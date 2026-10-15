@@ -868,7 +868,7 @@ namespace CrossguardScenario
 	class FScenarioRunner
 	{
 	public:
-		FScenarioRunner(FScenario& Scenario)
+		explicit FScenarioRunner(FScenario& Scenario)
 			: Test(Scenario.Test)
 			, Items(MoveTemp(Scenario.Items))
 			, Dilation(Scenario.Dilation)
