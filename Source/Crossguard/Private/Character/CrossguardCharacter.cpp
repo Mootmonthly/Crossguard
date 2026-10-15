@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/CrossguardAttributeSet.h"
 #include "Combat/CrossguardWeaponAttackAbility.h"
+#include "Game/CrossguardPlayerState.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -35,6 +36,12 @@ void ACrossguardCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 UAbilitySystemComponent* ACrossguardCharacter::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
+}
+
+FGenericTeamId ACrossguardCharacter::GetGenericTeamId() const
+{
+	const ACrossguardPlayerState* Team = GetPlayerState<ACrossguardPlayerState>();
+	return Team != nullptr ? Team->GetGenericTeamId() : FGenericTeamId::NoTeam;
 }
 
 void ACrossguardCharacter::PossessedBy(AController* NewController)

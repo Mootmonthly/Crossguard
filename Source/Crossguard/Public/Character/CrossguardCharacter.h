@@ -4,6 +4,7 @@
 #include "AbilitySystemInterface.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "GenericTeamAgentInterface.h"
 
 #include "CrossguardCharacter.generated.h"
 
@@ -16,7 +17,7 @@ struct FOnAttributeChangeData;
 // Player character. Owns its ability system: a character's stats and skills live and die with it,
 // as an extraction match ends with the character extracted or dead.
 UCLASS()
-class CROSSGUARD_API ACrossguardCharacter : public ACharacter, public IAbilitySystemInterface
+class CROSSGUARD_API ACrossguardCharacter : public ACharacter, public IAbilitySystemInterface, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
 
@@ -24,6 +25,9 @@ public:
 	ACrossguardCharacter();
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+	// The player state's team, for AI perception (which asks the pawn, not the player state).
+	virtual FGenericTeamId GetGenericTeamId() const override;
 	UCrossguardAbilitySystemComponent* GetCrossguardAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UCrossguardLoadoutComponent* GetLoadoutComponent() const { return LoadoutComponent; }
 	UCrossguardEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }

@@ -52,8 +52,13 @@ FString ACrossguardGameMode::InitNewPlayer(APlayerController* NewPlayerControlle
 	}
 
 	// PreLogin's check can race with another login, so Join decides.
-	const std::string Key = PlayerKey(UniqueId, NewPlayerController);
-	const Crossguard::FTeamJoinResult Joined = Teams.Join(Key, PartyKey(Options));
+	const FString Party = UGameplayStatics::ParseOption(Options, PartyOption);
+	return JoinTeam(NewPlayerController, PlayerKey(UniqueId, NewPlayerController), Party);
+}
+
+FString ACrossguardGameMode::JoinTeam(AController* Controller, const std::string& Key, const FString& Party)
+{
+	const Crossguard::FTeamJoinResult Joined = Teams.Join(Key, std::string(TCHAR_TO_UTF8(*Party)));
 	switch (Joined.Error)
 	{
 	case Crossguard::ETeamJoinError::None:
@@ -66,19 +71,36 @@ FString ACrossguardGameMode::InitNewPlayer(APlayerController* NewPlayerControlle
 		return TEXT("Invalid player.");
 	}
 
-	PlayerKeys.Add(NewPlayerController, FString(UTF8_TO_TCHAR(Key.c_str())));
-	if (ACrossguardPlayerState* PlayerState = NewPlayerController->GetPlayerState<ACrossguardPlayerState>())
+	PlayerKeys.Add(TWeakObjectPtr<const AController>(Controller), FString(UTF8_TO_TCHAR(Key.c_str())));
+	if (ACrossguardPlayerState* PlayerState = Controller->GetPlayerState<ACrossguardPlayerState>())
 	{
+		PlayerState->PartyKey = Party;
 		PlayerState->SetTeamId(Joined.TeamId);
 	}
-	UE_LOG(LogCrossguard, Log, TEXT("%s joined team %d"), *GetNameSafe(NewPlayerController), Joined.TeamId);
+	UE_LOG(LogCrossguard, Log, TEXT("%s joined team %d"), *GetNameSafe(Controller), Joined.TeamId);
 	return FString();
+}
+
+void ACrossguardGameMode::HandleSeamlessTravelPlayer(AController*& C)
+{
+	Super::HandleSeamlessTravelPlayer(C);
+
+	const ACrossguardPlayerState* PlayerState = C != nullptr ? C->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	if (PlayerState == nullptr)
+	{
+		return;
+	}
+	const FString Error = JoinTeam(C, PlayerKey(PlayerState->GetUniqueId(), C), PlayerState->PartyKey);
+	if (!Error.IsEmpty())
+	{
+		UE_LOG(LogCrossguard, Warning, TEXT("%s could not rejoin a team after travel: %s"), *GetNameSafe(C), *Error);
+	}
 }
 
 void ACrossguardGameMode::Logout(AController* Exiting)
 {
 	FString Key;
-	if (PlayerKeys.RemoveAndCopyValue(Exiting, Key))
+	if (PlayerKeys.RemoveAndCopyValue(TWeakObjectPtr<const AController>(Exiting), Key))
 	{
 		Teams.Leave(std::string(TCHAR_TO_UTF8(*Key)));
 	}

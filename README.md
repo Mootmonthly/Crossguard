@@ -12,6 +12,7 @@ Fantasy extraction game. Unreal Engine 5 with the Gameplay Ability System.
 | `Data/Skills/Skills.json` | Skill definitions (schema in `docs/skill-data-schema.md`). |
 | `Data/Skills/SkillTable.json` | Generated Unreal data table import. Do not edit. |
 | `Tools/` | Data validation, table export and check scripts. |
+| `Tools/SkillForge/` | Skill Forge: web editor for skills, synced into `Skills.json` on request. |
 | `docs/design-decisions.md` | Design rulings; overrides the Drive design docs. |
 
 ## Setup

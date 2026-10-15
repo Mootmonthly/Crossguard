@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "CrossguardRules/Teams.h"
+#include "GameFramework/Controller.h"
 #include "GameFramework/GameModeBase.h"
 
 #include "CrossguardGameMode.generated.h"
@@ -22,12 +23,17 @@ public:
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId, const FString& Options,
 		const FString& Portal = TEXT("")) override;
 	virtual void Logout(AController* Exiting) override;
+	// Seamless travel skips InitNewPlayer: re-register the player with the party key their player
+	// state carried over.
+	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
 
 	static const TCHAR* PartyOption;
 
 private:
 	static std::string PlayerKey(const FUniqueNetIdRepl& UniqueId, const AController* Controller);
 	static std::string PartyKey(const FString& Options);
+	// Registers the player and sets their team. Returns an error message, or empty on success.
+	FString JoinTeam(AController* Controller, const std::string& Key, const FString& Party);
 
 	Crossguard::FTeamRegistry Teams;
 	// Controller -> registry key, so Logout can find the player.

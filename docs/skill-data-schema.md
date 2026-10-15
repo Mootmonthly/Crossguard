@@ -26,7 +26,7 @@ Rulings in `docs/design-decisions.md` override the Drive docs.
 | `healing` | Healing[] | yes | Healing instances. May be empty. |
 | `mechanics` | string[] | yes | Behaviours the stat fields cannot express, one short imperative line each (`Become invisible for 12 s`). |
 | `description` | string | yes | The skill text from the source doc, verbatim, without the cost suffix. |
-| `source` | enum | yes | `SkillsDoc` or `StatsDoc`: which doc's version is used. |
+| `source` | enum | yes | `SkillsDoc` or `StatsDoc`: which Drive doc's version is used; `Editor` for skills created in the Skill Forge. |
 | `notes` | string[] | yes | Ambiguities found while entering the skill. One question per entry. |
 
 ### requirements

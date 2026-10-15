@@ -24,7 +24,15 @@ public:
 	// Server only.
 	void SetTeamId(int32 NewTeamId);
 
-	// IGenericTeamAgentInterface, for AI perception. Team ids above 254 report NoTeam.
+	// The ?Party= key the player joined with. Server only; kept across seamless travel so the next
+	// map's game mode can re-register the team.
+	FString PartyKey;
+
+	// Seamless travel: carry the team and party key to the new player state.
+	virtual void CopyProperties(APlayerState* PlayerState) override;
+
+	// IGenericTeamAgentInterface. Perception asks the pawn, which forwards here. Team ids above 254
+	// report NoTeam.
 	virtual FGenericTeamId GetGenericTeamId() const override;
 
 	UPROPERTY(BlueprintAssignable, Category = "Crossguard|Team")

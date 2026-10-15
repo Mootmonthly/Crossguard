@@ -1,0 +1,690 @@
+<title>Crossguard Skill Forge</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: workbench — skill index on the left, the open skill's form on the right; stacks on phones. */
+:root {
+  --bg: #eef1f4;
+  --surface: #ffffff;
+  --sunken: #f5f7f9;
+  --ink: #1a2230;
+  --muted: #5a6577;
+  --line: #d6dce4;
+  --accent: #0d7472;
+  --accent-ink: #ffffff;
+  --accent-soft: #d9efee;
+  --warn: #a8570b;
+  --warn-soft: #fbecd9;
+  --bad: #b3261e;
+  --bad-soft: #fbe3e1;
+  --good: #2b7a3d;
+  --cat-active: #b7791f;
+  --cat-spell: #6d4bc4;
+  --cat-art: #0d7472;
+  --cat-passive: #607089;
+  --font-display: "Cinzel", "Trajan Pro", Georgia, serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161d; --surface: #1a2029; --sunken: #151a22; --ink: #e4e8ee; --muted: #9aa5b5;
+    --line: #2c3542; --accent: #3fb7b3; --accent-ink: #08201f; --accent-soft: #163634;
+    --warn: #e6a35a; --warn-soft: #3a2a16; --bad: #f08a82; --bad-soft: #3d1c1a; --good: #6cc581;
+    --cat-active: #e0a64a; --cat-spell: #a98cf0; --cat-art: #3fb7b3; --cat-passive: #8d9bb2;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161d; --surface: #1a2029; --sunken: #151a22; --ink: #e4e8ee; --muted: #9aa5b5;
+  --line: #2c3542; --accent: #3fb7b3; --accent-ink: #08201f; --accent-soft: #163634;
+  --warn: #e6a35a; --warn-soft: #3a2a16; --bad: #f08a82; --bad-soft: #3d1c1a; --good: #6cc581;
+  --cat-active: #e0a64a; --cat-spell: #a98cf0; --cat-art: #3fb7b3; --cat-passive: #8d9bb2;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px;
+}
+* { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.brand { display: flex; flex-direction: column; gap: 2px; margin-right: auto; }
+.brand h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; letter-spacing: .04em; margin: 0; text-wrap: balance; }
+.brand p { margin: 0; color: var(--muted); max-width: 60ch; }
+.sync-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--sunken); border: 1px solid var(--line); font-size: .85rem; }
+.sync-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); }
+.sync-chip.pending { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+.sync-chip.pending .dot { background: var(--warn); }
+
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 7px 14px; border-radius: var(--radius); cursor: pointer; font-weight: 500; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.danger { color: var(--bad); }
+.btn.danger.armed { background: var(--bad); border-color: var(--bad); color: var(--surface); }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.btn.small { padding: 3px 9px; font-size: .85rem; }
+
+.notice { padding: 10px 14px; border-radius: var(--radius); background: var(--warn-soft); color: var(--warn); }
+
+.workbench { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 820px) { .workbench { grid-template-columns: minmax(0, 1fr); } }
+
+/* Skill index */
+.index { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); display: flex; flex-direction: column; min-width: 0; }
+.index-tools { padding: 12px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--line); }
+.index-tools input[type="search"] { width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--sunken); }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filter { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 2px 10px; font-size: .8rem; cursor: pointer; }
+.filter[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.skill-list { list-style: none; margin: 0; padding: 4px; max-height: 70vh; overflow-y: auto; }
+@media (max-width: 820px) { .skill-list { max-height: 40vh; } }
+.skill-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; padding: 8px 10px; border-radius: var(--radius); cursor: pointer; border: 1px solid transparent; width: 100%; text-align: left; background: none; }
+.skill-item:hover { background: var(--sunken); }
+.skill-item[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.skill-item .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skill-item .meta { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: .8rem; }
+.skill-item .id { font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skill-item.deleted .name { text-decoration: line-through; color: var(--muted); }
+.cost { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: .8rem; display: inline-flex; align-items: center; gap: 4px; }
+.cost::before { content: ""; width: 9px; height: 9px; background: currentColor; transform: rotate(45deg); border-radius: 1px; }
+.cat { font-size: .72rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.cat.Active { color: var(--cat-active); } .cat.Spell { color: var(--cat-spell); } .cat.Art { color: var(--cat-art); } .cat.Passive { color: var(--cat-passive); }
+.pending-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); margin-left: auto; }
+.list-empty { padding: 20px 14px; color: var(--muted); }
+
+/* Editor */
+.editor { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
+.editor-head { padding: 16px 18px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.editor-head h2 { font-family: var(--font-display); font-size: 1.3rem; margin: 0; letter-spacing: .03em; text-wrap: balance; }
+.editor-head .summary { color: var(--muted); font-size: .9rem; width: 100%; }
+.editor-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.editor-body { padding: 18px; display: flex; flex-direction: column; gap: 22px; }
+.editor-empty { padding: 40px 24px; color: var(--muted); display: flex; flex-direction: column; gap: 8px; }
+.editor-empty strong { color: var(--ink); font-size: 1.05rem; }
+
+fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 0; margin-bottom: 10px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field > span { font-size: .82rem; color: var(--muted); }
+.field input, .field select, .field textarea, .row input, .row select {
+  padding: 6px 9px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--sunken); min-width: 0; width: 100%;
+}
+.field input[readonly] { background: transparent; border-style: dashed; color: var(--muted); }
+.field textarea { min-height: 70px; resize: vertical; }
+.field.wide { grid-column: 1 / -1; }
+.hint { font-size: .78rem; color: var(--muted); }
+.mono { font-family: var(--font-mono); }
+
+.checks { display: flex; flex-wrap: wrap; gap: 6px; }
+.check { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px 2px 6px; font-size: .82rem; cursor: pointer; background: var(--sunken); }
+.check:has(input:checked) { background: var(--accent-soft); border-color: var(--accent); }
+
+.tokens { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 5px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--sunken); }
+.token { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: .8rem; padding: 2px 4px 2px 8px; border-radius: 4px; background: var(--surface); border: 1px solid var(--line); }
+.token.unknown { border-color: var(--bad); color: var(--bad); }
+.token button { border: 0; background: none; cursor: pointer; color: var(--muted); padding: 0 4px; }
+.tokens input { border: 0; background: transparent; flex: 1 1 120px; min-width: 100px; padding: 3px 4px; font-family: var(--font-mono); font-size: .85rem; }
+
+.rows { display: flex; flex-direction: column; gap: 8px; }
+.row { display: grid; gap: 8px; align-items: end; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--sunken); }
+.row label { display: flex; flex-direction: column; gap: 3px; font-size: .75rem; color: var(--muted); min-width: 0; }
+.row .remove { align-self: center; }
+.row.mod { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+.row.dmg { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+.row.heal { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+.row .reads { grid-column: 1 / -1; font-size: .8rem; color: var(--ink); }
+.row .cond { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.row .cond select { width: auto; }
+.row .cond input[type="text"] { flex: 1 1 200px; }
+
+.errors { border-radius: var(--radius); background: var(--bad-soft); color: var(--bad); padding: 10px 14px; }
+.errors ul { margin: 6px 0 0; padding-left: 18px; }
+.status { font-size: .85rem; color: var(--muted); min-height: 1.2em; }
+.status.ok { color: var(--good); } .status.bad { color: var(--bad); }
+.badge-pending { font-size: .75rem; padding: 2px 8px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); }
+.badge-deleted { font-size: .75rem; padding: 2px 8px; border-radius: 999px; background: var(--bad-soft); color: var(--bad); }
+@media (prefers-reduced-motion: no-preference) { .skill-item, .btn, .check { transition: background-color .12s, border-color .12s; } }
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Skill Forge</h1>
+      <p>Edit Crossguard's Skill Gems. Saved changes wait here until you ask Claude to sync them into <span class="mono">Skills.json</span>.</p>
+    </div>
+    <span class="sync-chip" id="sync-chip"><span class="dot"></span><span id="sync-text">Connecting…</span></span>
+    <button class="btn primary" id="new-skill" type="button">New skill</button>
+  </header>
+  <div class="notice" id="notice" hidden></div>
+
+  <div class="workbench">
+    <aside class="index" aria-label="Skills">
+      <div class="index-tools">
+        <input type="search" id="search" placeholder="Search name or id" aria-label="Search skills">
+        <div class="filters" id="filters" role="group" aria-label="Filter by category"></div>
+      </div>
+      <ul class="skill-list" id="skill-list"></ul>
+    </aside>
+
+    <section class="editor" id="editor" aria-live="polite">
+      <div class="editor-empty" id="editor-empty">
+        <strong>Waiting for the skill list</strong>
+        <span>Skills appear on the left once the forge connects. Pick one to edit it, or start a new skill.</span>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  // Schema enums — keep in step with docs/skill-data-schema.md and Tools/validate_skills.py.
+  const CATEGORIES = ["Active", "Spell", "Art", "Passive"];
+  const TAGS = ["Minion", "Buff", "Debuff", "Summon", "Heal", "Raid"];
+  const MELEE = ["Sword", "Axe", "Dagger", "Spear", "Mace", "Quarterstaff", "Hammer", "Shield", "AnyMelee", "TwoHandedMelee"];
+  const RANGED = ["Bow", "Crossbow", "Sling", "Throwing"];
+  const CASTING = ["Wand", "MagicStaff"];
+  const WEAPONS = [...MELEE, ...RANGED, ...CASTING];
+  const ARMOR = ["Plate", "PlateAllSlots"];
+  const STATS = ["STR", "AGI", "INT", "AllAttributes", "MHP", "MHPB", "AD", "AAD", "ADB", "AR", "AP", "Dexterity", "ActionSpeed", "MoveSpeed", "PH", "APH", "PHB", "MD", "AMD", "MDB", "MR", "MH", "AMH", "MHB", "CDR", "CastTime"];
+  const OPS = ["Flat", "Percent", "Multiply"];
+  const TARGETS = ["Self", "Party", "AlliesInRadius", "Target"];
+  const FILTERS = ["Melee", "Ranged", "Minion", "Active", "Spell", "Art"];
+  const COND_TYPES = { none: "Always", wielding: "While wielding", armor: "With armor", perEmptyArmorSlot: "Per empty armor slot", onActivation: "On activation", nextAttack: "Next attack", other: "Other (describe)" };
+  const DMG_TYPES = ["Attack", "Magic"];
+  const DMG_KINDS = ["Impact", "Splash", "PerSecond", "OverTime", "Additional", "WeaponPercent"];
+  const HEAL_TYPES = ["Physical", "Magical"];
+  const SOURCES = ["SkillsDoc", "StatsDoc", "Editor"];
+  const ID_RE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
+
+  const $ = (id) => document.getElementById(id);
+  function h(tag, attrs = {}, ...children) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v === undefined || v === null || v === false) continue;
+      if (k === "class") el.className = v;
+      else if (k === "text") el.textContent = v;
+      else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+      else if (k === "value") el.value = v;
+      else if (k === "checked") el.checked = !!v;
+      else el.setAttribute(k, v === true ? "" : v);
+    }
+    for (const c of children.flat()) if (c !== null && c !== undefined && c !== false) el.append(c instanceof Node ? c : String(c));
+    return el;
+  }
+  const clone = (v) => JSON.parse(JSON.stringify(v));
+  const nowIso = () => new Date().toISOString();
+
+  // ---- State ----
+  let db = null;
+  let canWrite = true;
+  const store = new Map(); // id -> { skill, meta }
+  let selectedId = null;
+  let draft = null;        // skill being edited (clone)
+  let isNew = false;
+  let dirty = false;
+  let filterCat = "All";
+  let deleteArmed = false;
+  let saving = false;
+
+  function isPending(entry) {
+    const m = entry.meta || {};
+    return !!m.deleted || !m.syncedAt || (m.updatedAt && m.updatedAt > m.syncedAt);
+  }
+
+  // ---- Derived values ----
+  function weaponTagFor(weapons) {
+    if (!weapons.length) return null;
+    if (weapons.every((w) => MELEE.includes(w))) return "Melee";
+    if (weapons.every((w) => RANGED.includes(w))) return "Ranged";
+    return undefined; // invalid mix
+  }
+  function pct(v) { return `${+(v * 100).toFixed(3)}%`; }
+  function describeModifier(m) {
+    const sign = m.value < 0 ? "−" : "+";
+    let amount;
+    if (m.op === "Flat") amount = `${sign}${Math.abs(m.value)} ${m.stat}`;
+    else if (m.op === "Percent") amount = `${sign}${pct(Math.abs(m.value))} ${m.stat}`;
+    else amount = `${m.stat} ×${m.value}`;
+    const bits = [amount];
+    if (m.skillFilter) bits.push(`on ${m.skillFilter} skills`);
+    if (m.target !== "Self") bits.push(`to ${m.target}`);
+    const c = m.condition;
+    if (c) {
+      const [k, v] = Object.entries(c)[0] || [];
+      if (k === "wielding") bits.push(`while wielding ${v.join(" or ")}`);
+      else if (k === "armor") bits.push(`with ${v}`);
+      else if (k === "perEmptyArmorSlot") bits.push("per empty armor slot");
+      else if (k === "onActivation") bits.push("on activation");
+      else if (k === "nextAttack") bits.push("on the next attack");
+      else if (k === "other") bits.push(`(${v})`);
+    }
+    if (m.durationSec) bits.push(`for ${m.durationSec} s`);
+    return bits.join(" ");
+  }
+  function summary(s) {
+    const bits = [s.category, `${s.capacityCost} Capacity`];
+    if (s.cooldownSec != null) bits.push(`${s.cooldownSec} s cooldown`);
+    if (s.durationSec != null) bits.push(`lasts ${s.durationSec} s`);
+    if (s.weaponTag) bits.push(s.weaponTag);
+    return bits.join(" · ");
+  }
+
+  // ---- Validation (mirrors Tools/validate_skills.py) ----
+  function validate(s) {
+    const errs = [];
+    if (!ID_RE.test(s.id || "")) errs.push("Id must be snake_case, e.g. frost_nova.");
+    if (isNew && store.has(s.id)) errs.push(`Id "${s.id}" is already used.`);
+    if (!s.name || !s.name.trim()) errs.push("Name is required.");
+    if (!Number.isInteger(s.capacityCost) || s.capacityCost < 0) errs.push("Capacity cost must be a whole number, 0 or more.");
+    if (!CATEGORIES.includes(s.category)) errs.push("Pick a category.");
+    const tag = weaponTagFor(s.requirements.weapons);
+    if (tag === undefined) errs.push("Required weapons mix melee and ranged (or include a casting weapon); split them into separate skills.");
+    for (const field of ["cooldownSec", "durationSec"]) {
+      const v = s[field];
+      if (v !== null && !(typeof v === "number" && v >= 0)) errs.push(`${field === "cooldownSec" ? "Cooldown" : "Duration"} must be a number, 0 or more, or blank.`);
+    }
+    if (s.category === "Passive" && s.cooldownSec !== null) errs.push("Passive skills have no cooldown; clear it.");
+    const known = new Set([...store.keys(), s.id]);
+    for (const field of ["includes", "grantsWhileActive", "minionSkills"]) {
+      for (const ref of s[field]) {
+        if (ref === s.id) errs.push(`${labelFor(field)} cannot list the skill itself.`);
+        else if (!known.has(ref)) errs.push(`${labelFor(field)}: no skill with id "${ref}".`);
+      }
+    }
+    s.statModifiers.forEach((m, i) => {
+      const where = `Stat modifier ${i + 1}`;
+      if (typeof m.value !== "number" || Number.isNaN(m.value)) errs.push(`${where}: value must be a number.`);
+      if (m.skillFilter && !["CDR", "CastTime"].includes(m.stat)) errs.push(`${where}: "applies to skills" only works with CDR or CastTime.`);
+      if (m.condition && m.condition.wielding && !m.condition.wielding.length) errs.push(`${where}: pick at least one weapon for "While wielding".`);
+      if (m.condition && "other" in m.condition && !m.condition.other.trim()) errs.push(`${where}: describe the condition.`);
+      if (m.durationSec !== null && !(m.durationSec > 0)) errs.push(`${where}: duration must be above 0, or blank for permanent.`);
+    });
+    s.damage.forEach((d, i) => {
+      const where = `Damage ${i + 1}`;
+      if (typeof d.amount !== "number" || Number.isNaN(d.amount)) errs.push(`${where}: amount must be a number.`);
+      if (typeof d.coefficient !== "number" || Number.isNaN(d.coefficient)) errs.push(`${where}: coefficient must be a number (1 if none).`);
+      if (!Number.isInteger(d.hits) || d.hits < 1) errs.push(`${where}: hits must be a whole number, 1 or more.`);
+      if (["PerSecond", "OverTime"].includes(d.kind) && !(d.durationSec > 0)) errs.push(`${where}: ${d.kind} damage needs a duration.`);
+    });
+    s.healing.forEach((x, i) => {
+      const where = `Healing ${i + 1}`;
+      if (x.full && x.amount !== null) errs.push(`${where}: full healing has no amount; clear it.`);
+      if (!x.full && typeof x.amount !== "number") errs.push(`${where}: enter an amount or tick "Full".`);
+    });
+    if (!s.description || !s.description.trim()) errs.push("Description is required.");
+    return errs;
+  }
+  const labelFor = (f) => ({ includes: "Includes", grantsWhileActive: "Grants while active", minionSkills: "Minion skills" })[f];
+
+  function blankSkill() {
+    return {
+      id: "", name: "", capacityCost: 1, category: "Active", weaponTag: null, tags: [],
+      requirements: { weapons: [], armor: null, items: [], forms: [] },
+      cooldownSec: 10, durationSec: null, includes: [], grantsWhileActive: [], minionSkills: [],
+      statModifiers: [], damage: [], healing: [], mechanics: [], description: "", source: "Editor", notes: [],
+    };
+  }
+
+  // ---- Index ----
+  function renderFilters() {
+    const wrap = $("filters");
+    wrap.replaceChildren(...["All", ...CATEGORIES, "Pending"].map((c) =>
+      h("button", { class: "filter", type: "button", "aria-pressed": String(filterCat === c), onclick: () => { filterCat = c; renderFilters(); renderList(); } }, c)));
+  }
+  function renderList() {
+    const q = $("search").value.trim().toLowerCase();
+    const items = [...store.entries()]
+      .filter(([id, e]) => filterCat === "All" || (filterCat === "Pending" ? isPending(e) : e.skill.category === filterCat))
+      .filter(([id, e]) => !q || id.includes(q) || (e.skill.name || "").toLowerCase().includes(q))
+      .sort((a, b) => (a[1].skill.name || a[0]).localeCompare(b[1].skill.name || b[0]));
+    const list = $("skill-list");
+    if (!items.length) {
+      list.replaceChildren(h("li", { class: "list-empty", text: store.size ? "No skills match." : "No skills yet. Start one with New skill." }));
+      return;
+    }
+    list.replaceChildren(...items.map(([id, e]) => {
+      const s = e.skill;
+      return h("li", {}, h("button", {
+        class: "skill-item" + (e.meta && e.meta.deleted ? " deleted" : ""), type: "button",
+        "aria-current": String(id === selectedId && !isNew), onclick: () => select(id),
+      },
+        h("span", { class: "name", text: s.name || id }),
+        h("span", { class: "cost", title: "Capacity cost", text: String(s.capacityCost) }),
+        h("span", { class: "meta" },
+          h("span", { class: `cat ${s.category}`, text: s.category }),
+          h("span", { class: "id", text: id }),
+          isPending(e) ? h("span", { class: "pending-dot", title: "Pending sync" }) : null)));
+    }));
+  }
+  function renderSyncChip() {
+    const pending = [...store.values()].filter(isPending).length;
+    $("sync-chip").classList.toggle("pending", pending > 0);
+    $("sync-text").textContent = !db ? "Offline" : pending ? `${pending} change${pending === 1 ? "" : "s"} waiting for sync` : `All ${store.size} skills synced`;
+  }
+
+  // ---- Selection ----
+  function select(id) {
+    if (dirty && !confirmLeave()) return;
+    selectedId = id; isNew = false; dirty = false; deleteArmed = false;
+    draft = clone(store.get(id).skill);
+    renderList(); renderEditor();
+  }
+  function startNew() {
+    if (dirty && !confirmLeave()) return;
+    selectedId = null; isNew = true; dirty = false; deleteArmed = false;
+    draft = blankSkill();
+    renderList(); renderEditor();
+    const first = document.querySelector("#f-name"); if (first) first.focus();
+  }
+  // No confirm() in the viewer: leaving with unsaved edits needs a second click.
+  let leaveArmedAt = 0;
+  function confirmLeave() {
+    if (Date.now() - leaveArmedAt < 4000) { leaveArmedAt = 0; return true; }
+    leaveArmedAt = Date.now();
+    setStatus("You have unsaved changes. Click again within 4 seconds to discard them.", "bad");
+    return false;
+  }
+
+  // ---- Editor ----
+  function touch() { dirty = true; refreshHeader(); }
+  function setStatus(msg, kind = "") { const el = $("status"); if (el) { el.textContent = msg; el.className = "status " + kind; } }
+
+  function textField(label, value, oninput, opts = {}) {
+    return h("label", { class: "field" + (opts.wide ? " wide" : "") }, h("span", { text: label }),
+      h("input", { type: "text", id: opts.id, value: value ?? "", class: opts.mono ? "mono" : null, readonly: opts.readonly, placeholder: opts.placeholder, oninput: (e) => oninput(e.target.value) }),
+      opts.hint ? h("span", { class: "hint", text: opts.hint }) : null);
+  }
+  function numberField(label, value, oninput, opts = {}) {
+    return h("label", { class: "field" }, h("span", { text: label }),
+      h("input", { type: "number", step: opts.step || "any", min: opts.min, value: value ?? "", placeholder: opts.placeholder, oninput: (e) => oninput(e.target.value === "" ? null : Number(e.target.value)) }),
+      opts.hint ? h("span", { class: "hint", text: opts.hint }) : null);
+  }
+  function selectField(label, value, options, onchange, opts = {}) {
+    return h("label", { class: "field" }, h("span", { text: label }),
+      h("select", { onchange: (e) => onchange(e.target.value === "" ? null : e.target.value) },
+        options.map(([v, text]) => h("option", { value: v ?? "", selected: (v ?? "") === (value ?? "") ? "selected" : null }, text))),
+      opts.hint ? h("span", { class: "hint", text: opts.hint }) : null);
+  }
+  function checkGroup(values, selected, onchange) {
+    return h("div", { class: "checks" }, values.map((v) => h("label", { class: "check" },
+      h("input", { type: "checkbox", checked: selected.includes(v), onchange: (e) => {
+        const next = e.target.checked ? [...selected, v] : selected.filter((x) => x !== v);
+        selected.splice(0, selected.length, ...values.filter((x) => next.includes(x)));
+        onchange();
+      } }), v)));
+  }
+  function tokenField(label, list, hint, rerender) {
+    const listId = "ids-" + Math.random().toString(36).slice(2);
+    const input = h("input", { type: "text", list: listId, placeholder: "Add skill id, press Enter", "aria-label": label,
+      onkeydown: (e) => {
+        if (e.key !== "Enter" && e.key !== ",") return;
+        e.preventDefault();
+        const v = e.target.value.trim().toLowerCase();
+        if (v && !list.includes(v)) { list.push(v); touch(); rerender(); }
+        e.target.value = "";
+      } });
+    return h("div", { class: "field wide" }, h("span", { text: label }),
+      h("div", { class: "tokens" },
+        list.map((id, i) => h("span", { class: "token" + (store.has(id) || id === draft.id ? "" : " unknown") }, id,
+          h("button", { type: "button", "aria-label": `Remove ${id}`, onclick: () => { list.splice(i, 1); touch(); rerender(); } }, "×"))),
+        input),
+      h("datalist", { id: listId }, [...store.keys()].sort().map((id) => h("option", { value: id }))),
+      h("span", { class: "hint", text: hint }));
+  }
+  function linesField(label, list, hint) {
+    return h("label", { class: "field wide" }, h("span", { text: label }),
+      h("textarea", { value: list.join("\n"), oninput: (e) => { list.splice(0, list.length, ...e.target.value.split("\n").map((x) => x.trim()).filter(Boolean)); touch(); } }),
+      h("span", { class: "hint", text: hint }));
+  }
+
+  function conditionEditor(m, rerender) {
+    const c = m.condition;
+    const type = c ? Object.keys(c)[0] : "none";
+    const setType = (t) => {
+      m.condition = t === "none" ? null : t === "wielding" ? { wielding: [] } : t === "armor" ? { armor: "Plate" } : t === "other" ? { other: "" } : { [t]: true };
+      touch(); rerender();
+    };
+    const parts = [h("span", { class: "hint", text: "When" }),
+      h("select", { "aria-label": "Condition", onchange: (e) => setType(e.target.value) },
+        Object.entries(COND_TYPES).map(([k, v]) => h("option", { value: k, selected: k === type ? "selected" : null }, v)))];
+    if (type === "wielding") parts.push(checkGroup(WEAPONS.filter((w) => !["AnyMelee", "TwoHandedMelee"].includes(w)).concat(["AnyMelee", "TwoHandedMelee"]), c.wielding, () => { touch(); rerender(); }));
+    if (type === "armor") parts.push(h("select", { "aria-label": "Armor", onchange: (e) => { c.armor = e.target.value; touch(); rerender(); } }, ARMOR.map((a) => h("option", { value: a, selected: a === c.armor ? "selected" : null }, a))));
+    if (type === "other") parts.push(h("input", { type: "text", value: c.other, placeholder: "e.g. applies when stealth ends", oninput: (e) => { c.other = e.target.value; touch(); } }));
+    return h("div", { class: "cond" }, parts);
+  }
+
+  function modifierRows(s, rerender) {
+    return h("div", { class: "rows" }, s.statModifiers.map((m, i) => h("div", { class: "row mod" },
+      h("label", {}, "Stat", h("select", { onchange: (e) => { m.stat = e.target.value; if (!["CDR", "CastTime"].includes(m.stat)) m.skillFilter = null; touch(); rerender(); } }, STATS.map((v) => h("option", { value: v, selected: v === m.stat ? "selected" : null }, v)))),
+      h("label", {}, "Operation", h("select", { onchange: (e) => { m.op = e.target.value; touch(); rerender(); } }, OPS.map((v) => h("option", { value: v, selected: v === m.op ? "selected" : null }, v)))),
+      h("label", {}, m.op === "Percent" ? "Value (0.15 = 15%)" : m.op === "Multiply" ? "Multiplier" : "Points",
+        h("input", { type: "number", step: "any", value: m.value, onchange: (e) => { m.value = e.target.value === "" ? NaN : Number(e.target.value); touch(); rerender(); } })),
+      h("label", {}, "Target", h("select", { onchange: (e) => { m.target = e.target.value; touch(); rerender(); } }, TARGETS.map((v) => h("option", { value: v, selected: v === m.target ? "selected" : null }, v)))),
+      ["CDR", "CastTime"].includes(m.stat) ? h("label", {}, "Applies to skills", h("select", { onchange: (e) => { m.skillFilter = e.target.value || null; touch(); rerender(); } },
+        [["", "All"], ...FILTERS.map((f) => [f, f])].map(([v, t]) => h("option", { value: v, selected: (m.skillFilter || "") === v ? "selected" : null }, t)))) : null,
+      h("label", {}, "Duration (s)", h("input", { type: "number", step: "any", min: "0", placeholder: "permanent", value: m.durationSec ?? "", onchange: (e) => { m.durationSec = e.target.value === "" ? null : Number(e.target.value); touch(); rerender(); } })),
+      h("button", { class: "btn small danger remove", type: "button", onclick: () => { s.statModifiers.splice(i, 1); touch(); rerender(); } }, "Remove"),
+      conditionEditor(m, rerender),
+      h("div", { class: "reads", text: "Reads as: " + describeModifier(m) }))),
+      h("div", {}, h("button", { class: "btn small", type: "button", onclick: () => { s.statModifiers.push({ stat: "ADB", op: "Percent", value: 0.1, target: "Self", skillFilter: null, condition: null, durationSec: null }); touch(); rerender(); } }, "Add stat modifier")));
+  }
+  function damageRows(s, rerender) {
+    return h("div", { class: "rows" }, s.damage.map((d, i) => h("div", { class: "row dmg" },
+      h("label", {}, "Type", h("select", { onchange: (e) => { d.type = e.target.value; touch(); } }, DMG_TYPES.map((v) => h("option", { value: v, selected: v === d.type ? "selected" : null }, v)))),
+      h("label", {}, "Kind", h("select", { onchange: (e) => { d.kind = e.target.value; if (!["PerSecond", "OverTime"].includes(d.kind)) d.durationSec = null; touch(); rerender(); } }, DMG_KINDS.map((v) => h("option", { value: v, selected: v === d.kind ? "selected" : null }, v)))),
+      h("label", {}, d.kind === "WeaponPercent" ? "Amount (0.85 = 85% AD)" : "Amount", h("input", { type: "number", step: "any", value: d.amount, oninput: (e) => { d.amount = e.target.value === "" ? NaN : Number(e.target.value); touch(); } })),
+      h("label", {}, "Coefficient", h("input", { type: "number", step: "any", value: d.coefficient, oninput: (e) => { d.coefficient = e.target.value === "" ? NaN : Number(e.target.value); touch(); } })),
+      ["PerSecond", "OverTime"].includes(d.kind) ? h("label", {}, "Duration (s)", h("input", { type: "number", step: "any", min: "0", value: d.durationSec ?? "", oninput: (e) => { d.durationSec = e.target.value === "" ? null : Number(e.target.value); touch(); } })) : null,
+      h("label", {}, "Hits", h("input", { type: "number", step: "1", min: "1", value: d.hits, oninput: (e) => { d.hits = Number(e.target.value); touch(); } })),
+      h("button", { class: "btn small danger remove", type: "button", onclick: () => { s.damage.splice(i, 1); touch(); rerender(); } }, "Remove"))),
+      h("div", {}, h("button", { class: "btn small", type: "button", onclick: () => { s.damage.push({ type: "Attack", amount: 10, coefficient: 1.0, kind: "Impact", durationSec: null, hits: 1 }); touch(); rerender(); } }, "Add damage")));
+  }
+  function healingRows(s, rerender) {
+    return h("div", { class: "rows" }, s.healing.map((x, i) => h("div", { class: "row heal" },
+      h("label", {}, "Type", h("select", { onchange: (e) => { x.type = e.target.value; touch(); } }, HEAL_TYPES.map((v) => h("option", { value: v, selected: v === x.type ? "selected" : null }, v)))),
+      h("label", {}, "Amount", h("input", { type: "number", step: "any", value: x.amount ?? "", disabled: x.full ? "disabled" : null, oninput: (e) => { x.amount = e.target.value === "" ? null : Number(e.target.value); touch(); } })),
+      h("label", {}, "Coefficient", h("input", { type: "number", step: "any", value: x.coefficient, oninput: (e) => { x.coefficient = Number(e.target.value); touch(); } })),
+      h("label", { class: "check" }, h("input", { type: "checkbox", checked: x.full, onchange: (e) => { x.full = e.target.checked; if (x.full) x.amount = null; touch(); rerender(); } }), "Full"),
+      h("label", { class: "check" }, h("input", { type: "checkbox", checked: x.canRevive, onchange: (e) => { x.canRevive = e.target.checked; touch(); } }), "Can revive"),
+      h("button", { class: "btn small danger remove", type: "button", onclick: () => { s.healing.splice(i, 1); touch(); rerender(); } }, "Remove"))),
+      h("div", {}, h("button", { class: "btn small", type: "button", onclick: () => { s.healing.push({ type: "Magical", amount: 20, coefficient: 1.0, full: false, canRevive: false }); touch(); rerender(); } }, "Add healing")));
+  }
+
+  function section(title, ...content) { return h("fieldset", {}, h("legend", { text: title }), ...content); }
+
+  function renderEditor() {
+    const editor = $("editor");
+    if (!draft) {
+      editor.replaceChildren(h("div", { class: "editor-empty" },
+        h("strong", { text: store.size ? "Pick a skill to edit" : "No skills in the forge yet" }),
+        h("span", { text: store.size ? "Choose one from the list, or start a new skill." : "Start a new skill, or ask Claude to load the current skill list." })));
+      return;
+    }
+    const s = draft;
+    const rerender = () => renderEditor();
+    const entry = selectedId ? store.get(selectedId) : null;
+    s.weaponTag = weaponTagFor(s.requirements.weapons) ?? null;
+
+    const head = h("div", { class: "editor-head" },
+      h("h2", { id: "editor-title", text: s.name || (isNew ? "New skill" : s.id) }),
+      entry && entry.meta && entry.meta.deleted ? h("span", { class: "badge-deleted", text: "Marked for deletion" }) : entry && isPending(entry) ? h("span", { class: "badge-pending", text: "Pending sync" }) : null,
+      h("div", { class: "editor-actions" },
+        h("button", { class: "btn primary", type: "button", id: "save", onclick: save, disabled: !canWrite ? "disabled" : null }, isNew ? "Create skill" : "Save changes"),
+        h("button", { class: "btn", type: "button", onclick: discard, id: "discard" }, isNew ? "Cancel" : "Discard edits"),
+        !isNew ? h("button", { class: "btn", type: "button", onclick: duplicate }, "Duplicate") : null,
+        !isNew && entry && !(entry.meta && entry.meta.deleted) ? h("button", { class: "btn danger" + (deleteArmed ? " armed" : ""), type: "button", onclick: remove, disabled: !canWrite ? "disabled" : null }, deleteArmed ? "Click again to delete" : "Delete") : null,
+        !isNew && entry && entry.meta && entry.meta.deleted ? h("button", { class: "btn", type: "button", onclick: restore, disabled: !canWrite ? "disabled" : null }, "Restore") : null,
+        h("button", { class: "btn", type: "button", onclick: copyJson }, "Copy JSON")),
+      h("div", { class: "summary", id: "summary", text: summary(s) }),
+      h("div", { class: "status", id: "status" }));
+
+    const errs = validate(s);
+    const errorBox = h("div", { class: "errors", id: "errors", hidden: errs.length ? null : "hidden" },
+      h("strong", { text: "Fix before saving" }), h("ul", {}, errs.map((e) => h("li", { text: e }))));
+
+    const body = h("div", { class: "editor-body" },
+      errorBox,
+      section("Identity",
+        h("div", { class: "grid" },
+          textField("Name", s.name, (v) => { s.name = v; if (isNew && !idTouched) { s.id = v.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, ""); const idEl = $("f-id"); if (idEl) idEl.value = s.id; } touch(); }, { id: "f-name" }),
+          textField("Id", s.id, (v) => { idTouched = true; s.id = v.trim(); touch(); }, { id: "f-id", mono: true, readonly: !isNew, hint: isNew ? "snake_case; cannot change after creating" : "Fixed. Duplicate to rename." }),
+          numberField("Capacity cost", s.capacityCost, (v) => { s.capacityCost = v; touch(); }, { step: "1", min: "0" }),
+          selectField("Category", s.category, CATEGORIES.map((c) => [c, c]), (v) => { s.category = v; if (v === "Passive") s.cooldownSec = null; touch(); rerender(); }),
+          selectField("Source", s.source, SOURCES.map((c) => [c, c === "Editor" ? "Skill Forge" : c]), (v) => { s.source = v; touch(); })),
+        h("div", { class: "field wide" }, h("span", { text: "Tags" }), checkGroup(TAGS, s.tags, touch))),
+      section("Timing",
+        h("div", { class: "grid" },
+          numberField("Cooldown (s)", s.category === "Passive" ? null : s.cooldownSec, (v) => { s.cooldownSec = v; touch(); }, { min: "0", placeholder: s.category === "Passive" ? "passive: none" : "none", hint: "Before CDR. Blank: no cooldown." }),
+          numberField("Duration (s)", s.durationSec, (v) => { s.durationSec = v; touch(); }, { min: "0", placeholder: "none", hint: "Main effect length. Blank: none." }))),
+      section("Requirements",
+        h("div", { class: "field wide" }, h("span", { text: "Weapons (any one)" }), checkGroup(WEAPONS, s.requirements.weapons, () => { touch(); rerender(); }),
+          h("span", { class: "hint", text: "Weapon tag (derived): " + (weaponTagFor(s.requirements.weapons) === undefined ? "invalid mix" : weaponTagFor(s.requirements.weapons) || "none") })),
+        h("div", { class: "grid" },
+          selectField("Armor", s.requirements.armor, [[null, "None"], ...ARMOR.map((a) => [a, a === "PlateAllSlots" ? "Plate in every slot" : a])], (v) => { s.requirements.armor = v; touch(); }),
+          textField("Required items", s.requirements.items.join(", "), (v) => { s.requirements.items = v.split(",").map((x) => x.trim()).filter(Boolean); touch(); }, { placeholder: "e.g. Pet Gem (Tiger)", hint: "Comma-separated." }),
+          textField("Required forms", s.requirements.forms.join(", "), (v) => { s.requirements.forms = v.split(",").map((x) => x.trim()).filter(Boolean); touch(); }, { placeholder: "e.g. Bestial", hint: "Comma-separated." }))),
+      section("Linked skills",
+        tokenField("Includes (bundle components)", s.includes, "Full effects included permanently. Cannot be equipped alongside.", rerender),
+        tokenField("Grants while active", s.grantsWhileActive, "Usable only while this skill is active (e.g. Dragonification → Flight). Cannot be equipped alongside.", rerender),
+        tokenField("Minion skills", s.minionSkills, "Skills a summoned minion uses. Not granted to the player.", rerender)),
+      section("Stat modifiers", modifierRows(s, rerender)),
+      section("Damage", damageRows(s, rerender)),
+      section("Healing", healingRows(s, rerender)),
+      section("Text",
+        h("label", { class: "field wide" }, h("span", { text: "Description" }),
+          h("textarea", { value: s.description, oninput: (e) => { s.description = e.target.value; touch(); } }),
+          h("span", { class: "hint", text: "Player-facing text, as written in the design doc." })),
+        linesField("Mechanics", s.mechanics, "One behaviour per line that the fields above cannot express, e.g. \"Become invisible for 12 s\"."),
+        linesField("Notes", s.notes, "Open questions for Claude or the design. One per line.")));
+
+    editor.replaceChildren(head, body);
+  }
+  let idTouched = false;
+
+  // Light refresh while typing: keeps focus in the field being edited.
+  function refreshHeader() {
+    if (!draft) return;
+    draft.weaponTag = weaponTagFor(draft.requirements.weapons) ?? null;
+    const title = $("editor-title"); if (title) title.textContent = draft.name || (isNew ? "New skill" : draft.id);
+    const sum = $("summary"); if (sum) sum.textContent = summary(draft);
+    const errs = validate(draft);
+    const box = $("errors");
+    if (box) {
+      box.hidden = !errs.length;
+      box.replaceChildren(h("strong", { text: "Fix before saving" }), h("ul", {}, errs.map((e) => h("li", { text: e }))));
+    }
+    setStatus(dirty ? "Unsaved changes" : "");
+  }
+
+  // ---- Actions ----
+  async function save() {
+    if (!db || saving) return;
+    const errs = validate(draft);
+    if (errs.length) { refreshHeader(); setStatus("Fix the problems listed above, then save.", "bad"); return; }
+    saving = true;
+    const id = draft.id;
+    const prev = store.get(id);
+    const skill = clone(draft);
+    skill.weaponTag = weaponTagFor(skill.requirements.weapons) ?? null;
+    if (skill.category === "Passive") skill.cooldownSec = null;
+    const doc = { skill, meta: { updatedAt: nowIso(), deleted: false, syncedAt: prev && prev.meta ? prev.meta.syncedAt ?? null : null } };
+    try {
+      await db.doc("skills/" + id).set(doc);
+      store.set(id, doc);
+      selectedId = id; isNew = false; dirty = false; idTouched = false;
+      renderList(); renderEditor(); renderSyncChip();
+      setStatus("Saved. It syncs into the game data the next time you ask Claude to sync skills.", "ok");
+    } catch (e) {
+      setStatus(writeError(e), "bad");
+    } finally { saving = false; }
+  }
+  function writeError(e) {
+    if (e && e.code === "invalid_argument") { canWrite = false; return "You can view these skills but not change them. Ask the owner for edit access."; }
+    if (e && e.code === "quota_exceeded") return "The skill store is full. Delete unused skills, then save again.";
+    return "Could not save (" + (e && e.code || "error") + "). Try again in a moment.";
+  }
+  function discard() {
+    if (isNew) { draft = null; isNew = false; dirty = false; idTouched = false; renderList(); renderEditor(); return; }
+    dirty = false; draft = clone(store.get(selectedId).skill); renderEditor(); setStatus("Edits discarded.");
+  }
+  function duplicate() {
+    const copy = clone(draft);
+    copy.id = copy.id + "_copy"; copy.name = copy.name + " (copy)"; copy.source = "Editor";
+    selectedId = null; isNew = true; dirty = true; idTouched = true; deleteArmed = false; draft = copy;
+    renderList(); renderEditor(); setStatus("Copy ready. Change the id and name, then create it.");
+  }
+  async function remove() {
+    if (!deleteArmed) { deleteArmed = true; renderEditor(); setTimeout(() => { if (deleteArmed) { deleteArmed = false; renderEditor(); } }, 4000); return; }
+    deleteArmed = false;
+    const entry = store.get(selectedId);
+    const doc = { skill: entry.skill, meta: { ...(entry.meta || {}), deleted: true, updatedAt: nowIso() } };
+    try {
+      await db.doc("skills/" + selectedId).set(doc);
+      store.set(selectedId, doc); dirty = false;
+      renderList(); renderEditor(); renderSyncChip();
+      setStatus("Marked for deletion. The next sync removes it from the game data.", "ok");
+    } catch (e) { setStatus(writeError(e), "bad"); }
+  }
+  async function restore() {
+    const entry = store.get(selectedId);
+    const doc = { skill: entry.skill, meta: { ...(entry.meta || {}), deleted: false, updatedAt: nowIso() } };
+    try {
+      await db.doc("skills/" + selectedId).set(doc);
+      store.set(selectedId, doc);
+      renderList(); renderEditor(); renderSyncChip(); setStatus("Restored.", "ok");
+    } catch (e) { setStatus(writeError(e), "bad"); }
+  }
+  async function copyJson() {
+    const text = JSON.stringify(draft, null, 2);
+    try { await navigator.clipboard.writeText(text); setStatus("Skill JSON copied.", "ok"); }
+    catch { setStatus("Copy was blocked here. Select the text from Claude's sync instead.", "bad"); }
+  }
+
+  // ---- Boot ----
+  $("search").addEventListener("input", renderList);
+  $("new-skill").addEventListener("click", startNew);
+  renderFilters();
+
+  (async () => {
+    if (!window.claude || !window.claude.use) { showOffline(); return; }
+    const [dbNs, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+    db = dbNs;
+    if (!db) { showOffline(); return; }
+    if (user && typeof user.can === "function") {
+      try { const allowed = await user.can("data.write"); if (allowed === false) canWrite = false; } catch {}
+    }
+    if (!canWrite) { const n = $("notice"); n.hidden = false; n.textContent = "You can browse these skills but not change them. Ask the owner for edit access."; $("new-skill").disabled = true; }
+    db.collection("skills").onSnapshot((snap) => {
+      for (const ch of snap.docChanges()) {
+        if (ch.type === "removed") { store.delete(ch.doc.id); continue; }
+        const data = ch.doc.data();
+        if (data && data.skill) store.set(ch.doc.id, clone(data));
+      }
+      if (selectedId && !store.has(selectedId) && !isNew) { selectedId = null; draft = null; }
+      // Pick up other edits to the open skill unless the viewer is mid-edit.
+      if (selectedId && !dirty && !isNew && store.has(selectedId)) draft = clone(store.get(selectedId).skill);
+      renderList(); renderSyncChip();
+      if (!dirty) renderEditor();
+    }, (err) => {
+      const n = $("notice"); n.hidden = false;
+      n.textContent = err.code === "revoked" ? "Access to the skill store ended. Reload to reconnect." : "Lost the live connection to the skill store. Reload the page.";
+    });
+  })();
+
+  function showOffline() {
+    const n = $("notice"); n.hidden = false;
+    n.textContent = "Open this page in claude.ai while signed in to load and edit skills.";
+    $("new-skill").disabled = true; renderSyncChip(); renderEditor();
+  }
+})();
+</script>

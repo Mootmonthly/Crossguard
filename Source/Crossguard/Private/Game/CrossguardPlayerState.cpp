@@ -19,6 +19,17 @@ void ACrossguardPlayerState::SetTeamId(int32 NewTeamId)
 	}
 }
 
+void ACrossguardPlayerState::CopyProperties(APlayerState* PlayerState)
+{
+	Super::CopyProperties(PlayerState);
+
+	if (ACrossguardPlayerState* Next = Cast<ACrossguardPlayerState>(PlayerState))
+	{
+		Next->PartyKey = PartyKey;
+		Next->SetTeamId(TeamId);
+	}
+}
+
 void ACrossguardPlayerState::OnRep_TeamId()
 {
 	OnTeamChanged.Broadcast(TeamId);

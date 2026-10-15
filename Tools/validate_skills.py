@@ -24,7 +24,7 @@ COND_KEYS = {"wielding": list, "armor": str, "perEmptyArmorSlot": bool, "onActiv
 DMG_TYPES = {"Attack", "Magic"}
 DMG_KINDS = {"Impact", "Splash", "PerSecond", "OverTime", "Additional", "WeaponPercent"}
 HEAL_TYPES = {"Physical", "Magical"}
-SOURCES = {"SkillsDoc", "StatsDoc"}
+SOURCES = {"SkillsDoc", "StatsDoc", "Editor"}
 ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 
 
