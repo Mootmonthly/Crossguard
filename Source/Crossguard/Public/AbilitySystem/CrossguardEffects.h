@@ -12,6 +12,10 @@ namespace CrossguardSetByCaller
 {
 	// Cooldown duration in seconds (UCrossguardCooldownEffect).
 	extern CROSSGUARD_API const FName Cooldown;
+	// Effect duration in seconds (UCrossguardHealOverTimeEffect).
+	extern CROSSGUARD_API const FName Duration;
+	// HP restored each tick (UCrossguardHealOverTimeEffect).
+	extern CROSSGUARD_API const FName HealPerTick;
 }
 
 // Instant. Runs UCrossguardDamageExecution (SetByCaller.Damage.Attack / .Magic, SetByCaller.Coefficient).
@@ -43,6 +47,22 @@ class CROSSGUARD_API UCrossguardCooldownEffect : public UGameplayEffect
 
 public:
 	UCrossguardCooldownEffect();
+};
+
+// Heals SetByCaller "HealPerTick" every TickSeconds for SetByCaller "Duration" seconds. Flat: no
+// healing bonus applies. Used by potions and bandages; MakeSpec spreads a total over the duration.
+UCLASS()
+class CROSSGUARD_API UCrossguardHealOverTimeEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UCrossguardHealOverTimeEffect();
+
+	static constexpr float TickSeconds = 0.5f;
+
+	// Sets Duration and HealPerTick so that TotalHealing lands over Seconds in equal ticks.
+	static void SetHealing(FGameplayEffectSpec& Spec, float TotalHealing, float Seconds);
 };
 
 // Infinite. Holds the stat contributions of equipped items, one Add modifier per stat with a

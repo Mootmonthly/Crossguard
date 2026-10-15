@@ -129,6 +129,10 @@ camera direction. The body mesh is hidden from its owner until first-person arms
 - `AddItem` (server) tops up stacks first, then finds the first free spot; ammo tries the Quiver
   first. Dropping a stack on the top-left square of the same item merges them.
 - Using a Skill Gem learns its skill (between raids) and consumes the gem.
+- Consumables: `RequestReadyItem(ItemId)` puts a stack in hand (Q cycles through them for now);
+  left click then uses one (`RequestStartUse` / `RequestStopUse`). The server applies the native
+  `UCrossguardHealOverTimeEffect` (flat healing spread over the item's heal duration in 0.5 s ticks).
+  Items with a use time channel; releasing early removes the effect.
 - Stacks combine only the same item at the same rarity.
 - Testing: the character's `DebugInventory` items are added at spawn.
 

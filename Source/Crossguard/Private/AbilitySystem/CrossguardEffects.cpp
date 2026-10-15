@@ -7,6 +7,8 @@
 namespace CrossguardSetByCaller
 {
 	const FName Cooldown(TEXT("Cooldown"));
+	const FName Duration(TEXT("Duration"));
+	const FName HealPerTick(TEXT("HealPerTick"));
 }
 
 namespace
@@ -71,6 +73,28 @@ UCrossguardCooldownEffect::UCrossguardCooldownEffect()
 {
 	DurationPolicy = EGameplayEffectDurationType::HasDuration;
 	DurationMagnitude = SetByCallerMagnitude(CrossguardSetByCaller::Cooldown);
+}
+
+UCrossguardHealOverTimeEffect::UCrossguardHealOverTimeEffect()
+{
+	DurationPolicy = EGameplayEffectDurationType::HasDuration;
+	DurationMagnitude = SetByCallerMagnitude(CrossguardSetByCaller::Duration);
+	Period = FScalableFloat(TickSeconds);
+	bExecutePeriodicEffectOnApplication = false;
+
+	FGameplayModifierInfo Modifier;
+	Modifier.Attribute = UCrossguardAttributeSet::GetIncomingHealingAttribute();
+	Modifier.ModifierOp = EGameplayModOp::Additive;
+	Modifier.ModifierMagnitude = SetByCallerMagnitude(CrossguardSetByCaller::HealPerTick);
+	Modifiers.Add(Modifier);
+}
+
+void UCrossguardHealOverTimeEffect::SetHealing(FGameplayEffectSpec& Spec, float TotalHealing, float Seconds)
+{
+	const int32 Ticks = FMath::Max(1, FMath::RoundToInt(Seconds / TickSeconds));
+	Spec.SetSetByCallerMagnitude(CrossguardSetByCaller::HealPerTick, TotalHealing / static_cast<float>(Ticks));
+	// Half a tick of slack so the last tick lands before the effect expires.
+	Spec.SetSetByCallerMagnitude(CrossguardSetByCaller::Duration, Ticks * TickSeconds + TickSeconds * 0.5f);
 }
 
 UCrossguardEquipmentEffect::UCrossguardEquipmentEffect()

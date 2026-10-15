@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ActiveGameplayEffectHandle.h"
 #include "Components/ActorComponent.h"
 #include "CoreMinimal.h"
 #include "CrossguardRules/Inventory.h"
@@ -244,6 +245,29 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void RequestUseItem(int32 ItemId);
 
+	// Consumables (potions, bandages): ready a stack in hand, then hold left click to use one.
+	// After a use the hands go back to the weapon. 0 puts the item away.
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Use")
+	void RequestReadyItem(int32 ItemId);
+
+	// Readies the next consumable stack, then nothing, then the first again. Placeholder for a
+	// hotbar.
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Use")
+	void RequestReadyNextConsumable();
+
+	// 0 when the hands hold the weapon.
+	UFUNCTION(BlueprintPure, Category = "Inventory|Use")
+	int32 GetReadiedItemId() const { return ReadiedItemId; }
+
+	// Left click pressed / released with an item readied. Uses one: the healing starts at once and
+	// runs over the item's heal duration. Items with a use time (bandages) channel: releasing early
+	// stops the healing, and the item is already used up.
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Use")
+	void RequestStartUse();
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Use")
+	void RequestStopUse();
+
 	// Loot containers (bodies, later chests). Open one with the character's interact key.
 	UFUNCTION(BlueprintPure, Category = "Inventory|Loot")
 	ACrossguardLootContainer* GetOpenContainer() const { return OpenContainer; }
@@ -301,6 +325,18 @@ protected:
 	void ServerUseItem(int32 ItemId);
 
 	UFUNCTION(Server, Reliable)
+	void ServerReadyItem(int32 ItemId);
+
+	UFUNCTION(Server, Reliable)
+	void ServerReadyNextConsumable();
+
+	UFUNCTION(Server, Reliable)
+	void ServerStartUse();
+
+	UFUNCTION(Server, Reliable)
+	void ServerStopUse();
+
+	UFUNCTION(Server, Reliable)
 	void ServerCloseContainer();
 
 	UFUNCTION(Server, Reliable)
@@ -326,6 +362,10 @@ private:
 	FCrossguardInventoryResult UnequipArmor(ECrossguardArmorSlot Slot);
 	FCrossguardInventoryResult UnequipContainer(ECrossguardInventoryContainer Container);
 	FCrossguardInventoryResult UseItem(int32 ItemId);
+	FCrossguardInventoryResult ReadyItem(int32 ItemId);
+	FCrossguardInventoryResult StartUse();
+	void StopUse();
+	void FinishChannel();
 	FCrossguardInventoryResult TakeFromContainer(int32 ContainerItemId);
 	FCrossguardInventoryResult PutInContainer(int32 ItemId);
 	// The open container, if it still exists and the owner is in range.
@@ -361,6 +401,13 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_OpenContainer)
 	TObjectPtr<ACrossguardLootContainer> OpenContainer;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Inventory)
+	int32 ReadiedItemId = 0;
+
+	// Server only: the channel in progress.
+	FActiveGameplayEffectHandle ChannelEffect;
+	FTimerHandle ChannelTimer;
 
 	// Server only.
 	int32 NextItemId = 1;

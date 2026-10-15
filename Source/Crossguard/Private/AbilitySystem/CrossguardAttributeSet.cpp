@@ -144,7 +144,10 @@ void UCrossguardAttributeSet::PostGameplayEffectExecute(const FGameplayEffectMod
 	{
 		const float Healing = GetIncomingHealing();
 		SetIncomingHealing(0.0f);
-		if (Healing > 0.0f)
+		// Healing never revives: only Revive does.
+		const UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
+		const bool bDead = ASC != nullptr && ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead);
+		if (Healing > 0.0f && !bDead)
 		{
 			SetHealth(FMath::Clamp(GetHealth() + Healing, 0.0f, GetMaxHealth()));
 		}

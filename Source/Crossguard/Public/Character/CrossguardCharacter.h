@@ -166,6 +166,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
 	TObjectPtr<UInputAction> InteractAction;
 
+	// Q: ready the next consumable (placeholder until a hotbar exists).
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> ReadyItemAction;
+
 	// Spawned on death to hold what the character carried.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Inventory")
 	TSubclassOf<ACrossguardLootContainer> BodyContainerClass;
@@ -209,6 +213,10 @@ private:
 	void OnMove(const FInputActionValue& Value);
 	void OnLook(const FInputActionValue& Value);
 	void OnAttack();
+	// Left click pressed / released: uses a readied consumable instead of attacking.
+	void OnAttackPressed();
+	void OnAttackReleased();
+	void OnReadyItem();
 	void OnSecondary();
 
 	UFUNCTION(Server, Reliable)
@@ -229,6 +237,9 @@ private:
 	// The mesh's place on the capsule, restored on revive.
 	FTransform MeshRelativeTransform;
 	FName MeshCollisionProfile;
+
+	// Local: left click is using an item, so it does not attack until released.
+	bool bUsingItem = false;
 
 	bool bMoveSpeedBound = false;
 	bool bWeaponAttackGranted = false;

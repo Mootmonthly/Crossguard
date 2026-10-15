@@ -1,5 +1,6 @@
 #include "Items/CrossguardInventoryComponent.h"
 
+#include "AbilitySystem/CrossguardEffects.h"
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
@@ -8,6 +9,7 @@
 #include "GameFramework/Pawn.h"
 #include "Items/CrossguardLootContainer.h"
 #include "Net/UnrealNetwork.h"
+#include "TimerManager.h"
 #include "Skills/CrossguardLoadoutComponent.h"
 
 namespace
@@ -76,6 +78,7 @@ void UCrossguardInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeP
 	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, EquippedBackpack, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, EquippedQuiver, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, OpenContainer, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, ReadiedItemId, COND_OwnerOnly);
 }
 
 bool UCrossguardInventoryComponent::IsServer() const
@@ -925,6 +928,8 @@ TArray<FCrossguardInventoryItem> UCrossguardInventoryComponent::TakeEverything()
 	{
 		return Taken;
 	}
+	StopUse();
+	ReadiedItemId = 0;
 
 	// Equipped gear first, so it sits at the top of the body's grid. Off hand before main hand:
 	// an off-hand weapon without a main hand may not validate on its own.
@@ -1040,4 +1045,188 @@ TArray<FCrossguardInventoryItem> UCrossguardInventoryComponent::RestoreFromBody(
 
 	OnInventoryChanged.Broadcast();
 	return Leftover;
+}
+
+// --- Readying and using consumables ---------------------------------------------------------------
+
+void UCrossguardInventoryComponent::RequestReadyItem(int32 ItemId)
+{
+	if (IsServer())
+	{
+		Finish(ReadyItem(ItemId));
+	}
+	else
+	{
+		ServerReadyItem(ItemId);
+	}
+}
+
+void UCrossguardInventoryComponent::ServerReadyItem_Implementation(int32 ItemId)
+{
+	Finish(ReadyItem(ItemId));
+}
+
+void UCrossguardInventoryComponent::RequestReadyNextConsumable()
+{
+	if (!IsServer())
+	{
+		ServerReadyNextConsumable();
+		return;
+	}
+	// Next consumable stack after the readied one, in inventory order; past the last: put away.
+	int32 Next = 0;
+	bool bPassedCurrent = ReadiedItemId == 0;
+	for (const FCrossguardInventoryItem& Item : Items)
+	{
+		if (Item.Category != ECrossguardItemCategory::Consumable)
+		{
+			continue;
+		}
+		if (bPassedCurrent)
+		{
+			Next = Item.Id;
+			break;
+		}
+		bPassedCurrent = Item.Id == ReadiedItemId;
+	}
+	Finish(ReadyItem(Next));
+}
+
+void UCrossguardInventoryComponent::ServerReadyNextConsumable_Implementation()
+{
+	RequestReadyNextConsumable();
+}
+
+FCrossguardInventoryResult UCrossguardInventoryComponent::ReadyItem(int32 ItemId)
+{
+	if (IsOwnerDead())
+	{
+		return Fail(ECrossguardInventoryError::OwnerDead);
+	}
+	if (ChannelTimer.IsValid())
+	{
+		return Fail(ECrossguardInventoryError::NotReady);
+	}
+	const int32 Index = IndexOfItem(ItemId);
+	if (ItemId != 0 && (Index == INDEX_NONE || Items[Index].Category != ECrossguardItemCategory::Consumable))
+	{
+		return Fail(ItemId != 0 && Index != INDEX_NONE ? ECrossguardInventoryError::NotUsable : ECrossguardInventoryError::UnknownItem);
+	}
+	ReadiedItemId = ItemId;
+	return {};
+}
+
+void UCrossguardInventoryComponent::RequestStartUse()
+{
+	if (IsServer())
+	{
+		Finish(StartUse());
+	}
+	else
+	{
+		ServerStartUse();
+	}
+}
+
+void UCrossguardInventoryComponent::ServerStartUse_Implementation()
+{
+	Finish(StartUse());
+}
+
+void UCrossguardInventoryComponent::RequestStopUse()
+{
+	if (IsServer())
+	{
+		StopUse();
+	}
+	else
+	{
+		ServerStopUse();
+	}
+}
+
+void UCrossguardInventoryComponent::ServerStopUse_Implementation()
+{
+	StopUse();
+}
+
+FCrossguardInventoryResult UCrossguardInventoryComponent::StartUse()
+{
+	if (IsOwnerDead())
+	{
+		return Fail(ECrossguardInventoryError::OwnerDead);
+	}
+	if (ChannelTimer.IsValid())
+	{
+		return Fail(ECrossguardInventoryError::NotReady);
+	}
+	const int32 Index = IndexOfItem(ReadiedItemId);
+	if (Index == INDEX_NONE)
+	{
+		ReadiedItemId = 0;
+		return Fail(ECrossguardInventoryError::UnknownItem);
+	}
+
+	const FCrossguardInventoryItem Item = Items[Index];
+	const FCrossguardItemRow* Row = ItemTable != nullptr ? ItemTable->FindRow<FCrossguardItemRow>(Item.ItemId, TEXT("Inventory"), false) : nullptr;
+	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
+	if (Row == nullptr || Row->HealAmount <= 0.0f || Row->HealDuration <= 0.0f)
+	{
+		return Fail(ECrossguardInventoryError::NotUsable);
+	}
+	if (ASC == nullptr)
+	{
+		return Fail(ECrossguardInventoryError::NotReady);
+	}
+
+	// Used up as soon as it is used.
+	if (--Items[Index].Count <= 0)
+	{
+		Items.RemoveAt(Index);
+	}
+
+	const float Healing = Row->HealAmount + Row->HealPerRarity * UCrossguardItemLibrary::GetRarityLevel(Item.Rarity);
+	const FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(UCrossguardHealOverTimeEffect::StaticClass(), 1.0f, ASC->MakeEffectContext());
+	if (Spec.IsValid())
+	{
+		UCrossguardHealOverTimeEffect::SetHealing(*Spec.Data, Healing, Row->HealDuration);
+		const FActiveGameplayEffectHandle Applied = ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
+		if (Row->UseTime > 0.0f)
+		{
+			ChannelEffect = Applied;
+		}
+	}
+
+	if (Row->UseTime > 0.0f)
+	{
+		// Channel: the hands stay busy until it finishes or left click is released.
+		GetWorld()->GetTimerManager().SetTimer(ChannelTimer, FTimerDelegate::CreateUObject(this, &UCrossguardInventoryComponent::FinishChannel), Row->UseTime, false);
+	}
+	else
+	{
+		ReadiedItemId = 0;
+	}
+	return {};
+}
+
+void UCrossguardInventoryComponent::StopUse()
+{
+	if (!ChannelTimer.IsValid())
+	{
+		return;
+	}
+	// Released early: the rest of the healing is lost.
+	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
+	{
+		ASC->RemoveActiveGameplayEffect(ChannelEffect);
+	}
+	FinishChannel();
+}
+
+void UCrossguardInventoryComponent::FinishChannel()
+{
+	GetWorld()->GetTimerManager().ClearTimer(ChannelTimer);
+	ChannelEffect = FActiveGameplayEffectHandle();
+	ReadiedItemId = 0;
+	OnInventoryChanged.Broadcast();
 }

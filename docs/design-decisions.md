@@ -137,6 +137,12 @@ Independent of category, a skill is:
   axes, javelins) 1 × 3.
 - Arrows are 1 × 3 and Bolts 1 × 2, each stacking up to 20 in the same squares. Throwables stack
   up to 3, consumables (potions, bandages) up to 5.
+- Healing Potion: restores 15 HP over 10 s, +5 HP per rarity level. Bandage: restores 10 HP over a
+  2 s channel (hold left click). Both are readied in hand first, then used with left click; after a
+  use the hands go back to the weapon.
+- Assumed until ruled otherwise: drinking a potion is instant (the healing runs on its own);
+  releasing a bandage early stops its healing and the bandage is still used up; healing never
+  revives a dead player; a bow shoots whichever arrows it finds first (Quiver first), any rarity.
 - Stacks only combine items of the same type **and** rarity: a Common health potion does not stack
   with a Rare one.
 - Placeholder: Backpack and Quiver items take 2 × 2 while not equipped.

@@ -73,6 +73,7 @@ void ACrossguardCharacter::EnsureDefaultInput()
 	MakeAction(AttackAction, TEXT("IA_Attack"), EInputActionValueType::Boolean);
 	MakeAction(SecondaryActionInput, TEXT("IA_Secondary"), EInputActionValueType::Boolean);
 	MakeAction(InteractAction, TEXT("IA_Interact"), EInputActionValueType::Boolean);
+	MakeAction(ReadyItemAction, TEXT("IA_ReadyItem"), EInputActionValueType::Boolean);
 
 	if (DefaultMappingContext != nullptr)
 	{
@@ -100,6 +101,7 @@ void ACrossguardCharacter::EnsureDefaultInput()
 	Context->MapKey(AttackAction, EKeys::LeftMouseButton);
 	Context->MapKey(SecondaryActionInput, EKeys::RightMouseButton);
 	Context->MapKey(InteractAction, EKeys::E);
+	Context->MapKey(ReadyItemAction, EKeys::Q);
 	DefaultMappingContext = Context;
 }
 
@@ -118,9 +120,12 @@ void ACrossguardCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	Input->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
 	Input->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 	// Triggered fires every frame while held: holding the button keeps attacking at the weapon's rate.
+	Input->BindAction(AttackAction, ETriggerEvent::Started, this, &ACrossguardCharacter::OnAttackPressed);
 	Input->BindAction(AttackAction, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnAttack);
+	Input->BindAction(AttackAction, ETriggerEvent::Completed, this, &ACrossguardCharacter::OnAttackReleased);
 	Input->BindAction(SecondaryActionInput, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnSecondary);
 	Input->BindAction(InteractAction, ETriggerEvent::Started, this, &ACrossguardCharacter::TryInteract);
+	Input->BindAction(ReadyItemAction, ETriggerEvent::Started, this, &ACrossguardCharacter::OnReadyItem);
 }
 
 void ACrossguardCharacter::PawnClientRestart()
@@ -154,7 +159,33 @@ void ACrossguardCharacter::OnLook(const FInputActionValue& Value)
 
 void ACrossguardCharacter::OnAttack()
 {
-	TryWeaponAttack();
+	if (!bUsingItem && InventoryComponent->GetReadiedItemId() == 0)
+	{
+		TryWeaponAttack();
+	}
+}
+
+void ACrossguardCharacter::OnAttackPressed()
+{
+	if (InventoryComponent->GetReadiedItemId() != 0)
+	{
+		bUsingItem = true;
+		InventoryComponent->RequestStartUse();
+	}
+}
+
+void ACrossguardCharacter::OnAttackReleased()
+{
+	if (bUsingItem)
+	{
+		bUsingItem = false;
+		InventoryComponent->RequestStopUse();
+	}
+}
+
+void ACrossguardCharacter::OnReadyItem()
+{
+	InventoryComponent->RequestReadyNextConsumable();
 }
 
 void ACrossguardCharacter::OnSecondary()
