@@ -42,6 +42,10 @@ public:
 	// Dead characters (State.Dead) cannot extract.
 	virtual void HandleExtraction(ACrossguardCharacter* Character);
 
+	// Server. The character's revive window ran out: its player's raid ends as a failure. The player
+	// spectates a teammate still in the raid, or goes back to the menu if none is left (or solo).
+	virtual void HandlePermanentDeath(ACrossguardCharacter* Character);
+
 	// After a successful extraction. Hook the trip to the hub here once it exists.
 	UPROPERTY(BlueprintAssignable, Category = "Crossguard")
 	FCrossguardPlayerExtracted OnPlayerExtracted;
@@ -69,7 +73,14 @@ private:
 	// Registers the player and sets their team. Returns an error message, or empty on success.
 	FString JoinTeam(AController* Controller, const std::string& Key, const FString& Party);
 
+	// Re-targets every spectator whose teammate left the raid; sends them to the menu when none is
+	// left.
+	void UpdateSpectators();
+	// A teammate of Player still in the raid; null if none.
+	APawn* FindSpectateTarget(const APlayerController* Player) const;
+
 	Crossguard::FTeamRegistry Teams;
+	TArray<TWeakObjectPtr<APlayerController>> Spectators;
 	float RaidStartSeconds = 0.0f;
 	// Controller -> registry key, so Logout can find the player.
 	TMap<TWeakObjectPtr<const AController>, FString> PlayerKeys;

@@ -7,6 +7,7 @@
 #include "Engine/World.h"
 #include "Game/CrossguardPlayerState.h"
 #include "Game/CrossguardTeamLibrary.h"
+#include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -153,6 +154,7 @@ void ACrossguardGameMode::HandleExtraction(ACrossguardCharacter* Character)
 	const int32 Xp = PlayerState->EndRaid(true);
 	UE_LOG(LogCrossguard, Log, TEXT("%s extracted: %d XP banked, %d gold banked in total"), *Character->GetName(), Xp, PlayerState->GetGold());
 	OnPlayerExtracted.Broadcast(Character);
+	UpdateSpectators();
 }
 
 void ACrossguardGameMode::StartPlay()
@@ -164,4 +166,71 @@ void ACrossguardGameMode::StartPlay()
 float ACrossguardGameMode::GetRaidElapsedSeconds() const
 {
 	return bIsRaid ? GetWorld()->GetTimeSeconds() - RaidStartSeconds : 0.0f;
+}
+
+void ACrossguardGameMode::HandlePermanentDeath(ACrossguardCharacter* Character)
+{
+	ACrossguardPlayerState* PlayerState = Character != nullptr ? Character->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	APlayerController* Player = Character != nullptr ? Character->GetController<APlayerController>() : nullptr;
+	if (PlayerState == nullptr || Player == nullptr)
+	{
+		// AI: nothing to end.
+		return;
+	}
+	PlayerState->EndRaid(false);
+	UE_LOG(LogCrossguard, Log, TEXT("%s is dead for the raid"), *Character->GetName());
+
+	// The body stays in the world; the player only watches from now on.
+	Player->UnPossess();
+	Spectators.AddUnique(Player);
+	UpdateSpectators();
+}
+
+APawn* ACrossguardGameMode::FindSpectateTarget(const APlayerController* Player) const
+{
+	const int32 Team = UCrossguardTeamLibrary::GetTeamId(Player);
+	if (Team < 0 || GameState == nullptr)
+	{
+		return nullptr;
+	}
+	for (APlayerState* Other : GameState->PlayerArray)
+	{
+		const ACrossguardPlayerState* Teammate = Cast<ACrossguardPlayerState>(Other);
+		// Downed teammates are still in the raid and can still be watched.
+		if (Teammate != nullptr && Teammate->GetOwner() != Player && Teammate->GetTeamId() == Team && Teammate->IsInRaid()
+			&& Teammate->GetPawn() != nullptr)
+		{
+			return Teammate->GetPawn();
+		}
+	}
+	return nullptr;
+}
+
+void ACrossguardGameMode::UpdateSpectators()
+{
+	for (int32 Index = Spectators.Num() - 1; Index >= 0; --Index)
+	{
+		APlayerController* Player = Spectators[Index].Get();
+		if (Player == nullptr)
+		{
+			Spectators.RemoveAt(Index);
+			continue;
+		}
+		const APawn* WatchedPawn = Cast<APawn>(Player->GetViewTarget());
+		const ACrossguardPlayerState* Watched = WatchedPawn != nullptr ? WatchedPawn->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+		if (Watched != nullptr && Watched->IsInRaid() && Watched->GetOwner() != Player)
+		{
+			continue;
+		}
+		if (APawn* Target = FindSpectateTarget(Player))
+		{
+			Player->SetViewTargetWithBlend(Target, 0.5f);
+			// The owning client's camera follows only through the client call.
+			Player->ClientSetViewTarget(Target, FViewTargetTransitionParams());
+			continue;
+		}
+		// Solo, or no teammate left in the raid.
+		Spectators.RemoveAt(Index);
+		Player->ClientReturnToMainMenuWithTextReason(FText::FromString(TEXT("Your raid is over.")));
+	}
 }

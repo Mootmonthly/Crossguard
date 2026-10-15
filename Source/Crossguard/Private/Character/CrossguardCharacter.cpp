@@ -211,6 +211,7 @@ void ACrossguardCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 
 	DOREPLIFETIME(ACrossguardCharacter, Level);
 	DOREPLIFETIME_CONDITION(ACrossguardCharacter, bLockpicking, COND_OwnerOnly);
+	DOREPLIFETIME(ACrossguardCharacter, bPermanentlyDead);
 }
 
 UAbilitySystemComponent* ACrossguardCharacter::GetAbilitySystemComponent() const
@@ -514,7 +515,14 @@ void ACrossguardCharacter::StopLockpicking()
 
 void ACrossguardCharacter::HandleDeath()
 {
-	if (!HasAuthority() || BodyContainerClass == nullptr)
+	if (!HasAuthority())
+	{
+		return;
+	}
+	// Teammates have this long to revive; then the character is dead for the raid.
+	GetWorldTimerManager().SetTimer(ReviveWindowTimer, this, &ACrossguardCharacter::OnReviveWindowExpired,
+		static_cast<float>(Crossguard::FDeathConfig().ReviveWindowSeconds), false);
+	if (BodyContainerClass == nullptr)
 	{
 		return;
 	}
@@ -549,10 +557,11 @@ void ACrossguardCharacter::HandleDeath()
 
 bool ACrossguardCharacter::Revive(float HealthFraction)
 {
-	if (!HasAuthority() || !AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Dead))
+	if (!HasAuthority() || bPermanentlyDead || !AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Dead))
 	{
 		return false;
 	}
+	GetWorldTimerManager().ClearTimer(ReviveWindowTimer);
 
 	const float MaxHealth = AbilitySystemComponent->GetNumericAttribute(UCrossguardAttributeSet::GetMaxHealthAttribute());
 	const float Health = FMath::Max(1.0f, MaxHealth * FMath::Clamp(HealthFraction, 0.0f, 1.0f));
@@ -662,4 +671,17 @@ void ACrossguardCharacter::ServerSummonPortal_Implementation()
 	Portal->Initialize(this, UCrossguardTeamLibrary::GetTeamId(this));
 	Progression->MarkPortalSummoned();
 	UE_LOG(LogCrossguard, Log, TEXT("%s summoned an extract portal"), *GetName());
+}
+
+void ACrossguardCharacter::OnReviveWindowExpired()
+{
+	if (!HasAuthority() || bPermanentlyDead || !AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Dead))
+	{
+		return;
+	}
+	bPermanentlyDead = true;
+	if (ACrossguardGameMode* GameMode = GetWorld()->GetAuthGameMode<ACrossguardGameMode>())
+	{
+		GameMode->HandlePermanentDeath(this);
+	}
 }

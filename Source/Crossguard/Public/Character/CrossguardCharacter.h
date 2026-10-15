@@ -76,9 +76,14 @@ public:
 
 	// Server. Brings a dead character back with HealthFraction of its Max HP (at least 1 HP). It gets
 	// back what is still on its body: worn gear goes back on, the rest into the inventory. Whatever
-	// was looted is gone. For revive spells. False if the character is not dead.
+	// was looted is gone. For revive spells. False if the character is not dead, or the 120 s revive
+	// window has run out.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Death")
 	bool Revive(float HealthFraction = 0.5f);
+
+	// The revive window ran out: dead for the rest of the raid.
+	UFUNCTION(BlueprintPure, Category = "Crossguard|Death")
+	bool IsPermanentlyDead() const { return bPermanentlyDead; }
 
 	// Ragdolls the character when dead, stands it back up when revived. Runs on every machine
 	// (called by the attribute set when State.Dead is added or removed).
@@ -266,6 +271,13 @@ private:
 	bool PullProgression();
 	void OnMoveSpeedChanged(const FOnAttributeChangeData& Data);
 	void ApplyMoveSpeed(float MoveSpeed);
+
+	UPROPERTY(Replicated)
+	bool bPermanentlyDead = false;
+
+	// Server: runs from death until the revive window closes.
+	FTimerHandle ReviveWindowTimer;
+	void OnReviveWindowExpired();
 
 	// Server. This character's body while it is dead.
 	UPROPERTY()

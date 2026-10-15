@@ -21,8 +21,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardSold, int32, Gold);
 // only where the player opens it. Between raids only, server authoritative.
 //
 // A whole stack sells at once: SellValue + SellPerRarity x rarity level per item, from the item
-// table. Items with no sell value (and weapons and armor, until their prices are set) cannot be
-// sold.
+// table; items with no sell value cannot be sold. Gear (weapons, armor, Backpacks, Quivers) sells
+// for 5 gold per grid square per rarity step.
 UCLASS(ClassGroup = (Crossguard), meta = (BlueprintSpawnableComponent))
 class CROSSGUARD_API UCrossguardVendorComponent : public UActorComponent
 {

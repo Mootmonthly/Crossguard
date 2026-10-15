@@ -31,12 +31,21 @@ UCrossguardInventoryComponent* UCrossguardVendorComponent::GetInventory() const
 
 int32 UCrossguardVendorComponent::GetSellPrice(const FCrossguardInventoryItem& Item) const
 {
+	// Gear: 5 gold per square per rarity step. Size is set once the item is in an inventory or stash.
+	const Crossguard::ERarity GearRarity = static_cast<Crossguard::ERarity>(static_cast<uint8>(
+		Item.Category == ECrossguardItemCategory::Weapon ? Item.Weapon.Rarity
+		: Item.Category == ECrossguardItemCategory::Armor ? Item.Armor.Rarity : Item.Rarity));
+	if (Item.Category == ECrossguardItemCategory::Weapon || Item.Category == ECrossguardItemCategory::Armor
+		|| Item.Category == ECrossguardItemCategory::Container)
+	{
+		return Crossguard::GearSellPrice(Crossguard::FEconomyConfig(), Item.Size.X * Item.Size.Y, GearRarity);
+	}
+
 	const UCrossguardInventoryComponent* Inventory = GetInventory();
 	const UDataTable* Table = Inventory != nullptr ? Inventory->ItemTable.Get() : nullptr;
 	const FCrossguardItemRow* Row = Table != nullptr && !Item.ItemId.IsNone()
 		? Table->FindRow<FCrossguardItemRow>(Item.ItemId, TEXT("Vendor"), false)
 		: nullptr;
-	// Weapons and armor have no prices yet; their ItemId is None.
 	if (Row == nullptr || Row->Category != Item.Category)
 	{
 		return 0;

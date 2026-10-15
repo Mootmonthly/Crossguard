@@ -178,8 +178,8 @@ the hub and saved progression); the character stays in the map, now between raid
   the raid inventory.
 - `UCrossguardVendorComponent` on the player state (`GetVendor()`): `RequestSell(Source, ItemId)`
   sells a whole stack from the inventory or stash for banked gold, between raids. Price per item:
-  `SellValue + SellPerRarity × rarity level` from the item table (gemstones 50–300). Weapons and
-  armor cannot be sold until their prices are decided.
+  `SellValue + SellPerRarity × rarity level` from the item table (gemstones 50–300); gear (weapons,
+  armor, Backpacks, Quivers) sells for `5 × squares × (rarity level + 1)`.
 - `UCrossguardStashComponent::RequestBuyStashTab()` spends 3000 banked gold for a tab, up to 3.
 
 ### Interaction and lockpicking
@@ -198,6 +198,11 @@ the hub and saved progression); the character stays in the map, now between raid
   into an `ACrossguardLootContainer` spawned where it died: a 10-wide grid that grows taller to fit.
   A body is spawned even when empty. The dead character ragdolls; if it is removed (its player
   left), the container shows a ragdoll copy of its mesh instead.
+- Revive window: 120 s after death (`Crossguard::FDeathConfig`). When it runs out the character is
+  `IsPermanentlyDead()`, and `ACrossguardGameMode::HandlePermanentDeath` ends its player's raid as a
+  failure, unpossesses the body and makes the player spectate a teammate still in the raid. With no
+  teammate left (or solo) the player goes back to the menu (`ClientReturnToMainMenuWithTextReason`).
+  Spectators are re-targeted whenever a watched teammate extracts or dies for good.
 - `Revive(HealthFraction)` (server, for revive spells) clears `State.Dead`, stands the character up
   and gives back what is still on the body: worn items go back on, the rest into the inventory.
   Testing: `DebugReviveDelay` revives the character that many seconds after death.
