@@ -127,5 +127,9 @@ namespace Crossguard
 		int AffixSlotsByRarity[6] = {0, 1, 2, 3, 4, 5};
 		// Floor on (1 + ActionSpeed) so very low AGI cannot stall attacks.
 		double MinActionSpeedFactor = 0.1;
+		// Seconds to draw a weapon set at 0% Dexterity (an animation will play here).
+		double WeaponDrawSeconds = 1.0;
+		// Floor on (1 + Dexterity) for draw time.
+		double MinDexterityFactor = 0.1;
 	};
 }

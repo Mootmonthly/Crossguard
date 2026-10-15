@@ -8,7 +8,9 @@
 #include "Crossguard.h"
 #include "CrossguardRules/Inventory.h"
 #include "Engine/DataTable.h"
+#include "Items/CrossguardInventoryComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "TimerManager.h"
 
 // UE and rules enums must stay in the same order.
 static_assert(static_cast<int>(ECrossguardWeaponType::Sword) == static_cast<int>(Crossguard::EWeaponType::Sword), "Weapon type enums out of sync");
@@ -103,6 +105,10 @@ void UCrossguardEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimeP
 	DOREPLIFETIME_CONDITION(UCrossguardEquipmentComponent, StowedMainHand, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UCrossguardEquipmentComponent, StowedOffHand, COND_OwnerOnly);
 	DOREPLIFETIME(UCrossguardEquipmentComponent, ActiveWeaponSet);
+	DOREPLIFETIME(UCrossguardEquipmentComponent, bWeaponsDrawn);
+	DOREPLIFETIME(UCrossguardEquipmentComponent, bDrawingWeapons);
+	DOREPLIFETIME(UCrossguardEquipmentComponent, bHoldingThrowable);
+	DOREPLIFETIME(UCrossguardEquipmentComponent, HeldThrowableType);
 	DOREPLIFETIME(UCrossguardEquipmentComponent, Armor);
 }
 
@@ -193,16 +199,69 @@ void UCrossguardEquipmentComponent::RequestSwitchWeaponSet(int32 Set)
 void UCrossguardEquipmentComponent::ServerSwitchWeaponSet_Implementation(int32 Set)
 {
 	const UCrossguardAbilitySystemComponent* ASC = GetAbilitySystem();
-	if (Set < 0 || Set >= Crossguard::WeaponSetCount || Set == ActiveWeaponSet
-		|| (ASC != nullptr && ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead)))
+	if (Set < 0 || Set >= Crossguard::WeaponSetCount || ASC == nullptr || ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead))
 	{
 		return;
 	}
-	Swap(MainHand, StowedMainHand);
-	Swap(OffHand, StowedOffHand);
-	ActiveWeaponSet = Set;
+	// Already in hand.
+	if (Set == ActiveWeaponSet && bWeaponsDrawn && !bDrawingWeapons)
+	{
+		return;
+	}
+	if (Set != ActiveWeaponSet)
+	{
+		Swap(MainHand, StowedMainHand);
+		Swap(OffHand, StowedOffHand);
+		ActiveWeaponSet = Set;
+	}
+
+	// Drawing puts away whatever item the hands held.
+	if (UCrossguardInventoryComponent* Inventory = GetOwner()->FindComponentByClass<UCrossguardInventoryComponent>())
+	{
+		Inventory->ReleaseHeldItem();
+	}
+	bWeaponsDrawn = true;
+	bDrawingWeapons = true;
+	const float Dexterity = ASC->GetNumericAttribute(UCrossguardAttributeSet::GetDexterityAttribute());
+	const float Seconds = static_cast<float>(Crossguard::WeaponDrawSeconds(Crossguard::FItemConfig(), Dexterity));
+	GetOwner()->GetWorldTimerManager().SetTimer(DrawTimer, this, &UCrossguardEquipmentComponent::FinishDrawing, FMath::Max(Seconds, 0.01f), false);
 	RefreshEquipmentEffect();
 	OnEquipmentChanged.Broadcast();
+}
+
+void UCrossguardEquipmentComponent::FinishDrawing()
+{
+	bDrawingWeapons = false;
+	OnEquipmentChanged.Broadcast();
+}
+
+void UCrossguardEquipmentComponent::HolsterWeapons()
+{
+	if (GetOwner() == nullptr || !GetOwner()->HasAuthority())
+	{
+		return;
+	}
+	GetOwner()->GetWorldTimerManager().ClearTimer(DrawTimer);
+	bWeaponsDrawn = false;
+	bDrawingWeapons = false;
+	OnEquipmentChanged.Broadcast();
+}
+
+void UCrossguardEquipmentComponent::SetHeldThrowable(bool bHolding, ECrossguardWeaponType Type)
+{
+	if (GetOwner() == nullptr || !GetOwner()->HasAuthority() || (bHoldingThrowable == bHolding && HeldThrowableType == Type))
+	{
+		return;
+	}
+	bHoldingThrowable = bHolding;
+	HeldThrowableType = Type;
+	RefreshEquipmentEffect();
+	OnEquipmentChanged.Broadcast();
+}
+
+FGameplayTag UCrossguardEquipmentComponent::GetWieldingTag(ECrossguardWeaponType Type)
+{
+	return WieldingTag(Type);
 }
 
 const FCrossguardWeaponRow* UCrossguardEquipmentComponent::GetWeaponRow(ECrossguardEquipmentSlot Slot) const
@@ -241,6 +300,11 @@ bool UCrossguardEquipmentComponent::SatisfiesWeaponRequirement(const TArray<ECro
 	for (const ECrossguardWeaponType Type : AnyOf)
 	{
 		Required.push_back(ToRulesWeaponType(Type));
+		// A throwing knife in hand counts as a dagger.
+		if (bHoldingThrowable && Type == HeldThrowableType)
+		{
+			return true;
+		}
 	}
 	return Crossguard::SatisfiesWeaponRequirement(Required, BuildRulesEquipment(MainHand, OffHand));
 }
@@ -439,6 +503,10 @@ void UCrossguardEquipmentComponent::RefreshEquipmentEffect()
 		}
 		AddAffixes(Item->Affixes, Item->WeaponId);
 		Spec.Data->DynamicGrantedTags.AddTag(WieldingTag(Row->WeaponType));
+	}
+	if (bHoldingThrowable)
+	{
+		Spec.Data->DynamicGrantedTags.AddTag(WieldingTag(HeldThrowableType));
 	}
 	for (const ECrossguardWeaponType Wildcard : {ECrossguardWeaponType::AnyMelee, ECrossguardWeaponType::TwoHandedMelee})
 	{

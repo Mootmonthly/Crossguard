@@ -105,8 +105,10 @@ list is in design-decisions.md, Controls. Set the character's Input properties t
 character faces the camera direction. The body mesh is hidden from its owner until first-person arms
 exist.
 
-- 1 / 2: `UCrossguardEquipmentComponent::RequestSwitchWeaponSet`. Each set is a main hand and an off
-  hand; only the set in hand attacks and counts for stats, tags and skill requirements. Equip into
+- 1 / 2: `UCrossguardEquipmentComponent::RequestSwitchWeaponSet` draws that set (1 s ÷ (1 +
+  Dexterity); `AreWeaponsReady()` is false meanwhile and weapon attacks refuse). Taking an item in
+  hand holsters the weapons. Each set is a main hand and an off hand; only the active set counts for
+  stats, tags and skill requirements. Equip into
   either set with `RequestEquipItem(ItemId, Slot, WeaponSet)`.
 - Hold Q: `UCrossguardLoadoutComponent::SetSkillWheelOpen` broadcasts `OnSkillWheelOpened` /
   `OnSkillWheelClosed` for the wheel widget, which lists `GetActivatableSkills()` and calls
@@ -155,7 +157,10 @@ exist.
   inventory's `ThrownProjectileClass`). Knives and axes damage what they hit; the explosive bottle
   explodes where it lands (everyone within 3 m, thrower included) and leaves an
   `ACrossguardDamageArea` that deals 3 Magic Damage per second for 5 s. One item is used per throw.
-  Not built yet: "applies Dagger / Axe skills" (`CountsAsWeapon` is in the data).
+  While a throwable with `CountsAsWeapon` is in hand, `SetHeldThrowable` makes that type count as
+  wielded (`SatisfiesWeaponRequirement`, the `Equipment.Wielding.<Type>` tag, data passives), and
+  its damage spec carries the same tag as a dynamic asset tag for on-hit effects. After each use
+  the hands stay on the same item while any is left, else are empty.
 - Consumables: left click then uses one (`RequestStartUse` / `RequestStopUse`). The server applies the native
   `UCrossguardHealOverTimeEffect` (flat healing spread over the item's heal duration in 0.5 s ticks).
   Items with a use time channel; releasing early removes the effect.

@@ -222,19 +222,27 @@ point of interest instead of only using fixed extraction points. Ruled details:
 | F | Interact (bodies, chests, doors) |
 | X | Summon an extract portal (placeholder key) |
 
-- Assumed until ruled otherwise: switching weapon sets is instant; a hotbar key readies its item and
-  left click uses or throws it, after which the hands go back to the weapon (as with potions);
-  hotbar slots remember the item type and rarity, so a new stack of the same item fills the slot.
+- Drawing a weapon set (1 / 2) takes 1 s, faster with Dexterity (`1 s ÷ (1 + Dexterity)`); an
+  animation will play here. Nothing attacks while drawing.
+- A hotbar key takes its item in hand (weapons are put away); left click uses or throws one. The
+  hands stay on that item while any of it (same type and rarity) is left, so players can throw again
+  after a miss or bandage repeatedly; when it runs out the hands are empty until a weapon set is
+  drawn. Pressing the item's key again empties the hands.
+- Hotbar slots remember the item type and rarity, so a new stack of the same item fills the slot.
 
 ## Throwables
 
 | Item | Effect |
 | --- | --- |
-| Throwing Knife | 15 Attack Damage, +2 per rarity level. Dagger skills apply. |
-| Throwing Axe | 25 Attack Damage, +2 per rarity level. Axe skills apply. |
+| Throwing Knife | 15 Attack Damage, +2 per rarity level. Counts as a Dagger. |
+| Throwing Axe | 25 Attack Damage, +2 per rarity level. Counts as an Axe. |
 | Explosive Bottle | Shatters where it lands: 10 Magic Damage to everyone within 3 m, then 3 Magic Damage per second for 5 s in that area. |
 
 - All are 1 × 3 and stack to 3. Friendly fire applies, the thrower included.
+- "Counts as a Dagger / Axe" while in hand: mastery bonuses apply to the throw, on-hit skill
+  effects of that weapon type trigger on its hits, and skills requiring that weapon can be used.
+- Assumed until ruled otherwise: weapons put away (an item in hand, or empty hands) still give their
+  stats and count for masteries; only attacking needs them drawn.
 
 ## Camera
 

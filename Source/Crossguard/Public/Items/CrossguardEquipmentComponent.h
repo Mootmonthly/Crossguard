@@ -4,6 +4,7 @@
 #include "Components/ActorComponent.h"
 #include "CoreMinimal.h"
 #include "CrossguardRules/Items.h"
+#include "GameplayTagContainer.h"
 #include "Items/CrossguardItemTypes.h"
 
 #include "CrossguardEquipmentComponent.generated.h"
@@ -83,9 +84,29 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	const FCrossguardWeaponItem& GetWeaponInSet(int32 Set, ECrossguardEquipmentSlot Slot) const;
 
-	// Takes weapon set Set (0 or 1) in hand. Instant. Runs on the server; clients forward it.
+	// Draws weapon set Set (0 or 1): 1 s, faster with Dexterity, during which nothing attacks. Also
+	// draws the active set when the hands hold an item or nothing. Runs on the server; clients
+	// forward it.
 	UFUNCTION(BlueprintCallable, Category = "Equipment")
 	void RequestSwitchWeaponSet(int32 Set);
+
+	// The active set is drawn and in hand: weapon attacks are allowed.
+	UFUNCTION(BlueprintPure, Category = "Equipment")
+	bool AreWeaponsReady() const { return bWeaponsDrawn && !bDrawingWeapons; }
+
+	UFUNCTION(BlueprintPure, Category = "Equipment")
+	bool IsDrawingWeapons() const { return bDrawingWeapons; }
+
+	// Server. The hands take an item (or nothing): the weapons go away until a set is drawn again.
+	void HolsterWeapons();
+
+	// Server. A throwable that counts as a weapon type (throwing knife: Dagger) is in hand: that type
+	// counts as wielded for skill requirements, masteries and Equipment.Wielding tags. bHolding
+	// false clears it.
+	void SetHeldThrowable(bool bHolding, ECrossguardWeaponType Type);
+
+	// Equipment.Wielding.<Type>.
+	static FGameplayTag GetWieldingTag(ECrossguardWeaponType Type);
 
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	const FCrossguardWeaponItem& GetItem(ECrossguardEquipmentSlot Slot) const;
@@ -141,6 +162,8 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerSwitchWeaponSet(int32 Set);
 
+	void FinishDrawing();
+
 private:
 	void RefreshEquipmentEffect();
 	const FCrossguardArmorRow* FindArmor(FName ArmorId) const;
@@ -167,6 +190,21 @@ private:
 	int32 ActiveWeaponSet = 0;
 
 	bool IsActiveSet(int32 Set) const { return Set < 0 || Set == ActiveWeaponSet; }
+
+	UPROPERTY(Replicated)
+	bool bWeaponsDrawn = true;
+
+	UPROPERTY(Replicated)
+	bool bDrawingWeapons = false;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Equipment)
+	bool bHoldingThrowable = false;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Equipment)
+	ECrossguardWeaponType HeldThrowableType = ECrossguardWeaponType::Dagger;
+
+	// Server only.
+	FTimerHandle DrawTimer;
 
 	// One entry per ECrossguardArmorSlot, in enum order.
 	UPROPERTY(ReplicatedUsing = OnRep_Equipment)

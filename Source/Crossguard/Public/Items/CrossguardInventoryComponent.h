@@ -254,6 +254,9 @@ public:
 	// items they held.
 	int32 TakeAllOfCategory(ECrossguardItemCategory Category);
 
+	// Server. Empties the hands of any item (a weapon set is being drawn).
+	void ReleaseHeldItem();
+
 	// Server. Removes a whole stack. False if there is no such item.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	bool RemoveItem(int32 ItemId);
@@ -300,8 +303,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Hotbar")
 	void RequestUseHotbarSlot(int32 Slot);
 
-	// Consumables and throwables: ready a stack in hand, then left click uses or throws one.
-	// After a use the hands go back to the weapon. 0 puts the item away.
+	// Consumables and throwables: take a stack in hand (weapons are put away), then left click uses
+	// or throws one. The hands stay on that item while any stack of it (same rarity) is left, then
+	// are empty; 1 / 2 draw a weapon set again. 0 empties the hands.
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Use")
 	void RequestReadyItem(int32 ItemId);
 
@@ -416,6 +420,10 @@ private:
 	FCrossguardInventoryResult UnequipContainer(ECrossguardInventoryContainer Container);
 	FCrossguardInventoryResult UseItem(int32 ItemId);
 	FCrossguardInventoryResult ReadyItem(int32 ItemId);
+	// Puts ItemId (0: nothing) in hand and tells the equipment (weapons away, held throwable type).
+	void HoldItem(int32 ItemId);
+	// After using one of Used: keep holding the same item if any stack is left, else empty hands.
+	void ContinueWith(const FCrossguardInventoryItem& Used);
 	FCrossguardInventoryResult AssignHotbarSlot(int32 Slot, int32 ItemId);
 	FCrossguardInventoryResult UseHotbarSlot(int32 Slot);
 	FCrossguardInventoryResult StartUse();
@@ -467,6 +475,7 @@ private:
 
 	// Server only: the channel in progress.
 	FActiveGameplayEffectHandle ChannelEffect;
+	FCrossguardInventoryItem ChannelItem;
 	FTimerHandle ChannelTimer;
 
 	// Server only.

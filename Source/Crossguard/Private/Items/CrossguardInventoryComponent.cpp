@@ -978,7 +978,7 @@ TArray<FCrossguardInventoryItem> UCrossguardInventoryComponent::TakeEverything()
 		return Taken;
 	}
 	StopUse();
-	ReadiedItemId = 0;
+	HoldItem(0);
 
 	// Equipped gear first, so it sits at the top of the body's grid. Off hand before main hand:
 	// an off-hand weapon without a main hand may not validate on its own.
@@ -1135,8 +1135,62 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::ReadyItem(int32 ItemId
 	{
 		return Fail(ItemId != 0 && Index != INDEX_NONE ? ECrossguardInventoryError::NotUsable : ECrossguardInventoryError::UnknownItem);
 	}
-	ReadiedItemId = ItemId;
+	HoldItem(ItemId);
 	return {};
+}
+
+void UCrossguardInventoryComponent::HoldItem(int32 ItemId)
+{
+	ReadiedItemId = ItemId;
+	UCrossguardEquipmentComponent* Equipment = GetEquipment();
+	if (Equipment == nullptr)
+	{
+		return;
+	}
+	const int32 Index = IndexOfItem(ItemId);
+	const FCrossguardItemRow* Row = Index != INDEX_NONE && ItemTable != nullptr
+		? ItemTable->FindRow<FCrossguardItemRow>(Items[Index].ItemId, TEXT("Inventory"), false)
+		: nullptr;
+	if (ItemId != 0)
+	{
+		Equipment->HolsterWeapons();
+	}
+	// A throwing knife in hand counts as a dagger (skills, masteries, tags).
+	const bool bCountsAsWeapon = Row != nullptr && Row->Category == ECrossguardItemCategory::Throwable && Row->bHasCountsAsWeapon;
+	Equipment->SetHeldThrowable(bCountsAsWeapon, bCountsAsWeapon ? Row->CountsAsWeapon : ECrossguardWeaponType::Dagger);
+}
+
+void UCrossguardInventoryComponent::ContinueWith(const FCrossguardInventoryItem& Used)
+{
+	const FCrossguardInventoryItem* Next = Items.FindByPredicate([&Used](const FCrossguardInventoryItem& Item)
+	{
+		return Item.Category == Used.Category && Item.ItemId == Used.ItemId && Item.Rarity == Used.Rarity;
+	});
+	HoldItem(Next != nullptr ? Next->Id : 0);
+}
+
+void UCrossguardInventoryComponent::ReleaseHeldItem()
+{
+	if (!IsServer())
+	{
+		return;
+	}
+	// A channel in progress stops (the bandage is already used up); the hands do not move on to the
+	// next one.
+	if (ChannelTimer.IsValid())
+	{
+		if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
+		{
+			ASC->RemoveActiveGameplayEffect(ChannelEffect);
+		}
+		GetWorld()->GetTimerManager().ClearTimer(ChannelTimer);
+		ChannelEffect = FActiveGameplayEffectHandle();
+	}
+	ReadiedItemId = 0;
+	if (UCrossguardEquipmentComponent* Equipment = GetEquipment())
+	{
+		Equipment->SetHeldThrowable(false, ECrossguardWeaponType::Dagger);
+	}
 }
 
 void UCrossguardInventoryComponent::RequestStartUse()
@@ -1186,7 +1240,7 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::StartUse()
 	const int32 Index = IndexOfItem(ReadiedItemId);
 	if (Index == INDEX_NONE)
 	{
-		ReadiedItemId = 0;
+		HoldItem(0);
 		return Fail(ECrossguardInventoryError::UnknownItem);
 	}
 
@@ -1227,11 +1281,12 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::StartUse()
 	if (Row->UseTime > 0.0f)
 	{
 		// Channel: the hands stay busy until it finishes or left click is released.
+		ChannelItem = Item;
 		GetWorld()->GetTimerManager().SetTimer(ChannelTimer, FTimerDelegate::CreateUObject(this, &UCrossguardInventoryComponent::FinishChannel), Row->UseTime, false);
 	}
 	else
 	{
-		ReadiedItemId = 0;
+		ContinueWith(Item);
 	}
 	return {};
 }
@@ -1254,7 +1309,7 @@ void UCrossguardInventoryComponent::FinishChannel()
 {
 	GetWorld()->GetTimerManager().ClearTimer(ChannelTimer);
 	ChannelEffect = FActiveGameplayEffectHandle();
-	ReadiedItemId = 0;
+	ContinueWith(ChannelItem);
 	OnInventoryChanged.Broadcast();
 }
 
@@ -1357,12 +1412,17 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::Throw(int32 Index, con
 	const int32 RarityLevel = UCrossguardItemLibrary::GetRarityLevel(Items[Index].Rarity);
 	const FGameplayTag DamageTag = Row.ThrowDamageType == ECrossguardDamageType::Magic ? CrossguardTags::SetByCaller_Damage_Magic
 		: CrossguardTags::SetByCaller_Damage_Attack;
-	const auto MakeDamageSpec = [ASC, &DamageTag](float Amount)
+	const auto MakeDamageSpec = [ASC, &DamageTag, &Row](float Amount)
 	{
 		FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(UCrossguardDamageEffect::StaticClass(), 1.0f, ASC->MakeEffectContext());
 		if (Spec.IsValid())
 		{
 			Spec.Data->SetSetByCallerMagnitude(DamageTag, Amount);
+			// A throwing knife's hit is a dagger hit for on-hit skill effects.
+			if (Row.bHasCountsAsWeapon)
+			{
+				Spec.Data->AddDynamicAssetTag(UCrossguardEquipmentComponent::GetWieldingTag(Row.CountsAsWeapon));
+			}
 		}
 		return Spec;
 	};
@@ -1386,11 +1446,12 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::Throw(int32 Index, con
 	}
 	Projectile->FinishSpawning(SpawnTransform);
 
-	// One is used up per throw; the hands go back to the weapon.
+	// One is used up per throw; the hands stay on the next one if any is left.
+	const FCrossguardInventoryItem Thrown = Items[Index];
 	if (--Items[Index].Count <= 0)
 	{
 		Items.RemoveAt(Index);
 	}
-	ReadiedItemId = 0;
+	ContinueWith(Thrown);
 	return {};
 }

@@ -52,7 +52,7 @@ bool UCrossguardWeaponAttackAbility::CanActivateAbility(const FGameplayAbilitySp
 	const UCrossguardEquipmentComponent* Equipment = FindEquipment(ActorInfo);
 	const FCrossguardWeaponRow* Weapon = Equipment != nullptr ? Equipment->GetWeaponRow(Slot) : nullptr;
 	return Weapon != nullptr && Weapon->Delivery != ECrossguardAttackDelivery::None && Equipment->GetAttackInterval(Slot) > 0.0f
-		&& HasAmmo(*Weapon, ActorInfo);
+		&& Equipment->AreWeaponsReady() && HasAmmo(*Weapon, ActorInfo);
 }
 
 void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

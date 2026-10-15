@@ -208,4 +208,10 @@ namespace Crossguard
 		}
 		return Result;
 	}
+
+	double WeaponDrawSeconds(const FItemConfig& Config, double Dexterity)
+	{
+		const double Factor = 1.0 + Dexterity;
+		return Config.WeaponDrawSeconds / (Factor > Config.MinDexterityFactor ? Factor : Config.MinDexterityFactor);
+	}
 }

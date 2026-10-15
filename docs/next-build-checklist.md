@@ -46,7 +46,8 @@ On `BP_CrossguardCharacter` → **Crossguard | Debug**:
 | Test | Expected |
 | --- | --- |
 | Add `throwing_knife` and `explosive_bottle` to `DebugInventory`, press their hotbar key, left click | The knife arcs and hits for 15; the bottle explodes for 10 within 3 m, then 3 per second for 5 s (you too, if you stand in it). |
-| Press 1 and 2 with weapons in both sets (equip with `RequestEquipItem(..., WeaponSet)`) | The weapon in hand switches; attacks use the new set. |
+| Press 1 and 2 with weapons in both sets (equip with `RequestEquipItem(..., WeaponSet)`) | After about 1 s of drawing the new set attacks; nothing attacks while drawing. |
+| Throw a knife, then left click again | The next knife throws; after the last one the hands are empty until 1 or 2. |
 | Shoot the bow 45 times | Arrows run out and the bow stops firing. |
 | Press 3 (debug consumables fill the hotbar in order), then left click | A potion heals 15 HP over 10 s; a bandage heals 10 HP while left click is held for 2 s. |
 | Kill the dummy | It ragdolls and leaves a body; you get 5 XP (raid XP, shown by `GetRaidXp`). |

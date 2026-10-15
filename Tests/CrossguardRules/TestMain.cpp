@@ -735,6 +735,12 @@ static void TestEconomy()
 	CHECK(!CanAssignToHotbar(EItemCategory::Weapon));
 
 	CHECK_NEAR(LockpickSeconds(Config, 0.0), 5.0);
+
+	// Drawing a weapon set: 1 s, faster with Dexterity.
+	const FItemConfig Items;
+	CHECK_NEAR(WeaponDrawSeconds(Items, 0.0), 1.0);
+	CHECK_NEAR(WeaponDrawSeconds(Items, 0.25), 0.8);
+	CHECK_NEAR(WeaponDrawSeconds(Items, -5.0), 10.0);
 	CHECK_NEAR(LockpickSeconds(Config, 0.25), 4.0);
 	CHECK_NEAR(LockpickSeconds(Config, -0.2), 6.25);
 	// Floor: never slower than LockpickSeconds / 0.1.

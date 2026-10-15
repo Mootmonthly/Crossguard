@@ -33,6 +33,9 @@ namespace Crossguard
 
 	CROSSGUARDRULES_API int AffixSlots(const FItemConfig& Config, ERarity Rarity);
 
+	// WeaponDrawSeconds / max(1 + Dexterity, MinDexterityFactor). Dexterity is a fraction.
+	CROSSGUARDRULES_API double WeaponDrawSeconds(const FItemConfig& Config, double Dexterity);
+
 	// (PerSeconds / Attacks) / max(1 + ActionSpeed, MinActionSpeedFactor). 0 if Attacks <= 0.
 	CROSSGUARDRULES_API double AttackInterval(const FItemConfig& Config, double Attacks, double PerSeconds, double ActionSpeed);
 

@@ -67,7 +67,6 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Passives on others and free-text mechanics | Code | Data-driven passives cover Self stat modifiers (masteries, Heroic Might, Cor Leonis, ...); party auras, on-hit slows and mechanics like Hunter's Tracking still need code. |
 | Block (shields) and parry | Code | Right-click actions already chosen by the rules; not built. |
 | Status effects | Code | Slow, Mute, Silence, crowd control, damage shields (Eldritch Shield). |
-| Throwables: weapon skills | Decision, Code | Knives, axes and explosive bottles are built. "Applies Dagger / Axe skills" needs a ruling on what it covers. |
 | Minions | Code | Summon Tiger and minion CDR. |
 | Animations, first-person arms | Editor | Melee hits are sphere sweeps until weapon collision exists. |
 | Weapon-on-weapon collision (fencing) | Code, Editor | |
@@ -119,8 +118,7 @@ Decisions that block items above. Answers go into design-decisions.md.
 | Extraction time | Extraction (currently: 5 s) |
 | Final subscription price | Subscription |
 | Can the loadout change during a raid? | Loadout timing |
-| What does "applies Dagger / Axe skills" cover for throwing knives and axes (mastery bonuses, on-hit skill effects, skill requirements)? | Throwables: weapon skills |
-| Is switching weapon sets instant? Does using a hotbar item return the hands to the weapon? | Controls (currently: instant; yes) |
+| Do put-away weapons still give their stats and count for masteries? | Controls (currently: yes) |
 | Materials stack size? | Gathering |
 | Which arrows does a bow use first when several rarities are carried? | Ammo (currently: first found) |
 | Is drinking a potion instant? Does bandaging slow movement? | Consumables (currently: instant, full speed) |
