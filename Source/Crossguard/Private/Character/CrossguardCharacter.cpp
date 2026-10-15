@@ -23,6 +23,7 @@
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
 #include "Engine/DataTable.h"
+#include "Engine/Engine.h"
 #include "EngineUtils.h"
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Interaction/CrossguardInteractable.h"
@@ -281,17 +282,96 @@ void ACrossguardCharacter::OnHotbar5()
 
 void ACrossguardCharacter::OnSkillWheelOpened()
 {
+	SelectedSkillAtWheelOpen = LoadoutComponent->GetSelectedSkill();
 	LoadoutComponent->SetSkillWheelOpen(true);
 }
 
 void ACrossguardCharacter::OnSkillWheelClosed()
 {
 	LoadoutComponent->SetSkillWheelOpen(false);
+	// No wheel widget picked anything: a tap of Q selects the next skill (testing until the UI).
+	if (bDebugHud && LoadoutComponent->GetSelectedSkill() == SelectedSkillAtWheelOpen)
+	{
+		const TArray<FName> Skills = LoadoutComponent->GetActivatableSkills();
+		if (Skills.IsEmpty())
+		{
+			ShowDebugMessage(TEXT("No skills to select (check DebugSkills, Level and the Output Log)"), FColor::Red);
+			return;
+		}
+		const int32 Current = Skills.IndexOfByKey(LoadoutComponent->GetSelectedSkill());
+		const FName Next = Skills[(Current + 1) % Skills.Num()];
+		LoadoutComponent->SetSelectedSkill(Next);
+		ShowDebugMessage(FString::Printf(TEXT("Selected %s"), *Next.ToString()), FColor::Cyan);
+	}
 }
 
 void ACrossguardCharacter::OnCastSkill()
 {
-	LoadoutComponent->TryActivateSelectedSkill();
+	const FName Skill = LoadoutComponent->GetSelectedSkill();
+	const bool bCast = LoadoutComponent->TryActivateSelectedSkill();
+	if (bDebugHud)
+	{
+		ShowDebugMessage(Skill.IsNone() ? FString(TEXT("No skill selected: tap Q"))
+			: bCast ? FString::Printf(TEXT("Cast %s"), *Skill.ToString())
+			: FString::Printf(TEXT("%s refused (cooldown, wrong weapon, Muted, or dragon form)"), *Skill.ToString()),
+			bCast ? FColor::Green : FColor::Orange);
+	}
+}
+
+void ACrossguardCharacter::ShowDebugMessage(const FString& Message, const FColor& Color) const
+{
+	if (GEngine != nullptr)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 3.0f, Color, Message);
+	}
+}
+
+void ACrossguardCharacter::DrawDebugHud()
+{
+	if (!IsLocallyControlled() || GEngine == nullptr)
+	{
+		return;
+	}
+	const UCrossguardAbilitySystemComponent* ASC = AbilitySystemComponent;
+	const auto Value = [ASC](const FGameplayAttribute& Attribute) { return ASC->GetNumericAttribute(Attribute); };
+
+	FString States;
+	const auto AddState = [ASC, &States](const FGameplayTag& Tag, const TCHAR* Name)
+	{
+		if (ASC->HasMatchingGameplayTag(Tag))
+		{
+			States += FString(Name) + TEXT(" ");
+		}
+	};
+	AddState(CrossguardTags::State_Dead, TEXT("Dead"));
+	AddState(CrossguardTags::State_Muted, TEXT("Muted"));
+	AddState(CrossguardTags::State_Slowed, TEXT("Slowed"));
+	AddState(CrossguardTags::State_Blinded, TEXT("BLINDED"));
+	AddState(CrossguardTags::State_Flying, TEXT("Flying"));
+	AddState(CrossguardTags::State_Dragonified, TEXT("Dragon"));
+	AddState(CrossguardTags::State_ChopDownReady, TEXT("ChopDownReady"));
+
+	const UCrossguardEquipmentComponent* Equipment = EquipmentComponent;
+	const FString Weapons = Equipment->IsDrawingWeapons() ? FString::Printf(TEXT("drawing set %d..."), Equipment->GetActiveWeaponSet() + 1)
+		: Equipment->AreWeaponsReady() ? FString::Printf(TEXT("set %d in hand"), Equipment->GetActiveWeaponSet() + 1)
+		: FString(TEXT("holstered (press 1 or 2)"));
+
+	const TArray<FName> Skills = LoadoutComponent->GetActivatableSkills();
+	FString SkillList;
+	for (const FName& Skill : Skills)
+	{
+		SkillList += (Skill == LoadoutComponent->GetSelectedSkill() ? TEXT("[") + Skill.ToString() + TEXT("] ") : Skill.ToString() + TEXT(" "));
+	}
+
+	// Fixed keys: each line replaces itself.
+	const float Life = 0.3f;
+	GEngine->AddOnScreenDebugMessage(91004, Life, FColor::Yellow, FString::Printf(TEXT("States: %s"), States.IsEmpty() ? TEXT("-") : *States));
+	GEngine->AddOnScreenDebugMessage(91003, Life, FColor::White, FString::Printf(TEXT("Skills (tap Q, E casts): %s"),
+		SkillList.IsEmpty() ? TEXT("none") : *SkillList));
+	GEngine->AddOnScreenDebugMessage(91002, Life, FColor::White, FString::Printf(TEXT("Weapons: %s"), *Weapons));
+	GEngine->AddOnScreenDebugMessage(91001, Life, FColor::Green, FString::Printf(TEXT("HP %.0f / %.0f   Shield %.0f   Level %d"),
+		Value(UCrossguardAttributeSet::GetHealthAttribute()), Value(UCrossguardAttributeSet::GetMaxHealthAttribute()),
+		Value(UCrossguardAttributeSet::GetAttackShieldAttribute()), Level));
 }
 
 void ACrossguardCharacter::OnSecondary()
@@ -704,6 +784,10 @@ bool ACrossguardCharacter::Revive(float HealthFraction)
 void ACrossguardCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	if (bDebugHud)
+	{
+		GetWorldTimerManager().SetTimer(DebugHudTimer, this, &ACrossguardCharacter::DrawDebugHud, 0.2f, true);
+	}
 	MeshRelativeTransform = GetMesh()->GetRelativeTransform();
 	MeshCollisionProfile = GetMesh()->GetCollisionProfileName();
 }

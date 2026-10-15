@@ -157,6 +157,12 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
 	bool bDebugLootTakesAll = false;
 
+	// Testing until the HUD exists: on-screen text (top left) with Health, shield, weapons, the
+	// selected skill and states. A quick tap of Q selects the next skill, since there is no wheel
+	// widget yet.
+	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
+	bool bDebugHud = true;
+
 	// Replace each debug item's affixes with a random roll for its rarity.
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
 	bool bRollDebugAffixes = false;
@@ -326,6 +332,12 @@ private:
 
 	// Server: runs from death until the revive window closes.
 	FTimerHandle ReviveWindowTimer;
+
+	// bDebugHud.
+	void DrawDebugHud();
+	void ShowDebugMessage(const FString& Message, const FColor& Color) const;
+	FTimerHandle DebugHudTimer;
+	FName SelectedSkillAtWheelOpen;
 	void OnReviveWindowExpired();
 
 	// Server. This character's body while it is dead.
