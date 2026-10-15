@@ -86,6 +86,14 @@ Subclass `UCrossguardPassiveAbility`. It activates on the server when granted an
 `PassiveEffects` (Infinite effects holding the stat modifiers) until unequipped. Example: Heroic
 Might = one Infinite effect adding 10 to Strength.
 
+## Controls
+
+`ACrossguardCharacter` builds default Enhanced Input bindings in code (no assets needed): WASD
+move, mouse look, Space jump, hold left mouse to attack with the main hand, right mouse for the
+secondary action. Set the character's Input properties to your own `InputAction` /
+`InputMappingContext` assets to rebind. Camera: over-the-shoulder spring arm; the character faces
+the camera direction.
+
 ## Weapons and equipment
 
 - Import `Data/Items/WeaponTable.json` as a Data Table with row struct `CrossguardWeaponRow`
@@ -137,7 +145,7 @@ and the rules unit tests.
 - Shields (Eldritch Shield), CC, Mute, Silence, minions.
 - Client-side ability system init for pawns without a PlayerState (AI). Players are covered by
   `OnRep_PlayerState`.
-- Animations, weapon-on-weapon collision (fencing), input bindings.
+- Animations, weapon-on-weapon collision (fencing).
 - Affix pool and applying affix stats.
 - Inventory: the server currently trusts the item a client asks to equip. Once inventory exists,
   equip by inventory slot and look the item up on the server.

@@ -1,9 +1,18 @@
 #include "Character/CrossguardCharacter.h"
 
 #include "AbilitySystem/CrossguardAttributeSet.h"
+#include "Camera/CameraComponent.h"
 #include "Combat/CrossguardWeaponAttackAbility.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "Engine/LocalPlayer.h"
 #include "Game/CrossguardPlayerState.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerController.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "InputAction.h"
+#include "InputMappingContext.h"
+#include "InputModifiers.h"
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Skills/CrossguardLoadoutComponent.h"
@@ -24,6 +33,122 @@ ACrossguardCharacter::ACrossguardCharacter()
 	OffHandAttackAbilityClass = UCrossguardOffHandAttackAbility::StaticClass();
 
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
+
+	// Face the camera direction (melee aiming, strafing) rather than the movement direction.
+	bUseControllerRotationYaw = true;
+	GetCharacterMovement()->bOrientRotationToMovement = false;
+
+	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
+	CameraBoom->SetupAttachment(GetRootComponent());
+	CameraBoom->TargetArmLength = 300.0f;
+	CameraBoom->SocketOffset = FVector(0.0f, 50.0f, 60.0f);
+	CameraBoom->bUsePawnControlRotation = true;
+
+	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
+	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
+	FollowCamera->bUsePawnControlRotation = false;
+}
+
+void ACrossguardCharacter::EnsureDefaultInput()
+{
+	const auto MakeAction = [this](TObjectPtr<UInputAction>& Action, const TCHAR* Name, EInputActionValueType Type)
+	{
+		if (Action == nullptr)
+		{
+			Action = NewObject<UInputAction>(this, Name);
+			Action->ValueType = Type;
+		}
+	};
+	MakeAction(MoveAction, TEXT("IA_Move"), EInputActionValueType::Axis2D);
+	MakeAction(LookAction, TEXT("IA_Look"), EInputActionValueType::Axis2D);
+	MakeAction(JumpAction, TEXT("IA_Jump"), EInputActionValueType::Boolean);
+	MakeAction(AttackAction, TEXT("IA_Attack"), EInputActionValueType::Boolean);
+	MakeAction(SecondaryActionInput, TEXT("IA_Secondary"), EInputActionValueType::Boolean);
+
+	if (DefaultMappingContext != nullptr)
+	{
+		return;
+	}
+	UInputMappingContext* Context = NewObject<UInputMappingContext>(this, TEXT("IMC_Default"));
+	const auto Swizzle = [Context]() { return NewObject<UInputModifierSwizzleAxis>(Context); };
+	const auto Negate = [Context]() { return NewObject<UInputModifierNegate>(Context); };
+
+	// Move is X = right, Y = forward. Keys give X by default; Swizzle moves it to Y.
+	Context->MapKey(MoveAction, EKeys::W).Modifiers.Add(Swizzle());
+	FEnhancedActionKeyMapping& Back = Context->MapKey(MoveAction, EKeys::S);
+	Back.Modifiers.Add(Swizzle());
+	Back.Modifiers.Add(Negate());
+	Context->MapKey(MoveAction, EKeys::D);
+	Context->MapKey(MoveAction, EKeys::A).Modifiers.Add(Negate());
+
+	// Mouse up looks up.
+	UInputModifierNegate* InvertY = Negate();
+	InvertY->bX = false;
+	InvertY->bZ = false;
+	Context->MapKey(LookAction, EKeys::Mouse2D).Modifiers.Add(InvertY);
+
+	Context->MapKey(JumpAction, EKeys::SpaceBar);
+	Context->MapKey(AttackAction, EKeys::LeftMouseButton);
+	Context->MapKey(SecondaryActionInput, EKeys::RightMouseButton);
+	DefaultMappingContext = Context;
+}
+
+void ACrossguardCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	EnsureDefaultInput();
+
+	UEnhancedInputComponent* Input = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+	if (Input == nullptr)
+	{
+		return;
+	}
+	Input->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnMove);
+	Input->BindAction(LookAction, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnLook);
+	Input->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+	Input->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+	// Triggered fires every frame while held: holding the button keeps attacking at the weapon's rate.
+	Input->BindAction(AttackAction, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnAttack);
+	Input->BindAction(SecondaryActionInput, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnSecondary);
+}
+
+void ACrossguardCharacter::PawnClientRestart()
+{
+	Super::PawnClientRestart();
+	EnsureDefaultInput();
+
+	const APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	const ULocalPlayer* LocalPlayer = PlayerController != nullptr ? PlayerController->GetLocalPlayer() : nullptr;
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(LocalPlayer))
+	{
+		Subsystem->RemoveMappingContext(DefaultMappingContext);
+		Subsystem->AddMappingContext(DefaultMappingContext, 0);
+	}
+}
+
+void ACrossguardCharacter::OnMove(const FInputActionValue& Value)
+{
+	const FVector2D Axis = Value.Get<FVector2D>();
+	const FRotator Yaw(0.0f, GetControlRotation().Yaw, 0.0f);
+	AddMovementInput(FRotationMatrix(Yaw).GetUnitAxis(EAxis::X), Axis.Y);
+	AddMovementInput(FRotationMatrix(Yaw).GetUnitAxis(EAxis::Y), Axis.X);
+}
+
+void ACrossguardCharacter::OnLook(const FInputActionValue& Value)
+{
+	const FVector2D Axis = Value.Get<FVector2D>();
+	AddControllerYawInput(Axis.X);
+	AddControllerPitchInput(Axis.Y);
+}
+
+void ACrossguardCharacter::OnAttack()
+{
+	TryWeaponAttack();
+}
+
+void ACrossguardCharacter::OnSecondary()
+{
+	TrySecondaryAction();
 }
 
 void ACrossguardCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

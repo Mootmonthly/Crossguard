@@ -8,7 +8,12 @@
 
 #include "CrossguardCharacter.generated.h"
 
+class UCameraComponent;
 class UCrossguardAttributeSet;
+class UInputAction;
+class UInputMappingContext;
+class USpringArmComponent;
+struct FInputActionValue;
 class UCrossguardEquipmentComponent;
 class UCrossguardWeaponAttackAbility;
 class UCrossguardLoadoutComponent;
@@ -41,6 +46,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Combat")
 	bool TrySecondaryAction();
 
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+	// Adds the mapping context for the local player.
+	virtual void PawnClientRestart() override;
+
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
 
@@ -55,6 +64,33 @@ public:
 	FCrossguardAttributeAllocation AttributeAllocation;
 
 protected:
+	// Over-the-shoulder third-person camera. The character faces where the camera looks.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Camera")
+	TObjectPtr<USpringArmComponent> CameraBoom;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Camera")
+	TObjectPtr<UCameraComponent> FollowCamera;
+
+	// Input. Leave empty to use the built-in defaults: WASD move, mouse look, Space jump, left
+	// mouse attack, right mouse secondary action. Set these to your own assets to rebind.
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputMappingContext> DefaultMappingContext;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> MoveAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> LookAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> JumpAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> AttackAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> SecondaryActionInput;
+
 	// MaxWalkSpeed at 100% MoveSpeed.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Movement", meta = (ClampMin = "0"))
 	float BaseWalkSpeed = 450.0f;
@@ -82,6 +118,13 @@ protected:
 	TObjectPtr<UCrossguardLoadoutComponent> LoadoutComponent;
 
 private:
+	// Creates any input asset left empty above, with the default bindings.
+	void EnsureDefaultInput();
+	void OnMove(const FInputActionValue& Value);
+	void OnLook(const FInputActionValue& Value);
+	void OnAttack();
+	void OnSecondary();
+
 	void InitializeAbilitySystem();
 	void OnMoveSpeedChanged(const FOnAttributeChangeData& Data);
 	void ApplyMoveSpeed(float MoveSpeed);
