@@ -48,12 +48,12 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | --- | --- | --- |
 | Extract portals | Editor | Built in code: summon with X inside a point of interest after 10 min, 60 s channel, open 30 s for anyone. Needs points of interest placed and beam/portal visuals. |
 | Extraction points | Editor | Built in code (`ACrossguardExtractionZone`, 5 s placeholder). Needs placing in maps; the trip to the hub needs the hub and saving. |
-| Raid end on failure | Code, Decision | When does a raid end for a dead player: when they leave, after a timer, when the match ends? |
+| Spectating and menu | Editor | Built in code: 120 s revive window, then spectate teammates or return to the menu. Needs a main menu map and a spectator HUD. |
 | Stash | Editor | Built in code: per character, 10 × 30 tabs (up to 3 more at 3000 gold), Skill Gems learnable from it. Needs the stash UI in the hub. |
 | Shared stash tabs | Code, Decision | Subscription benefit: tabs shared by all of an account's characters. Needs accounts and the backend. |
 | Hub / lobby map | Editor | Where players manage stash, Skill Library, attributes, loadout; game mode with `bIsRaid` off. |
 | Inventory and loot UI | Editor | Grid widgets for inventory, Backpack, Quiver, equipment, bodies. The C++ API is ready. |
-| Hotbar for consumables | Code, Decision | Replaces the Q placeholder. How many slots and which keys? |
+| Hotbar, weapon sets and skill wheel UI | Editor | Built in code (keys 1–7, hold Q, E). Needs the hotbar bar, the radial skill wheel and a weapon set indicator. |
 | Drop and pick up single items | Code | Items lying in the world, separate from bodies. |
 | Revive spell | Decision, Code | Calls the existing `Revive`. Comes from the skills you add in the Skill Forge. |
 | Saving progression | Code, Decision | XP, level, attributes, Skill Library, stash, respec tokens. Needs a choice of backend. |
@@ -67,7 +67,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Passives on others and free-text mechanics | Code | Data-driven passives cover Self stat modifiers (masteries, Heroic Might, Cor Leonis, ...); party auras, on-hit slows and mechanics like Hunter's Tracking still need code. |
 | Block (shields) and parry | Code | Right-click actions already chosen by the rules; not built. |
 | Status effects | Code | Slow, Mute, Silence, crowd control, damage shields (Eldritch Shield). |
-| Throwables | Decision, Code | Sizes and stack (3) ruled; damage and behaviour not. |
+| Throwables: weapon skills | Decision, Code | Knives, axes and explosive bottles are built. "Applies Dagger / Axe skills" needs a ruling on what it covers. |
 | Minions | Code | Summon Tiger and minion CDR. |
 | Animations, first-person arms | Editor | Melee hits are sphere sweeps until weapon collision exists. |
 | Weapon-on-weapon collision (fencing) | Code, Editor | |
@@ -79,7 +79,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Monster AI | Code, Editor | Basic monsters (5 XP) and bosses (50 XP) via `KillXpSource`. |
 | Loot tables | Decision, Code | What monsters, chests and bosses drop. |
 | Treasure chests | Code, Editor | Reuse `ACrossguardLootContainer` (it can be locked). Filling them needs loot tables. |
-| Lockpick item and skill | Decision, Editor | Lockpicking is built. The lockpick item needs a size and stack; the skill comes from the Skill Forge (grant `Ability.Lockpicking`). |
+| Lockpicking skill | Editor | Lockpicking and the lockpick item are built; the skill comes from the Skill Forge (grant `Ability.Lockpicking`). |
 | Doors in maps | Editor | `ACrossguardDoor` needs a mesh and placing; it snaps open until it is animated. |
 | Gathering nodes | Code, Editor | Herbs and ore, 10 XP per node; materials stack size not ruled. |
 | Raid maps | Editor | PCG plugin is enabled. |
@@ -95,7 +95,6 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Guilds and guild bank | Code | Members deposit; officers withdraw, manage, redistribute. |
 | Respec store purchase | Code | Grants respec tokens after a verified purchase; price not set. |
 | Subscription | Decision, Code | About $10 per season: five respec tokens, a shared stash tab, common healing items, throwables, lockpicks. |
-| Gear sell prices | Decision, Code | Vendors buy gemstones today; weapons and armor need a price formula (5–500 gold by rarity and size). |
 | NPC vendors in the hub | Editor | Selling is built (`UCrossguardVendorComponent`); needs the NPC and a sell screen. |
 | Cosmetics | Decision, Editor | |
 
@@ -115,15 +114,13 @@ Decisions that block items above. Answers go into design-decisions.md.
 
 | Question | Blocks |
 | --- | --- |
-| Gear sell price formula (5–500 gold by rarity and size) | Gear sell prices |
 | Do gemstones stack? | Gemstones (currently: no) |
-| Lockpick item: size, stack, is it used up per lock? Exact Dexterity effect? | Lockpick item (currently: used up; 5 s ÷ (1 + Dexterity)) |
+| Is a lockpick used up per lock? Exact Dexterity effect? | Lockpicking (currently: used up; 5 s ÷ (1 + Dexterity)) |
 | Extraction time | Extraction (currently: 5 s) |
 | Final subscription price | Subscription |
-| When does the raid end for a player who died and was not revived? | Raid end |
-| Hotbar: how many slots, which keys? | Hotbar |
 | Can the loadout change during a raid? | Loadout timing |
-| What do throwables do (damage, area, effects)? | Throwables |
+| What does "applies Dagger / Axe skills" cover for throwing knives and axes (mastery bonuses, on-hit skill effects, skill requirements)? | Throwables: weapon skills |
+| Is switching weapon sets instant? Does using a hotbar item return the hands to the weapon? | Controls (currently: instant; yes) |
 | Materials stack size? | Gathering |
 | Which arrows does a bow use first when several rarities are carried? | Ammo (currently: first found) |
 | Is drinking a potion instant? Does bandaging slow movement? | Consumables (currently: instant, full speed) |
