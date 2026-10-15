@@ -28,6 +28,8 @@ namespace Crossguard
 		Currency,
 		// Valuables sold to vendors (gemstones).
 		Trinket,
+		// Lockpicks and other tools.
+		Tool,
 		Other,
 	};
 
@@ -51,6 +53,13 @@ namespace Crossguard
 	CROSSGUARDRULES_API FGridSize ContainerSize(const FInventoryConfig& Config, EContainerKind Kind, ERarity Rarity = ERarity::Common);
 
 	CROSSGUARDRULES_API bool ContainerAccepts(EContainerKind Kind, EItemCategory Category);
+
+	// Hotbar keys 3-7 hold consumables and throwables.
+	constexpr int HotbarSlotCount = 5;
+	CROSSGUARDRULES_API bool CanAssignToHotbar(EItemCategory Category);
+
+	// Two weapon sets (keys 1 and 2), each a main hand and an off hand.
+	constexpr int WeaponSetCount = 2;
 
 	// Moves as many as fit from a source stack onto a target stack of the same item, up to MaxStack.
 	// Returns the number moved. Counts below 0 are treated as 0.

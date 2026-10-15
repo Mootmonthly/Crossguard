@@ -55,6 +55,11 @@ namespace Crossguard
 		return EStashTabPurchaseError::None;
 	}
 
+	bool CanAssignToHotbar(EItemCategory Category)
+	{
+		return Category == EItemCategory::Consumable || Category == EItemCategory::Throwable;
+	}
+
 	FGridSize FGridItem::Footprint() const
 	{
 		return Rotate(Size, Placement.bRotated);

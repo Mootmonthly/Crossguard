@@ -718,6 +718,22 @@ static void TestEconomy()
 	CHECK(SellPrice(10, -5, ERarity::Epic) == 10);
 
 	const FEconomyConfig Config;
+	// Gear: 5 gold per square per rarity step.
+	CHECK(GearSellPrice(Config, 8, ERarity::Mystic) == 240);
+	CHECK(GearSellPrice(Config, 1, ERarity::Common) == 5);
+	CHECK(GearSellPrice(Config, 6, ERarity::Rare) == 90);
+	CHECK(GearSellPrice(Config, 0, ERarity::Mystic) == 0);
+
+	const FDeathConfig Death;
+	CHECK(CanRevive(Death, 0.0));
+	CHECK(CanRevive(Death, 119.9));
+	CHECK(!CanRevive(Death, 120.0));
+
+	CHECK(CanAssignToHotbar(EItemCategory::Consumable));
+	CHECK(CanAssignToHotbar(EItemCategory::Throwable));
+	CHECK(!CanAssignToHotbar(EItemCategory::Tool));
+	CHECK(!CanAssignToHotbar(EItemCategory::Weapon));
+
 	CHECK_NEAR(LockpickSeconds(Config, 0.0), 5.0);
 	CHECK_NEAR(LockpickSeconds(Config, 0.25), 4.0);
 	CHECK_NEAR(LockpickSeconds(Config, -0.2), 6.25);

@@ -50,12 +50,20 @@ namespace Crossguard
 		double KeepAliveRadius = 1000.0;
 	};
 
+	struct FDeathConfig
+	{
+		// A downed player can be revived for this long; then they are dead for the raid.
+		double ReviveWindowSeconds = 120.0;
+	};
+
 	struct FEconomyConfig
 	{
 		// Seconds to pick a lock at 0% Dexterity (10 AGI). Lockpicking cannot fail.
 		double LockpickSeconds = 5.0;
 		// Floor on (1 + Dexterity) so very low AGI cannot make a lock take forever.
 		double MinDexterityFactor = 0.1;
+		// Weapons and armor sell for GearGoldPerSquare × squares × (rarity level + 1).
+		int GearGoldPerSquare = 5;
 	};
 
 	struct FInventoryConfig

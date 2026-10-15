@@ -97,6 +97,8 @@ enum class ECrossguardItemCategory : uint8
 	Throwable,
 	Currency, // gold coins
 	Trinket,  // valuables sold to vendors, e.g. gemstones
+	// Lockpicks and other tools.
+	Tool,
 	Other,
 };
 
@@ -279,6 +281,38 @@ struct CROSSGUARD_API FCrossguardItemRow : public FTableRowBase
 	// Consumables only: seconds the player channels (holds left click) to use it. 0: instant.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
 	float UseTime = 0.0f;
+
+	// Throwables only: whether the throw deals Attack or Magic damage.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	ECrossguardDamageType ThrowDamageType = ECrossguardDamageType::Attack;
+
+	// Throwables only: damage on hit at Common.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	float ThrowDamage = 0.0f;
+
+	// Throwables only: extra damage per rarity level.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	float ThrowDamagePerRarity = 0.0f;
+
+	// Throwables only: 0 hits the single target struck; > 0 explodes where it lands and hits everyone within this radius.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	float ThrowRadiusMeters = 0.0f;
+
+	// Throwables only: damage per second left in the radius after an explosion. 0: none.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	float ThrowDotPerSecond = 0.0f;
+
+	// Throwables only: seconds the damage over time lasts.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	float ThrowDotSeconds = 0.0f;
+
+	// Throwables only: the weapon type whose skills apply to the throw. Only valid when bHasCountsAsWeapon.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	ECrossguardWeaponType CountsAsWeapon = ECrossguardWeaponType::Sword;
+
+	// Throwables only: true when CountsAsWeapon is set.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	bool bHasCountsAsWeapon = false;
 };
 
 // A rolled affix on an item instance.

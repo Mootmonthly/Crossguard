@@ -152,6 +152,9 @@ Independent of category, a skill is:
 - The body is a container: walk up, press the interact key (E) and take items from it, like opening
   a treasure chest. Anyone can loot it, teammates included. Items can also be put into it.
 - Every death leaves a visible body, even with nothing on it: seeing bodies is information.
+- A downed player can be revived for 120 s; after that they are dead for the raid (it counts as a
+  failed extraction). Dead players spectate their remaining teammates; a solo player, or one with no
+  teammates left in the raid, goes back to the menu.
 - Revived players get back whatever is still on their body (worn gear goes back on). Anything
   looted while they were down is gone unless they get it back from whoever took it.
 - Skill Gems are items. Only between raids, right-clicking a gem in the inventory or stash learns
@@ -168,15 +171,17 @@ Independent of category, a skill is:
   vendor pays banked gold.
 - Gemstones (Ruby, Sapphire, Emerald) are 1 × 1 trinkets selling for 50 gold at Common, +50 per
   rarity level (300 at Mystic).
-- Vendor prices for gear: 5–500 gold depending on rarity and size; exact formula not set.
+- Vendor prices for gear (weapons and armor): 5 gold per grid square at Common, +5 per rarity
+  level: `5 × squares × (rarity level + 1)`. A 2 × 4 Mystic weapon sells for 240. Placeholder for a
+  richer formula later.
 - Assumed until ruled otherwise: vendors are used between raids only; gemstones do not stack; a
   whole stack sells at once.
 - Lockpicking: the best chests and doors need it, through a skill or a lockpick item. It takes 5 s,
   faster with Dexterity, and cannot fail. The lockpicking skill comes from the Skill Forge.
 - Assumed until ruled otherwise: time = 5 s ÷ (1 + Dexterity) (30% Dexterity: 3.8 s); a lockpick
   item is used up per lock picked, the skill needs none; lockpicking continues while you stay in
-  range, and pressing E again stops it. The lockpick item's size and stack are not set, so it is
-  not in the item data yet.
+  range, and pressing the interact key again stops it.
+- The lockpick item is 1 × 1 and stacks to 3.
 - Guild banks: a shared stash per guild; every member deposits, only officers withdraw, manage or
   redistribute.
 
@@ -202,6 +207,34 @@ point of interest instead of only using fixed extraction points. Ruled details:
   solo); the channel collapses only when none are left.
 - A collapsed portal still uses up the player's one summon for the raid.
 - Summoning is on X for now.
+
+## Controls
+
+| Key | Action |
+| --- | --- |
+| WASD, mouse, Space | Move, look, jump |
+| Left click | Attack with the main hand; use the readied hotbar item |
+| Right click | Off-hand attack, block or parry |
+| 1, 2 | Switch between the two weapon sets (each a main hand and an off hand) |
+| 3–7 | Hotbar: consumables and throwables assigned to these keys |
+| Hold Q | Skill wheel: hover an activatable skill (Active, Spell or Art) to select it |
+| E | Activate the selected skill |
+| F | Interact (bodies, chests, doors) |
+| X | Summon an extract portal (placeholder key) |
+
+- Assumed until ruled otherwise: switching weapon sets is instant; a hotbar key readies its item and
+  left click uses or throws it, after which the hands go back to the weapon (as with potions);
+  hotbar slots remember the item type and rarity, so a new stack of the same item fills the slot.
+
+## Throwables
+
+| Item | Effect |
+| --- | --- |
+| Throwing Knife | 15 Attack Damage, +2 per rarity level. Dagger skills apply. |
+| Throwing Axe | 25 Attack Damage, +2 per rarity level. Axe skills apply. |
+| Explosive Bottle | Shatters where it lands: 10 Magic Damage to everyone within 3 m, then 3 Magic Damage per second for 5 s in that area. |
+
+- All are 1 × 3 and stack to 3. Friendly fire applies, the thrower included.
 
 ## Camera
 

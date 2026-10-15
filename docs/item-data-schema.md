@@ -71,16 +71,16 @@ Armor by slot:
 ## General items
 
 `Data/Items/Items.json` is a JSON array of non-gear items (ammo, consumables, throwables,
-materials, currency, trinkets), sorted by `id`. `Tools/validate_items.py` checks it;
+materials, currency, trinkets, tools), sorted by `id`. `Tools/validate_items.py` checks it;
 `Tools/export_item_table.py` writes `ItemTable.json` (row struct `CrossguardItemRow`).
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `id` | string | `snake_case`, unique. |
 | `name` | string | Display name. |
-| `category` | enum | `Ammo`, `Consumable`, `Throwable`, `Material`, `Currency` (gold coins), `Trinket` (valuables sold to vendors, e.g. gemstones). Mirrors the same-named entries of `ECrossguardItemCategory`. |
+| `category` | enum | `Ammo`, `Consumable`, `Throwable`, `Material`, `Currency` (gold coins), `Trinket` (valuables sold to vendors, e.g. gemstones), `Tool` (lockpicks and other tools). Mirrors the same-named entries of `ECrossguardItemCategory`. |
 | `gridWidth`, `gridHeight` | integer ≥ 1 | Squares one item takes in the inventory grid, unrotated; must fit the main grid (see [Grid size](#grid-size)). |
-| `maxStack` | integer ≥ 1 | Most items one inventory stack holds. Set by category: Ammo 20, Throwable 3, Consumable 5, Currency 100. Material and Trinket are not ruled yet (any integer ≥ 1). |
+| `maxStack` | integer ≥ 1 | Most items one inventory stack holds. Set by category: Ammo 20, Throwable 3, Consumable 5, Currency 100. Material, Trinket and Tool are not ruled yet (any integer ≥ 1). |
 | `sellValue` | integer ≥ 0 | Gold a vendor pays at Common. 0: vendors do not buy it. Trinkets must have `sellValue` > 0. |
 | `sellPerRarity` | integer ≥ 0 | Extra gold per rarity level (Common 0 ... Mystic 5). |
 
@@ -99,11 +99,32 @@ Consumables also have these fields; other categories must not have them. The exp
 
 HP restored at a rarity = `healAmount + healPerRarity × level`.
 
+Throwables must have these fields; other categories must not have them. The exporter writes
+`ThrowDamageType`, `ThrowDamage`, `ThrowDamagePerRarity`, `ThrowRadiusMeters`, `ThrowDotPerSecond`,
+`ThrowDotSeconds`, `CountsAsWeapon` and `bHasCountsAsWeapon` for every row (defaults for
+non-throwables: `Attack`, 0, 0, 0, 0, 0, `Sword`, false).
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `throwDamageType` | enum | `Attack` or `Magic` (`ECrossguardDamageType`). |
+| `throwDamage` | number > 0 | Damage on hit at Common. |
+| `throwDamagePerRarity` | number ≥ 0 | Extra damage per rarity level (Common 0 ... Mystic 5). |
+| `throwRadius` | number ≥ 0 | Meters. 0: hits the single target it strikes. > 0: explodes where it lands and hits everyone within the radius. Exported as `ThrowRadiusMeters`. |
+| `throwDotPerSecond` | number ≥ 0 | Damage per second left behind in the radius after an explosion. 0: none. |
+| `throwDotSeconds` | number ≥ 0 | How long that lasts. Must be > 0 when `throwDotPerSecond` > 0, and 0 when it is 0. |
+| `countsAsWeapon` | enum or null | A `WeaponType` (`Sword`, `Axe`, `Dagger`, `Spear`, `Mace`, `Quarterstaff`, `Hammer`, `Shield`, `Bow`, `Crossbow`, `Sling`, `Throwing`, `Wand`, `MagicStaff`) whose skills apply to the throw, or `null`. Exported as `CountsAsWeapon` plus `bHasCountsAsWeapon` (false for null; `CountsAsWeapon` is then `Sword`, ignore it). |
+
+Throw damage at a rarity = `throwDamage + throwDamagePerRarity × level`.
+
 Prototype items: Arrow (1 × 3, stack 20), Bolt (1 × 2, stack 20), Bandage (1 × 1, stack 5, heals
 10 over 2 s, 2 s use time) and Healing Potion (1 × 1, stack 5, heals 15 + 5 per rarity level over
 10 s, instant). Arrow, Bolt, Bandage and Healing Potion are not sold to vendors (`sellValue` 0).
 Gold Coin (Currency, 1 × 1, stack 100, `sellValue` 0). Emerald, Ruby and Sapphire (Trinkets,
 1 × 1, stack 1) sell for 50 at Common, +50 per rarity level, up to 300 at Mystic.
+Lockpick (Tool, 1 × 1, stack 3, not sold). Throwing Knife and Throwing Axe (Throwables, 1 × 3,
+stack 3, not sold): Attack damage 15 / 25 at Common, +2 per rarity level, single target, count as a
+Dagger / Axe. Explosive Bottle (Throwable, 1 × 3, stack 3, not sold): Magic damage 10, explodes in a
+3 m radius and leaves 3 damage per second for 5 s, counts as no weapon.
 
 ## Equipment slots
 
