@@ -63,39 +63,41 @@ namespace CrossguardScenarioSupportSkills
 	constexpr int32 CostSummonTiger = 5;
 	constexpr int32 CostSummonGreaterDemon = 10;
 
-	// Skill numbers (Skills.json; design-decisions.md; the skills' constants in C++).
+	// Skill numbers (Skills.json; design-decisions.md; the skills' constants in C++). Names the skills'
+	// .cpp files also use for their file-local constants (anonymous namespaces) carry an "Expected"
+	// prefix: in a unity build both would be visible in RunTest and the name ambiguous.
 	constexpr float HealAmount = 20.0f;
-	constexpr float MuteSeconds = 10.0f;
-	constexpr float MuteDamagePerSecond = 5.0f;
-	constexpr float EldritchShieldAmount = 45.0f;
-	constexpr float EldritchShieldHealthCost = 10.0f;
-	constexpr float EldritchShieldSeconds = 12.0f;
+	constexpr float ExpectedMuteSeconds = 10.0f;
+	constexpr float ExpectedMuteDamagePerSecond = 5.0f;
+	constexpr float ExpectedEldritchShieldAmount = 45.0f;
+	constexpr float ExpectedEldritchShieldHealthCost = 10.0f;
+	constexpr float ExpectedEldritchShieldSeconds = 12.0f;
 	constexpr float ChopDownMultiplier = 1.1f;
-	constexpr float ChopDownSlow = 0.5f;
-	constexpr float ChopDownSlowSeconds = 2.0f;
-	constexpr float ShootingStarDistance = 1000.0f;
-	constexpr float ShootingStarDamage = 50.0f;
-	constexpr float ShootingStarBlindSeconds = 2.0f;
-	constexpr float DragonSeconds = 45.0f;
-	constexpr float DragonMaxHealthBonus = 0.5f;
-	constexpr float DragonResistance = 0.25f;
-	constexpr float FlightSeconds = 20.0f;
-	constexpr float WallDistance = 300.0f;
+	constexpr float ExpectedChopDownSlow = 0.5f;
+	constexpr float ExpectedChopDownSlowSeconds = 2.0f;
+	constexpr float ExpectedShootingStarDistance = 1000.0f;
+	constexpr float ExpectedShootingStarDamage = 50.0f;
+	constexpr float ExpectedShootingStarBlindSeconds = 2.0f;
+	constexpr float ExpectedDragonSeconds = 45.0f;
+	constexpr float ExpectedDragonMaxHealthBonus = 0.5f;
+	constexpr float ExpectedDragonResistance = 0.25f;
+	constexpr float ExpectedFlightSeconds = 20.0f;
+	constexpr float ExpectedWallDistance = 300.0f;
 	constexpr float WallSeconds = 15.0f;
-	constexpr float LightHeight = 120.0f;
+	constexpr float ExpectedLightHeight = 120.0f;
 	constexpr float LightSeconds = 120.0f;
-	constexpr float StealthSeconds = 12.0f;
-	constexpr float StealthExitSeconds = 3.0f;
-	constexpr float StealthExitMoveSpeed = 0.1f;
-	constexpr float StealthExitAttackBonus = 0.25f;
-	constexpr float UnleashSeconds = 15.0f;
-	constexpr float MultiscaleResistance = 0.15f;
+	constexpr float ExpectedStealthSeconds = 12.0f;
+	constexpr float ExpectedStealthExitSeconds = 3.0f;
+	constexpr float ExpectedStealthExitMoveSpeed = 0.1f;
+	constexpr float ExpectedStealthExitAttackBonus = 0.25f;
+	constexpr float ExpectedUnleashSeconds = 15.0f;
+	constexpr float ExpectedMultiscaleResistance = 0.15f;
 	constexpr float TrackingTrailSeconds = 30.0f;
 	constexpr int32 SkeletonCount = 6;
-	constexpr int32 SkeletonWarriors = 5;
-	constexpr float SkeletonWarriorHealth = 40.0f;
-	constexpr float SkeletonMageHealth = 30.0f;
-	constexpr float SkeletonSeconds = 60.0f;
+	constexpr int32 ExpectedSkeletonWarriors = 5;
+	constexpr float ExpectedSkeletonWarriorHealth = 40.0f;
+	constexpr float ExpectedSkeletonMageHealth = 30.0f;
+	constexpr float ExpectedSkeletonSeconds = 60.0f;
 	constexpr float TigerHealth = 100.0f;
 	constexpr float TigerAttackDamage = 20.0f;
 	constexpr float TigerSeconds = 180.0f;
@@ -476,7 +478,7 @@ bool FCrossguardScenarioSupportMute::RunTest(const FString& Parameters)
 		}
 		C.SetNumber(TEXT("TargetBefore"), C.Health(Target));
 		// One tick of the Mute's damage over time: 5 Magic Damage, coefficient 1, from the caster.
-		C.SetNumber(TEXT("Tick"), C.ExpectedDamage(Caster, Target, 0.0f, MuteDamagePerSecond, 1.0f));
+		C.SetNumber(TEXT("Tick"), C.ExpectedDamage(Caster, Target, 0.0f, ExpectedMuteDamagePerSecond, 1.0f));
 		if (!C.Require(C.ActivateSkill(Caster, TEXT("mute")), TEXT("Mute activates at the target")))
 		{
 			return;
@@ -524,7 +526,7 @@ bool FCrossguardScenarioSupportMute::RunTest(const FString& Parameters)
 		C.SetTimeDilation(FastForward * 0.5f);
 	});
 
-	Scenario.WaitUntil(TEXT("The Mute wears off"), MuteSeconds, [](FScenarioContext& C)
+	Scenario.WaitUntil(TEXT("The Mute wears off"), ExpectedMuteSeconds, [](FScenarioContext& C)
 	{
 		const ACrossguardCharacter* Target = FindCharacter(C, TEXT("Target"));
 		return Target != nullptr && !C.HasTag(Target, CrossguardTags::State_Muted);
@@ -544,7 +546,7 @@ bool FCrossguardScenarioSupportMute::RunTest(const FString& Parameters)
 		const float Tick = static_cast<float>(C.Number(TEXT("Tick")));
 		const float Ticks = Tick > 0.0f ? Taken / Tick : 0.0f;
 		C.Test.AddInfo(FString::Printf(TEXT("Mute lasted %.2f s and dealt %.2f (%.2f ticks)"), Elapsed, Taken, Ticks));
-		C.Test.TestEqual(TEXT("Mute lasts 10 s"), Elapsed, MuteSeconds, 0.5f);
+		C.Test.TestEqual(TEXT("Mute lasts 10 s"), Elapsed, ExpectedMuteSeconds, 0.5f);
 		// The last tick and the expiry fall on the same moment: 9 or 10 ticks.
 		C.Test.TestTrue(TEXT("Mute dealt 9 to 10 ticks of 5 per second"), Ticks > 8.95f && Ticks < 10.05f);
 		C.Test.TestTrue(TEXT("Skills work again once the Mute is over (Unleash)"), C.ActivateSkill(Target, TEXT("unleash")));
@@ -597,8 +599,8 @@ bool FCrossguardScenarioSupportEldritchShield::RunTest(const FString& Parameters
 			return;
 		}
 		C.SetNumber(TEXT("CastAt"), C.Now());
-		C.Test.TestEqual(TEXT("Casting costs 10 HP (never below 1)"), C.Health(Caster), FMath::Max(1.0f, Before - EldritchShieldHealthCost), 0.01f);
-		C.Test.TestEqual(TEXT("AttackShield is 45"), C.Stat(Caster, UCrossguardAttributeSet::GetAttackShieldAttribute()), EldritchShieldAmount, 0.01f);
+		C.Test.TestEqual(TEXT("Casting costs 10 HP (never below 1)"), C.Health(Caster), FMath::Max(1.0f, Before - ExpectedEldritchShieldHealthCost), 0.01f);
+		C.Test.TestEqual(TEXT("AttackShield is 45"), C.Stat(Caster, UCrossguardAttributeSet::GetAttackShieldAttribute()), ExpectedEldritchShieldAmount, 0.01f);
 		C.Test.TestTrue(TEXT("Eldritch Shield is on cooldown"), C.IsOnCooldown(Caster, TEXT("eldritch_shield")));
 	});
 
@@ -637,7 +639,7 @@ bool FCrossguardScenarioSupportEldritchShield::RunTest(const FString& Parameters
 		C.SetTimeDilation(FastForward * 0.5f);
 	});
 
-	Scenario.WaitUntil(TEXT("The barrier is gone"), EldritchShieldSeconds + 2.0f, [](FScenarioContext& C)
+	Scenario.WaitUntil(TEXT("The barrier is gone"), ExpectedEldritchShieldSeconds + 2.0f, [](FScenarioContext& C)
 	{
 		const ACrossguardCharacter* Caster = FindCharacter(C, TEXT("Caster"));
 		return Caster != nullptr && C.Stat(Caster, UCrossguardAttributeSet::GetAttackShieldAttribute()) <= 0.0f;
@@ -650,7 +652,7 @@ bool FCrossguardScenarioSupportEldritchShield::RunTest(const FString& Parameters
 		{
 			const float Elapsed = C.Now() - static_cast<float>(C.Number(TEXT("CastAt")));
 			C.Test.AddInfo(FString::Printf(TEXT("Barrier ended after %.2f s"), Elapsed));
-			C.Test.TestEqual(TEXT("The barrier lasts 12 s"), Elapsed, EldritchShieldSeconds, 0.5f);
+			C.Test.TestEqual(TEXT("The barrier lasts 12 s"), Elapsed, ExpectedEldritchShieldSeconds, 0.5f);
 		}
 	});
 
@@ -721,10 +723,10 @@ bool FCrossguardScenarioSupportChopDown::RunTest(const FString& Parameters)
 		C.Test.TestFalse(TEXT("The readied attack is used up"), C.HasTag(Axeman, CrossguardTags::State_ChopDownReady));
 		C.Test.TestTrue(TEXT("The dummy is slowed (State.Slowed)"), C.HasTag(Dummy, CrossguardTags::State_Slowed));
 		C.Test.TestEqual(TEXT("The dummy's Movement Speed is 50% lower"), C.Stat(Dummy, UCrossguardAttributeSet::GetMoveSpeedAttribute()),
-			FMath::Max(0.0f, SpeedBefore - ChopDownSlow), 0.001f);
+			FMath::Max(0.0f, SpeedBefore - ExpectedChopDownSlow), 0.001f);
 	});
 
-	Scenario.Wait(ChopDownSlowSeconds + 0.5f);
+	Scenario.Wait(ExpectedChopDownSlowSeconds + 0.5f);
 
 	Scenario.Step(TEXT("The slow has worn off after 2 s"), [](FScenarioContext& C)
 	{
@@ -838,7 +840,7 @@ bool FCrossguardScenarioSupportShootingStar::RunTest(const FString& Parameters)
 		C.Face(Dasher, 0.0f);
 		C.SetNumber(TEXT("StartX"), Dasher->GetActorLocation().X);
 		C.SetNumber(TEXT("WatcherBefore"), C.Health(Watcher));
-		C.SetNumber(TEXT("Expected"), C.ExpectedDamage(Dasher, Watcher, ShootingStarDamage));
+		C.SetNumber(TEXT("Expected"), C.ExpectedDamage(Dasher, Watcher, ExpectedShootingStarDamage));
 		if (!C.Require(C.ActivateSkill(Dasher, TEXT("shooting_star")), TEXT("Shooting Star activates")))
 		{
 			return;
@@ -864,13 +866,13 @@ bool FCrossguardScenarioSupportShootingStar::RunTest(const FString& Parameters)
 		const float Before = static_cast<float>(C.Number(TEXT("WatcherBefore")));
 		const float Expected = FMath::Min(static_cast<float>(C.Number(TEXT("Expected"))), Before);
 		C.Test.AddInfo(FString::Printf(TEXT("Dashed %.1f cm; watcher %.2f -> %.2f (expected -%.2f)"), Dashed, Before, C.Health(Watcher), Expected));
-		C.Test.TestTrue(TEXT("The dash covers about 10 m"), Dashed > ShootingStarDistance * 0.85f && Dashed < ShootingStarDistance * 1.1f);
+		C.Test.TestTrue(TEXT("The dash covers about 10 m"), Dashed > ExpectedShootingStarDistance * 0.85f && Dashed < ExpectedShootingStarDistance * 1.1f);
 		C.Test.TestTrue(TEXT("The dasher passed through the watcher"), Dasher->GetActorLocation().X > Watcher->GetActorLocation().X);
 		C.Test.TestEqual(TEXT("The watcher in the path takes 50 Attack Damage"), Before - C.Health(Watcher), Expected, 0.05f);
 		C.Test.TestTrue(TEXT("The watcher is still Blinded 0.6 s later"), C.HasTag(Watcher, CrossguardTags::State_Blinded));
 	});
 
-	Scenario.Wait(ShootingStarBlindSeconds);
+	Scenario.Wait(ExpectedShootingStarBlindSeconds);
 
 	Scenario.Step(TEXT("The Blind is over after 2 s"), [](FScenarioContext& C)
 	{
@@ -938,13 +940,13 @@ bool FCrossguardScenarioSupportDragonification::RunTest(const FString& Parameter
 		C.SetNumber(TEXT("FormAt"), C.Now());
 		C.Test.TestTrue(TEXT("State.Dragonified"), C.HasTag(Dragon, CrossguardTags::State_Dragonified));
 		// Max HP = derived x (1 + MHPB): +0.5 MHPB.
-		const float ExpectedMax = Max * (1.0f + Mhpb + DragonMaxHealthBonus) / FMath::Max(1.0f + Mhpb, KINDA_SMALL_NUMBER);
+		const float ExpectedMax = Max * (1.0f + Mhpb + ExpectedDragonMaxHealthBonus) / FMath::Max(1.0f + Mhpb, KINDA_SMALL_NUMBER);
 		C.Test.AddInfo(FString::Printf(TEXT("Dragon: Max HP %.2f -> %.2f (expected %.2f), Health %.2f -> %.2f"), Max, C.MaxHealth(Dragon), ExpectedMax,
 			Health, C.Health(Dragon)));
 		C.Test.TestEqual(TEXT("Max HP +50%"), C.MaxHealth(Dragon), ExpectedMax, 0.5f);
 		C.Test.TestEqual(TEXT("Health keeps its percentage"), C.Health(Dragon) / C.MaxHealth(Dragon), Health / Max, 0.01f);
-		C.Test.TestEqual(TEXT("Attack Resistance +0.25"), C.Stat(Dragon, UCrossguardAttributeSet::GetAttackResistanceAttribute()), Ar + DragonResistance, 0.001f);
-		C.Test.TestEqual(TEXT("Magic Resistance +0.25"), C.Stat(Dragon, UCrossguardAttributeSet::GetMagicResistanceAttribute()), Mr + DragonResistance, 0.001f);
+		C.Test.TestEqual(TEXT("Attack Resistance +0.25"), C.Stat(Dragon, UCrossguardAttributeSet::GetAttackResistanceAttribute()), Ar + ExpectedDragonResistance, 0.001f);
+		C.Test.TestEqual(TEXT("Magic Resistance +0.25"), C.Stat(Dragon, UCrossguardAttributeSet::GetMagicResistanceAttribute()), Mr + ExpectedDragonResistance, 0.001f);
 		C.Test.TestTrue(TEXT("Flare Breath is granted"), HasSkill(Dragon, TEXT("flare_breath")));
 		C.Test.TestTrue(TEXT("Flight is granted"), HasSkill(Dragon, TEXT("flight")));
 		C.Test.TestFalse(TEXT("Weapons are put away"), Dragon->GetEquipmentComponent()->AreWeaponsReady());
@@ -976,7 +978,7 @@ bool FCrossguardScenarioSupportDragonification::RunTest(const FString& Parameter
 		C.SetTimeDilation(FastForward);
 	});
 
-	Scenario.WaitUntil(TEXT("The form ends"), DragonSeconds + 5.0f, [](FScenarioContext& C)
+	Scenario.WaitUntil(TEXT("The form ends"), ExpectedDragonSeconds + 5.0f, [](FScenarioContext& C)
 	{
 		const ACrossguardCharacter* Dragon = FindCharacter(C, TEXT("Dragon"));
 		return Dragon != nullptr && !C.HasTag(Dragon, CrossguardTags::State_Dragonified);
@@ -993,7 +995,7 @@ bool FCrossguardScenarioSupportDragonification::RunTest(const FString& Parameter
 		}
 		const float Elapsed = C.Now() - static_cast<float>(C.Number(TEXT("FormAt")));
 		C.Test.AddInfo(FString::Printf(TEXT("Dragon form lasted %.2f s"), Elapsed));
-		C.Test.TestEqual(TEXT("The form lasts 45 s"), Elapsed, DragonSeconds, 1.0f);
+		C.Test.TestEqual(TEXT("The form lasts 45 s"), Elapsed, ExpectedDragonSeconds, 1.0f);
 		C.Test.TestEqual(TEXT("Max HP is back"), C.MaxHealth(Dragon), static_cast<float>(C.Number(TEXT("Max"))), 0.5f);
 		C.Test.TestEqual(TEXT("Attack Resistance is back"), C.Stat(Dragon, UCrossguardAttributeSet::GetAttackResistanceAttribute()),
 			static_cast<float>(C.Number(TEXT("Ar"))), 0.001f);
@@ -1094,7 +1096,7 @@ bool FCrossguardScenarioSupportFlight::RunTest(const FString& Parameters)
 			Flier->GetActorLocation().Z > C.Number(TEXT("HighZ")) - 20.0);
 	});
 
-	Scenario.WaitUntil(TEXT("Flight ends"), FlightSeconds + 5.0f, [](FScenarioContext& C)
+	Scenario.WaitUntil(TEXT("Flight ends"), ExpectedFlightSeconds + 5.0f, [](FScenarioContext& C)
 	{
 		const ACrossguardCharacter* Flier = FindCharacter(C, TEXT("Flier"));
 		return Flier != nullptr && !C.HasTag(Flier, CrossguardTags::State_Flying);
@@ -1110,7 +1112,7 @@ bool FCrossguardScenarioSupportFlight::RunTest(const FString& Parameters)
 		}
 		const float Elapsed = C.Now() - static_cast<float>(C.Number(TEXT("FlightAt")));
 		C.Test.AddInfo(FString::Printf(TEXT("Flight lasted %.2f s"), Elapsed));
-		C.Test.TestEqual(TEXT("Flight lasts 20 s"), Elapsed, FlightSeconds, 1.0f);
+		C.Test.TestEqual(TEXT("Flight lasts 20 s"), Elapsed, ExpectedFlightSeconds, 1.0f);
 		C.Test.TestFalse(TEXT("No longer in Flying movement mode"), IsFlyingMode(Flier));
 	});
 
@@ -1169,7 +1171,7 @@ bool FCrossguardScenarioSupportWall::RunTest(const FString& Parameters)
 			return;
 		}
 		C.Face(Caster, 0.0f);
-		const FVector Expected = Caster->GetActorLocation() + FVector(WallDistance, 0.0f, 0.0f);
+		const FVector Expected = Caster->GetActorLocation() + FVector(ExpectedWallDistance, 0.0f, 0.0f);
 		if (!C.Require(C.ActivateSkill(Caster, TEXT("wall")), TEXT("Wall activates")))
 		{
 			return;
@@ -1253,7 +1255,7 @@ bool FCrossguardScenarioSupportLight::RunTest(const FString& Parameters)
 		ACrossguardLightOrb* Orb = Orbs[0];
 		C.Remember(TEXT("Orb1"), Orb);
 		C.Test.TestTrue(TEXT("The orb is attached to the caster"), Orb->GetAttachParentActor() == Caster);
-		C.Test.TestEqual(TEXT("The orb is 1.2 m over the caster"), static_cast<float>(Orb->GetActorLocation().Z - Caster->GetActorLocation().Z), LightHeight, 1.0f);
+		C.Test.TestEqual(TEXT("The orb is 1.2 m over the caster"), static_cast<float>(Orb->GetActorLocation().Z - Caster->GetActorLocation().Z), ExpectedLightHeight, 1.0f);
 		C.Test.TestEqual(TEXT("The orb lives 120 s"), Orb->GetLifeSpan(), LightSeconds, 0.2f);
 		C.Test.TestTrue(TEXT("Light is on cooldown"), C.IsOnCooldown(Caster, TEXT("light")));
 		C.SetTimeDilation(FastForward);
@@ -1399,12 +1401,12 @@ bool FCrossguardScenarioSupportStealth::RunTest(const FString& Parameters)
 		}
 		C.Test.TestFalse(TEXT("The attack ends stealth"), C.HasTag(Sneak, CrossguardTags::State_Stealthed));
 		C.Test.TestEqual(TEXT("Exit bonus: +10% Movement Speed"), C.Stat(Sneak, UCrossguardAttributeSet::GetMoveSpeedAttribute()),
-			Speed + StealthExitMoveSpeed, 0.001f);
+			Speed + ExpectedStealthExitMoveSpeed, 0.001f);
 		C.Test.TestEqual(TEXT("Exit bonus: +25% Attack Damage Bonus"), C.Stat(Sneak, UCrossguardAttributeSet::GetAttackDamageBonusAttribute()),
-			Bonus + StealthExitAttackBonus, 0.001f);
+			Bonus + ExpectedStealthExitAttackBonus, 0.001f);
 	});
 
-	Scenario.Wait(StealthExitSeconds + 0.5f);
+	Scenario.Wait(ExpectedStealthExitSeconds + 0.5f);
 
 	Scenario.Step(TEXT("The exit bonus lasts 3 s"), [](FScenarioContext& C)
 	{
@@ -1420,7 +1422,7 @@ bool FCrossguardScenarioSupportStealth::RunTest(const FString& Parameters)
 			static_cast<float>(C.Number(TEXT("Bonus"))), 0.001f);
 	});
 
-	Scenario.WaitUntil(TEXT("The hider's stealth runs out"), StealthSeconds, [](FScenarioContext& C)
+	Scenario.WaitUntil(TEXT("The hider's stealth runs out"), ExpectedStealthSeconds, [](FScenarioContext& C)
 	{
 		const ACrossguardCharacter* Hider = FindCharacter(C, TEXT("Hider"));
 		return Hider != nullptr && !C.HasTag(Hider, CrossguardTags::State_Stealthed);
@@ -1436,7 +1438,7 @@ bool FCrossguardScenarioSupportStealth::RunTest(const FString& Parameters)
 		}
 		const float Elapsed = C.Now() - static_cast<float>(C.Number(TEXT("HiddenAt")));
 		C.Test.AddInfo(FString::Printf(TEXT("The hider's stealth lasted %.2f s"), Elapsed));
-		C.Test.TestEqual(TEXT("Stealth lasts 12 s"), Elapsed, StealthSeconds, 0.5f);
+		C.Test.TestEqual(TEXT("Stealth lasts 12 s"), Elapsed, ExpectedStealthSeconds, 0.5f);
 		C.Test.TestTrue(TEXT("The hider's capsule is visible again"), Hider->GetCapsuleComponent()->IsVisible());
 	});
 
@@ -1571,7 +1573,7 @@ bool FCrossguardScenarioSupportUnleash::RunTest(const FString& Parameters)
 		C.SetTimeDilation(FastForward * 0.5f);
 	});
 
-	Scenario.Wait(UnleashSeconds - 2.0f);
+	Scenario.Wait(ExpectedUnleashSeconds - 2.0f);
 
 	Scenario.Step(TEXT("Still doubled after 13 s"), [](FScenarioContext& C)
 	{
@@ -1805,7 +1807,7 @@ bool FCrossguardScenarioSupportMultiscale::RunTest(const FString& Parameters)
 				return;
 			}
 			const bool bParty = FCString::Strcmp(Name, TEXT("Outsider")) != 0;
-			const float Bonus = bParty ? MultiscaleResistance : 0.0f;
+			const float Bonus = bParty ? ExpectedMultiscaleResistance : 0.0f;
 			C.Test.TestEqual(*FString::Printf(TEXT("%s: Attack Resistance %s"), Name, bParty ? TEXT("+0.15") : TEXT("unchanged")),
 				C.Stat(Member, UCrossguardAttributeSet::GetAttackResistanceAttribute()),
 				static_cast<float>(C.Number(FName(*(FString(Name) + TEXT(".Ar"))))) + Bonus, 0.001f);
@@ -1998,17 +2000,17 @@ bool FCrossguardScenarioSupportSummonSkeletons::RunTest(const FString& Parameter
 			if (Minion->CombatRole == ECrossguardCombatRole::Mage)
 			{
 				++Mages;
-				C.Test.TestEqual(TEXT("The Mage has 30 HP"), C.MaxHealth(Minion), SkeletonMageHealth, 0.01f);
+				C.Test.TestEqual(TEXT("The Mage has 30 HP"), C.MaxHealth(Minion), ExpectedSkeletonMageHealth, 0.01f);
 			}
 			else
 			{
 				++Warriors;
-				C.Test.TestEqual(TEXT("A Warrior has 40 HP"), C.MaxHealth(Minion), SkeletonWarriorHealth, 0.01f);
+				C.Test.TestEqual(TEXT("A Warrior has 40 HP"), C.MaxHealth(Minion), ExpectedSkeletonWarriorHealth, 0.01f);
 			}
-			C.Test.TestEqual(TEXT("A skeleton lives 60 s"), Minion->GetLifeSpan(), SkeletonSeconds, 0.2f);
+			C.Test.TestEqual(TEXT("A skeleton lives 60 s"), Minion->GetLifeSpan(), ExpectedSkeletonSeconds, 0.2f);
 		}
-		C.Test.TestEqual(TEXT("Five Warriors"), Warriors, SkeletonWarriors);
-		C.Test.TestEqual(TEXT("One Mage"), Mages, SkeletonCount - SkeletonWarriors);
+		C.Test.TestEqual(TEXT("Five Warriors"), Warriors, ExpectedSkeletonWarriors);
+		C.Test.TestEqual(TEXT("One Mage"), Mages, SkeletonCount - ExpectedSkeletonWarriors);
 	});
 
 	Scenario.WaitUntil(TEXT("The skeletons attack the dummy"), 15.0f, [](FScenarioContext& C)
@@ -2061,7 +2063,7 @@ bool FCrossguardScenarioSupportSummonSkeletons::RunTest(const FString& Parameter
 		C.Test.TestEqual(TEXT("Six new skeletons"), MinionsOf(C, Necromancer).Num(), SkeletonCount);
 	});
 
-	Scenario.WaitUntil(TEXT("The skeletons vanish"), SkeletonSeconds + 5.0f, [](FScenarioContext& C)
+	Scenario.WaitUntil(TEXT("The skeletons vanish"), ExpectedSkeletonSeconds + 5.0f, [](FScenarioContext& C)
 	{
 		const ACrossguardCharacter* Necromancer = FindCharacter(C, TEXT("Necromancer"));
 		return Necromancer != nullptr && MinionsOf(C, Necromancer).Num() == 0;
@@ -2072,7 +2074,7 @@ bool FCrossguardScenarioSupportSummonSkeletons::RunTest(const FString& Parameter
 		C.SetTimeDilation(1.0f);
 		const float Elapsed = C.Now() - static_cast<float>(C.Number(TEXT("RecastAt")));
 		C.Test.AddInfo(FString::Printf(TEXT("Skeletons lasted %.2f s"), Elapsed));
-		C.Test.TestEqual(TEXT("Skeletons vanish after 60 s"), Elapsed, SkeletonSeconds, 1.0f);
+		C.Test.TestEqual(TEXT("Skeletons vanish after 60 s"), Elapsed, ExpectedSkeletonSeconds, 1.0f);
 	});
 
 	Scenario.Run();

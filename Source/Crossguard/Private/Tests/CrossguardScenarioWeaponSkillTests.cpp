@@ -27,40 +27,43 @@ namespace CrossguardScenarioWeaponSkills
 
 	// --- Data (Data/Skills/Skills.json, Data/Items/Weapons.json, docs/design-decisions.md) ---------
 
+	// Names the game's .cpp files also use for their file-local constants (anonymous namespaces) carry
+	// an "Expected" prefix: in a unity build both would be visible in RunTest and the name ambiguous.
+
 	// Next-attack riders (GatherRiders).
-	constexpr float SlashWeaponDamage = 7.0f;
-	constexpr float MortalStrikeAttackDamage = 20.0f;
-	constexpr float ShadeBlowMagicDamage = 20.0f;
-	constexpr float ShadeBlowHealBlockSeconds = 5.0f;
+	constexpr float ExpectedSlashWeaponDamage = 7.0f;
+	constexpr float ExpectedMortalStrikeAttackDamage = 20.0f;
+	constexpr float ExpectedShadeBlowMagicDamage = 20.0f;
+	constexpr float ExpectedShadeBlowHealBlockSeconds = 5.0f;
 	// Gouge: 25 Attack Damage over 5 s = 5 per second (a tick each second, none on application).
-	constexpr float GougeDamagePerSecond = 5.0f;
+	constexpr float ExpectedGougeDamagePerSecond = 5.0f;
 	constexpr int32 GougeTicks = 5;
-	constexpr float GougeSlow = 0.05f;
-	constexpr float GougeSeconds = 5.0f;
-	constexpr float PurgeShotMagicDamage = 10.0f;
-	constexpr float PurgeShotMuteSeconds = 3.0f;
+	constexpr float ExpectedGougeSlow = 0.05f;
+	constexpr float ExpectedGougeSeconds = 5.0f;
+	constexpr float ExpectedPurgeShotMagicDamage = 10.0f;
+	constexpr float ExpectedPurgeShotMuteSeconds = 3.0f;
 	// Bow buffs: 8 s.
 	constexpr float BowBuffSeconds = 8.0f;
-	constexpr float QuickshotMoveSpeed = 0.05f;
-	constexpr float QuickshotActionSpeed = 0.25f;
-	constexpr float ArcaneArrowsMagicDamage = 5.0f;
+	constexpr float ExpectedQuickshotMoveSpeed = 0.05f;
+	constexpr float ExpectedQuickshotActionSpeed = 0.25f;
+	constexpr float ExpectedArcaneArrowsMagicDamage = 5.0f;
 	// Cleave: 85% of the main-hand weapon, 3 m, 120 degree arc.
-	constexpr float CleaveWeaponFraction = 0.85f;
+	constexpr float ExpectedCleaveWeaponFraction = 0.85f;
 	// Parting the Land: 65 Attack Damage, knock-up 1 s, two 15 s walls.
-	constexpr float PartingDamage = 65.0f;
+	constexpr float ExpectedPartingDamage = 65.0f;
 	constexpr float WallSeconds = 15.0f;
 	// Hunter's Leap: 0.5 m per AGI point.
-	constexpr float LeapCmPerAgility = 50.0f;
+	constexpr float ExpectedLeapCmPerAgility = 50.0f;
 	// Like A Lion: 30 m, lands 1.5 m short, STR x1.2 for 6 s.
-	constexpr float LionRange = 3000.0f;
-	constexpr float LionStopShort = 150.0f;
-	constexpr float LionStrength = 1.2f;
-	constexpr float LionBuffSeconds = 6.0f;
+	constexpr float ExpectedLionRange = 3000.0f;
+	constexpr float ExpectedLionStopShort = 150.0f;
+	constexpr float ExpectedLionStrength = 1.2f;
+	constexpr float ExpectedLionBuffSeconds = 6.0f;
 	// Spear: 33 AD at Common, once every 1.2 s. Triple Thrust: three thrusts 0.15 s apart, +15 each.
 	constexpr float SpearValue = 33.0f;
 	constexpr float SpearSecondsPerAttack = 1.2f;
-	constexpr int32 TripleThrustCount = 3;
-	constexpr float TripleThrustBonus = 15.0f;
+	constexpr int32 ExpectedTripleThrustCount = 3;
+	constexpr float ExpectedTripleThrustBonus = 15.0f;
 	constexpr float TripleThrustSeconds = 0.45f;
 	// Passives.
 	constexpr float HeroicMightStrength = 10.0f;
@@ -250,7 +253,7 @@ bool FCrossguardScenarioWeaponSkillNextAttackStack::RunTest(const FString& Param
 		C.Aim(Player, Dummy);
 		const float Before = C.Health(Dummy);
 		const float Plain = C.ExpectedDamage(Player, Dummy, C.WeaponValue(Player));
-		const float Full = C.ExpectedDamage(Player, Dummy, C.WeaponValue(Player) + SlashWeaponDamage + MortalStrikeAttackDamage, ShadeBlowMagicDamage);
+		const float Full = C.ExpectedDamage(Player, Dummy, C.WeaponValue(Player) + ExpectedSlashWeaponDamage + ExpectedMortalStrikeAttackDamage, ExpectedShadeBlowMagicDamage);
 		const float Expected = FMath::Min(Full, Before);
 		if (!C.Require(C.BasicAttack(Player), TEXT("the sword attack activates")))
 		{
@@ -384,7 +387,7 @@ bool FCrossguardScenarioWeaponSkillGouge::RunTest(const FString& Parameters)
 		C.Test.TestTrue(TEXT("State.NextAttack.Gouge is on"), C.HasTag(Player, CrossguardTags::State_NextAttack_Gouge));
 		C.Aim(Player, Dummy);
 		const float MoveSpeedBefore = C.Stat(Dummy, UCrossguardAttributeSet::GetMoveSpeedAttribute());
-		C.SetNumber(TEXT("Tick"), C.ExpectedDamage(Player, Dummy, GougeDamagePerSecond));
+		C.SetNumber(TEXT("Tick"), C.ExpectedDamage(Player, Dummy, ExpectedGougeDamagePerSecond));
 		if (!TryMeleeHit(C, TEXT("Rogue"), TEXT("Dummy"), TEXT("Stab")))
 		{
 			C.Fail(TEXT("the dagger attack does not activate"));
@@ -394,7 +397,7 @@ bool FCrossguardScenarioWeaponSkillGouge::RunTest(const FString& Parameters)
 		C.Test.TestFalse(TEXT("Gouge is used up"), C.HasTag(Player, CrossguardTags::State_NextAttack_Gouge));
 		C.Test.TestTrue(TEXT("The dummy is slowed (State.Slowed)"), C.HasTag(Dummy, CrossguardTags::State_Slowed));
 		C.Test.TestEqual(TEXT("The dummy's Move Speed is down 5%"), C.Stat(Dummy, UCrossguardAttributeSet::GetMoveSpeedAttribute()),
-			MoveSpeedBefore - GougeSlow, 0.001f);
+			MoveSpeedBefore - ExpectedGougeSlow, 0.001f);
 		C.SetNumber(TEXT("AfterStab"), C.Health(Dummy));
 		C.SetNumber(TEXT("MoveSpeedBefore"), MoveSpeedBefore);
 	});
@@ -416,7 +419,7 @@ bool FCrossguardScenarioWeaponSkillGouge::RunTest(const FString& Parameters)
 		C.Test.TestEqual(TEXT("One Gouge tick after 1.5 s"), AfterStab - C.Health(Dummy), Tick, DamageTolerance);
 	});
 
-	Scenario.Wait(GougeSeconds - 1.5f + 1.0f);
+	Scenario.Wait(ExpectedGougeSeconds - 1.5f + 1.0f);
 
 	Scenario.Step(TEXT("6 s later: 5 ticks (25) in all, the slow is over"), [](FScenarioContext& C)
 	{
@@ -497,7 +500,7 @@ bool FCrossguardScenarioWeaponSkillShadeBlowHealBlock::RunTest(const FString& Pa
 			return;
 		}
 		C.Aim(Player, Dummy);
-		if (!TryMeleeHit(C, TEXT("Swordsman"), TEXT("Dummy"), TEXT("Blow"), 0.0f, ShadeBlowMagicDamage))
+		if (!TryMeleeHit(C, TEXT("Swordsman"), TEXT("Dummy"), TEXT("Blow"), 0.0f, ExpectedShadeBlowMagicDamage))
 		{
 			C.Fail(TEXT("the sword attack does not activate"));
 			return;
@@ -531,7 +534,7 @@ bool FCrossguardScenarioWeaponSkillShadeBlowHealBlock::RunTest(const FString& Pa
 		C.Test.TestFalse(TEXT("No 'healed' log line"), C.LogContains(TEXT(" healed ")));
 	});
 
-	Scenario.Wait(ShadeBlowHealBlockSeconds + 0.5f);
+	Scenario.Wait(ExpectedShadeBlowHealBlockSeconds + 0.5f);
 
 	Scenario.Step(TEXT("5.5 s later: healer B's heal works again"), [](FScenarioContext& C)
 	{
@@ -607,7 +610,7 @@ bool FCrossguardScenarioWeaponSkillPurgeShot::RunTest(const FString& Parameters)
 		C.Aim(Archer, Target);
 		const float Before = C.Health(Target);
 		C.SetNumber(TEXT("Before"), Before);
-		C.SetNumber(TEXT("Expected"), FMath::Min(C.ExpectedDamage(Archer, Target, C.WeaponValue(Archer), PurgeShotMagicDamage), Before));
+		C.SetNumber(TEXT("Expected"), FMath::Min(C.ExpectedDamage(Archer, Target, C.WeaponValue(Archer), ExpectedPurgeShotMagicDamage), Before));
 		if (!C.Require(C.BasicAttack(Archer), TEXT("the bow shot activates")))
 		{
 			return;
@@ -640,7 +643,7 @@ bool FCrossguardScenarioWeaponSkillPurgeShot::RunTest(const FString& Parameters)
 		C.Test.TestTrue(TEXT("A Muted target still attacks"), C.BasicAttack(Target));
 	});
 
-	Scenario.Wait(PurgeShotMuteSeconds + 0.3f);
+	Scenario.Wait(ExpectedPurgeShotMuteSeconds + 0.3f);
 
 	Scenario.Step(TEXT("3 s later: the Mute is over, Slash works"), [](FScenarioContext& C)
 	{
@@ -700,7 +703,7 @@ bool FCrossguardScenarioWeaponSkillCleave::RunTest(const FString& Parameters)
 			return;
 		}
 		C.Face(Player, 0.0f);
-		const float Base = C.WeaponValue(Player) * CleaveWeaponFraction;
+		const float Base = C.WeaponValue(Player) * ExpectedCleaveWeaponFraction;
 		const float FrontBefore = C.Health(Front);
 		const float SideBefore = C.Health(Side);
 		const float BehindBefore = C.Health(Behind);
@@ -778,7 +781,7 @@ bool FCrossguardScenarioWeaponSkillPartingTheLand::RunTest(const FString& Parame
 		C.Face(Player, 0.0f);
 		C.Test.TestEqual(TEXT("No walls before"), CountWallsOwnedBy(C, Player), 0);
 		const float Before = C.Health(Dummy);
-		const float Expected = FMath::Min(C.ExpectedDamage(Player, Dummy, PartingDamage), Before);
+		const float Expected = FMath::Min(C.ExpectedDamage(Player, Dummy, ExpectedPartingDamage), Before);
 		C.SetNumber(TEXT("DummyZ"), Dummy->GetActorLocation().Z);
 		if (!C.Require(C.ActivateSkill(Player, TEXT("parting_the_land")), TEXT("Parting the Land activates")))
 		{
@@ -877,7 +880,7 @@ bool FCrossguardScenarioWeaponSkillHuntersLeap::RunTest(const FString& Parameter
 		C.SetNumber(TEXT("StartX"), Start.X);
 		C.SetNumber(TEXT("StartY"), Start.Y);
 		C.SetNumber(TEXT("StartZ"), Start.Z);
-		C.SetNumber(TEXT("Expected"), Agility * LeapCmPerAgility);
+		C.SetNumber(TEXT("Expected"), Agility * ExpectedLeapCmPerAgility);
 		if (!C.Require(C.ActivateSkill(Player, TEXT("hunters_leap")), TEXT("Hunter's Leap activates")))
 		{
 			return;
@@ -906,7 +909,7 @@ bool FCrossguardScenarioWeaponSkillHuntersLeap::RunTest(const FString& Parameter
 		C.Test.TestTrue(TEXT("Leapt at least 90% of 0.5 m x AGI forward"), Forward >= Expected * 0.9f);
 		C.Test.TestTrue(TEXT("Leapt no more than 2 m past 0.5 m x AGI"), Forward <= Expected + 200.0f);
 		C.Test.TestTrue(TEXT("Straight ahead"), Sideways < 50.0f);
-		C.Test.TestEqual(TEXT("Back on the floor"), End.Z, static_cast<float>(C.Number(TEXT("StartZ"))), 20.0f);
+		C.Test.TestEqual(TEXT("Back on the floor"), static_cast<float>(End.Z), static_cast<float>(C.Number(TEXT("StartZ"))), 20.0f);
 	});
 
 	Scenario.Run();
@@ -952,7 +955,7 @@ bool FCrossguardScenarioWeaponSkillLikeALion::RunTest(const FString& Parameters)
 		if (const ACrossguardCharacter* Local = C.LocalPlayer())
 		{
 			C.Test.TestTrue(TEXT("The PIE player is out of the leap's range"),
-				FVector::Dist(Local->GetActorLocation(), Player->GetActorLocation()) > LionRange);
+				FVector::Dist(Local->GetActorLocation(), Player->GetActorLocation()) > ExpectedLionRange);
 		}
 		C.SetNumber(TEXT("StartX"), Player->GetActorLocation().X);
 		C.SetNumber(TEXT("StartY"), Player->GetActorLocation().Y);
@@ -997,7 +1000,7 @@ bool FCrossguardScenarioWeaponSkillLikeALion::RunTest(const FString& Parameters)
 			return;
 		}
 		C.Test.TestTrue(TEXT("Like A Lion is on cooldown"), C.IsOnCooldown(Player, TEXT("like_a_lion_he_leapt")));
-		C.Test.TestEqual(TEXT("Strength x1.2"), C.Stat(Player, UCrossguardAttributeSet::GetStrengthAttribute()), Strength * LionStrength, 0.05f);
+		C.Test.TestEqual(TEXT("Strength x1.2"), C.Stat(Player, UCrossguardAttributeSet::GetStrengthAttribute()), Strength * ExpectedLionStrength, 0.05f);
 	});
 
 	// 0.4 s + 8.5 m / 25 m/s, then the landing.
@@ -1014,12 +1017,12 @@ bool FCrossguardScenarioWeaponSkillLikeALion::RunTest(const FString& Parameters)
 		const FVector Start(static_cast<float>(C.Number(TEXT("StartX"))), static_cast<float>(C.Number(TEXT("StartY"))), 0.0f);
 		const float Moved = FVector::Dist2D(Player->GetActorLocation(), Start);
 		const float Gap = FVector::Dist2D(Player->GetActorLocation(), Prey->GetActorLocation());
-		C.Test.AddInfo(FString::Printf(TEXT("Like A Lion: moved %.0f cm, %.0f cm from the dummy (lands %.0f short)"), Moved, Gap, LionStopShort));
-		C.Test.TestTrue(TEXT("Leapt most of the 10 m"), Moved >= 1000.0f - LionStopShort - 150.0f);
-		C.Test.TestTrue(TEXT("Landed next to the dummy, not past it"), Gap <= LionStopShort + 150.0f && Gap >= 50.0f);
+		C.Test.AddInfo(FString::Printf(TEXT("Like A Lion: moved %.0f cm, %.0f cm from the dummy (lands %.0f short)"), Moved, Gap, ExpectedLionStopShort));
+		C.Test.TestTrue(TEXT("Leapt most of the 10 m"), Moved >= 1000.0f - ExpectedLionStopShort - 150.0f);
+		C.Test.TestTrue(TEXT("Landed next to the dummy, not past it"), Gap <= ExpectedLionStopShort + 150.0f && Gap >= 50.0f);
 	});
 
-	Scenario.Wait(LionBuffSeconds);
+	Scenario.Wait(ExpectedLionBuffSeconds);
 
 	Scenario.Step(TEXT("7.5 s later: Strength is back"), [](FScenarioContext& C)
 	{
@@ -1148,7 +1151,7 @@ bool FCrossguardScenarioWeaponSkillTripleThrust::RunTest(const FString& Paramete
 		}
 		C.Aim(Player, Dummy);
 		const float Before = C.Health(Dummy);
-		const float PerThrust = C.ExpectedDamage(Player, Dummy, C.WeaponValue(Player) + TripleThrustBonus);
+		const float PerThrust = C.ExpectedDamage(Player, Dummy, C.WeaponValue(Player) + ExpectedTripleThrustBonus);
 		C.SetNumber(TEXT("Before"), Before);
 		C.SetNumber(TEXT("PerThrust"), PerThrust);
 		if (!C.Require(C.ActivateSkill(Player, TEXT("triple_thrust")), TEXT("Triple Thrust activates")))
@@ -1170,7 +1173,7 @@ bool FCrossguardScenarioWeaponSkillTripleThrust::RunTest(const FString& Paramete
 			return;
 		}
 		const float Before = static_cast<float>(C.Number(TEXT("Before")));
-		const float Expected = FMath::Min(static_cast<float>(C.Number(TEXT("PerThrust"))) * TripleThrustCount, Before);
+		const float Expected = FMath::Min(static_cast<float>(C.Number(TEXT("PerThrust"))) * ExpectedTripleThrustCount, Before);
 		C.Test.AddInfo(FString::Printf(TEXT("Triple Thrust: %.2f taken (expected %.2f)"), Before - C.Health(Dummy), Expected));
 		C.Test.TestEqual(TEXT("Three thrusts of the spear +15"), Before - C.Health(Dummy), Expected, DamageTolerance);
 	});
@@ -1224,15 +1227,15 @@ bool FCrossguardScenarioWeaponSkillQuickshot::RunTest(const FString& Parameters)
 		}
 		C.Test.TestTrue(TEXT("Quickshot is on cooldown"), C.IsOnCooldown(Player, TEXT("quickshot")));
 		C.Test.TestEqual(TEXT("+25% Action Speed"), C.Stat(Player, UCrossguardAttributeSet::GetActionSpeedAttribute()),
-			ActionSpeed + QuickshotActionSpeed, 0.001f);
-		C.Test.TestEqual(TEXT("+5% Move Speed"), C.Stat(Player, UCrossguardAttributeSet::GetMoveSpeedAttribute()), MoveSpeed + QuickshotMoveSpeed, 0.001f);
+			ActionSpeed + ExpectedQuickshotActionSpeed, 0.001f);
+		C.Test.TestEqual(TEXT("+5% Move Speed"), C.Stat(Player, UCrossguardAttributeSet::GetMoveSpeedAttribute()), MoveSpeed + ExpectedQuickshotMoveSpeed, 0.001f);
 		const float Faster = Equipment->GetAttackInterval(ECrossguardEquipmentSlot::MainHand);
 		C.Test.AddInfo(FString::Printf(TEXT("Bow interval %.3f -> %.3f s"), Interval, Faster));
 		C.Test.TestTrue(TEXT("The bow shoots faster"), Faster < Interval);
 		if (ActionSpeed >= 0.0f)
 		{
 			// (seconds per attack) / (1 + Action Speed).
-			C.Test.TestEqual(TEXT("Interval / (1 + Action Speed)"), Faster, Interval * (1.0f + ActionSpeed) / (1.0f + ActionSpeed + QuickshotActionSpeed), 0.001f);
+			C.Test.TestEqual(TEXT("Interval / (1 + Action Speed)"), Faster, Interval * (1.0f + ActionSpeed) / (1.0f + ActionSpeed + ExpectedQuickshotActionSpeed), 0.001f);
 		}
 	});
 
@@ -1302,7 +1305,7 @@ bool FCrossguardScenarioWeaponSkillArcaneArrows::RunTest(const FString& Paramete
 		C.Aim(Player, Dummy);
 		const float Before = C.Health(Dummy);
 		C.SetNumber(TEXT("Before"), Before);
-		C.SetNumber(TEXT("Expected"), FMath::Min(C.ExpectedDamage(Player, Dummy, C.WeaponValue(Player), ArcaneArrowsMagicDamage), Before));
+		C.SetNumber(TEXT("Expected"), FMath::Min(C.ExpectedDamage(Player, Dummy, C.WeaponValue(Player), ExpectedArcaneArrowsMagicDamage), Before));
 		C.Require(C.BasicAttack(Player), TEXT("the bow shot activates"));
 	});
 

@@ -82,6 +82,24 @@ namespace CrossguardScenarioLocal
 			|| Name.StartsWith(TEXT("HOTRELOADED_"));
 	}
 
+	// A granted, non-passive skill's spec by skill id; null if none.
+	const FGameplayAbilitySpec* FindSkillSpec(UAbilitySystemComponent* ASC, FName SkillId)
+	{
+		if (ASC == nullptr)
+		{
+			return nullptr;
+		}
+		for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+		{
+			const UCrossguardGameplayAbility* Ability = Cast<UCrossguardGameplayAbility>(Spec.Ability);
+			if (Ability != nullptr && Ability->SkillId == SkillId && Ability->SkillCategory != ECrossguardSkillCategory::Passive)
+			{
+				return &Spec;
+			}
+		}
+		return nullptr;
+	}
+
 	// Blueprint classes derived from Base (not Base, not native, not a subclass of Excluded), by class
 	// path. From the asset registry (also unloaded Blueprints) and from classes already in memory.
 	TArray<FString> FindBlueprintClassPaths(UClass* Base, UClass* Excluded)
@@ -158,8 +176,6 @@ namespace CrossguardScenarioLocal
 
 namespace CrossguardScenario
 {
-	using namespace CrossguardScenarioLocal;
-
 	// --- Log capture ------------------------------------------------------------------------------
 
 	// Registered with GLog while a scenario's PIE session runs.
@@ -293,7 +309,7 @@ namespace CrossguardScenario
 			return nullptr;
 		}
 		const float HalfHeight = Class->GetDefaultObject<ACrossguardCharacter>()->GetDefaultHalfHeight();
-		const FTransform Transform(FRotator(0.0f, Yaw, 0.0f), FloorPoint + FVector(0.0f, 0.0f, HalfHeight + SpawnClearance));
+		const FTransform Transform(FRotator(0.0f, Yaw, 0.0f), FloorPoint + FVector(0.0f, 0.0f, HalfHeight + CrossguardScenarioLocal::SpawnClearance));
 		ACrossguardCharacter* Character = PlayWorld->SpawnActorDeferred<ACrossguardCharacter>(Class, Transform, nullptr, nullptr,
 			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 		if (Character == nullptr)
@@ -425,7 +441,7 @@ namespace CrossguardScenario
 			Fail(TEXT("Place: no character"));
 			return;
 		}
-		const FVector Location = FloorPoint + FVector(0.0f, 0.0f, Character->GetDefaultHalfHeight() + SpawnClearance);
+		const FVector Location = FloorPoint + FVector(0.0f, 0.0f, Character->GetDefaultHalfHeight() + CrossguardScenarioLocal::SpawnClearance);
 		Character->SetActorLocationAndRotation(Location, FRotator(0.0f, Yaw, 0.0f), false, nullptr, ETeleportType::TeleportPhysics);
 		if (AController* Controller = Character->GetController())
 		{
@@ -536,7 +552,7 @@ namespace CrossguardScenario
 			FCrossguardLoadoutResult Result = Loadout->ValidateLoadout(SkillIds);
 			// Not enough Skill Capacity at this level: raise the level (debug progression) until it fits,
 			// up to the cap. Attributes are left as they are; ExpectedDamage reads the current stats.
-			while (Result.Error == ECrossguardLoadoutError::OverCapacity && Character->Level < MaxTestLevel)
+			while (Result.Error == ECrossguardLoadoutError::OverCapacity && Character->Level < CrossguardScenarioLocal::MaxTestLevel)
 			{
 				Character->bUseDebugProgression = true;
 				++Character->Level;
@@ -636,37 +652,17 @@ namespace CrossguardScenario
 
 	void FScenarioContext::LowerGuard(ACrossguardCharacter* Character)
 	{
-		if (UAbilitySystemComponent* ASC = FindASC(Character))
+		if (UAbilitySystemComponent* ASC = CrossguardScenarioLocal::FindASC(Character))
 		{
 			const FGameplayTagContainer GuardTag(CrossguardTags::Ability_Guard);
 			ASC->CancelAbilities(&GuardTag);
 		}
 	}
 
-	namespace
-	{
-		const FGameplayAbilitySpec* FindSkillSpec(UAbilitySystemComponent* ASC, FName SkillId)
-		{
-			if (ASC == nullptr)
-			{
-				return nullptr;
-			}
-			for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
-			{
-				const UCrossguardGameplayAbility* Ability = Cast<UCrossguardGameplayAbility>(Spec.Ability);
-				if (Ability != nullptr && Ability->SkillId == SkillId && Ability->SkillCategory != ECrossguardSkillCategory::Passive)
-				{
-					return &Spec;
-				}
-			}
-			return nullptr;
-		}
-	}
-
 	bool FScenarioContext::ActivateSkill(ACrossguardCharacter* Character, FName SkillId)
 	{
-		UAbilitySystemComponent* ASC = FindASC(Character);
-		const FGameplayAbilitySpec* Spec = FindSkillSpec(ASC, SkillId);
+		UAbilitySystemComponent* ASC = CrossguardScenarioLocal::FindASC(Character);
+		const FGameplayAbilitySpec* Spec = CrossguardScenarioLocal::FindSkillSpec(ASC, SkillId);
 		if (Spec == nullptr)
 		{
 			Test.AddError(FString::Printf(TEXT("ActivateSkill: %s has no active skill '%s' (GrantSkills first)"), *GetNameSafe(Character),
@@ -680,16 +676,16 @@ namespace CrossguardScenario
 
 	bool FScenarioContext::IsOnCooldown(const ACrossguardCharacter* Character, FName SkillId) const
 	{
-		UAbilitySystemComponent* ASC = FindASC(Character);
-		const FGameplayAbilitySpec* Spec = FindSkillSpec(ASC, SkillId);
+		UAbilitySystemComponent* ASC = CrossguardScenarioLocal::FindASC(Character);
+		const FGameplayAbilitySpec* Spec = CrossguardScenarioLocal::FindSkillSpec(ASC, SkillId);
 		const UCrossguardGameplayAbility* Ability = Spec != nullptr ? Cast<UCrossguardGameplayAbility>(Spec->Ability) : nullptr;
 		return Ability != nullptr && !Ability->CooldownTags.IsEmpty() && ASC->HasAnyMatchingGameplayTags(Ability->CooldownTags);
 	}
 
 	void FScenarioContext::Kill(AActor* Victim, AActor* Killer)
 	{
-		UAbilitySystemComponent* VictimASC = FindASC(Victim);
-		UAbilitySystemComponent* SourceASC = Killer != nullptr ? FindASC(Killer) : VictimASC;
+		UAbilitySystemComponent* VictimASC = CrossguardScenarioLocal::FindASC(Victim);
+		UAbilitySystemComponent* SourceASC = Killer != nullptr ? CrossguardScenarioLocal::FindASC(Killer) : VictimASC;
 		if (VictimASC == nullptr || SourceASC == nullptr)
 		{
 			Fail(FString::Printf(TEXT("Kill: %s or %s has no ability system"), *GetNameSafe(Victim), *GetNameSafe(Killer)));
@@ -710,25 +706,25 @@ namespace CrossguardScenario
 
 	float FScenarioContext::Health(const AActor* Actor) const
 	{
-		const UAbilitySystemComponent* ASC = FindASC(Actor);
+		const UAbilitySystemComponent* ASC = CrossguardScenarioLocal::FindASC(Actor);
 		return ASC != nullptr ? ASC->GetNumericAttribute(UCrossguardAttributeSet::GetHealthAttribute()) : -1.0f;
 	}
 
 	float FScenarioContext::MaxHealth(const AActor* Actor) const
 	{
-		const UAbilitySystemComponent* ASC = FindASC(Actor);
+		const UAbilitySystemComponent* ASC = CrossguardScenarioLocal::FindASC(Actor);
 		return ASC != nullptr ? ASC->GetNumericAttribute(UCrossguardAttributeSet::GetMaxHealthAttribute()) : -1.0f;
 	}
 
 	float FScenarioContext::Stat(const AActor* Actor, const FGameplayAttribute& Attribute) const
 	{
-		const UAbilitySystemComponent* ASC = FindASC(Actor);
+		const UAbilitySystemComponent* ASC = CrossguardScenarioLocal::FindASC(Actor);
 		return ASC != nullptr ? ASC->GetNumericAttribute(Attribute) : 0.0f;
 	}
 
 	bool FScenarioContext::HasTag(const AActor* Actor, const FGameplayTag& Tag) const
 	{
-		const UAbilitySystemComponent* ASC = FindASC(Actor);
+		const UAbilitySystemComponent* ASC = CrossguardScenarioLocal::FindASC(Actor);
 		return ASC != nullptr && Tag.IsValid() && ASC->HasMatchingGameplayTag(Tag);
 	}
 
@@ -907,7 +903,7 @@ namespace CrossguardScenario
 				{
 					return BeginScenario();
 				}
-				if (RealSince(PhaseStarted) > PIEEndTimeout)
+				if (RealSince(PhaseStarted) > CrossguardScenarioLocal::PIEEndTimeout)
 				{
 					Test.AddError(TEXT("A PIE session was already running and did not end; scenario not run"));
 					return true;
@@ -924,9 +920,9 @@ namespace CrossguardScenario
 				{
 					return true;
 				}
-				if (RealSince(PhaseStarted) > PIEEndTimeout)
+				if (RealSince(PhaseStarted) > CrossguardScenarioLocal::PIEEndTimeout)
 				{
-					Test.AddError(FString::Printf(TEXT("PIE did not end within %.0f s"), PIEEndTimeout));
+					Test.AddError(FString::Printf(TEXT("PIE did not end within %.0f s"), CrossguardScenarioLocal::PIEEndTimeout));
 					return true;
 				}
 				return false;
@@ -973,7 +969,7 @@ namespace CrossguardScenario
 		// Finds the Blueprints, makes the map and asks for PIE. True (done) if it cannot.
 		bool BeginScenario()
 		{
-			UClass* GameModeClass = FindBlueprintClass(Test, ACrossguardGameMode::StaticClass(), nullptr, PreferredGameMode,
+			UClass* GameModeClass = CrossguardScenarioLocal::FindBlueprintClass(Test, ACrossguardGameMode::StaticClass(), nullptr, CrossguardScenarioLocal::PreferredGameMode,
 				TEXT("Create a Blueprint Class with parent CrossguardGameMode named BP_CrossguardGameMode and set it up as docs/next-build-checklist.md section 2 says."));
 			if (GameModeClass == nullptr)
 			{
@@ -1026,7 +1022,7 @@ namespace CrossguardScenario
 			}
 			else
 			{
-				CharacterClass = FindBlueprintClass(Test, ACrossguardCharacter::StaticClass(), ACrossguardAICharacter::StaticClass(), PreferredCharacter,
+				CharacterClass = CrossguardScenarioLocal::FindBlueprintClass(Test, ACrossguardCharacter::StaticClass(), ACrossguardAICharacter::StaticClass(), CrossguardScenarioLocal::PreferredCharacter,
 					TEXT("Create a Blueprint Class with parent CrossguardCharacter named BP_CrossguardCharacter, set its tables as docs/next-build-checklist.md sections 2-3 say, and make it the game mode's Default Pawn Class."));
 				if (CharacterClass != nullptr)
 				{
@@ -1063,7 +1059,7 @@ namespace CrossguardScenario
 			else
 			{
 				// The cube is 100 cm: scaled to FloorSize x FloorSize x 100 cm, its top at Z = 0.
-				const float Scale = FloorSize / 100.0f;
+				const float Scale = CrossguardScenarioLocal::FloorSize / 100.0f;
 				const FTransform FloorTransform(FRotator::ZeroRotator, FVector(0.0f, 0.0f, -50.0f), FVector(Scale, Scale, 1.0f));
 				AStaticMeshActor* Floor = EditorWorld.SpawnActor<AStaticMeshActor>(AStaticMeshActor::StaticClass(), FloorTransform, Params);
 				if (Floor != nullptr && Floor->GetStaticMeshComponent() != nullptr)
@@ -1077,7 +1073,7 @@ namespace CrossguardScenario
 				}
 			}
 
-			if (EditorWorld.SpawnActor<APlayerStart>(APlayerStart::StaticClass(), FTransform(FRotator::ZeroRotator, LocalPlayerStart), Params) == nullptr)
+			if (EditorWorld.SpawnActor<APlayerStart>(APlayerStart::StaticClass(), FTransform(FRotator::ZeroRotator, CrossguardScenarioLocal::LocalPlayerStart), Params) == nullptr)
 			{
 				Test.AddWarning(TEXT("Scenario set-up: could not spawn a Player Start; the PIE player spawns at the origin"));
 			}
@@ -1091,9 +1087,9 @@ namespace CrossguardScenario
 				PlaySettings.Reset();
 				return OnPIEReady(*PlayWorld);
 			}
-			if (RealSince(PhaseStarted) > PIEStartTimeout)
+			if (RealSince(PhaseStarted) > CrossguardScenarioLocal::PIEStartTimeout)
 			{
-				Test.AddError(FString::Printf(TEXT("PIE did not start within %.0f s"), PIEStartTimeout));
+				Test.AddError(FString::Printf(TEXT("PIE did not start within %.0f s"), CrossguardScenarioLocal::PIEStartTimeout));
 				SetPhase(EPhase::EndPIE);
 			}
 			return false;
