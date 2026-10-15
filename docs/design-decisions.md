@@ -226,7 +226,6 @@ Weapons and armor have different affix pools. Weapon pools:
 - Flat Max HP from affixes is added after Max HP Bonus: `Max HP = derived × (1 + MHPB) + flat`.
 - Shields roll: AR, MR, Max HP, Max HP Bonus, AAD, AMD, Active/Spell/Art CDR, Active/Spell/Art
   Cast Speed, Action Speed, Dexterity. AR, MR and Max HP Bonus use the 2–5% range.
-- Pending: armor affix pools.
 
 ## Formulas
 

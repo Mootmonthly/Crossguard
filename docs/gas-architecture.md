@@ -221,14 +221,14 @@ and the rules unit tests.
 
 - Generating the stat-modifier effects for passives from the table (currently made by hand).
 - Restricting when the loadout can change (e.g. only between raids).
-- Saving progression; extraction points; reviving.
+- Saving progression; extraction points; a revive spell.
 - Shields (Eldritch Shield), CC, Mute, Silence, minions.
 - Client-side ability system init for pawns without a PlayerState (AI). Players are covered by
   `OnRep_PlayerState`.
 - Animations, weapon-on-weapon collision (fencing).
-- Affix pool and applying affix stats.
-- Inventory and loot UI, single-item drops and pickups in the world, stash and guild bank,
-  splitting stacks, using consumables, bows consuming arrows, treasure chests (reuse
-  `ACrossguardLootContainer`), a revive spell.
+- Inventory and loot UI, a hotbar, single-item drops and pickups in the world, stash and guild
+  bank, splitting stacks, treasure chests (reuse `ACrossguardLootContainer`).
+
+The order these get built in is in [roadmap.md](roadmap.md).
 - Verify in two-client PIE (`showdebug abilitysystem`) that `Equipment.Wielding.*` tags reach
   simulated proxies; they are added to the equipment effect spec's dynamic granted tags.
