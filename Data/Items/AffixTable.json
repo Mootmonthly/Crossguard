@@ -193,8 +193,8 @@
 		"Name": "max_health",
 		"DisplayName": "Max Health",
 		"Stat": "MaxHealth",
-		"Min": 5,
-		"Max": 15,
+		"Min": 1,
+		"Max": 3,
 		"Step": 1,
 		"Pools": [
 			"Shield"

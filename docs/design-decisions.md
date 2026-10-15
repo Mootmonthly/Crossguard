@@ -166,12 +166,14 @@ Weapons and armor have different affix pools. Weapon pools:
 - **Magic Penetration** is the magic counterpart of AP: it removes a percentage of the target's MR.
 - CDR and Cast Speed affixes are split per skill category: Active, Spell and Art CDR; Active, Spell
   and Art Cast Speed.
-- Ranges: percentage stats 2–5%; base attributes 1–3; AAD and AMD 1–3. True Damage 1–3 is a
-  placeholder (not specified). Values roll on whole steps (1 point, 1%).
+- Ranges: percentage stats 2–5%; base attributes, AAD, AMD, True Damage and flat Max HP 1–3.
+  Values roll on whole steps (1 point, 1%). Max HP stays small because every armor piece can
+  roll it.
+- Affix slots by rarity: Common 0, Uncommon 1, Rare 2, Epic 3, Legendary 4, Mystic 5.
+- Flat Max HP from affixes is added after Max HP Bonus: `Max HP = derived × (1 + MHPB) + flat`.
 - Shields roll: AR, MR, Max HP, Max HP Bonus, AAD, AMD, Active/Spell/Art CDR, Active/Spell/Art
   Cast Speed, Action Speed, Dexterity. AR, MR and Max HP Bonus use the 2–5% range.
-- Pending: Max HP affix range (placeholder 5–15); affix slots per rarity (placeholder
-  0/1/2/3/4/5); armor affix pools.
+- Pending: armor affix pools.
 
 ## Formulas
 

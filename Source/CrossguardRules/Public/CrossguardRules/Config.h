@@ -58,7 +58,7 @@ namespace Crossguard
 
 	struct FItemConfig
 	{
-		// Affix slots by rarity level (Common..Mystic). PLACEHOLDER, following Dark and Darker.
+		// Affix slots by rarity level (Common..Mystic).
 		int AffixSlotsByRarity[6] = {0, 1, 2, 3, 4, 5};
 		// Floor on (1 + ActionSpeed) so very low AGI cannot stall attacks.
 		double MinActionSpeedFactor = 0.1;

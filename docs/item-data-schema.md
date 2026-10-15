@@ -4,7 +4,7 @@
 
 Every item has a rarity. The rarity **level** is its index:
 
-| Rarity | Level | Color | Affix slots (placeholder) |
+| Rarity | Level | Color | Affix slots |
 | --- | --- | --- | --- |
 | Common | 0 | Gray `#9D9D9D` | 0 |
 | Uncommon | 1 | Green `#1EFF00` | 1 |
@@ -13,7 +13,6 @@ Every item has a rarity. The rarity **level** is its index:
 | Legendary | 4 | Orange `#FF8000` | 4 |
 | Mystic | 5 | Gold `#FFD700` | 5 |
 
-Affix slot counts follow Dark and Darker's pattern and are placeholders until confirmed.
 
 ## Weapons
 
