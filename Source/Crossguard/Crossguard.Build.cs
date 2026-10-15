@@ -21,5 +21,17 @@ public class Crossguard : ModuleRules
 			"GameplayTasks",
 			"CrossguardRules",
 		});
+
+		// Editor builds only: the scenario tests (Private/Tests/CrossguardScenario.*) create a map,
+		// find the game mode / character Blueprints and run Play-In-Editor. That code is compiled only
+		// with WITH_EDITOR, so game and server builds do not need these modules.
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[]
+			{
+				"UnrealEd",
+				"AssetRegistry",
+			});
+		}
 	}
 }
