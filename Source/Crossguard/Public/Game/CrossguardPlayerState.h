@@ -10,6 +10,7 @@
 #include "CrossguardPlayerState.generated.h"
 
 class UCrossguardSkillCatalog;
+class UCrossguardStashComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardTeamChanged, int32, NewTeamId);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCrossguardProgressionChanged);
@@ -47,8 +48,8 @@ enum class ECrossguardProgressionError : uint8
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardProgressionRejected, ECrossguardProgressionError, Error);
 
-// Per-player state that outlives the pawn: team, XP and level, attribute allocation, Skill Library
-// and respec tokens.
+// Per-player state that outlives the pawn: team, XP and level, attribute allocation, Skill Library,
+// respec tokens and the stash.
 //
 // Not persisted yet: progression lasts for the session (and across seamless travel) until a save
 // or backend exists.
@@ -58,6 +59,8 @@ class CROSSGUARD_API ACrossguardPlayerState : public APlayerState, public IGener
 	GENERATED_BODY()
 
 public:
+	ACrossguardPlayerState();
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// -1 until assigned.
@@ -157,6 +160,10 @@ public:
 
 	const Crossguard::FProgressionConfig& GetProgressionConfig() const { return ProgressionConfig; }
 
+	// The character's stash (between-raid storage).
+	UFUNCTION(BlueprintPure, Category = "Crossguard|Stash")
+	UCrossguardStashComponent* GetStash() const { return Stash; }
+
 protected:
 	UFUNCTION()
 	void OnRep_TeamId();
@@ -175,6 +182,9 @@ private:
 	void AddXp(int32 Amount);
 	// Server. Broadcasts and pushes level and allocation to the pawn.
 	void ProgressionChanged();
+
+	UPROPERTY(VisibleAnywhere, Category = "Crossguard|Stash")
+	TObjectPtr<UCrossguardStashComponent> Stash;
 
 	UPROPERTY(ReplicatedUsing = OnRep_TeamId)
 	int32 TeamId = -1;

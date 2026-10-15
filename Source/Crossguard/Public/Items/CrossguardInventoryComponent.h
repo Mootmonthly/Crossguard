@@ -47,6 +47,8 @@ enum class ECrossguardInventoryError : uint8
 	CannotLearn,
 	// Dead characters cannot use their inventory; their body is looted instead.
 	OwnerDead,
+	// Stash actions are only allowed between raids.
+	BetweenRaidsOnly,
 	// No container is open, or it is too far away.
 	NoContainerOpen,
 	OutOfRange,

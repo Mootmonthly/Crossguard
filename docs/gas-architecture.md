@@ -136,6 +136,14 @@ camera direction. The body mesh is hidden from its owner until first-person arms
 - Stacks combine only the same item at the same rarity.
 - Testing: the character's `DebugInventory` items are added at spawn.
 
+### Stash
+
+`UCrossguardStashComponent` on the player state (`GetStash()`): tabs of 10 × 30 squares, one to
+start; `GrantStashTab()` (server) adds one once tab purchases exist. Between raids only:
+`RequestStore` / `RequestStoreAnywhere` move an inventory stack in, `RequestRetrieve` moves one out,
+`RequestMoveInStash` moves, rotates and merges, `RequestUseStashItem` learns a Skill Gem. Copied
+across seamless travel; not saved yet. Shared tabs (subscription) need the backend.
+
 ### Bodies and loot containers
 
 - On death (`ACrossguardCharacter::HandleDeath`), everything the character wears and carries moves
@@ -227,7 +235,7 @@ and the rules unit tests.
   `OnRep_PlayerState`.
 - Animations, weapon-on-weapon collision (fencing).
 - Inventory and loot UI, a hotbar, single-item drops and pickups in the world, stash and guild
-  bank, splitting stacks, treasure chests (reuse `ACrossguardLootContainer`).
+  bank, shared stash tabs, splitting stacks, treasure chests (reuse `ACrossguardLootContainer`).
 
 The order these get built in is in [roadmap.md](roadmap.md).
 - Verify in two-client PIE (`showdebug abilitysystem`) that `Equipment.Wielding.*` tags reach

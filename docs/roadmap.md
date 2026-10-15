@@ -22,6 +22,7 @@ order changes.
 | Equipment | Main hand / off hand, six armor slots, rolled affixes, equipment stats and tags. |
 | Skills | Loadout validation (Capacity, bundles, superseded skills), Skill Library gating, passive ability base class. **No individual skills implemented yet.** |
 | Progression | XP sources, level curve, raid XP banked on extraction, attribute allocation, paid respec tokens. Session only, not saved. |
+| Stash | Per-character tabs of 10 × 30, between raids only. Not saved yet. |
 | Inventory | Server-authoritative 10 × 5 grid, Backpack and Quiver, stacking by type and rarity, equip through the inventory, Skill Gems, potions and bandages (Q to ready, left click to use). |
 | Death | Ragdoll, lootable body for every death, E to loot, revive returns what was not looted. |
 | Teams | Parties up to 8 via `?Party=`, friendly fire always on. |
@@ -32,7 +33,7 @@ Several systems were written without an editor build. Do this before building mo
 
 | Item | Needs | Notes |
 | --- | --- | --- |
-| Build and fix compile errors | Editor | Progression, inventory, bodies, revive, ammo and consumables are uncompiled. |
+| Build and fix compile errors | Editor | Progression, inventory, bodies, revive, ammo, consumables and the stash are uncompiled. |
 | Import new tables | Editor | `DT_Items` (row `CrossguardItemRow`); reimport `DT_Weapons`, `DT_Armor`. Set `InventoryComponent.ItemTable`. |
 | Playtest each system | Editor | Debug options on the character: `DebugInventory`, `bDebugLootTakesAll`, `DebugReviveDelay`, `bUseDebugProgression`. |
 | Two-client PIE check | Editor | `Equipment.Wielding.*` tags reach other clients; bodies ragdoll on every client. |
@@ -45,7 +46,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | --- | --- | --- |
 | Extraction points | Code, Editor | A volume that ends the raid for a player (`EndRaid(true)`, +35 XP). Placement in levels is editor work. |
 | Raid end on failure | Code, Decision | When does a raid end for a dead player: when they leave, after a timer, when the match ends? |
-| Stash | Code | Per character, 10 × 30 per tab; extra tabs bought with in-game currency. Skill Gems can be learned from it. |
+| Stash | Editor | Built in code: per character, 10 × 30 tabs, Skill Gems learnable from it. Needs the stash UI in the hub. Buying tabs waits on the currency. |
 | Shared stash tabs | Code, Decision | Subscription benefit: tabs shared by all of an account's characters. Needs accounts and the backend. |
 | Hub / lobby map | Editor | Where players manage stash, Skill Library, attributes, loadout; game mode with `bIsRaid` off. |
 | Inventory and loot UI | Editor | Grid widgets for inventory, Backpack, Quiver, equipment, bodies. The C++ API is ready. |

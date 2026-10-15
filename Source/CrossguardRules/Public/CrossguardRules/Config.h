@@ -44,6 +44,10 @@ namespace Crossguard
 		int MainHeight = 5;
 		// Backpack / Quiver: Width × (rarity level + 1) squares, i.e. 5..30. Shape is a placeholder.
 		int ContainerWidth = 5;
+		// Stash: per character, between raids only. More tabs are bought with in-game currency.
+		int StashTabWidth = 10;
+		int StashTabHeight = 30;
+		int StartingStashTabs = 1;
 	};
 
 	struct FScalingConfig

@@ -3,6 +3,7 @@
 #include "Character/CrossguardCharacter.h"
 #include "CrossguardRules/Loadout.h"
 #include "CrossguardRules/Progression.h"
+#include "Items/CrossguardStashComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Skills/CrossguardSkillCatalog.h"
 
@@ -33,6 +34,11 @@ static_assert(static_cast<int>(ECrossguardXpSource::GatherNode) == static_cast<i
 static_assert(static_cast<int>(ECrossguardXpSource::Craft) == static_cast<int>(Crossguard::EXpSource::Craft), "XP source enums out of sync");
 static_assert(static_cast<int>(ECrossguardXpSource::Enchant) == static_cast<int>(Crossguard::EXpSource::Enchant), "XP source enums out of sync");
 static_assert(static_cast<int>(ECrossguardXpSource::Extract) == static_cast<int>(Crossguard::EXpSource::Extract), "XP source enums out of sync");
+
+ACrossguardPlayerState::ACrossguardPlayerState()
+{
+	Stash = CreateDefaultSubobject<UCrossguardStashComponent>(TEXT("Stash"));
+}
 
 void ACrossguardPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -73,6 +79,10 @@ void ACrossguardPlayerState::CopyProperties(APlayerState* PlayerState)
 		Next->AttributeAllocation = AttributeAllocation;
 		Next->RespecTokens = RespecTokens;
 		Next->SkillLibrary = SkillLibrary;
+		if (Next->Stash != nullptr && Stash != nullptr)
+		{
+			Next->Stash->CopyFrom(*Stash);
+		}
 	}
 }
 
