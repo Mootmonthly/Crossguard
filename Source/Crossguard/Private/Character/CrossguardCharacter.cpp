@@ -9,7 +9,6 @@
 #include "Game/CrossguardPlayerState.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
-#include "GameFramework/SpringArmComponent.h"
 #include "InputAction.h"
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
@@ -34,19 +33,17 @@ ACrossguardCharacter::ACrossguardCharacter()
 
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
 
-	// Face the camera direction (melee aiming, strafing) rather than the movement direction.
+	// First person: the body turns with the view.
 	bUseControllerRotationYaw = true;
 	GetCharacterMovement()->bOrientRotationToMovement = false;
 
-	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
-	CameraBoom->SetupAttachment(GetRootComponent());
-	CameraBoom->TargetArmLength = 300.0f;
-	CameraBoom->SocketOffset = FVector(0.0f, 50.0f, 60.0f);
-	CameraBoom->bUsePawnControlRotation = true;
+	// At BaseEyeHeight, the same point weapon traces and projectiles start from.
+	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
+	FirstPersonCamera->SetupAttachment(GetRootComponent());
+	FirstPersonCamera->SetRelativeLocation(FVector(0.0f, 0.0f, BaseEyeHeight));
+	FirstPersonCamera->bUsePawnControlRotation = true;
 
-	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
-	FollowCamera->bUsePawnControlRotation = false;
+	GetMesh()->SetOwnerNoSee(true);
 }
 
 void ACrossguardCharacter::EnsureDefaultInput()

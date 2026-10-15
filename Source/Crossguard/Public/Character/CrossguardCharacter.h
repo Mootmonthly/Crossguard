@@ -12,7 +12,6 @@ class UCameraComponent;
 class UCrossguardAttributeSet;
 class UInputAction;
 class UInputMappingContext;
-class USpringArmComponent;
 struct FInputActionValue;
 class UCrossguardEquipmentComponent;
 class UCrossguardWeaponAttackAbility;
@@ -64,12 +63,10 @@ public:
 	FCrossguardAttributeAllocation AttributeAllocation;
 
 protected:
-	// Over-the-shoulder third-person camera. The character faces where the camera looks.
+	// First-person camera at eye height, turned by the mouse. The character faces where it looks.
+	// The body mesh is hidden from its owner until first-person arms exist; others still see it.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Camera")
-	TObjectPtr<USpringArmComponent> CameraBoom;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Camera")
-	TObjectPtr<UCameraComponent> FollowCamera;
+	TObjectPtr<UCameraComponent> FirstPersonCamera;
 
 	// Input. Leave empty to use the built-in defaults: WASD move, mouse look, Space jump, left
 	// mouse attack, right mouse secondary action. Set these to your own assets to rebind.

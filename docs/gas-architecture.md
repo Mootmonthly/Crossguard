@@ -91,8 +91,8 @@ Might = one Infinite effect adding 10 to Strength.
 `ACrossguardCharacter` builds default Enhanced Input bindings in code (no assets needed): WASD
 move, mouse look, Space jump, hold left mouse to attack with the main hand, right mouse for the
 secondary action. Set the character's Input properties to your own `InputAction` /
-`InputMappingContext` assets to rebind. Camera: over-the-shoulder spring arm; the character faces
-the camera direction.
+`InputMappingContext` assets to rebind. Camera: first person at eye height; the character faces the
+camera direction. The body mesh is hidden from its owner until first-person arms exist.
 
 ## Weapons and equipment
 

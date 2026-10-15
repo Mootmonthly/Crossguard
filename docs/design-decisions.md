@@ -113,6 +113,10 @@ Independent of category, a skill is:
 
 "Melee Skills -10% Cooldown" style effects apply to skills with the matching weapon tag.
 
+## Camera
+
+- First-person camera.
+
 ## Teams and friendly fire
 
 - Players enter a match solo or in a premade team of **up to 8**. Matchmaking passes the party
