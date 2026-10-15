@@ -50,10 +50,19 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Combat")
 	bool TrySecondaryAction();
 
-	// E: opens the loot container (a body, later a chest) in front of the character, within its
-	// InteractRange. Runs on the server; clients forward it.
+	// E: uses the nearest interactable (body, chest, door) in front of the character, within its
+	// range. If it is locked, starts lockpicking instead; pressing E again stops. Runs on the
+	// server; clients forward it.
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Interaction")
 	void TryInteract();
+
+	// True while picking a lock (for a progress bar). Owner only.
+	UFUNCTION(BlueprintPure, Category = "Crossguard|Interaction")
+	bool IsLockpicking() const { return bLockpicking; }
+
+	// Item table id of the lockpick item. Characters with the Ability.Lockpicking tag need none.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Interaction")
+	FName LockpickItemId = TEXT("lockpick");
 
 	// Server. Called when Health reaches 0: everything the character carries and wears moves into a
 	// lootable body where it fell. Always spawned, even when empty: a body is information.
@@ -221,8 +230,19 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void ServerInteract();
-	// Server. The nearest container within reach that the camera is facing.
-	ACrossguardLootContainer* FindInteractTarget() const;
+	// Server. The nearest interactable within its range that the camera is facing.
+	AActor* FindInteractTarget() const;
+	// Server. Lockpicking: 5 s scaled by Dexterity, cannot fail. Needs Ability.Lockpicking or a
+	// lockpick item (one is used up per lock picked).
+	void StartLockpicking(AActor* Target);
+	void FinishLockpicking();
+	void StopLockpicking();
+
+	UPROPERTY(Replicated)
+	bool bLockpicking = false;
+
+	TWeakObjectPtr<AActor> LockpickTarget;
+	FTimerHandle LockpickTimer;
 
 	void InitializeAbilitySystem();
 	// Copies level and allocation from the player state. Returns true if either changed.

@@ -2,23 +2,26 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Interaction/CrossguardInteractable.h"
 #include "Items/CrossguardInventoryComponent.h"
 
 #include "CrossguardLootContainer.generated.h"
 
+class UCrossguardLockComponent;
 class USkeletalMesh;
 class USkeletalMeshComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCrossguardLootContentsChanged);
 
 // A grid of items in the world that players open with the interact key and loot: a dead
-// character's body (spawned on death with everything they carried), later treasure chests.
+// character's body (spawned on death with everything they carried), later treasure chests. A
+// chest can be locked (its Lock component), so it must be lockpicked first.
 //
 // Server authoritative. Players take and put items through their own
 // UCrossguardInventoryComponent, which checks they are alive and within InteractRange. Contents
 // replicate to everyone.
 UCLASS()
-class CROSSGUARD_API ACrossguardLootContainer : public AActor
+class CROSSGUARD_API ACrossguardLootContainer : public AActor, public ICrossguardInteractable
 {
 	GENERATED_BODY()
 
@@ -26,6 +29,10 @@ public:
 	ACrossguardLootContainer();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// Opens it in the user's inventory, so they can take and put items.
+	virtual void Interact(ACrossguardCharacter* User) override;
+	virtual float GetInteractRange() const override { return InteractRange; }
 
 	// Server. Replaces the contents. The grid is Width squares wide and grows taller until every
 	// item fits. Items must already have their Size set (they come from an inventory).
@@ -77,6 +84,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Loot")
 	TObjectPtr<USkeletalMeshComponent> BodyMeshComponent;
+
+	// Unlocked by default; tick bLocked on a chest that needs lockpicking.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Loot")
+	TObjectPtr<UCrossguardLockComponent> Lock;
 
 private:
 	Crossguard::FInventoryGrid BuildGrid(FIntPoint Size) const;

@@ -25,6 +25,9 @@ namespace CrossguardTags
 
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Dead);
 
+	// Picks locks without a lockpick item. Grant it from the lockpicking skill's passive effect.
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Lockpicking);
+
 	// Granted by the equipment effect while the weapon type is held (either hand). AnyMelee: any
 	// melee weapon; TwoHandedMelee: a two-handed melee main hand. Use in effect tag requirements,
 	// e.g. Sword Mastery's modifiers require Equipment.Wielding.Sword.

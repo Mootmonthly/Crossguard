@@ -155,6 +155,16 @@ across seamless travel; not saved yet. Shared tabs (subscription) need the backe
   armor cannot be sold until their prices are decided.
 - `UCrossguardStashComponent::RequestBuyStashTab()` spends 3000 banked gold for a tab, up to 3.
 
+### Interaction and lockpicking
+
+- E (`ACrossguardCharacter::TryInteract`) uses the nearest `ICrossguardInteractable` in front of the
+  character within its range: loot containers open, `ACrossguardDoor`s open and close.
+- An actor with a locked `UCrossguardLockComponent` (tick `bLocked` on a placed chest or door) is
+  lockpicked first: `5 s / (1 + Dexterity)`, cannot fail, E again stops. The character needs the
+  `Ability.Lockpicking` tag (grant it from the lockpicking skill's passive effect) or a lockpick
+  item (`LockpickItemId`, default `lockpick`; one is used up per lock). When the lock opens, the
+  chest or door opens too. The range is re-checked when the time is up.
+
 ### Bodies and loot containers
 
 - On death (`ACrossguardCharacter::HandleDeath`), everything the character wears and carries moves

@@ -18,6 +18,7 @@ namespace CrossguardTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Coefficient, "SetByCaller.Coefficient", "Fraction of ADB/MDB/PHB/MHB that applies. Defaults to 1.");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Dead, "State.Dead", "Health reached 0.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Lockpicking, "Ability.Lockpicking", "Picks locks without a lockpick item (the lockpicking skill).");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Sword, "Equipment.Wielding.Sword", "Holding a Sword.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Axe, "Equipment.Wielding.Axe", "Holding an Axe.");

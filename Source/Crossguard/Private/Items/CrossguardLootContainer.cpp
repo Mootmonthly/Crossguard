@@ -1,8 +1,10 @@
 #include "Items/CrossguardLootContainer.h"
 
+#include "Character/CrossguardCharacter.h"
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
+#include "Interaction/CrossguardLockComponent.h"
 #include "Net/UnrealNetwork.h"
 
 ACrossguardLootContainer::ACrossguardLootContainer()
@@ -14,6 +16,16 @@ ACrossguardLootContainer::ACrossguardLootContainer()
 	BodyMeshComponent->SetupAttachment(GetRootComponent());
 	BodyMeshComponent->SetVisibility(false);
 	BodyMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	Lock = CreateDefaultSubobject<UCrossguardLockComponent>(TEXT("Lock"));
+}
+
+void ACrossguardLootContainer::Interact(ACrossguardCharacter* User)
+{
+	if (User != nullptr && User->GetInventoryComponent() != nullptr)
+	{
+		User->GetInventoryComponent()->OpenLootContainer(this);
+	}
 }
 
 void ACrossguardLootContainer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

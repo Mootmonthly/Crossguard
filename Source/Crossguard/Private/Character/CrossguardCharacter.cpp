@@ -7,6 +7,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Combat/CrossguardWeaponAttackAbility.h"
 #include "Crossguard.h"
+#include "CrossguardRules/Economy.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
@@ -19,6 +20,8 @@
 #include "Engine/DataTable.h"
 #include "EngineUtils.h"
 #include "Items/CrossguardEquipmentComponent.h"
+#include "Interaction/CrossguardInteractable.h"
+#include "Interaction/CrossguardLockComponent.h"
 #include "Items/CrossguardLootContainer.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
@@ -198,6 +201,7 @@ void ACrossguardCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ACrossguardCharacter, Level);
+	DOREPLIFETIME_CONDITION(ACrossguardCharacter, bLockpicking, COND_OwnerOnly);
 }
 
 UAbilitySystemComponent* ACrossguardCharacter::GetAbilitySystemComponent() const
@@ -387,17 +391,35 @@ void ACrossguardCharacter::TryInteract()
 
 void ACrossguardCharacter::ServerInteract_Implementation()
 {
-	ACrossguardLootContainer* Target = FindInteractTarget();
-	if (Target == nullptr || !InventoryComponent->OpenLootContainer(Target))
+	if (bLockpicking)
+	{
+		StopLockpicking();
+		return;
+	}
+	if (AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Dead))
 	{
 		return;
 	}
-	UE_LOG(LogCrossguard, Log, TEXT("%s opened %s (%d items)"), *GetName(), *Target->GetName(), Target->GetItems().Num());
-
-	if (bDebugLootTakesAll)
+	AActor* Target = FindInteractTarget();
+	ICrossguardInteractable* Interactable = Cast<ICrossguardInteractable>(Target);
+	if (Interactable == nullptr)
 	{
+		return;
+	}
+	const UCrossguardLockComponent* Lock = Target->FindComponentByClass<UCrossguardLockComponent>();
+	if (Lock != nullptr && Lock->IsLocked())
+	{
+		StartLockpicking(Target);
+		return;
+	}
+	Interactable->Interact(this);
+
+	ACrossguardLootContainer* Container = Cast<ACrossguardLootContainer>(Target);
+	if (bDebugLootTakesAll && Container != nullptr && InventoryComponent->GetOpenContainer() == Container)
+	{
+		UE_LOG(LogCrossguard, Log, TEXT("%s opened %s (%d items)"), *GetName(), *Container->GetName(), Container->GetItems().Num());
 		TArray<int32> Ids;
-		for (const FCrossguardInventoryItem& Item : Target->GetItems())
+		for (const FCrossguardInventoryItem& Item : Container->GetItems())
 		{
 			Ids.Add(Item.Id);
 		}
@@ -408,28 +430,77 @@ void ACrossguardCharacter::ServerInteract_Implementation()
 	}
 }
 
-ACrossguardLootContainer* ACrossguardCharacter::FindInteractTarget() const
+AActor* ACrossguardCharacter::FindInteractTarget() const
 {
 	FVector EyeLocation;
 	FRotator EyeRotation;
 	GetActorEyesViewPoint(EyeLocation, EyeRotation);
 	const FVector Forward = EyeRotation.Vector();
 
-	ACrossguardLootContainer* Best = nullptr;
+	AActor* Best = nullptr;
 	float BestDistance = TNumericLimits<float>::Max();
-	for (TActorIterator<ACrossguardLootContainer> It(GetWorld()); It; ++It)
+	for (TActorIterator<AActor> It(GetWorld()); It; ++It)
 	{
-		ACrossguardLootContainer* Container = *It;
-		const FVector ToContainer = Container->GetActorLocation() - EyeLocation;
-		const float Distance = FVector::Dist(GetActorLocation(), Container->GetActorLocation());
-		// Roughly in front: within about 60 degrees of where the camera looks.
-		if (Distance <= Container->InteractRange && Distance < BestDistance && FVector::DotProduct(ToContainer.GetSafeNormal(), Forward) >= 0.5f)
+		AActor* Candidate = *It;
+		const ICrossguardInteractable* Interactable = Cast<ICrossguardInteractable>(Candidate);
+		if (Interactable == nullptr || Candidate == this)
 		{
-			Best = Container;
+			continue;
+		}
+		const FVector ToCandidate = Candidate->GetActorLocation() - EyeLocation;
+		const float Distance = FVector::Dist(GetActorLocation(), Candidate->GetActorLocation());
+		// Roughly in front: within about 60 degrees of where the camera looks.
+		if (Distance <= Interactable->GetInteractRange() && Distance < BestDistance
+			&& FVector::DotProduct(ToCandidate.GetSafeNormal(), Forward) >= 0.5f)
+		{
+			Best = Candidate;
 			BestDistance = Distance;
 		}
 	}
 	return Best;
+}
+
+void ACrossguardCharacter::StartLockpicking(AActor* Target)
+{
+	const bool bHasSkill = AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::Ability_Lockpicking);
+	if (!bHasSkill && InventoryComponent->CountItem(LockpickItemId) <= 0)
+	{
+		UE_LOG(LogCrossguard, Log, TEXT("%s cannot pick %s: no lockpick"), *GetName(), *GetNameSafe(Target));
+		return;
+	}
+	const float Dexterity = AbilitySystemComponent->GetNumericAttribute(UCrossguardAttributeSet::GetDexterityAttribute());
+	const float Seconds = static_cast<float>(Crossguard::LockpickSeconds(Crossguard::FEconomyConfig(), Dexterity));
+	LockpickTarget = Target;
+	bLockpicking = true;
+	GetWorldTimerManager().SetTimer(LockpickTimer, this, &ACrossguardCharacter::FinishLockpicking, Seconds, false);
+}
+
+void ACrossguardCharacter::FinishLockpicking()
+{
+	AActor* Target = LockpickTarget.Get();
+	StopLockpicking();
+
+	ICrossguardInteractable* Interactable = Cast<ICrossguardInteractable>(Target);
+	UCrossguardLockComponent* Lock = Target != nullptr ? Target->FindComponentByClass<UCrossguardLockComponent>() : nullptr;
+	if (Interactable == nullptr || Lock == nullptr || AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Dead)
+		|| FVector::Dist(GetActorLocation(), Target->GetActorLocation()) > Interactable->GetInteractRange())
+	{
+		return;
+	}
+	// The skill picks freely; otherwise one lockpick is used up.
+	if (!AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::Ability_Lockpicking) && !InventoryComponent->ConsumeItem(LockpickItemId))
+	{
+		return;
+	}
+	Lock->SetLocked(false);
+	Interactable->Interact(this);
+}
+
+void ACrossguardCharacter::StopLockpicking()
+{
+	GetWorldTimerManager().ClearTimer(LockpickTimer);
+	LockpickTarget.Reset();
+	bLockpicking = false;
 }
 
 void ACrossguardCharacter::HandleDeath()
@@ -438,6 +509,7 @@ void ACrossguardCharacter::HandleDeath()
 	{
 		return;
 	}
+	StopLockpicking();
 	TArray<FCrossguardInventoryItem> Dropped = InventoryComponent->TakeEverything();
 	// Died again with items still left on the previous body (they did not fit at the revive): one
 	// body holds everything.

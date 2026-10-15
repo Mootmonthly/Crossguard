@@ -171,7 +171,12 @@ Independent of category, a skill is:
 - Vendor prices for gear: 5–500 gold depending on rarity and size; exact formula not set.
 - Assumed until ruled otherwise: vendors are used between raids only; gemstones do not stack; a
   whole stack sells at once.
-- Lockpicking: the best chests and doors need it, through a skill or a lockpick item.
+- Lockpicking: the best chests and doors need it, through a skill or a lockpick item. It takes 5 s,
+  faster with Dexterity, and cannot fail. The lockpicking skill comes from the Skill Forge.
+- Assumed until ruled otherwise: time = 5 s ÷ (1 + Dexterity) (30% Dexterity: 3.8 s); a lockpick
+  item is used up per lock picked, the skill needs none; lockpicking continues while you stay in
+  range, and pressing E again stops it. The lockpick item's size and stack are not set, so it is
+  not in the item data yet.
 - Guild banks: a shared stash per guild; every member deposits, only officers withdraw, manage or
   redistribute.
 
