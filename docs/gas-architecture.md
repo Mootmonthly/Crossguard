@@ -337,8 +337,6 @@ and the rules unit tests.
 - Restricting when the loadout can change (e.g. only between raids).
 - Saving progression; extraction points; a revive spell.
 - Silence, stuns and other CC; Blind's screen effect; skeleton meshes and animations.
-- Client-side ability system init for pawns without a PlayerState (AI). Players are covered by
-  `OnRep_PlayerState`.
 - Animations, weapon-on-weapon collision (fencing).
 - Inventory, loot and stash UI, a hotbar, single-item drops and pickups in the world, the guild
   bank, shared stash tabs, splitting stacks, treasure chests (reuse `ACrossguardLootContainer`).

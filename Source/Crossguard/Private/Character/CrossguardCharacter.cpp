@@ -846,6 +846,12 @@ bool ACrossguardCharacter::Revive(float HealthFraction)
 void ACrossguardCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	// Clients: AI characters get no OnRep_PlayerState, so set up their ability system here (tags
+	// and attributes for visuals such as Stealth). Players repeat it harmlessly in OnRep_PlayerState.
+	if (!HasAuthority())
+	{
+		InitializeAbilitySystem();
+	}
 	if (bDebugHud)
 	{
 		GetWorldTimerManager().SetTimer(DebugHudTimer, this, &ACrossguardCharacter::DrawDebugHud, 0.2f, true);
