@@ -57,7 +57,9 @@
 //     capsule is placed above). Keep scenes within 50 m of the origin and away from the PIE player at
 //     (-30 m, -30 m).
 //   - One scenario per test, named Crossguard.Scenario.<Area>.<Name>, flags CROSSGUARD_SCENARIO_FLAGS.
-//     Keep file-local helpers in a uniquely named namespace (unity builds).
+//     Keep file-local helpers in a uniquely named namespace (unity builds). A name that `using
+//     namespace` brings into RunTest must not also be in a game .cpp's anonymous namespace (e.g. the
+//     skills' constants): in a unity build both are visible there and the name is ambiguous.
 //   - Log lines written while the scenario runs (any category) are captured: LogContains("blocked").
 //     Engine and game warnings / errors logged during the test are also reported by the automation
 //     framework itself (errors fail the test).
