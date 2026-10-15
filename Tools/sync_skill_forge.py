@@ -37,6 +37,31 @@ def load_documents(export_dir):
     return docs
 
 
+# Field order of Skills.json (docs/skill-data-schema.md); the forge's database returns keys sorted.
+FIELD_ORDER = ["id", "name", "capacityCost", "category", "weaponTag", "tags", "requirements", "cooldownSec", "durationSec",
+               "includes", "grantsWhileActive", "minionSkills", "statModifiers", "damage", "healing", "mechanics",
+               "description", "source", "notes"]
+REQUIREMENT_ORDER = ["weapons", "armor", "items", "forms"]
+MODIFIER_ORDER = ["stat", "op", "value", "target", "skillFilter", "condition", "durationSec"]
+DAMAGE_ORDER = ["type", "amount", "coefficient", "kind", "durationSec", "hits"]
+HEALING_ORDER = ["type", "amount", "coefficient", "full", "canRevive"]
+
+
+def ordered(obj, order):
+    """obj with the keys in order first, any others after in their own order."""
+    return {**{k: obj[k] for k in order if k in obj}, **{k: v for k, v in obj.items() if k not in order}}
+
+
+def normalize(skill):
+    skill = ordered(skill, FIELD_ORDER)
+    if isinstance(skill.get("requirements"), dict):
+        skill["requirements"] = ordered(skill["requirements"], REQUIREMENT_ORDER)
+    for field, order in (("statModifiers", MODIFIER_ORDER), ("damage", DAMAGE_ORDER), ("healing", HEALING_ORDER)):
+        if isinstance(skill.get(field), list):
+            skill[field] = [ordered(x, order) if isinstance(x, dict) else x for x in skill[field]]
+    return skill
+
+
 def is_pending(meta):
     meta = meta or {}
     if meta.get("deleted"):
@@ -66,7 +91,7 @@ def main(argv):
             skills.pop(doc_id, None)
             report["deleted"].append(doc_id)
         else:
-            skills[doc_id] = skill
+            skills[doc_id] = normalize(skill)
             report["applied"].append(doc_id)
 
     if report["errors"]:
