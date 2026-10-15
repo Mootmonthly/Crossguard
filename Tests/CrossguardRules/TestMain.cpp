@@ -889,6 +889,385 @@ static void TestLoot()
 	CHECK(RollLoot(ManySwords, Gems, 5).at(0).Count == 1);
 }
 
+#include "CrossguardRules/Guild.h"
+
+#include <limits>
+
+static void TestGuild()
+{
+	const FGuildConfig Config;
+	CHECK(Config.MaxMembers == 50);
+	CHECK(Config.BankWidth == FInventoryConfig().StashTabWidth);
+	CHECK(Config.BankHeight == FInventoryConfig().StashTabHeight);
+	CHECK(Config.BankLogSize == 100);
+
+	// Permissions matrix.
+	const EGuildRank Ranks[] = {EGuildRank::Member, EGuildRank::Officer, EGuildRank::Leader};
+	for (const EGuildRank Rank : Ranks)
+	{
+		const bool bMember = Rank == EGuildRank::Member;
+		CHECK(GuildRankCan(Rank, EGuildPermission::Deposit));
+		CHECK(GuildRankCan(Rank, EGuildPermission::Invite) == !bMember);
+		CHECK(GuildRankCan(Rank, EGuildPermission::Withdraw) == !bMember);
+		CHECK(GuildRankCan(Rank, EGuildPermission::Redistribute) == !bMember);
+		CHECK(GuildRankCan(Rank, EGuildPermission::ManageBank) == !bMember);
+		CHECK(GuildRankCan(Rank, EGuildPermission::ManageRanks) == (Rank == EGuildRank::Leader));
+	}
+	CHECK(CanKick(EGuildRank::Leader, EGuildRank::Officer));
+	CHECK(CanKick(EGuildRank::Leader, EGuildRank::Member));
+	CHECK(!CanKick(EGuildRank::Leader, EGuildRank::Leader));
+	CHECK(CanKick(EGuildRank::Officer, EGuildRank::Member));
+	CHECK(!CanKick(EGuildRank::Officer, EGuildRank::Officer));
+	CHECK(!CanKick(EGuildRank::Officer, EGuildRank::Leader));
+	CHECK(!CanKick(EGuildRank::Member, EGuildRank::Member));
+	CHECK(!CanKick(EGuildRank::Member, EGuildRank::Officer));
+	CHECK(!CanKick(EGuildRank::Member, EGuildRank::Leader));
+
+	// Names: 3-24 characters after trimming; letters, digits, spaces and '-'.
+	CHECK(TrimGuildName("  Iron Wolves  ") == "Iron Wolves");
+	CHECK(TrimGuildName("   ").empty());
+	CHECK(ValidateGuildName(Config, "Abc") == EGuildError::None);
+	CHECK(ValidateGuildName(Config, "  Abc  ") == EGuildError::None);
+	CHECK(ValidateGuildName(Config, "Ab") == EGuildError::InvalidName);
+	CHECK(ValidateGuildName(Config, "  Ab   ") == EGuildError::InvalidName);
+	CHECK(ValidateGuildName(Config, std::string(24, 'x')) == EGuildError::None);
+	CHECK(ValidateGuildName(Config, std::string(25, 'x')) == EGuildError::InvalidName);
+	CHECK(ValidateGuildName(Config, "Red-Hand 7") == EGuildError::None);
+	CHECK(ValidateGuildName(Config, "Red_Hand") == EGuildError::InvalidName);
+	CHECK(ValidateGuildName(Config, "Red\tHand") == EGuildError::InvalidName);
+	CHECK(ValidateGuildName(Config, "Caf\xC3\xA9s") == EGuildError::InvalidName);
+	CHECK(ValidateGuildName(Config, "") == EGuildError::InvalidName);
+
+	// Create.
+	FGuildRegistry Guilds;
+	CHECK(Guilds.Create("g1", "  Iron Wolves ", "leader") == EGuildError::None);
+	const FGuild* Wolves = Guilds.Find("g1");
+	CHECK(Wolves != nullptr && Wolves->Name == "Iron Wolves");
+	CHECK(Wolves != nullptr && Wolves->LeaderId() == "leader");
+	CHECK(Wolves != nullptr && Wolves->Bank.Grid.Size().Width == 10 && Wolves->Bank.Grid.Size().Height == 30);
+	CHECK(Guilds.RankOf("leader") == EGuildRank::Leader);
+	CHECK(Guilds.GuildOf("leader") == Wolves);
+	CHECK(Guilds.FindByName("IRON WOLVES") == Wolves);
+	CHECK(Guilds.FindByName(" iron wolves ") == Wolves);
+	CHECK(Guilds.FindByName("Iron Wolf") == nullptr);
+	CHECK(Guilds.Create("g2", "iron WOLVES", "other") == EGuildError::NameTaken);
+	CHECK(Guilds.Create("g1", "Other Name", "other") == EGuildError::GuildIdTaken);
+	CHECK(Guilds.Create("", "Other Name", "other") == EGuildError::InvalidGuildId);
+	CHECK(Guilds.Create("g2", "Other Name", "") == EGuildError::InvalidPlayer);
+	CHECK(Guilds.Create("g2", "No!", "other") == EGuildError::InvalidName);
+	// Double guild: one guild per player.
+	CHECK(Guilds.Create("g2", "Other Name", "leader") == EGuildError::AlreadyInGuild);
+	CHECK(Guilds.Find("g2") == nullptr && Guilds.FindByName("Other Name") == nullptr);
+	CHECK(Guilds.Create("g2", "Ravens", "raven") == EGuildError::None);
+
+	// Invites: Leader and Officer invite, Members do not.
+	double Now = 1000.0;
+	CHECK(Guilds.Invite("leader", "officer", Now) == EGuildError::None);
+	CHECK(Guilds.Accept("g1", "officer", Now + 1.0) == EGuildError::None);
+	CHECK(Guilds.RankOf("officer") == EGuildRank::Member);
+	CHECK(Guilds.Promote("leader", "officer") == EGuildError::None);
+	CHECK(Guilds.RankOf("officer") == EGuildRank::Officer);
+	CHECK(Guilds.Invite("officer", "member", Now) == EGuildError::None);
+	CHECK(Guilds.Accept("g1", "member", Now) == EGuildError::None);
+	CHECK(Guilds.Invite("member", "someone", Now) == EGuildError::NotPermitted);
+	CHECK(Guilds.Invite("nobody", "someone", Now) == EGuildError::NotInGuild);
+	CHECK(Guilds.Invite("leader", "", Now) == EGuildError::InvalidPlayer);
+	// Double guild: invitee already in this or another guild.
+	CHECK(Guilds.Invite("leader", "raven", Now) == EGuildError::AlreadyInGuild);
+	CHECK(Guilds.Invite("leader", "member", Now) == EGuildError::AlreadyInGuild);
+	CHECK(Wolves->Members.size() == 3 && Wolves->Invites.empty());
+
+	// Decline, re-invite, duplicate invite.
+	CHECK(Guilds.Invite("leader", "a", Now) == EGuildError::None);
+	CHECK(Guilds.Invite("officer", "a", Now + 10.0) == EGuildError::AlreadyInvited);
+	CHECK(Guilds.Decline("g1", "a") == EGuildError::None);
+	CHECK(Guilds.Decline("g1", "a") == EGuildError::NoInvite);
+	CHECK(Guilds.Accept("g1", "a", Now) == EGuildError::NoInvite);
+	CHECK(Guilds.Decline("nope", "a") == EGuildError::UnknownGuild);
+	CHECK(Guilds.Accept("nope", "a", Now) == EGuildError::UnknownGuild);
+	CHECK(Guilds.Accept("g1", "", Now) == EGuildError::InvalidPlayer);
+
+	// Expired invite: refused, kept until pruned or replaced.
+	CHECK(Guilds.Invite("leader", "late", Now) == EGuildError::None);
+	CHECK(Guilds.Accept("g1", "late", Now + Config.InviteExpirySeconds) == EGuildError::InviteExpired);
+	CHECK(Guilds.GuildOf("late") == nullptr && Wolves->Invites.size() == 1);
+	CHECK(Guilds.Accept("g1", "late", Now + Config.InviteExpirySeconds - 0.5) == EGuildError::None);
+	CHECK(Guilds.Invite("leader", "late2", Now) == EGuildError::None);
+	CHECK(Guilds.Invite("leader", "late2", Now + Config.InviteExpirySeconds) == EGuildError::None);
+	CHECK(Wolves->Invites.size() == 1 && Wolves->Invites[0].ExpiresAt == Now + 2.0 * Config.InviteExpirySeconds);
+	CHECK(Guilds.PruneExpiredInvites(Now + 2.0 * Config.InviteExpirySeconds - 1.0) == 0);
+	CHECK(Guilds.PruneExpiredInvites(Now + 2.0 * Config.InviteExpirySeconds) == 1);
+	CHECK(Wolves->Invites.empty());
+
+	// Invites from two guilds: accepting one makes the other fail.
+	CHECK(Guilds.Invite("leader", "b", Now) == EGuildError::None);
+	CHECK(Guilds.Invite("raven", "b", Now) == EGuildError::None);
+	CHECK(Guilds.Accept("g2", "b", Now) == EGuildError::None);
+	CHECK(Guilds.Accept("g1", "b", Now) == EGuildError::AlreadyInGuild);
+	CHECK(Guilds.Decline("g1", "b") == EGuildError::None);
+	// Members now: leader (L), officer (O), member (M), late (M).
+
+	// Kick matrix.
+	CHECK(Guilds.Kick("member", "late") == EGuildError::NotPermitted);
+	CHECK(Guilds.Kick("member", "officer") == EGuildError::NotPermitted);
+	CHECK(Guilds.Kick("member", "leader") == EGuildError::NotPermitted);
+	CHECK(Guilds.Kick("officer", "leader") == EGuildError::NotPermitted);
+	CHECK(Guilds.Kick("leader", "leader") == EGuildError::CannotTargetSelf);
+	CHECK(Guilds.Kick("officer", "officer") == EGuildError::CannotTargetSelf);
+	CHECK(Guilds.Kick("leader", "raven") == EGuildError::TargetNotInGuild);
+	CHECK(Guilds.Kick("nobody", "late") == EGuildError::NotInGuild);
+	CHECK(Wolves->Members.size() == 4);
+	CHECK(Guilds.Kick("officer", "late") == EGuildError::None);
+	CHECK(Guilds.GuildOf("late") == nullptr && Wolves->Members.size() == 3);
+	CHECK(Guilds.Invite("leader", "o2", Now) == EGuildError::None);
+	CHECK(Guilds.Accept("g1", "o2", Now) == EGuildError::None);
+	CHECK(Guilds.Promote("leader", "o2") == EGuildError::None);
+	CHECK(Guilds.Kick("officer", "o2") == EGuildError::NotPermitted);
+	CHECK(Guilds.Kick("leader", "o2") == EGuildError::None);
+	CHECK(Guilds.RankOf("o2") == std::nullopt);
+
+	// Promote / demote: Leader only.
+	CHECK(Guilds.Promote("officer", "member") == EGuildError::NotPermitted);
+	CHECK(Guilds.Promote("member", "member") == EGuildError::CannotTargetSelf);
+	CHECK(Guilds.Demote("officer", "member") == EGuildError::NotPermitted);
+	CHECK(Guilds.Promote("leader", "officer") == EGuildError::AlreadyRank);
+	CHECK(Guilds.Demote("leader", "member") == EGuildError::AlreadyRank);
+	CHECK(Guilds.Promote("leader", "leader") == EGuildError::CannotTargetSelf);
+	CHECK(Guilds.Promote("leader", "raven") == EGuildError::TargetNotInGuild);
+	CHECK(Guilds.Demote("leader", "officer") == EGuildError::None);
+	CHECK(Guilds.RankOf("officer") == EGuildRank::Member);
+	CHECK(Guilds.Promote("leader", "officer") == EGuildError::None);
+
+	// Leave: the Leader must transfer first.
+	CHECK(Guilds.Leave("leader").Error == EGuildError::LeaderMustTransfer);
+	CHECK(Guilds.RankOf("leader") == EGuildRank::Leader && Wolves->Members.size() == 3);
+	CHECK(Guilds.Leave("nobody").Error == EGuildError::NotInGuild);
+	CHECK(Guilds.TransferLeadership("officer", "member") == EGuildError::NotPermitted);
+	CHECK(Guilds.TransferLeadership("leader", "leader") == EGuildError::CannotTargetSelf);
+	CHECK(Guilds.TransferLeadership("leader", "raven") == EGuildError::TargetNotInGuild);
+	CHECK(Guilds.TransferLeadership("leader", "member") == EGuildError::None);
+	CHECK(Guilds.RankOf("member") == EGuildRank::Leader);
+	CHECK(Guilds.RankOf("leader") == EGuildRank::Officer);
+	CHECK(Wolves->LeaderId() == "member");
+	// Ex-leader is an officer now and can leave.
+	const FGuildLeaveResult Left = Guilds.Leave("leader");
+	CHECK(Left.IsValid() && !Left.bDisbanded);
+	CHECK(Guilds.GuildOf("leader") == nullptr && Wolves->Members.size() == 2);
+	// Free to found or join another guild.
+	CHECK(Guilds.Invite("raven", "leader", Now) == EGuildError::None);
+	CHECK(Guilds.Accept("g2", "leader", Now) == EGuildError::None);
+
+	// Bank, gold: anyone deposits; officers and the leader withdraw and redistribute.
+	// g1 now: member (Leader), officer (Officer). Add a plain member.
+	CHECK(Guilds.Invite("member", "m2", Now) == EGuildError::None);
+	CHECK(Guilds.Accept("g1", "m2", Now) == EGuildError::None);
+	CHECK(Guilds.DepositGold("m2", 500, 1.0) == EGuildError::None);
+	CHECK(Guilds.DepositGold("officer", 250, 2.0) == EGuildError::None);
+	CHECK(Wolves->Bank.Gold == 750);
+	CHECK(Guilds.DepositGold("m2", 0, 3.0) == EGuildError::InvalidAmount);
+	CHECK(Guilds.DepositGold("m2", -5, 3.0) == EGuildError::InvalidAmount);
+	CHECK(Guilds.DepositGold("nobody", 5, 3.0) == EGuildError::NotInGuild);
+	CHECK(Guilds.WithdrawGold("m2", 10, 3.0) == EGuildError::NotPermitted);
+	CHECK(Guilds.RedistributeGold("m2", "officer", 10, 3.0) == EGuildError::NotPermitted);
+	// Bank underflow.
+	CHECK(Guilds.WithdrawGold("officer", 751, 3.0) == EGuildError::NotEnoughGold);
+	CHECK(Guilds.RedistributeGold("member", "m2", 751, 3.0) == EGuildError::NotEnoughGold);
+	CHECK(Guilds.WithdrawGold("officer", 0, 3.0) == EGuildError::InvalidAmount);
+	CHECK(Wolves->Bank.Gold == 750);
+	CHECK(Guilds.WithdrawGold("officer", 100, 4.0) == EGuildError::None);
+	CHECK(Guilds.WithdrawGold("member", 50, 5.0) == EGuildError::None);
+	CHECK(Guilds.RedistributeGold("officer", "m2", 100, 6.0) == EGuildError::None);
+	CHECK(Guilds.RedistributeGold("officer", "raven", 100, 6.0) == EGuildError::TargetNotInGuild);
+	CHECK(Guilds.RedistributeGold("officer", "", 100, 6.0) == EGuildError::TargetNotInGuild);
+	CHECK(Wolves->Bank.Gold == 500);
+	CHECK(Guilds.WithdrawGold("member", 500, 7.0) == EGuildError::None);
+	CHECK(Wolves->Bank.Gold == 0);
+	CHECK(Guilds.WithdrawGold("member", 1, 7.0) == EGuildError::NotEnoughGold);
+	// Overflow is refused.
+	CHECK(Guilds.DepositGold("m2", std::numeric_limits<std::int64_t>::max(), 8.0) == EGuildError::None);
+	CHECK(Guilds.DepositGold("m2", 1, 8.0) == EGuildError::GoldOverflow);
+	CHECK(Wolves->Bank.Gold == std::numeric_limits<std::int64_t>::max());
+	CHECK(Guilds.WithdrawGold("member", std::numeric_limits<std::int64_t>::max(), 9.0) == EGuildError::None);
+
+	// Log so far: 2 deposits, 3 withdrawals, 1 redistribution, 1 deposit, 1 withdrawal.
+	CHECK(Wolves->BankLog.size() == 8);
+	CHECK(Wolves->BankLog[0].PlayerId == "m2" && Wolves->BankLog[0].Action == EGuildBankAction::DepositGold);
+	CHECK(Wolves->BankLog[0].Gold == 500 && Wolves->BankLog[0].Time == 1.0 && Wolves->BankLog[0].ItemId.empty());
+	CHECK(Wolves->BankLog[4].Action == EGuildBankAction::RedistributeGold);
+	CHECK(Wolves->BankLog[4].PlayerId == "officer" && Wolves->BankLog[4].RecipientId == "m2");
+	CHECK(Wolves->BankLog[2].Action == EGuildBankAction::WithdrawGold && Wolves->BankLog[2].RecipientId.empty());
+	// Redistributing to oneself is a withdrawal.
+	CHECK(Guilds.DepositGold("m2", 10, 10.0) == EGuildError::None);
+	CHECK(Guilds.RedistributeGold("officer", "officer", 10, 10.0) == EGuildError::None);
+	CHECK(Wolves->BankLog.back().Action == EGuildBankAction::WithdrawGold);
+
+	// Bank, items: placed on the stash-tab grid.
+	FGuildBankItem Sword;
+	Sword.ItemId = "sword_one_handed";
+	Sword.Rarity = ERarity::Rare;
+	Sword.Size = {1, 3};
+	Sword.Payload = "affixes:...";
+	const FGuildItemResult Deposited = Guilds.DepositItem("m2", Sword, nullptr, 11.0);
+	CHECK(Deposited.IsValid() && Deposited.Item.SlotId > 0);
+	CHECK(Wolves->Bank.Grid.ItemAt(0, 0) == Deposited.Item.SlotId);
+	CHECK(Wolves->Bank.Grid.ItemAt(0, 2) == Deposited.Item.SlotId);
+	CHECK(Wolves->Bank.Find(Deposited.Item.SlotId) != nullptr);
+	CHECK(Wolves->Bank.Find(Deposited.Item.SlotId)->Payload == "affixes:...");
+	CHECK(Wolves->BankLog.back().Action == EGuildBankAction::DepositItem);
+	CHECK(Wolves->BankLog.back().ItemId == "sword_one_handed" && Wolves->BankLog.back().Count == 1);
+	CHECK(Wolves->BankLog.back().Rarity == ERarity::Rare && Wolves->BankLog.back().Gold == 0);
+
+	FGuildBankItem Potions;
+	Potions.ItemId = "healing_potion";
+	Potions.Count = 5;
+	const FGridPlacement Corner{9, 29, false};
+	const FGuildItemResult PotionsIn = Guilds.DepositItem("m2", Potions, &Corner, 12.0);
+	CHECK(PotionsIn.IsValid() && Wolves->Bank.Grid.ItemAt(9, 29) == PotionsIn.Item.SlotId);
+	CHECK(PotionsIn.Item.SlotId != Deposited.Item.SlotId);
+	// Occupied or out-of-grid spots are refused.
+	const FGridPlacement OnSword{0, 1, false};
+	const FGridPlacement Outside{10, 0, false};
+	CHECK(Guilds.DepositItem("m2", Potions, &OnSword, 12.0).Error == EGuildError::NoRoom);
+	CHECK(Guilds.DepositItem("m2", Potions, &Outside, 12.0).Error == EGuildError::NoRoom);
+	FGuildBankItem Bad = Potions;
+	Bad.Count = 0;
+	CHECK(Guilds.DepositItem("m2", Bad, nullptr, 12.0).Error == EGuildError::InvalidItem);
+	Bad = Potions;
+	Bad.ItemId.clear();
+	CHECK(Guilds.DepositItem("m2", Bad, nullptr, 12.0).Error == EGuildError::InvalidItem);
+	Bad = Potions;
+	Bad.Size = {0, 1};
+	CHECK(Guilds.DepositItem("m2", Bad, nullptr, 12.0).Error == EGuildError::InvalidItem);
+	CHECK(Guilds.DepositItem("nobody", Potions, nullptr, 12.0).Error == EGuildError::NotInGuild);
+	CHECK(Wolves->Bank.Items.size() == 2);
+
+	// Members cannot withdraw, redistribute or rearrange items.
+	CHECK(Guilds.WithdrawItem("m2", Deposited.Item.SlotId, 13.0).Error == EGuildError::NotPermitted);
+	CHECK(Guilds.RedistributeItem("m2", "officer", Deposited.Item.SlotId, 13.0).Error == EGuildError::NotPermitted);
+	CHECK(Guilds.MoveBankItem("m2", Deposited.Item.SlotId, {5, 5, true}) == EGuildError::NotPermitted);
+	// Officers manage: move and rotate.
+	CHECK(Guilds.MoveBankItem("officer", Deposited.Item.SlotId, {5, 5, true}) == EGuildError::None);
+	CHECK(Wolves->Bank.Grid.ItemAt(7, 5) == Deposited.Item.SlotId && Wolves->Bank.Grid.ItemAt(0, 0) == 0);
+	CHECK(Guilds.MoveBankItem("officer", Deposited.Item.SlotId, {8, 29, true}) == EGuildError::NoRoom);
+	CHECK(Guilds.MoveBankItem("officer", 999, {0, 0, false}) == EGuildError::UnknownItem);
+
+	const FGuildItemResult Given = Guilds.RedistributeItem("officer", "m2", Deposited.Item.SlotId, 14.0);
+	CHECK(Given.IsValid() && Given.Item.ItemId == "sword_one_handed" && Given.Item.Payload == "affixes:...");
+	CHECK(Wolves->Bank.Find(Deposited.Item.SlotId) == nullptr && Wolves->Bank.Grid.ItemAt(7, 5) == 0);
+	CHECK(Wolves->BankLog.back().Action == EGuildBankAction::RedistributeItem);
+	CHECK(Wolves->BankLog.back().RecipientId == "m2" && Wolves->BankLog.back().Time == 14.0);
+	CHECK(Guilds.RedistributeItem("officer", "m2", Deposited.Item.SlotId, 14.0).Error == EGuildError::UnknownItem);
+	CHECK(Guilds.RedistributeItem("officer", "raven", PotionsIn.Item.SlotId, 14.0).Error == EGuildError::TargetNotInGuild);
+	const FGuildItemResult Taken = Guilds.WithdrawItem("member", PotionsIn.Item.SlotId, 15.0);
+	CHECK(Taken.IsValid() && Taken.Item.Count == 5 && Wolves->Bank.Items.empty() && Wolves->Bank.Grid.IsEmpty());
+	CHECK(Wolves->BankLog.back().Action == EGuildBankAction::WithdrawItem && Wolves->BankLog.back().Count == 5);
+
+	// A full bank refuses deposits.
+	FGuildConfig Tiny;
+	Tiny.BankWidth = 2;
+	Tiny.BankHeight = 2;
+	Tiny.BankLogSize = 3;
+	Tiny.MaxMembers = 2;
+	FGuildRegistry Small(Tiny);
+	CHECK(Small.Create("s", "Small", "boss") == EGuildError::None);
+	FGuildBankItem Shield;
+	Shield.ItemId = "shield";
+	Shield.Size = {2, 2};
+	CHECK(Small.DepositItem("boss", Shield, nullptr, 1.0).IsValid());
+	CHECK(Small.DepositItem("boss", Potions, nullptr, 2.0).Error == EGuildError::NoRoom);
+	// Rotation is used to fit.
+	FGuildRegistry Narrow(Tiny);
+	CHECK(Narrow.Create("n", "Narrow", "boss") == EGuildError::None);
+	FGuildBankItem Bar;
+	Bar.ItemId = "bar";
+	Bar.Size = {1, 2};
+	FGuildBankItem Wide;
+	Wide.ItemId = "wide";
+	Wide.Size = {2, 1};
+	CHECK(Narrow.DepositItem("boss", Wide, nullptr, 1.0).IsValid());
+	const FGuildItemResult Rotated = Narrow.DepositItem("boss", Bar, nullptr, 1.0);
+	CHECK(Rotated.IsValid() && Narrow.Find("n")->Bank.Grid.Find(Rotated.Item.SlotId)->Placement.bRotated);
+
+	// Log trimming: only the newest BankLogSize entries are kept.
+	for (int I = 0; I < 5; ++I)
+	{
+		CHECK(Small.DepositGold("boss", I + 1, 10.0 + I) == EGuildError::None);
+	}
+	const FGuild* SmallGuild = Small.Find("s");
+	CHECK(SmallGuild->BankLog.size() == 3);
+	CHECK(SmallGuild->BankLog.front().Gold == 3 && SmallGuild->BankLog.back().Gold == 5);
+	CHECK(SmallGuild->BankLog.back().Time == 14.0);
+	CHECK(Wolves->BankLog.size() <= 100);
+	for (int I = 0; I < 150; ++I)
+	{
+		CHECK(Guilds.DepositGold("m2", 1, 100.0 + I) == EGuildError::None);
+	}
+	CHECK(Wolves->BankLog.size() == 100 && Wolves->BankLog.front().Time == 150.0);
+
+	// Full guild: invites and accepts are refused at MaxMembers.
+	CHECK(Small.Invite("boss", "p1", 0.0) == EGuildError::None);
+	CHECK(Small.Invite("boss", "p2", 0.0) == EGuildError::None);
+	CHECK(Small.Accept("s", "p1", 1.0) == EGuildError::None);
+	CHECK(Small.Accept("s", "p2", 1.0) == EGuildError::GuildFull);
+	CHECK(Small.Invite("boss", "p3", 1.0) == EGuildError::GuildFull);
+	CHECK(Small.GuildOf("p2") == nullptr && SmallGuild->Members.size() == 2);
+
+	// Default cap of 50.
+	FGuildRegistry Big;
+	CHECK(Big.Create("b", "Big", "p0") == EGuildError::None);
+	for (int I = 1; I < 50; ++I)
+	{
+		const std::string Player = "p" + std::to_string(I);
+		CHECK(Big.Invite("p0", Player, 0.0) == EGuildError::None);
+		CHECK(Big.Accept("b", Player, 0.0) == EGuildError::None);
+	}
+	CHECK(Big.Find("b")->Members.size() == 50);
+	CHECK(Big.Invite("p0", "p50", 0.0) == EGuildError::GuildFull);
+
+	// Last member leaving disbands the guild and hands over the bank; the name frees up.
+	CHECK(Small.Kick("boss", "p1") == EGuildError::None);
+	const FGuildLeaveResult Disbanded = Small.Leave("boss");
+	CHECK(Disbanded.IsValid() && Disbanded.bDisbanded);
+	CHECK(Disbanded.Gold == 15 && Disbanded.Items.size() == 1 && Disbanded.Items[0].ItemId == "shield");
+	CHECK(Small.Find("s") == nullptr && Small.FindByName("Small") == nullptr && Small.GuildOf("boss") == nullptr);
+	CHECK(Small.Accept("s", "p2", 1.0) == EGuildError::UnknownGuild);
+	CHECK(Small.Create("s", "SMALL", "p2") == EGuildError::None);
+
+	// Restore round-trips saved guilds and rejects bad data.
+	FGuildRegistry Loaded;
+	for (const auto& Entry : Guilds.All())
+	{
+		CHECK(Loaded.Restore(Entry.second) == EGuildError::None);
+	}
+	CHECK(Loaded.FindByName("iron wolves") != nullptr);
+	CHECK(Loaded.RankOf("member") == EGuildRank::Leader && Loaded.RankOf("leader") == EGuildRank::Member);
+	CHECK(Loaded.Restore(*Guilds.Find("g1")) == EGuildError::GuildIdTaken);
+	FGuild Copy = *Guilds.Find("g1");
+	Copy.Id = "g9";
+	CHECK(Loaded.Restore(Copy) == EGuildError::NameTaken);
+	Copy.Name = "Copy";
+	CHECK(Loaded.Restore(Copy) == EGuildError::AlreadyInGuild);
+	FGuild NoLeader;
+	NoLeader.Id = "x";
+	NoLeader.Name = "No Leader";
+	NoLeader.Members = {{"x1", EGuildRank::Officer}};
+	NoLeader.Bank.Grid = FInventoryGrid(FGridSize{2, 2});
+	CHECK(Loaded.Restore(NoLeader) == EGuildError::InvalidData);
+	NoLeader.Members = {{"x1", EGuildRank::Leader}, {"x2", EGuildRank::Leader}};
+	CHECK(Loaded.Restore(NoLeader) == EGuildError::InvalidData);
+	NoLeader.Members = {{"x1", EGuildRank::Leader}, {"x1", EGuildRank::Member}};
+	CHECK(Loaded.Restore(NoLeader) == EGuildError::InvalidData);
+	NoLeader.Members = {{"x1", EGuildRank::Leader}};
+	NoLeader.Bank.Items.push_back(Shield);
+	CHECK(Loaded.Restore(NoLeader) == EGuildError::InvalidData);
+	NoLeader.Bank.Items.clear();
+	NoLeader.Bank.Gold = -1;
+	CHECK(Loaded.Restore(NoLeader) == EGuildError::InvalidData);
+	NoLeader.Bank.Gold = 0;
+	CHECK(Loaded.Restore(NoLeader) == EGuildError::None);
+	CHECK(Loaded.RankOf("x1") == EGuildRank::Leader);
+}
+
 int main()
 {
 	TestProgression();
@@ -909,6 +1288,7 @@ int main()
 	TestEconomy();
 	TestPortal();
 	TestLoot();
+	TestGuild();
 
 	std::printf("%d checks, %d failures\n", GChecks, GFailures);
 	return GFailures == 0 ? 0 : 1;

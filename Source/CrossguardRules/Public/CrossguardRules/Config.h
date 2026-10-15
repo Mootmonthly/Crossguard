@@ -121,6 +121,24 @@ namespace Crossguard
 		int MaxTeamSize = 8;
 	};
 
+	// Guilds (docs/guild-rules.md). The ruling covers bank permissions only; every number here is
+	// an ASSUMPTION until ruled otherwise.
+	struct FGuildConfig
+	{
+		// Assumption: members per guild, Leader included.
+		int MaxMembers = 50;
+		// Assumption: name length after trimming leading and trailing spaces.
+		int MinNameLength = 3;
+		int MaxNameLength = 24;
+		// Assumption: an invite can be accepted until this many seconds after it was sent.
+		double InviteExpirySeconds = 300.0;
+		// Assumption: the bank grid is one stash tab.
+		int BankWidth = FInventoryConfig().StashTabWidth;
+		int BankHeight = FInventoryConfig().StashTabHeight;
+		// Assumption: the bank log keeps only the newest entries.
+		int BankLogSize = 100;
+	};
+
 	struct FItemConfig
 	{
 		// Affix slots by rarity level (Common..Mystic).
