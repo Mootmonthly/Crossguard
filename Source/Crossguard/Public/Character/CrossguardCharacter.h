@@ -235,6 +235,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
 	TObjectPtr<UInputAction> CastSkillAction;
 
+	// G (placeholder until the inventory UI): drops the stack in hand (a readied hotbar item).
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> DropAction;
+
 	// Left Ctrl: descend while flying ([Flight]). Space rises.
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
 	TObjectPtr<UInputAction> FlyDownAction;
@@ -296,6 +300,7 @@ private:
 	// Held Space / Left Ctrl while flying.
 	void OnFlyUp();
 	void OnFlyDown();
+	void OnDrop();
 	void OnAttack();
 	// Left click pressed / released: uses a readied consumable instead of attacking.
 	void OnAttackPressed();

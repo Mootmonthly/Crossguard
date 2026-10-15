@@ -25,7 +25,7 @@ On `BP_CrossguardCharacter`, select **InventoryComponent** and set **Item Table*
 ## 3. Character settings
 
 If `BP_CrossguardCharacter` has its own **Default Mapping Context** set, clear it (or add the new
-keys yourself): the built-in bindings (1–7, Q, E, F, X) are only created when it is empty.
+keys yourself): the built-in bindings (1–7, Q, E, F, X, G, Left Ctrl) are only created when it is empty.
 
 On `BP_CrossguardCharacter` → **Crossguard | Debug**:
 
@@ -85,6 +85,9 @@ Skills: put them in `DebugSkills` (Skill Capacity permitting; raise `Level` with
 | `immutable` equipped, then hit by `chop_down` | No slow. |
 | `unleash` | STR / AGI / INT double for 15 s, Max HP follows. |
 | `benediction` aimed at a dead body (DebugReviveDelay 0) | It stands up at full HP with its gear. |
+| `multiscale` with a party member (second client, same `?Party=`) | Both have +0.15 Attack and Magic Resistance in `showdebug abilitysystem`; gone when unequipped. |
+| `hunters_tracking`, second client (enemy) walks around | Small grey marks follow their path on your screen, fading after 30 s. |
+| Press 3 with a potion readied, then G; walk to the box and press F | The stack drops as a small box and comes back on pickup. |
 | `summon_skeletons` (needs a NavMesh Bounds Volume) | 6 cylinders appear, attack the dummy, follow you otherwise, vanish after 60 s; casting again replaces them. |
 
 Passive skills: put `heroic_might` (or a mastery) in `DebugSkills` and check

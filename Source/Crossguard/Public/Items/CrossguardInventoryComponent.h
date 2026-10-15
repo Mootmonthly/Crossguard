@@ -12,6 +12,7 @@
 
 class ACrossguardLootContainer;
 class ACrossguardThrownProjectile;
+class ACrossguardWorldItem;
 class UDataTable;
 
 // Mirrors Crossguard::EContainerKind.
@@ -191,8 +192,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardInventoryRejected, const 
 //
 // On death everything (equipped gear included) moves into a lootable body (ACrossguardLootContainer).
 //
-// Not built yet: dropping and picking up single items in the world, the stash and guild bank,
-// splitting stacks, using consumables.
+// A stack can be dropped on the ground (ACrossguardWorldItem) and picked up with the interact key.
+//
+// Not built yet: the guild bank, splitting stacks.
 UCLASS(ClassGroup = (Crossguard), meta = (BlueprintSpawnableComponent))
 class CROSSGUARD_API UCrossguardInventoryComponent : public UActorComponent
 {
@@ -289,6 +291,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void RequestUseItem(int32 ItemId);
 
+	// Drops a whole stack from a grid (inventory, Backpack, Quiver) on the ground in front of the
+	// owner. Worn gear is unequipped first.
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void RequestDropItem(int32 ItemId);
+
+	// Spawned by RequestDropItem. Set a Blueprint subclass for a look; empty uses the placeholder.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
+	TSubclassOf<ACrossguardWorldItem> WorldItemClass;
+
 	// Hotbar keys 3-7 (slots 0-4) hold consumables and throwables.
 	UFUNCTION(BlueprintPure, Category = "Inventory|Hotbar")
 	const TArray<FCrossguardHotbarSlot>& GetHotbar() const { return Hotbar; }
@@ -380,6 +391,9 @@ protected:
 	void ServerUseItem(int32 ItemId);
 
 	UFUNCTION(Server, Reliable)
+	void ServerDropItem(int32 ItemId);
+
+	UFUNCTION(Server, Reliable)
 	void ServerReadyItem(int32 ItemId);
 
 	UFUNCTION(Server, Reliable)
@@ -420,6 +434,7 @@ private:
 	FCrossguardInventoryResult UnequipArmor(ECrossguardArmorSlot Slot);
 	FCrossguardInventoryResult UnequipContainer(ECrossguardInventoryContainer Container);
 	FCrossguardInventoryResult UseItem(int32 ItemId);
+	FCrossguardInventoryResult DropItem(int32 ItemId);
 	FCrossguardInventoryResult ReadyItem(int32 ItemId);
 	// Puts ItemId (0: nothing) in hand and tells the equipment (weapons away, held throwable type).
 	void HoldItem(int32 ItemId);

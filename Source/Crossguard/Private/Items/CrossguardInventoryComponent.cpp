@@ -10,6 +10,7 @@
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "Items/CrossguardLootContainer.h"
+#include "Items/CrossguardWorldItem.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
 #include "Skills/CrossguardLoadoutComponent.h"
@@ -492,6 +493,64 @@ void UCrossguardInventoryComponent::RequestUseItem(int32 ItemId)
 void UCrossguardInventoryComponent::ServerUseItem_Implementation(int32 ItemId)
 {
 	Finish(UseItem(ItemId));
+}
+
+void UCrossguardInventoryComponent::RequestDropItem(int32 ItemId)
+{
+	if (IsServer())
+	{
+		Finish(DropItem(ItemId));
+	}
+	else
+	{
+		ServerDropItem(ItemId);
+	}
+}
+
+void UCrossguardInventoryComponent::ServerDropItem_Implementation(int32 ItemId)
+{
+	Finish(DropItem(ItemId));
+}
+
+FCrossguardInventoryResult UCrossguardInventoryComponent::DropItem(int32 ItemId)
+{
+	if (IsOwnerActorDead())
+	{
+		return Fail(ECrossguardInventoryError::OwnerActorDead);
+	}
+	const int32 Index = IndexOfItem(ItemId);
+	const AActor* OwnerActor = GetOwnerActor();
+	if (Index == INDEX_NONE || OwnerActor == nullptr)
+	{
+		return Fail(ECrossguardInventoryError::UnknownItem);
+	}
+
+	// On the ground 60 cm ahead: world geometry under that point, else the owner's feet.
+	UWorld* World = GetWorld();
+	const FVector Ahead = OwnerActor->GetActorLocation() + OwnerActor->GetActorForwardVector() * 60.0f;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(CrossguardDropItem), false, OwnerActor);
+	FHitResult Ground;
+	const FVector Spot = World->LineTraceSingleByObjectType(Ground, Ahead, Ahead - FVector(0.0f, 0.0f, 300.0f),
+		FCollisionObjectQueryParams(ECC_WorldStatic), Params) ? Ground.ImpactPoint + FVector(0.0f, 0.0f, 12.5f) : Ahead;
+
+	FCrossguardInventoryItem Dropped = Items[Index];
+	// The next inventory assigns its own id and place.
+	Dropped.Id = 0;
+	Dropped.bWasEquipped = false;
+	const FTransform Transform(OwnerActor->GetActorRotation(), Spot);
+	const TSubclassOf<ACrossguardWorldItem> Class = WorldItemClass != nullptr ? WorldItemClass
+		: TSubclassOf<ACrossguardWorldItem>(ACrossguardWorldItem::StaticClass());
+	ACrossguardWorldItem* WorldItem = World->SpawnActorDeferred<ACrossguardWorldItem>(Class, Transform, nullptr, nullptr,
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	if (WorldItem == nullptr)
+	{
+		return Fail(ECrossguardInventoryError::NotReady);
+	}
+	WorldItem->SetItem(Dropped);
+	WorldItem->FinishSpawning(Transform);
+
+	Items.RemoveAt(Index);
+	return FCrossguardInventoryResult();
 }
 
 void UCrossguardInventoryComponent::ClientInventoryRejected_Implementation(const FCrossguardInventoryResult& Result)

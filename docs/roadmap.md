@@ -20,7 +20,7 @@ order changes.
 | Character | First-person camera, Enhanced Input built in code, GAS stats derived from STR/AGI/INT. |
 | Combat | Weapon attacks (melee sweep, hitscan wand, projectiles), damage and healing formulas, dual wield, cooldowns with CDR cap. Bows use arrows. |
 | Equipment | Main hand / off hand, six armor slots, rolled affixes, equipment stats and tags. |
-| Skills | Loadout validation (Capacity, bundles, superseded skills), Skill Library gating. Passive stat bonuses play from the skill data. 42 of 49 skills playable: 29 in C++ (including the next-attack system, Stealth, walls, CC immunity) and the stat passives from data. |
+| Skills | Loadout validation (Capacity, bundles, superseded skills), Skill Library gating. Passive stat bonuses play from the skill data. 46 of 49 skills playable: 31 in C++ (including the next-attack system, Stealth, walls, CC immunity, party auras, tracking) and the stat passives from data. |
 | Progression | XP sources, level curve, raid XP banked on extraction, attribute allocation, paid respec tokens. Session only, not saved. |
 | Stash | Per-character tabs of 10 × 30, between raids only. Not saved yet. |
 | Inventory | Server-authoritative 10 × 5 grid, Backpack and Quiver, stacking by type and rarity, equip through the inventory, Skill Gems, hotbar keys 3–7 for potions, bandages and throwables, two weapon sets on 1 and 2. |
@@ -54,7 +54,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Hub / lobby map | Editor | Where players manage stash, Skill Library, attributes, loadout; game mode with `bIsRaid` off. |
 | Inventory and loot UI | Editor | Grid widgets for inventory, Backpack, Quiver, equipment, bodies. The C++ API is ready. |
 | Hotbar, weapon sets and skill wheel UI | Editor | Built in code (keys 1–7, hold Q, E). Needs the hotbar bar, the radial skill wheel and a weapon set indicator. |
-| Drop and pick up single items | Code | Items lying in the world, separate from bodies. |
+| Drop and pick up single items | Editor | Built in code (G drops the stack in hand, F picks up). Needs drag-to-drop in the inventory UI and item meshes. |
 | Revive spell | Decision, Code | Calls the existing `Revive`. Comes from the skills you add in the Skill Forge. |
 | Saving progression | Code, Decision | XP, level, attributes, Skill Library, stash, respec tokens. Needs a choice of backend. |
 | Loadout timing | Decision | Can the loadout change during a raid, or only between raids? |
@@ -63,7 +63,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 
 | Item | Needs | Notes |
 | --- | --- | --- |
-| Remaining skills | Code, Decision | Summon Tiger and Summon Greater Demon (minions that use skills), Neckbite (needs a Beastial form), Hunter's Tracking (footsteps, hearing), Multiscale / Mithril Knight party auras, Triple Thrust piercing (needs blocking), Arcane Arrows dropoff (needs arrow dropoff). |
+| Remaining skills | Code, Decision | Summon Tiger and Summon Greater Demon (minions that use skills), Neckbite (needs a Beastial form), Hunter's Tracking hearing range (needs sound), Triple Thrust piercing (needs blocking), Arcane Arrows dropoff (needs arrow dropoff). |
 | Stealth teammate indicator | Editor | Teammates should see when an ally is stealthed (outline or translucency). |
 | Skill visuals | Editor | Fireball, breath, shield, Blind screen effect, dragon form, skeleton meshes. |
 | Passives on others and free-text mechanics | Code | Data-driven passives cover Self stat modifiers (masteries, Heroic Might, Cor Leonis, ...); party auras, on-hit slows and mechanics like Hunter's Tracking still need code. |

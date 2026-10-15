@@ -101,6 +101,7 @@ void ACrossguardCharacter::EnsureDefaultInput()
 	MakeAction(CastSkillAction, TEXT("IA_CastSkill"), EInputActionValueType::Boolean);
 	MakeAction(SummonPortalAction, TEXT("IA_SummonPortal"), EInputActionValueType::Boolean);
 	MakeAction(FlyDownAction, TEXT("IA_FlyDown"), EInputActionValueType::Boolean);
+	MakeAction(DropAction, TEXT("IA_Drop"), EInputActionValueType::Boolean);
 
 	if (DefaultMappingContext != nullptr)
 	{
@@ -126,6 +127,7 @@ void ACrossguardCharacter::EnsureDefaultInput()
 
 	Context->MapKey(JumpAction, EKeys::SpaceBar);
 	Context->MapKey(FlyDownAction, EKeys::LeftControl);
+	Context->MapKey(DropAction, EKeys::G);
 	Context->MapKey(AttackAction, EKeys::LeftMouseButton);
 	Context->MapKey(SecondaryActionInput, EKeys::RightMouseButton);
 	Context->MapKey(InteractAction, EKeys::F);
@@ -158,6 +160,7 @@ void ACrossguardCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	Input->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 	Input->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnFlyUp);
 	Input->BindAction(FlyDownAction, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnFlyDown);
+	Input->BindAction(DropAction, ETriggerEvent::Started, this, &ACrossguardCharacter::OnDrop);
 	// Triggered fires every frame while held: holding the button keeps attacking at the weapon's rate.
 	Input->BindAction(AttackAction, ETriggerEvent::Started, this, &ACrossguardCharacter::OnAttackPressed);
 	Input->BindAction(AttackAction, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnAttack);
@@ -245,6 +248,19 @@ void ACrossguardCharacter::OnFlyDown()
 	if (GetCharacterMovement()->IsFlying())
 	{
 		AddMovementInput(FVector::UpVector, -1.0f);
+	}
+}
+
+void ACrossguardCharacter::OnDrop()
+{
+	const int32 Readied = InventoryComponent->GetReadiedItemId();
+	if (Readied != 0)
+	{
+		InventoryComponent->RequestDropItem(Readied);
+	}
+	else if (bDebugHud)
+	{
+		ShowDebugMessage(TEXT("Ready an item with 3-7 to drop it"), FColor::Orange);
 	}
 }
 

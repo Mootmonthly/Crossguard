@@ -136,6 +136,11 @@ Rulings for the first skills built in C++ (defaults proposed and accepted, plus 
 | Stealth | Invisible to everyone outside your party (and to minions) for 12 s. Attacking, casting or taking damage ends it early. The exit bonus (+10% speed, +25% Attack Bonus for 3 s) applies however it ends, except death or Mute. Later: an indicator so teammates can tell you are stealthed. |
 | Immutable | Crowd control = Slow, Blind, knock-up, Grounding (later Silence, Stun, Root). **Mute is not crowd control.** Equipped (and not Muted): permanently immune. Activated: you and party members within 10 m immune for 5 s. Existing crowd control is not removed. |
 | Splinter of Winter | Dagger attacks: +5 Magic Damage and -10% speed for 3 s. |
+| Multiscale | +15% Attack and Magic Resistance to you, every party member and party minions, at any distance. Two Multiscales do not stack. Off while you are Muted. Also comes with The Mithril Knight. |
+| Hunter's Tracking | Footprints of enemy players from the last 30 s, on your screen only, for enemies your client knows about (about 150 m). Stealthed enemies leave none. The +20 m hearing waits for the sound system. |
+
+Dropped items lie on the ground until picked up (interact key) or the raid ends; a pickup takes what
+fits and leaves the rest.
 
 All skills end on death.
 
@@ -254,6 +259,8 @@ point of interest instead of only using fixed extraction points. Ruled details:
 | E | Activate the selected skill |
 | F | Interact (bodies, chests, doors) |
 | X | Summon an extract portal (placeholder key) |
+| Space / Left Ctrl | Rise / descend while flying ([Flight]) |
+| G | Drop the stack in hand (placeholder until the inventory UI has drag-to-drop) |
 
 - Drawing a weapon set (1 / 2) takes 1 s, faster with Dexterity (`1 s ÷ (1 + Dexterity)`); an
   animation will play here. Nothing attacks while drawing.
