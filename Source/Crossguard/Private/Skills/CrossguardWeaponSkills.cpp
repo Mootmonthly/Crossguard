@@ -122,7 +122,8 @@ void UCrossguardNextAttackAbility::ActivateAbility(const FGameplayAbilitySpecHan
 bool UCrossguardNextAttackAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
 {
 	const UAbilitySystemComponent* ASC = User.GetAbilitySystemComponent();
-	return bMeleeRider && ASC != nullptr && !ASC->HasMatchingGameplayTag(ReadyTag)
+	// A Mage's attack is its Fireball: melee riders would never be used.
+	return bMeleeRider && User.CombatRole != ECrossguardCombatRole::Mage && ASC != nullptr && !ASC->HasMatchingGameplayTag(ReadyTag)
 		&& FVector::Dist(User.GetActorLocation(), Target.GetActorLocation()) <= User.AttackRange + AINextAttackLead;
 }
 
