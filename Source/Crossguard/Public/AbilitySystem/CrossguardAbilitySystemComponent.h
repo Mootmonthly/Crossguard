@@ -3,17 +3,9 @@
 #include "AbilitySystemComponent.h"
 #include "CoreMinimal.h"
 #include "CrossguardRules/Config.h"
+#include "Skills/CrossguardSkillTypes.h"
 
 #include "CrossguardAbilitySystemComponent.generated.h"
-
-UENUM(BlueprintType)
-enum class ECrossguardSkillCategory : uint8
-{
-	Active,
-	Spell,
-	Art,
-	Passive,
-};
 
 // A character's free attribute allocation (docs/design-decisions.md, "Levels").
 USTRUCT(BlueprintType)

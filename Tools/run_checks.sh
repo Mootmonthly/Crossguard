@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Runs every check that works without Unreal: skill data, generated table, rules unit tests.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+python3 Tools/validate_skills.py
+python3 Tools/export_skill_table.py --check
+python3 Tools/check_skill_types.py
+
+cmake -S Tests/CrossguardRules -B build/rules-tests >/dev/null
+cmake --build build/rules-tests
+ctest --test-dir build/rules-tests --output-on-failure

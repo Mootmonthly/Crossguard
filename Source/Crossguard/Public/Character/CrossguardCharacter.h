@@ -8,6 +8,7 @@
 #include "CrossguardCharacter.generated.h"
 
 class UCrossguardAttributeSet;
+class UCrossguardLoadoutComponent;
 struct FOnAttributeChangeData;
 
 // Player character. Owns its ability system: a character's stats and skills live and die with it,
@@ -22,6 +23,7 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UCrossguardAbilitySystemComponent* GetCrossguardAbilitySystemComponent() const { return AbilitySystemComponent; }
+	UCrossguardLoadoutComponent* GetLoadoutComponent() const { return LoadoutComponent; }
 
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
@@ -43,6 +45,10 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UCrossguardAttributeSet> AttributeSet;
+
+	// Set its SkillCatalog in the character Blueprint.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Abilities")
+	TObjectPtr<UCrossguardLoadoutComponent> LoadoutComponent;
 
 private:
 	void InitializeAbilitySystem();

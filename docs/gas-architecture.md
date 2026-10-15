@@ -58,10 +58,44 @@ Cast time: call `GetReducedCastTime()` for wait tasks and cast bars. Uncapped.
 
 The executions call the same formulas as the unit tests in `Tests/CrossguardRules`.
 
+## Skill data in Unreal
+
+`Data/Skills/Skills.json` stays the source of truth.
+
+1. After editing it, run `python3 Tools/export_skill_table.py`. It writes
+   `Data/Skills/SkillTable.json` in Unreal's data table format (`FCrossguardSkillRow` rows).
+2. In the editor, import `SkillTable.json` as a Data Table with row struct `CrossguardSkillRow`
+   (first time: drag it into `Content/Data/`, save as `DT_Skills`). Later: right-click → Reimport.
+3. Create one `CrossguardSkillCatalog` data asset (`DA_SkillCatalog`). Set `SkillTable` to
+   `DT_Skills` and add each implemented skill to `AbilityClasses` (skill id → ability class).
+   Data validation flags ids not in the table and classes whose `SkillId` or category disagree.
+
+## Loadout
+
+`UCrossguardLoadoutComponent` (add it to the character, set `SkillCatalog`):
+
+- `RequestLoadout(Skills)`: the server validates with `Crossguard::ValidateLoadout` against
+  Skill Capacity at the character's level, then grants one ability per effective skill. Bundle
+  components are granted as separate abilities; a component shared by two bundles is granted once.
+- Rejections reach the owning client through `OnLoadoutRejected` with the reason.
+- `ValidateLoadout(Skills)` checks without applying, for UI.
+- Equipped skills replicate to everyone.
+
+## Passive skills
+
+Subclass `UCrossguardPassiveAbility`. It activates on the server when granted and applies its
+`PassiveEffects` (Infinite effects holding the stat modifiers) until unequipped. Example: Heroic
+Might = one Infinite effect adding 10 to Strength.
+
+## Checks
+
+`Tools/run_checks.sh` runs the skill data validator, the table export check, the C++ struct check
+and the rules unit tests.
+
 ## Not built yet
 
-- Loading `Skills.json` into Unreal (a data table, or an import step that generates skill assets).
-- Loadout component using `Crossguard::ValidateLoadout`.
+- Generating the stat-modifier effects for passives from the table (currently made by hand).
+- Skill Gem ownership; restricting when the loadout can change.
 - Shields (Eldritch Shield), CC, Mute, Silence, minions.
 - Client-side ability system init for pawns without a PlayerState (AI). Players are covered by
   `OnRep_PlayerState`.

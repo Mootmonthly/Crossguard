@@ -10,7 +10,8 @@ Fantasy extraction game. Unreal Engine 5 with the Gameplay Ability System.
 | `Source/CrossguardRules` | Engine-free game rules: progression, derived stats, damage, cooldowns, loadout validation. |
 | `Tests/CrossguardRules` | Standalone unit tests for `CrossguardRules`. |
 | `Data/Skills/Skills.json` | Skill definitions (schema in `docs/skill-data-schema.md`). |
-| `Tools/validate_skills.py` | Validates `Skills.json`. |
+| `Data/Skills/SkillTable.json` | Generated Unreal data table import. Do not edit. |
+| `Tools/` | Data validation, table export and check scripts. |
 | `docs/design-decisions.md` | Design rulings; overrides the Drive design docs. |
 
 ## Setup
@@ -25,9 +26,8 @@ The `CrossguardServer` target needs a source build of the engine.
 ## Checks
 
 ```sh
-cmake -S Tests/CrossguardRules -B build/rules-tests
-cmake --build build/rules-tests
-ctest --test-dir build/rules-tests --output-on-failure
-
-python3 Tools/validate_skills.py
+Tools/run_checks.sh
 ```
+
+Runs the skill data validator, the data table export check, the C++ struct check and the rules
+unit tests. None of them need Unreal.

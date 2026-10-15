@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/CrossguardAttributeSet.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Skills/CrossguardLoadoutComponent.h"
 
 ACrossguardCharacter::ACrossguardCharacter()
 {
@@ -12,6 +13,8 @@ ACrossguardCharacter::ACrossguardCharacter()
 
 	// Created as a subobject of the owning actor, so the ASC registers it automatically.
 	AttributeSet = CreateDefaultSubobject<UCrossguardAttributeSet>(TEXT("AttributeSet"));
+
+	LoadoutComponent = CreateDefaultSubobject<UCrossguardLoadoutComponent>(TEXT("LoadoutComponent"));
 
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
 }
