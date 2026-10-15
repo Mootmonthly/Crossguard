@@ -11,6 +11,7 @@
 
 class UCrossguardSkillCatalog;
 class UCrossguardStashComponent;
+class UCrossguardVendorComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardTeamChanged, int32, NewTeamId);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCrossguardProgressionChanged);
@@ -112,6 +113,19 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Progression")
 	int32 GetRespecTokens() const { return RespecTokens; }
 
+	// Banked gold: safe, spent on stash tabs and the like. Gold coins carried in a raid are items
+	// until the player extracts with them. Owner only.
+	UFUNCTION(BlueprintPure, Category = "Crossguard|Progression")
+	int32 GetGold() const { return Gold; }
+
+	// Server. Adds banked gold (vendor sales, extraction).
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Progression")
+	void AddGold(int32 Amount);
+
+	// Server. Takes Amount from the banked gold. False, changing nothing, if there is not enough.
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Progression")
+	bool SpendGold(int32 Amount);
+
 	// Skills learned from Skill Gems; the loadout can only equip these. Owner only.
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Progression")
 	const TArray<FName>& GetSkillLibrary() const { return SkillLibrary; }
@@ -128,8 +142,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Progression")
 	void BeginRaid();
 
-	// Server. Ends the raid: extracting banks the raid XP (plus the extraction reward), failing to
-	// extract loses it. Returns the XP banked.
+	// Server. Ends the raid: extracting banks the raid XP (plus the extraction reward) and moves
+	// the gold coins the character carries into the gold balance; failing to extract loses the raid
+	// XP. Returns the XP banked.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Progression")
 	int32 EndRaid(bool bExtracted);
 
@@ -164,6 +179,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Stash")
 	UCrossguardStashComponent* GetStash() const { return Stash; }
 
+	// Selling to NPC vendors.
+	UFUNCTION(BlueprintPure, Category = "Crossguard|Vendor")
+	UCrossguardVendorComponent* GetVendor() const { return Vendor; }
+
 protected:
 	UFUNCTION()
 	void OnRep_TeamId();
@@ -186,6 +205,9 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Crossguard|Stash")
 	TObjectPtr<UCrossguardStashComponent> Stash;
 
+	UPROPERTY(VisibleAnywhere, Category = "Crossguard|Vendor")
+	TObjectPtr<UCrossguardVendorComponent> Vendor;
+
 	UPROPERTY(ReplicatedUsing = OnRep_TeamId)
 	int32 TeamId = -1;
 
@@ -203,6 +225,9 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_Progression)
 	int32 RespecTokens = 0;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Progression)
+	int32 Gold = 0;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Progression)
 	TArray<FName> SkillLibrary;

@@ -49,6 +49,11 @@ enum class ECrossguardInventoryError : uint8
 	OwnerDead,
 	// Stash actions are only allowed between raids.
 	BetweenRaidsOnly,
+	NotEnoughGold,
+	// A limit is reached (e.g. the most stash tabs a character can buy).
+	AtCap,
+	// A vendor does not buy this item.
+	NotSellable,
 	// No container is open, or it is too far away.
 	NoContainerOpen,
 	OutOfRange,
@@ -215,6 +220,10 @@ public:
 	// Server. Uses up Count of a table item (any rarity): Quiver first, then the main grid, then
 	// the Backpack. False, changing nothing, if there are not enough.
 	bool ConsumeItem(FName ItemId, int32 Count = 1);
+
+	// Server. Removes every stack of a category (e.g. Currency on extraction) and returns how many
+	// items they held.
+	int32 TakeAllOfCategory(ECrossguardItemCategory Category);
 
 	// Server. Removes a whole stack. False if there is no such item.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")

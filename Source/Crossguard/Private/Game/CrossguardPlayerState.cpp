@@ -3,7 +3,10 @@
 #include "Character/CrossguardCharacter.h"
 #include "CrossguardRules/Loadout.h"
 #include "CrossguardRules/Progression.h"
+#include "GameFramework/Pawn.h"
+#include "Items/CrossguardInventoryComponent.h"
 #include "Items/CrossguardStashComponent.h"
+#include "Items/CrossguardVendorComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Skills/CrossguardSkillCatalog.h"
 
@@ -38,6 +41,7 @@ static_assert(static_cast<int>(ECrossguardXpSource::Extract) == static_cast<int>
 ACrossguardPlayerState::ACrossguardPlayerState()
 {
 	Stash = CreateDefaultSubobject<UCrossguardStashComponent>(TEXT("Stash"));
+	Vendor = CreateDefaultSubobject<UCrossguardVendorComponent>(TEXT("Vendor"));
 }
 
 void ACrossguardPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -53,6 +57,7 @@ void ACrossguardPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, bInRaid, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, AttributeAllocation, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, RespecTokens, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, Gold, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, SkillLibrary, COND_OwnerOnly);
 }
 
@@ -78,6 +83,7 @@ void ACrossguardPlayerState::CopyProperties(APlayerState* PlayerState)
 		Next->bInRaid = bInRaid;
 		Next->AttributeAllocation = AttributeAllocation;
 		Next->RespecTokens = RespecTokens;
+		Next->Gold = Gold;
 		Next->SkillLibrary = SkillLibrary;
 		if (Next->Stash != nullptr && Stash != nullptr)
 		{
@@ -159,10 +165,38 @@ int32 ACrossguardPlayerState::EndRaid(bool bExtracted)
 	// A failed extraction loses the raid XP.
 	const int32 Banked = bExtracted ? Raid.Extract(XpConfig) : 0;
 	TotalXp += Banked;
+
+	// Extracted gold coins become banked gold.
+	const APawn* Pawn = GetPawn();
+	UCrossguardInventoryComponent* Inventory = Pawn != nullptr ? Pawn->FindComponentByClass<UCrossguardInventoryComponent>() : nullptr;
+	if (bExtracted && Inventory != nullptr)
+	{
+		Gold += Inventory->TakeAllOfCategory(ECrossguardItemCategory::Currency);
+	}
 	RaidXp = 0;
 	bInRaid = false;
 	ProgressionChanged();
 	return Banked;
+}
+
+void ACrossguardPlayerState::AddGold(int32 Amount)
+{
+	if (HasAuthority() && Amount > 0)
+	{
+		Gold += Amount;
+		ProgressionChanged();
+	}
+}
+
+bool ACrossguardPlayerState::SpendGold(int32 Amount)
+{
+	if (!HasAuthority() || Amount < 0 || Gold < Amount)
+	{
+		return false;
+	}
+	Gold -= Amount;
+	ProgressionChanged();
+	return true;
 }
 
 void ACrossguardPlayerState::GrantRespecTokens(int32 Count)

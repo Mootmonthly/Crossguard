@@ -144,6 +144,17 @@ start; `GrantStashTab()` (server) adds one once tab purchases exist. Between rai
 `RequestMoveInStash` moves, rotates and merges, `RequestUseStashItem` learns a Skill Gem. Copied
 across seamless travel; not saved yet. Shared tabs (subscription) need the backend.
 
+### Gold and vendors
+
+- Gold coins are `Currency` items (stacks of 100) while carried. `EndRaid(true)` moves every coin
+  the character carries into the player state's banked `Gold`; dying loses them with the rest of
+  the raid inventory.
+- `UCrossguardVendorComponent` on the player state (`GetVendor()`): `RequestSell(Source, ItemId)`
+  sells a whole stack from the inventory or stash for banked gold, between raids. Price per item:
+  `SellValue + SellPerRarity × rarity level` from the item table (gemstones 50–300). Weapons and
+  armor cannot be sold until their prices are decided.
+- `UCrossguardStashComponent::RequestBuyStashTab()` spends 3000 banked gold for a tab, up to 3.
+
 ### Bodies and loot containers
 
 - On death (`ACrossguardCharacter::HandleDeath`), everything the character wears and carries moves

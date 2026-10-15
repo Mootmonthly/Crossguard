@@ -54,6 +54,16 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Stash")
 	bool GrantStashTab();
 
+	// Buys a tab for 3000 banked gold, between raids, up to 3 bought tabs.
+	UFUNCTION(BlueprintCallable, Category = "Stash")
+	void RequestBuyStashTab();
+
+	UFUNCTION(BlueprintPure, Category = "Stash")
+	bool FindStashItem(int32 StashItemId, FCrossguardInventoryItem& OutItem) const;
+
+	// Server. Removes a whole stack (e.g. sold to a vendor). False if there is no such item.
+	bool RemoveStashItem(int32 StashItemId);
+
 	// Server. Seamless travel: copies the tabs from the previous player state's stash.
 	void CopyFrom(const UCrossguardStashComponent& Other);
 
@@ -98,6 +108,9 @@ protected:
 	void ServerRetrieve(int32 StashItemId);
 
 	UFUNCTION(Server, Reliable)
+	void ServerBuyStashTab();
+
+	UFUNCTION(Server, Reliable)
 	void ServerUseStashItem(int32 StashItemId);
 
 	UFUNCTION(Client, Reliable)
@@ -111,6 +124,7 @@ private:
 	FCrossguardInventoryResult Store(int32 InventoryItemId, int32 Tab, FIntPoint Position, bool bRotated, bool bAnywhere);
 	FCrossguardInventoryResult Retrieve(int32 StashItemId);
 	FCrossguardInventoryResult UseStashItem(int32 StashItemId);
+	FCrossguardInventoryResult BuyStashTab();
 	void Finish(const FCrossguardInventoryResult& Result);
 
 	// Between raids, with a pawn that has an inventory. Null (and OutError set) otherwise.

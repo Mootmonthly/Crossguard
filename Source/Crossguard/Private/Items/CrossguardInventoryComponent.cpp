@@ -349,6 +349,25 @@ bool UCrossguardInventoryComponent::ConsumeItem(FName ItemId, int32 Count)
 	return true;
 }
 
+int32 UCrossguardInventoryComponent::TakeAllOfCategory(ECrossguardItemCategory Category)
+{
+	int32 Taken = 0;
+	if (!IsServer())
+	{
+		return Taken;
+	}
+	for (int32 Index = Items.Num() - 1; Index >= 0; --Index)
+	{
+		if (Items[Index].Category == Category)
+		{
+			Taken += Items[Index].Count;
+			Items.RemoveAt(Index);
+		}
+	}
+	OnInventoryChanged.Broadcast();
+	return Taken;
+}
+
 bool UCrossguardInventoryComponent::RemoveItem(int32 ItemId)
 {
 	const int32 Index = IndexOfItem(ItemId);

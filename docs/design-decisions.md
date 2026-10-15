@@ -163,6 +163,14 @@ Independent of category, a skill is:
   character, 3000 gold each.
 - Gold is the in-game currency. It comes from selling gear and trinkets found in raids to NPC
   vendors, and from loot on monster corpses and in chests.
+- Gold found in a raid is carried as coins (1 × 1, 100 per stack) and lost on death like any item.
+  Extracting with coins moves them into the character's banked gold automatically. Selling to a
+  vendor pays banked gold.
+- Gemstones (Ruby, Sapphire, Emerald) are 1 × 1 trinkets selling for 50 gold at Common, +50 per
+  rarity level (300 at Mystic).
+- Vendor prices for gear: 5–500 gold depending on rarity and size; exact formula not set.
+- Assumed until ruled otherwise: vendors are used between raids only; gemstones do not stack; a
+  whole stack sells at once.
 - Lockpicking: the best chests and doors need it, through a skill or a lockpick item.
 - Guild banks: a shared stash per guild; every member deposits, only officers withdraw, manage or
   redistribute.

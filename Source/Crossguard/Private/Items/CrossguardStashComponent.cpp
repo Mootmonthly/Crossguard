@@ -416,3 +416,72 @@ FCrossguardInventoryResult UCrossguardStashComponent::UseStashItem(int32 StashIt
 	}
 	return {};
 }
+
+void UCrossguardStashComponent::RequestBuyStashTab()
+{
+	if (IsServer())
+	{
+		Finish(BuyStashTab());
+	}
+	else
+	{
+		ServerBuyStashTab();
+	}
+}
+
+void UCrossguardStashComponent::ServerBuyStashTab_Implementation()
+{
+	Finish(BuyStashTab());
+}
+
+FCrossguardInventoryResult UCrossguardStashComponent::BuyStashTab()
+{
+	ACrossguardPlayerState* Progression = Cast<ACrossguardPlayerState>(GetOwner());
+	if (Progression == nullptr)
+	{
+		return StashFail(ECrossguardInventoryError::NotReady);
+	}
+	const Crossguard::FInventoryConfig Config;
+	switch (Crossguard::CanBuyStashTab(Config, GetPurchasedTabCount(), Progression->GetGold(), Progression->IsInRaid()))
+	{
+	case Crossguard::EStashTabPurchaseError::None:
+		break;
+	case Crossguard::EStashTabPurchaseError::InRaid:
+		return StashFail(ECrossguardInventoryError::BetweenRaidsOnly);
+	case Crossguard::EStashTabPurchaseError::AtCap:
+		return StashFail(ECrossguardInventoryError::AtCap);
+	case Crossguard::EStashTabPurchaseError::NotEnoughGold:
+		return StashFail(ECrossguardInventoryError::NotEnoughGold);
+	}
+	if (!Progression->SpendGold(Config.StashTabPrice))
+	{
+		return StashFail(ECrossguardInventoryError::NotEnoughGold);
+	}
+	GrantStashTab();
+	return {};
+}
+
+bool UCrossguardStashComponent::FindStashItem(int32 StashItemId, FCrossguardInventoryItem& OutItem) const
+{
+	int32 Tab = 0;
+	int32 Index = 0;
+	if (!Locate(StashItemId, Tab, Index))
+	{
+		return false;
+	}
+	OutItem = Tabs[Tab].Items[Index];
+	return true;
+}
+
+bool UCrossguardStashComponent::RemoveStashItem(int32 StashItemId)
+{
+	int32 Tab = 0;
+	int32 Index = 0;
+	if (!IsServer() || !Locate(StashItemId, Tab, Index))
+	{
+		return false;
+	}
+	Tabs[Tab].Items.RemoveAt(Index);
+	OnStashChanged.Broadcast();
+	return true;
+}
