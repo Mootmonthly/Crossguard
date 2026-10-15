@@ -66,6 +66,25 @@ void UCrossguardAttributeSet::PreAttributeChange(const FGameplayAttribute& Attri
 	}
 }
 
+void UCrossguardAttributeSet::PreAttributeBaseChange(const FGameplayAttribute& Attribute, float& NewValue) const
+{
+	Super::PreAttributeBaseChange(Attribute, NewValue);
+
+	// Same clamps for base values written with SetNumericAttributeBase.
+	if (Attribute == GetHealthAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxHealth());
+	}
+	else if (Attribute == GetMaxHealthAttribute())
+	{
+		NewValue = FMath::Max(NewValue, 1.0f);
+	}
+	else if (Attribute == GetMoveSpeedAttribute())
+	{
+		NewValue = FMath::Max(NewValue, 0.0f);
+	}
+}
+
 void UCrossguardAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)
 {
 	Super::PostAttributeChange(Attribute, OldValue, NewValue);
@@ -95,7 +114,8 @@ void UCrossguardAttributeSet::PostGameplayEffectExecute(const FGameplayEffectMod
 			SetHealth(FMath::Clamp(GetHealth() - Damage, 0.0f, GetMaxHealth()));
 			if (GetHealth() <= 0.0f)
 			{
-				GetOwningAbilitySystemComponent()->AddLooseGameplayTag(CrossguardTags::State_Dead);
+				// Server only; replicated so clients see the death.
+				GetOwningAbilitySystemComponent()->AddReplicatedLooseGameplayTag(CrossguardTags::State_Dead);
 			}
 		}
 	}

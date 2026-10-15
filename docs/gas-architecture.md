@@ -63,4 +63,6 @@ The executions call the same formulas as the unit tests in `Tests/CrossguardRule
 - Loading `Skills.json` into Unreal (a data table, or an import step that generates skill assets).
 - Loadout component using `Crossguard::ValidateLoadout`.
 - Shields (Eldritch Shield), CC, Mute, Silence, minions.
+- Client-side ability system init for pawns without a PlayerState (AI). Players are covered by
+  `OnRep_PlayerState`.
 - Weapons and AD. Abilities pass weapon AD as the `SetByCaller.Damage.Attack` base for now.

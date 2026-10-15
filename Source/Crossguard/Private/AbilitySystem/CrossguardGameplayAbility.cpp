@@ -11,6 +11,11 @@ UCrossguardGameplayAbility::UCrossguardGameplayAbility()
 
 const UCrossguardAbilitySystemComponent* UCrossguardGameplayAbility::GetCrossguardAbilitySystemComponent() const
 {
+	// GetCurrentActorInfo asserts on non-instanced abilities such as the class default object.
+	if (!IsInstantiated())
+	{
+		return nullptr;
+	}
 	const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
 	return ActorInfo != nullptr ? Cast<UCrossguardAbilitySystemComponent>(ActorInfo->AbilitySystemComponent.Get()) : nullptr;
 }
