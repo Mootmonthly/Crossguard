@@ -130,6 +130,8 @@ Decisions that block items above. Answers go into design-decisions.md.
 | Tiger and Greater Demon stats (HP, damage, speed, size)? Is the Pet Gem (Tiger) used up? | Summon Tiger, Summon Greater Demon |
 | Block and parry: how much a shield block stops, the parry window, what a parry does | Block and parry, Triple Thrust piercing |
 | Spear stats (no spear in the weapon data yet) | Spear skills (Triple Thrust, Spear Mastery, Spear of Liscor) |
+| Real drop rates: what each monster and chest drops, and rarity odds | Loot tables (placeholders now) |
+| Monster roster: types, stats, aggro and leash ranges, which ones are bosses | Monster AI (one placeholder monster now) |
 
 ## Placeholders to replace
 
