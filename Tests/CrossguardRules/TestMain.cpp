@@ -11,6 +11,7 @@
 #include "CrossguardRules/Progression.h"
 #include "CrossguardRules/Stats.h"
 #include "CrossguardRules/Teams.h"
+#include "CrossguardRules/Guard.h"
 #include "CrossguardRules/Trade.h"
 
 #include <cmath>
@@ -1315,6 +1316,49 @@ static void TestTrade()
 	CHECK(Session.GetOffer(1).ItemIds.size() == 2);
 }
 
+static void TestGuard()
+{
+	const FGuardConfig Config;
+	// A tie: nothing through, nothing back.
+	FGuardOutcome Tie = ResolveGuard(Config, 3, 3, false, false);
+	CHECK_NEAR(Tie.DefenderDamage, 0.0);
+	CHECK_NEAR(Tie.AttackerDamage, 0.0);
+	CHECK_NEAR(Tie.AttackerStunSeconds, 0.0);
+	CHECK(Tie.bParryBonus);
+	// The attacker wins by 1, 2, 3+.
+	CHECK_NEAR(ResolveGuard(Config, 4, 3, false, false).DefenderDamage, 0.25);
+	CHECK_NEAR(ResolveGuard(Config, 4, 3, false, false).DefenderStunSeconds, 0.0);
+	CHECK_NEAR(ResolveGuard(Config, 5, 3, true, false).DefenderDamage, 0.5);
+	CHECK_NEAR(ResolveGuard(Config, 5, 3, true, false).DefenderStunSeconds, 0.5);
+	const FGuardOutcome Crushed = ResolveGuard(Config, 6, 1, false, false);
+	CHECK_NEAR(Crushed.DefenderDamage, 1.0);
+	CHECK_NEAR(Crushed.DefenderStunSeconds, 1.0);
+	CHECK(!Crushed.bParryBonus);
+	CHECK_NEAR(Crushed.AttackerDamage, 0.0);
+	// The defender wins (mirror): the attacker takes the loser's share of the defender's weapon.
+	const FGuardOutcome Parried = ResolveGuard(Config, 1, 3, false, false);
+	CHECK_NEAR(Parried.DefenderDamage, 0.0);
+	CHECK_NEAR(Parried.AttackerDamage, 0.5);
+	CHECK_NEAR(Parried.AttackerStunSeconds, 0.5);
+	CHECK(Parried.bParryBonus);
+	// A shield deals nothing back and gives no parry bonus, but still stuns.
+	const FGuardOutcome Shielded = ResolveGuard(Config, 1, 4, true, false);
+	CHECK_NEAR(Shielded.AttackerDamage, 0.0);
+	CHECK_NEAR(Shielded.AttackerStunSeconds, 1.0);
+	CHECK(!Shielded.bParryBonus);
+	// Piercing ([Triple Thrust]): a stopped hit deals half; a hit that wins by 1 at least half.
+	CHECK_NEAR(ResolveGuard(Config, 5, 5, true, true).DefenderDamage, 0.5);
+	CHECK_NEAR(ResolveGuard(Config, 5, 4, true, true).DefenderDamage, 0.5);
+	CHECK_NEAR(ResolveGuard(Config, 5, 2, true, true).DefenderDamage, 1.0);
+
+	// The guard's surface: hits from in front within the half angle.
+	CHECK(HitMeetsGuard(Config, 1, 0, 0, 1, 0, 0));
+	CHECK(HitMeetsGuard(Config, 1, 0, 0, 1, 1, 0));
+	CHECK(!HitMeetsGuard(Config, 1, 0, 0, 0, 1, 0));
+	CHECK(!HitMeetsGuard(Config, 1, 0, 0, -1, 0, 0));
+	CHECK(!HitMeetsGuard(Config, 0, 0, 0, 1, 0, 0));
+}
+
 int main()
 {
 	TestProgression();
@@ -1337,6 +1381,7 @@ int main()
 	TestLoot();
 	TestGuild();
 	TestTrade();
+	TestGuard();
 
 	std::printf("%d checks, %d failures\n", GChecks, GFailures);
 	return GFailures == 0 ? 0 : 1;

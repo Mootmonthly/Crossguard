@@ -16,7 +16,7 @@ writes nothing.
 
 --catalog writes the forge's "refs/catalog" document: the weapon, armor, item and skill ids and
 names the drop, weapon and skill editors offer. Weapons also carry weaponType, handedness and range
-(the weapon picker's role rules). Skills also carry their gem rarity, category, aiUsable and roles (null: any combat role)
+(the weapon picker's role rules) and impactPower. Skills also carry their gem rarity, category, aiUsable and roles (null: any combat role)
 (Tools/ai_skills.py).
 """
 
@@ -86,7 +86,8 @@ def catalog():
         return [{"id": e["id"], "name": e["name"]} for e in json.loads(path.read_text(encoding="utf-8"))]
 
     items = REPO / "Data" / "Items"
-    weapons = [{"id": w["id"], "name": w["name"], "weaponType": w["weaponType"], "handedness": w["handedness"], "range": w["range"]}
+    weapons = [{"id": w["id"], "name": w["name"], "weaponType": w["weaponType"], "handedness": w["handedness"], "range": w["range"],
+                "impactPower": w["impactPower"]}
                for w in json.loads((items / "Weapons.json").read_text(encoding="utf-8"))]
     skills = [{"id": s["id"], "name": s["name"], "rarity": s["rarity"], "category": s["category"], "aiUsable": is_ai_usable(s),
                "roles": roles_for(s["id"])}

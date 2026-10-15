@@ -19,7 +19,8 @@
 		"ThrowDotPerSecond": 0,
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
-		"bHasCountsAsWeapon": false
+		"bHasCountsAsWeapon": false,
+		"ImpactPower": 0
 	},
 	{
 		"Name": "bandage",
@@ -41,7 +42,8 @@
 		"ThrowDotPerSecond": 0,
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
-		"bHasCountsAsWeapon": false
+		"bHasCountsAsWeapon": false,
+		"ImpactPower": 0
 	},
 	{
 		"Name": "bolt",
@@ -63,7 +65,8 @@
 		"ThrowDotPerSecond": 0,
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
-		"bHasCountsAsWeapon": false
+		"bHasCountsAsWeapon": false,
+		"ImpactPower": 0
 	},
 	{
 		"Name": "emerald",
@@ -85,7 +88,8 @@
 		"ThrowDotPerSecond": 0,
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
-		"bHasCountsAsWeapon": false
+		"bHasCountsAsWeapon": false,
+		"ImpactPower": 0
 	},
 	{
 		"Name": "explosive_bottle",
@@ -107,7 +111,8 @@
 		"ThrowDotPerSecond": 3,
 		"ThrowDotSeconds": 5,
 		"CountsAsWeapon": "Sword",
-		"bHasCountsAsWeapon": false
+		"bHasCountsAsWeapon": false,
+		"ImpactPower": 0
 	},
 	{
 		"Name": "gold_coin",
@@ -129,7 +134,8 @@
 		"ThrowDotPerSecond": 0,
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
-		"bHasCountsAsWeapon": false
+		"bHasCountsAsWeapon": false,
+		"ImpactPower": 0
 	},
 	{
 		"Name": "healing_potion",
@@ -151,7 +157,8 @@
 		"ThrowDotPerSecond": 0,
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
-		"bHasCountsAsWeapon": false
+		"bHasCountsAsWeapon": false,
+		"ImpactPower": 0
 	},
 	{
 		"Name": "lockpick",
@@ -173,7 +180,8 @@
 		"ThrowDotPerSecond": 0,
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
-		"bHasCountsAsWeapon": false
+		"bHasCountsAsWeapon": false,
+		"ImpactPower": 0
 	},
 	{
 		"Name": "pet_gem_tiger",
@@ -195,7 +203,8 @@
 		"ThrowDotPerSecond": 0,
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
-		"bHasCountsAsWeapon": false
+		"bHasCountsAsWeapon": false,
+		"ImpactPower": 0
 	},
 	{
 		"Name": "ruby",
@@ -217,7 +226,8 @@
 		"ThrowDotPerSecond": 0,
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
-		"bHasCountsAsWeapon": false
+		"bHasCountsAsWeapon": false,
+		"ImpactPower": 0
 	},
 	{
 		"Name": "sapphire",
@@ -239,7 +249,8 @@
 		"ThrowDotPerSecond": 0,
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
-		"bHasCountsAsWeapon": false
+		"bHasCountsAsWeapon": false,
+		"ImpactPower": 0
 	},
 	{
 		"Name": "throwing_axe",
@@ -261,7 +272,8 @@
 		"ThrowDotPerSecond": 0,
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Axe",
-		"bHasCountsAsWeapon": true
+		"bHasCountsAsWeapon": true,
+		"ImpactPower": 3
 	},
 	{
 		"Name": "throwing_knife",
@@ -283,6 +295,7 @@
 		"ThrowDotPerSecond": 0,
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Dagger",
-		"bHasCountsAsWeapon": true
+		"bHasCountsAsWeapon": true,
+		"ImpactPower": 1
 	}
 ]

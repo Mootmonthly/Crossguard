@@ -58,7 +58,8 @@
     "throwRadius": 3,
     "throwDotPerSecond": 3,
     "throwDotSeconds": 5,
-    "countsAsWeapon": null
+    "countsAsWeapon": null,
+    "impactPower": 0
   },
   {
     "id": "gold_coin",
@@ -139,7 +140,8 @@
     "throwRadius": 0,
     "throwDotPerSecond": 0,
     "throwDotSeconds": 0,
-    "countsAsWeapon": "Axe"
+    "countsAsWeapon": "Axe",
+    "impactPower": 3
   },
   {
     "id": "throwing_knife",
@@ -156,6 +158,7 @@
     "throwRadius": 0,
     "throwDotPerSecond": 0,
     "throwDotSeconds": 0,
-    "countsAsWeapon": "Dagger"
+    "countsAsWeapon": "Dagger",
+    "impactPower": 1
   }
 ]

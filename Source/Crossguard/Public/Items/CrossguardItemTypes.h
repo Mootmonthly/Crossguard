@@ -147,6 +147,10 @@ struct CROSSGUARD_API FCrossguardWeaponRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	bool bCanParry = false;
 
+	// Blocking and parrying: when weapons collide, the higher Impact Power wins (docs/design-decisions.md, Block and parry).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	int32 ImpactPower = 0;
+
 	bool IsMelee() const { return Range == ECrossguardWeaponRange::Melee; }
 };
 
@@ -304,6 +308,11 @@ struct CROSSGUARD_API FCrossguardItemRow : public FTableRowBase
 	// Throwables only: true when CountsAsWeapon is set.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
 	bool bHasCountsAsWeapon = false;
+
+	// Throwables only: Impact Power against a block or parry (docs/design-decisions.md, Block and parry). 0: not a
+	// weapon hit, cannot be blocked.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	int32 ImpactPower = 0;
 };
 
 // A rolled affix on an item instance.

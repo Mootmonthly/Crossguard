@@ -81,6 +81,7 @@ THROWABLE_SPEC = {
     "throwDotSeconds": (lambda v: is_num(v) and v >= 0, "number >= 0"),
     "countsAsWeapon": (lambda v: v is None or (isinstance(v, str) and v in WEAPON_TYPES),
                        "null or one of %s" % sorted(WEAPON_TYPES)),
+    "impactPower": (non_negative_int, "integer >= 0"),
 }
 
 

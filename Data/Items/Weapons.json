@@ -16,7 +16,8 @@
     },
     "delivery": "MeleeSwing",
     "ammo": null,
-    "canParry": false
+    "canParry": false,
+    "impactPower": 4
   },
   {
     "id": "axe_two_handed",
@@ -35,7 +36,8 @@
     },
     "delivery": "MeleeSwing",
     "ammo": null,
-    "canParry": true
+    "canParry": true,
+    "impactPower": 6
   },
   {
     "id": "bow",
@@ -54,7 +56,8 @@
     },
     "delivery": "Projectile",
     "ammo": "arrow",
-    "canParry": false
+    "canParry": false,
+    "impactPower": 3
   },
   {
     "id": "dagger_one_handed",
@@ -73,7 +76,8 @@
     },
     "delivery": "MeleeSwing",
     "ammo": null,
-    "canParry": false
+    "canParry": false,
+    "impactPower": 1
   },
   {
     "id": "shield_one_handed",
@@ -89,7 +93,8 @@
     "attackSpeed": null,
     "delivery": "None",
     "ammo": null,
-    "canParry": false
+    "canParry": false,
+    "impactPower": 4
   },
   {
     "id": "spear_two_handed",
@@ -108,7 +113,8 @@
     },
     "delivery": "MeleeSwing",
     "ammo": null,
-    "canParry": true
+    "canParry": true,
+    "impactPower": 5
   },
   {
     "id": "staff_two_handed",
@@ -127,7 +133,8 @@
     },
     "delivery": "Projectile",
     "ammo": null,
-    "canParry": true
+    "canParry": true,
+    "impactPower": 4
   },
   {
     "id": "sword_one_handed",
@@ -146,7 +153,8 @@
     },
     "delivery": "MeleeSwing",
     "ammo": null,
-    "canParry": false
+    "canParry": false,
+    "impactPower": 3
   },
   {
     "id": "sword_two_handed",
@@ -165,7 +173,8 @@
     },
     "delivery": "MeleeSwing",
     "ammo": null,
-    "canParry": true
+    "canParry": true,
+    "impactPower": 5
   },
   {
     "id": "wand_one_handed",
@@ -184,6 +193,7 @@
     },
     "delivery": "Hitscan",
     "ammo": null,
-    "canParry": false
+    "canParry": false,
+    "impactPower": 1
   }
 ]

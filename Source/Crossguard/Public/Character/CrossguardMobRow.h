@@ -45,6 +45,10 @@ struct CROSSGUARD_API FCrossguardMobRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob")
 	bool bTwoHandedWeapon = false;
 
+	// Blocking and parrying: its weapon's Impact Power, 3 for natural attacks (placeholder).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob")
+	int32 ImpactPower = 3;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob")
 	float Health = 80.0f;
 

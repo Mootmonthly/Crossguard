@@ -35,6 +35,7 @@ checks it.
 | `delivery` | enum | How an attack lands: `MeleeSwing`, `Hitscan`, `Projectile`, or `None`. |
 | `ammo` | string or null | `id` of an `Ammo` entry in `Data/Items/Items.json` that each attack uses up (the bow uses `arrow`). `null`: no ammo. Exported as `AmmoId`, `None` for null. |
 | `canParry` | boolean | Right click parries when the off hand is empty. All two-handed weapons except bows; selected one-handed weapons (none yet). Never shields or bows. |
+| `impactPower` | integer ≥ 1 | Blocking and parrying: when weapons collide, the higher Impact Power wins. Dagger 1, one-handed sword 3, shield 4, one-handed axe 4, spear 5, two-handed sword 5, two-handed axe 6, bow 3; wand 1 and staff 4 are placeholders. Exported as `ImpactPower`. |
 
 Value at a rarity = `baseValue + perRarity × level`.
 
@@ -102,8 +103,8 @@ HP restored at a rarity = `healAmount + healPerRarity × level`.
 
 Throwables must have these fields; other categories must not have them. The exporter writes
 `ThrowDamageType`, `ThrowDamage`, `ThrowDamagePerRarity`, `ThrowRadiusMeters`, `ThrowDotPerSecond`,
-`ThrowDotSeconds`, `CountsAsWeapon` and `bHasCountsAsWeapon` for every row (defaults for
-non-throwables: `Attack`, 0, 0, 0, 0, 0, `Sword`, false).
+`ThrowDotSeconds`, `CountsAsWeapon`, `bHasCountsAsWeapon` and `ImpactPower` for every row (defaults for
+non-throwables: `Attack`, 0, 0, 0, 0, 0, `Sword`, false, 0).
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -114,6 +115,7 @@ non-throwables: `Attack`, 0, 0, 0, 0, 0, `Sword`, false).
 | `throwDotPerSecond` | number ≥ 0 | Damage per second left behind in the radius after an explosion. 0: none. |
 | `throwDotSeconds` | number ≥ 0 | How long that lasts. Must be > 0 when `throwDotPerSecond` > 0, and 0 when it is 0. |
 | `countsAsWeapon` | enum or null | A `WeaponType` (`Sword`, `Axe`, `Dagger`, `Spear`, `Mace`, `Quarterstaff`, `Hammer`, `Shield`, `Bow`, `Crossbow`, `Sling`, `Throwing`, `Wand`, `MagicStaff`) whose skills apply to the throw, or `null`. Exported as `CountsAsWeapon` plus `bHasCountsAsWeapon` (false for null; `CountsAsWeapon` is then `Sword`, ignore it). |
+| `impactPower` | integer ≥ 0 | Blocking and parrying: the throw's Impact Power against a block or parry, like a weapon's `impactPower`. 0: not a weapon hit, cannot be blocked. Throwing Knife 1, Throwing Axe 3, Explosive Bottle 0. Exported as `ImpactPower`. |
 
 Throw damage at a rarity = `throwDamage + throwDamagePerRarity × level`.
 

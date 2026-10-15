@@ -40,6 +40,7 @@ def row(item):
         "ThrowDotSeconds": item.get("throwDotSeconds", 0),
         "CountsAsWeapon": item.get("countsAsWeapon") or "Sword",
         "bHasCountsAsWeapon": item.get("countsAsWeapon") is not None,
+        "ImpactPower": item.get("impactPower", 0),
     }
 
 

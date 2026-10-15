@@ -68,6 +68,7 @@ WEAPON_SPEC = {
     "delivery": enum(DELIVERIES),
     "ammo": (lambda v: v is None or isinstance(v, str), "null or an Ammo item id"),
     "canParry": (lambda v: isinstance(v, bool), "boolean"),
+    "impactPower": (lambda v: isinstance(v, int) and not isinstance(v, bool) and v >= 1, "integer >= 1"),
 }
 SPEED_SPEC = {
     "attacks": (positive, "number > 0"),

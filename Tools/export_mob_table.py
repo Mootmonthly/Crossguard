@@ -6,7 +6,8 @@ Usage:
   python3 Tools/export_mob_table.py --check   # exit 1 if MobTable.json is out of date
 
 Mobs.json is the source of truth. Distances go from meters to centimeters. A mob's weapon id becomes
-bWieldsWeapon, WeaponType ("Sword" when it has none) and bTwoHandedWeapon from Data/Items/Weapons.json. Each mob's loot is
+bWieldsWeapon, WeaponType ("Sword" when it has none), bTwoHandedWeapon and ImpactPower (3 when it has none) from
+Data/Items/Weapons.json. Each mob's loot is
 exported by Tools/export_loot_table.py as the loot table "mob_<id>". Import MobTable.json in the
 editor as a Data Table with row struct CrossguardMobRow.
 """
@@ -19,6 +20,8 @@ REPO = Path(__file__).resolve().parent.parent
 SOURCE = REPO / "Data" / "Mobs" / "Mobs.json"
 OUTPUT = REPO / "Data" / "Mobs" / "MobTable.json"
 WEAPONS = REPO / "Data" / "Items" / "Weapons.json"
+# Impact Power without a weapon: natural attacks (Warrior, Mage) and a Ranged mob's bow. Placeholder.
+NATURAL_IMPACT_POWER = 3
 
 
 def row(mob, weapons):
@@ -31,6 +34,7 @@ def row(mob, weapons):
         "bWieldsWeapon": weapon is not None,
         "WeaponType": weapon["weaponType"] if weapon else "Sword",
         "bTwoHandedWeapon": bool(weapon) and weapon["handedness"] == "TwoHanded",
+        "ImpactPower": weapon["impactPower"] if weapon else NATURAL_IMPACT_POWER,
         "Health": mob["health"],
         "AttackDamage": mob["attackDamage"],
         "AttackInterval": mob["attackInterval"],

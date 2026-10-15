@@ -15,7 +15,7 @@ starts (the game mode's **Mob Table** must be set).
 | `name` | string | Display name. |
 | `kind` | enum | `Monster` (killer gets basic monster XP, 5) or `Boss` (boss XP, 50). |
 | `combatRole` | enum | `Warrior` (runs up and hits), `Mage` (keeps its distance, casts Fireball: 50 + 15 splash, as the skill) or `Ranged` (keeps its distance, shoots arrows with a bow: skeleton archers). |
-| `weapon` | string or null | A weapon id from `Data/Items/Weapons.json` it holds, or `null` for natural attacks (no weapon). For skills that care (masteries, Shade Blow); damage stays `attackDamage`. Warrior: not a `Bow`, `Crossbow` or `Sling`. Ranged: `null` (it holds a bow) or a `Bow`, `Crossbow` or `Sling`. Mage: any. No shields (`weaponType` `Shield`). Exported as `bWieldsWeapon`, `WeaponType` (`Sword` when none) and `bTwoHandedWeapon`. |
+| `weapon` | string or null | A weapon id from `Data/Items/Weapons.json` it holds, or `null` for natural attacks (no weapon). For skills that care (masteries, Shade Blow); damage stays `attackDamage`. Warrior: not a `Bow`, `Crossbow` or `Sling`. Ranged: `null` (it holds a bow) or a `Bow`, `Crossbow` or `Sling`. Mage: any. No shields (`weaponType` `Shield`). Exported as `bWieldsWeapon`, `WeaponType` (`Sword` when none), `bTwoHandedWeapon` and `ImpactPower` (blocking and parrying: the weapon's `impactPower`; 3 when none, for natural attacks and a Ranged mob's bow, placeholder). |
 | `health` | number > 0 | Max HP. |
 | `attackDamage` | number ≥ 0 | Warrior and Ranged: Attack Damage per hit or arrow, before resistance. |
 | `attackInterval` | number > 0 | Warrior and Ranged: seconds between attacks. |

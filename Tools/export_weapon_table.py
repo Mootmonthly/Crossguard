@@ -36,6 +36,7 @@ def row(weapon):
         "Delivery": weapon["delivery"],
         "AmmoId": weapon["ammo"] or "None",  # Unreal imports "None" as an empty FName
         "bCanParry": weapon["canParry"],
+        "ImpactPower": weapon["impactPower"],
     }
 
 
