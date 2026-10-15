@@ -41,6 +41,11 @@ void ACrossguardProjectile::BeginPlay()
 void ACrossguardProjectile::OnProjectileHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 	FVector NormalImpulse, const FHitResult& Hit)
 {
+	HandleImpact(OtherActor, Hit);
+}
+
+void ACrossguardProjectile::HandleImpact(AActor* OtherActor, const FHitResult& Hit)
+{
 	if (OtherActor != nullptr && OtherActor != GetInstigator() && DamageSpec.IsValid())
 	{
 		if (UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor))

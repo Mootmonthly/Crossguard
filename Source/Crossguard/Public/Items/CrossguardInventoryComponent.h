@@ -11,6 +11,7 @@
 #include "CrossguardInventoryComponent.generated.h"
 
 class ACrossguardLootContainer;
+class ACrossguardThrownProjectile;
 class UDataTable;
 
 // Mirrors Crossguard::EContainerKind.
@@ -206,6 +207,10 @@ public:
 	// come from the equipment component's tables.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory", meta = (RequiredAssetDataTags = "RowStructure=/Script/Crossguard.CrossguardItemRow"))
 	TObjectPtr<UDataTable> ItemTable;
+
+	// Thrown by left click with a throwable readied. Set a Blueprint subclass for meshes and speed.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
+	TSubclassOf<ACrossguardThrownProjectile> ThrownProjectileClass;
 
 	// Squares a Backpack / Quiver item takes while not equipped. Placeholders.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
@@ -414,6 +419,8 @@ private:
 	FCrossguardInventoryResult AssignHotbarSlot(int32 Slot, int32 ItemId);
 	FCrossguardInventoryResult UseHotbarSlot(int32 Slot);
 	FCrossguardInventoryResult StartUse();
+	// Throws one of the readied throwable stack at Index.
+	FCrossguardInventoryResult Throw(int32 Index, const FCrossguardItemRow& Row);
 	void StopUse();
 	void FinishChannel();
 	FCrossguardInventoryResult TakeFromContainer(int32 ContainerItemId);

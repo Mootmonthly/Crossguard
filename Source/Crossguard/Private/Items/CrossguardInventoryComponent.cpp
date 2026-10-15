@@ -4,6 +4,7 @@
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Combat/CrossguardThrownProjectile.h"
 #include "Crossguard.h"
 #include "Engine/DataTable.h"
 #include "Engine/World.h"
@@ -75,6 +76,7 @@ UCrossguardInventoryComponent::UCrossguardInventoryComponent()
 {
 	SetIsReplicatedByDefault(true);
 	Hotbar.SetNum(Crossguard::HotbarSlotCount);
+	ThrownProjectileClass = ACrossguardThrownProjectile::StaticClass();
 }
 
 void UCrossguardInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -1174,6 +1176,10 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::StartUse()
 	const FCrossguardInventoryItem Item = Items[Index];
 	const FCrossguardItemRow* Row = ItemTable != nullptr ? ItemTable->FindRow<FCrossguardItemRow>(Item.ItemId, TEXT("Inventory"), false) : nullptr;
 	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
+	if (Row != nullptr && Row->Category == ECrossguardItemCategory::Throwable)
+	{
+		return Throw(Index, *Row);
+	}
 	if (Row == nullptr || Row->HealAmount <= 0.0f || Row->HealDuration <= 0.0f)
 	{
 		return Fail(ECrossguardInventoryError::NotUsable);
@@ -1320,4 +1326,54 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::UseHotbarSlot(int32 Sl
 	}
 	// Pressing the key of the item in hand puts it away.
 	return ReadyItem(Stack->Id == ReadiedItemId ? 0 : Stack->Id);
+}
+
+FCrossguardInventoryResult UCrossguardInventoryComponent::Throw(int32 Index, const FCrossguardItemRow& Row)
+{
+	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
+	APawn* Thrower = Cast<APawn>(GetOwner());
+	if (ASC == nullptr || Thrower == nullptr || ThrownProjectileClass == nullptr || !Items.IsValidIndex(Index))
+	{
+		return Fail(ECrossguardInventoryError::NotReady);
+	}
+
+	const int32 RarityLevel = UCrossguardItemLibrary::GetRarityLevel(Items[Index].Rarity);
+	const FGameplayTag DamageTag = Row.ThrowDamageType == ECrossguardDamageType::Magic ? CrossguardTags::SetByCaller_Damage_Magic
+		: CrossguardTags::SetByCaller_Damage_Attack;
+	const auto MakeDamageSpec = [ASC, &DamageTag](float Amount)
+	{
+		FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(UCrossguardDamageEffect::StaticClass(), 1.0f, ASC->MakeEffectContext());
+		if (Spec.IsValid())
+		{
+			Spec.Data->SetSetByCallerMagnitude(DamageTag, Amount);
+		}
+		return Spec;
+	};
+
+	FVector EyeLocation;
+	FRotator EyeRotation;
+	Thrower->GetActorEyesViewPoint(EyeLocation, EyeRotation);
+	const FTransform SpawnTransform(EyeRotation, EyeLocation + EyeRotation.Vector() * 50.0f);
+	ACrossguardThrownProjectile* Projectile = GetWorld()->SpawnActorDeferred<ACrossguardThrownProjectile>(ThrownProjectileClass, SpawnTransform,
+		Thrower, Thrower, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	if (Projectile == nullptr)
+	{
+		return Fail(ECrossguardInventoryError::NotReady);
+	}
+	Projectile->DamageSpec = MakeDamageSpec(Row.ThrowDamage + Row.ThrowDamagePerRarity * RarityLevel);
+	Projectile->ExplosionRadius = Row.ThrowRadiusMeters * 100.0f;
+	if (Row.ThrowDotPerSecond > 0.0f && Row.ThrowDotSeconds > 0.0f)
+	{
+		Projectile->DotSpec = MakeDamageSpec(Row.ThrowDotPerSecond);
+		Projectile->DotSeconds = Row.ThrowDotSeconds;
+	}
+	Projectile->FinishSpawning(SpawnTransform);
+
+	// One is used up per throw; the hands go back to the weapon.
+	if (--Items[Index].Count <= 0)
+	{
+		Items.RemoveAt(Index);
+	}
+	ReadiedItemId = 0;
+	return {};
 }

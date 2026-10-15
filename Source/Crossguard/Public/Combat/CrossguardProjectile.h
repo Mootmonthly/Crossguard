@@ -30,6 +30,10 @@ protected:
 	void OnProjectileHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 		FVector NormalImpulse, const FHitResult& Hit);
 
+	// Server. Applies DamageSpec to OtherActor (if it has an ability system) and destroys the
+	// projectile. Override for other impacts (explosions).
+	virtual void HandleImpact(AActor* OtherActor, const FHitResult& Hit);
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	TObjectPtr<USphereComponent> Collision;
 

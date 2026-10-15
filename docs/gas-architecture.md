@@ -150,7 +150,13 @@ exist.
 - Using a Skill Gem learns its skill (between raids) and consumes the gem.
 - Hotbar: keys 3–7 are slots 0–4 (`RequestAssignHotbarSlot`, `RequestUseHotbarSlot`). A slot
   remembers an item type and rarity (consumables and throwables) and readies the first matching
-  stack (`RequestReadyItem`); pressing it again puts it away. Left click then uses one (`RequestStartUse` / `RequestStopUse`). The server applies the native
+  stack (`RequestReadyItem`); pressing it again puts it away.
+- Throwables: left click with one readied throws an `ACrossguardThrownProjectile` (arcing; the
+  inventory's `ThrownProjectileClass`). Knives and axes damage what they hit; the explosive bottle
+  explodes where it lands (everyone within 3 m, thrower included) and leaves an
+  `ACrossguardDamageArea` that deals 3 Magic Damage per second for 5 s. One item is used per throw.
+  Not built yet: "applies Dagger / Axe skills" (`CountsAsWeapon` is in the data).
+- Consumables: left click then uses one (`RequestStartUse` / `RequestStopUse`). The server applies the native
   `UCrossguardHealOverTimeEffect` (flat healing spread over the item's heal duration in 0.5 s ticks).
   Items with a use time channel; releasing early removes the effect.
 - Stacks combine only the same item at the same rarity.
