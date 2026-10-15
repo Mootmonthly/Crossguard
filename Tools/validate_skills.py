@@ -13,7 +13,8 @@ TAGS = {"Minion", "Buff", "Debuff", "Summon", "Heal", "Raid"}
 MELEE = {"Sword", "Axe", "Dagger", "Spear", "Mace", "Quarterstaff", "Hammer", "Shield", "AnyMelee", "TwoHandedMelee"}
 RANGED = {"Bow", "Crossbow", "Sling", "Throwing"}
 # Magic casting weapons are neither Melee nor Ranged skill weapons.
-WEAPONS = MELEE | RANGED | {"Wand", "MagicStaff"}
+CASTING = {"Wand", "MagicStaff"}
+WEAPONS = MELEE | RANGED | CASTING
 ARMOR = {"Plate", "PlateAllSlots"}
 STATS = {"STR", "AGI", "INT", "AllAttributes", "MHP", "MHPB", "AD", "AAD", "ADB", "AR", "AP",
          "Dexterity", "ActionSpeed", "MoveSpeed", "PH", "APH", "PHB", "MD", "AMD", "MDB", "MR", "MH",
@@ -162,9 +163,15 @@ def validate(skills):
                 expect = "Melee"
             elif all(x in RANGED for x in w):
                 expect = "Ranged"
+            elif all(x in CASTING for x in w):
+                # Casting weapons (Spells) are neither Melee nor Ranged for CDR.
+                expect = None
             else:
                 expect = "invalid"
-                err("requirements.weapons mixes melee and ranged weapons (or includes Wand); no valid weaponTag")
+                err("requirements.weapons mixes melee, ranged and casting weapons; no valid weaponTag")
+            # Every Spell needs a casting weapon: a Wand or a Two-Handed Staff.
+            if s.get("category") == "Spell" and set(w) != CASTING:
+                err("a Spell must require exactly the casting weapons %s" % sorted(CASTING))
             if expect != "invalid" and s.get("weaponTag") != expect:
                 err(f"weaponTag is {s.get('weaponTag')!r} but requirements.weapons implies {expect!r}")
 

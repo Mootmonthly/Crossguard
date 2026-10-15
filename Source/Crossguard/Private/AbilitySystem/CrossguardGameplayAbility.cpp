@@ -23,13 +23,22 @@ bool UCrossguardGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHa
 	{
 		return false;
 	}
-	if (RequiredWeapons.IsEmpty() && RequiredArmor == ECrossguardArmorRequirement::None)
+	// Every Spell needs a casting weapon in hand (a Wand or a Two-Handed Staff), except in dragon
+	// form, where Flare Breath and Flight are cast without hands.
+	TArray<ECrossguardWeaponType> Weapons = RequiredWeapons;
+	const UAbilitySystemComponent* ASC = ActorInfo != nullptr ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
+	if (SkillCategory == ECrossguardSkillCategory::Spell && Weapons.IsEmpty()
+		&& (ASC == nullptr || !ASC->HasMatchingGameplayTag(CrossguardTags::State_Dragonified)))
+	{
+		Weapons = {ECrossguardWeaponType::Wand, ECrossguardWeaponType::MagicStaff};
+	}
+	if (Weapons.IsEmpty() && RequiredArmor == ECrossguardArmorRequirement::None)
 	{
 		return true;
 	}
 	const AActor* Avatar = ActorInfo != nullptr ? ActorInfo->AvatarActor.Get() : nullptr;
 	const UCrossguardEquipmentComponent* Equipment = Avatar != nullptr ? Avatar->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
-	return Equipment != nullptr && Equipment->SatisfiesWeaponRequirement(RequiredWeapons) && Equipment->SatisfiesArmorRequirement(RequiredArmor);
+	return Equipment != nullptr && Equipment->SatisfiesWeaponRequirement(Weapons) && Equipment->SatisfiesArmorRequirement(RequiredArmor);
 }
 
 const UCrossguardAbilitySystemComponent* UCrossguardGameplayAbility::GetCrossguardAbilitySystemComponent() const

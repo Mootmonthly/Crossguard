@@ -4,8 +4,8 @@
 		"DisplayName": "Antimagic Garb",
 		"CapacityCost": 5,
 		"Category": "Passive",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Uncommon",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -45,8 +45,8 @@
 		"DisplayName": "Arcane Arrows",
 		"CapacityCost": 4,
 		"Category": "Active",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Rare",
 		"WeaponTag": "Ranged",
 		"Tags": [
 			"Buff"
@@ -69,7 +69,7 @@
 			{
 				"Type": "Magic",
 				"Amount": 5,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"Kind": "Additional",
 				"DurationSec": 0,
 				"Hits": 1
@@ -87,7 +87,7 @@
 		"DisplayName": "Arcane Intellect",
 		"CapacityCost": 3,
 		"Category": "Passive",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
@@ -128,7 +128,7 @@
 		"DisplayName": "Armor Mastery",
 		"CapacityCost": 4,
 		"Category": "Passive",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
@@ -183,7 +183,7 @@
 		"DisplayName": "Axe Mastery",
 		"CapacityCost": 5,
 		"Category": "Passive",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
@@ -274,14 +274,17 @@
 		"DisplayName": "Benediction",
 		"CapacityCost": 10,
 		"Category": "Spell",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Epic",
 		"WeaponTag": "None",
 		"Tags": [
 			"Heal"
 		],
 		"Requirements": {
-			"Weapons": [],
+			"Weapons": [
+				"Wand",
+				"MagicStaff"
+			],
 			"Armor": "None",
 			"Items": [],
 			"Forms": []
@@ -297,7 +300,7 @@
 			{
 				"Type": "Magical",
 				"Amount": 0,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"bFull": true,
 				"bCanRevive": true
 			}
@@ -312,7 +315,7 @@
 		"DisplayName": "Bow Mastery",
 		"CapacityCost": 5,
 		"Category": "Passive",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
@@ -387,7 +390,7 @@
 		"DisplayName": "Chop Down",
 		"CapacityCost": 5,
 		"Category": "Active",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "Melee",
 		"Tags": [
@@ -426,7 +429,7 @@
 			{
 				"Type": "Attack",
 				"Amount": 1.1,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"Kind": "WeaponPercent",
 				"DurationSec": 0,
 				"Hits": 1
@@ -444,8 +447,8 @@
 		"DisplayName": "Cleave",
 		"CapacityCost": 3,
 		"Category": "Art",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Uncommon",
 		"WeaponTag": "Melee",
 		"Tags": [],
 		"Requirements": {
@@ -466,7 +469,7 @@
 			{
 				"Type": "Attack",
 				"Amount": 0.85,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"Kind": "WeaponPercent",
 				"DurationSec": 0,
 				"Hits": 1
@@ -483,8 +486,8 @@
 		"DisplayName": "Cor Leonis",
 		"CapacityCost": 6,
 		"Category": "Passive",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Mystic",
 		"WeaponTag": "None",
 		"Tags": [
 			"Raid"
@@ -568,7 +571,7 @@
 		"DisplayName": "Dagger Mastery",
 		"CapacityCost": 2,
 		"Category": "Passive",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
@@ -627,7 +630,7 @@
 		"DisplayName": "Divine Alacrity",
 		"CapacityCost": 3,
 		"Category": "Passive",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
@@ -668,8 +671,8 @@
 		"DisplayName": "Dragonification",
 		"CapacityCost": 13,
 		"Category": "Art",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Legendary",
 		"WeaponTag": "None",
 		"Tags": [
 			"Buff"
@@ -745,8 +748,8 @@
 		"DisplayName": "Elder Summoner",
 		"CapacityCost": 3,
 		"Category": "Passive",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Rare",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -786,12 +789,15 @@
 		"DisplayName": "Eldritch Shield",
 		"CapacityCost": 5,
 		"Category": "Spell",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Uncommon",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
-			"Weapons": [],
+			"Weapons": [
+				"Wand",
+				"MagicStaff"
+			],
 			"Armor": "None",
 			"Items": [],
 			"Forms": []
@@ -815,12 +821,15 @@
 		"DisplayName": "Fireball",
 		"CapacityCost": 3,
 		"Category": "Spell",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
-			"Weapons": [],
+			"Weapons": [
+				"Wand",
+				"MagicStaff"
+			],
 			"Armor": "None",
 			"Items": [],
 			"Forms": []
@@ -843,7 +852,7 @@
 			{
 				"Type": "Magic",
 				"Amount": 15,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"Kind": "Splash",
 				"DurationSec": 0,
 				"Hits": 1
@@ -860,12 +869,15 @@
 		"DisplayName": "Flare Breath",
 		"CapacityCost": 9,
 		"Category": "Spell",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Rare",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
-			"Weapons": [],
+			"Weapons": [
+				"Wand",
+				"MagicStaff"
+			],
 			"Armor": "None",
 			"Items": [],
 			"Forms": []
@@ -905,12 +917,15 @@
 		"DisplayName": "Flight",
 		"CapacityCost": 8,
 		"Category": "Spell",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Epic",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
-			"Weapons": [],
+			"Weapons": [
+				"Wand",
+				"MagicStaff"
+			],
 			"Armor": "None",
 			"Items": [],
 			"Forms": []
@@ -933,7 +948,7 @@
 		"DisplayName": "Gouge",
 		"CapacityCost": 3,
 		"Category": "Active",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "Melee",
 		"Tags": [
@@ -972,7 +987,7 @@
 			{
 				"Type": "Attack",
 				"Amount": 25,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"Kind": "OverTime",
 				"DurationSec": 5,
 				"Hits": 1
@@ -989,14 +1004,17 @@
 		"DisplayName": "Greater Heal",
 		"CapacityCost": 5,
 		"Category": "Spell",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Rare",
 		"WeaponTag": "None",
 		"Tags": [
 			"Heal"
 		],
 		"Requirements": {
-			"Weapons": [],
+			"Weapons": [
+				"Wand",
+				"MagicStaff"
+			],
 			"Armor": "None",
 			"Items": [],
 			"Forms": []
@@ -1012,7 +1030,7 @@
 			{
 				"Type": "Magical",
 				"Amount": 55,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"bFull": false,
 				"bCanRevive": false
 			}
@@ -1025,14 +1043,17 @@
 		"DisplayName": "Heal",
 		"CapacityCost": 2,
 		"Category": "Spell",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [
 			"Heal"
 		],
 		"Requirements": {
-			"Weapons": [],
+			"Weapons": [
+				"Wand",
+				"MagicStaff"
+			],
 			"Armor": "None",
 			"Items": [],
 			"Forms": []
@@ -1048,7 +1069,7 @@
 			{
 				"Type": "Magical",
 				"Amount": 20,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"bFull": false,
 				"bCanRevive": false
 			}
@@ -1061,7 +1082,7 @@
 		"DisplayName": "Heroic Might",
 		"CapacityCost": 3,
 		"Category": "Passive",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
@@ -1102,8 +1123,8 @@
 		"DisplayName": "Hunter's Leap",
 		"CapacityCost": 3,
 		"Category": "Art",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Uncommon",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -1130,8 +1151,8 @@
 		"DisplayName": "Hunter's Tracking",
 		"CapacityCost": 2,
 		"Category": "Passive",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Uncommon",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -1159,8 +1180,8 @@
 		"DisplayName": "Immutable",
 		"CapacityCost": 9,
 		"Category": "Active",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Epic",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -1188,12 +1209,15 @@
 		"DisplayName": "Light",
 		"CapacityCost": 1,
 		"Category": "Spell",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
-			"Weapons": [],
+			"Weapons": [
+				"Wand",
+				"MagicStaff"
+			],
 			"Armor": "None",
 			"Items": [],
 			"Forms": []
@@ -1216,8 +1240,8 @@
 		"DisplayName": "Like A Lion, He Leapt",
 		"CapacityCost": 7,
 		"Category": "Art",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Legendary",
 		"WeaponTag": "Melee",
 		"Tags": [],
 		"Requirements": {
@@ -1259,7 +1283,7 @@
 		"DisplayName": "Mortal Strike",
 		"CapacityCost": 5,
 		"Category": "Active",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "Melee",
 		"Tags": [],
@@ -1281,7 +1305,7 @@
 			{
 				"Type": "Attack",
 				"Amount": 20,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"Kind": "Additional",
 				"DurationSec": 0,
 				"Hits": 1
@@ -1299,13 +1323,13 @@
 		"DisplayName": "Multiscale",
 		"CapacityCost": 9,
 		"Category": "Passive",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Rare",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
 			"Weapons": [],
-			"Armor": "None",
+			"Armor": "Plate",
 			"Items": [],
 			"Forms": []
 		},
@@ -1354,14 +1378,17 @@
 		"DisplayName": "Mute",
 		"CapacityCost": 10,
 		"Category": "Spell",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Epic",
 		"WeaponTag": "None",
 		"Tags": [
 			"Debuff"
 		],
 		"Requirements": {
-			"Weapons": [],
+			"Weapons": [
+				"Wand",
+				"MagicStaff"
+			],
 			"Armor": "None",
 			"Items": [],
 			"Forms": []
@@ -1376,7 +1403,7 @@
 			{
 				"Type": "Magic",
 				"Amount": 5,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"Kind": "PerSecond",
 				"DurationSec": 10,
 				"Hits": 1
@@ -1394,8 +1421,8 @@
 		"DisplayName": "Neckbite",
 		"CapacityCost": 3,
 		"Category": "Active",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Uncommon",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -1416,7 +1443,7 @@
 			{
 				"Type": "Magic",
 				"Amount": 10,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"Kind": "Additional",
 				"DurationSec": 0,
 				"Hits": 1
@@ -1434,8 +1461,8 @@
 		"DisplayName": "Parting The Land",
 		"CapacityCost": 9,
 		"Category": "Active",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Epic",
 		"WeaponTag": "Melee",
 		"Tags": [],
 		"Requirements": {
@@ -1456,7 +1483,7 @@
 			{
 				"Type": "Attack",
 				"Amount": 65,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"Kind": "Impact",
 				"DurationSec": 0,
 				"Hits": 1
@@ -1475,8 +1502,8 @@
 		"DisplayName": "Purge Shot",
 		"CapacityCost": 4,
 		"Category": "Active",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Rare",
 		"WeaponTag": "Ranged",
 		"Tags": [
 			"Debuff"
@@ -1500,7 +1527,7 @@
 			{
 				"Type": "Magic",
 				"Amount": 10,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"Kind": "Additional",
 				"DurationSec": 0,
 				"Hits": 1
@@ -1518,8 +1545,8 @@
 		"DisplayName": "Quickshot",
 		"CapacityCost": 5,
 		"Category": "Active",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Uncommon",
 		"WeaponTag": "Ranged",
 		"Tags": [
 			"Buff"
@@ -1577,8 +1604,8 @@
 		"DisplayName": "Shade Blow",
 		"CapacityCost": 8,
 		"Category": "Active",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Rare",
 		"WeaponTag": "Melee",
 		"Tags": [
 			"Debuff"
@@ -1602,7 +1629,7 @@
 			{
 				"Type": "Magic",
 				"Amount": 20,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"Kind": "Additional",
 				"DurationSec": 0,
 				"Hits": 1
@@ -1620,8 +1647,8 @@
 		"DisplayName": "Shooting Star",
 		"CapacityCost": 6,
 		"Category": "Art",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Epic",
 		"WeaponTag": "Melee",
 		"Tags": [],
 		"Requirements": {
@@ -1642,7 +1669,7 @@
 			{
 				"Type": "Attack",
 				"Amount": 50,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"Kind": "Impact",
 				"DurationSec": 0,
 				"Hits": 1
@@ -1660,7 +1687,7 @@
 		"DisplayName": "Slash",
 		"CapacityCost": 1,
 		"Category": "Active",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "Melee",
 		"Tags": [],
@@ -1683,7 +1710,7 @@
 			{
 				"Type": "Attack",
 				"Amount": 7,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"Kind": "Additional",
 				"DurationSec": 0,
 				"Hits": 1
@@ -1700,7 +1727,7 @@
 		"DisplayName": "Spear Mastery",
 		"CapacityCost": 2,
 		"Category": "Passive",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
@@ -1759,8 +1786,8 @@
 		"DisplayName": "Spear of Liscor",
 		"CapacityCost": 15,
 		"Category": "Passive",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Epic",
 		"WeaponTag": "Melee",
 		"Tags": [],
 		"Requirements": {
@@ -1820,8 +1847,8 @@
 		"DisplayName": "Splinter of Winter",
 		"CapacityCost": 2,
 		"Category": "Passive",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Legendary",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -1859,7 +1886,7 @@
 			{
 				"Type": "Magic",
 				"Amount": 5,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"Kind": "Additional",
 				"DurationSec": 0,
 				"Hits": 1
@@ -1876,8 +1903,8 @@
 		"DisplayName": "Stealth",
 		"CapacityCost": 6,
 		"Category": "Active",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Rare",
 		"WeaponTag": "None",
 		"Tags": [
 			"Buff"
@@ -1935,15 +1962,18 @@
 		"DisplayName": "Summon Greater Demon",
 		"CapacityCost": 10,
 		"Category": "Spell",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Epic",
 		"WeaponTag": "None",
 		"Tags": [
 			"Minion",
 			"Summon"
 		],
 		"Requirements": {
-			"Weapons": [],
+			"Weapons": [
+				"Wand",
+				"MagicStaff"
+			],
 			"Armor": "None",
 			"Items": [],
 			"Forms": []
@@ -1971,15 +2001,18 @@
 		"DisplayName": "Summon Skeletons",
 		"CapacityCost": 4,
 		"Category": "Spell",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Uncommon",
 		"WeaponTag": "None",
 		"Tags": [
 			"Minion",
 			"Summon"
 		],
 		"Requirements": {
-			"Weapons": [],
+			"Weapons": [
+				"Wand",
+				"MagicStaff"
+			],
 			"Armor": "None",
 			"Items": [],
 			"Forms": []
@@ -2007,15 +2040,18 @@
 		"DisplayName": "Summon Tiger",
 		"CapacityCost": 5,
 		"Category": "Spell",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Rare",
 		"WeaponTag": "None",
 		"Tags": [
 			"Minion",
 			"Summon"
 		],
 		"Requirements": {
-			"Weapons": [],
+			"Weapons": [
+				"Wand",
+				"MagicStaff"
+			],
 			"Armor": "None",
 			"Items": [
 				"Pet Gem (Tiger)"
@@ -2044,7 +2080,7 @@
 		"DisplayName": "Sword Mastery",
 		"CapacityCost": 5,
 		"Category": "Passive",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
@@ -2119,8 +2155,8 @@
 		"DisplayName": "The Mithril Knight",
 		"CapacityCost": 15,
 		"Category": "Passive",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Mystic",
 		"WeaponTag": "None",
 		"Tags": [
 			"Raid"
@@ -2194,7 +2230,7 @@
 		"DisplayName": "Trauma Mastery",
 		"CapacityCost": 4,
 		"Category": "Passive",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
@@ -2275,8 +2311,8 @@
 		"DisplayName": "Triple Thrust",
 		"CapacityCost": 8,
 		"Category": "Art",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Uncommon",
 		"WeaponTag": "Melee",
 		"Tags": [],
 		"Requirements": {
@@ -2297,7 +2333,7 @@
 			{
 				"Type": "Attack",
 				"Amount": 15,
-				"Coefficient": 1.0,
+				"Coefficient": 1,
 				"Kind": "Additional",
 				"DurationSec": 0,
 				"Hits": 3
@@ -2316,8 +2352,8 @@
 		"DisplayName": "Unleash",
 		"CapacityCost": 11,
 		"Category": "Active",
-		"bHasRarity": false,
-		"Rarity": "Common",
+		"bHasRarity": true,
+		"Rarity": "Epic",
 		"WeaponTag": "None",
 		"Tags": [
 			"Buff"
@@ -2337,7 +2373,7 @@
 			{
 				"Stat": "AllAttributes",
 				"Op": "Multiply",
-				"Value": 2.0,
+				"Value": 2,
 				"Target": "Self",
 				"SkillFilter": "None",
 				"Condition": {
@@ -2359,12 +2395,15 @@
 		"DisplayName": "Wall",
 		"CapacityCost": 1,
 		"Category": "Spell",
-		"bHasRarity": false,
+		"bHasRarity": true,
 		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
-			"Weapons": [],
+			"Weapons": [
+				"Wand",
+				"MagicStaff"
+			],
 			"Armor": "None",
 			"Items": [],
 			"Forms": []

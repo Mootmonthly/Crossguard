@@ -34,7 +34,7 @@ Rulings in `docs/design-decisions.md` override the Drive docs.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `weapons` | WeaponType[] | Any one of these must be wielded. Empty = no weapon requirement. |
+| `weapons` | WeaponType[] | Any one of these must be wielded. Empty = no weapon requirement. Every Spell has exactly `["Wand", "MagicStaff"]` (casting weapons; its `weaponTag` stays `null`). |
 | `armor` | enum or null | `Plate` (some plate) or `PlateAllSlots`, or `null`. |
 | `items` | string[] | Required items, e.g. `"Pet Gem (Tiger)"`. |
 | `forms` | string[] | Required forms, e.g. `"Bestial"`. |

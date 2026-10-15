@@ -11,6 +11,7 @@
 // Cooldowns use UCrossguardCooldownEffect by default: this class fills its duration with
 // BaseCooldownSeconds after CDR and grants the CooldownTags below, so one effect serves every skill.
 // Weapon requirements: activation fails unless the owner's equipment satisfies RequiredWeapons.
+// Spells with no RequiredWeapons need a Wand or a Two-Handed Staff in hand (not in dragon form).
 UCLASS(Abstract)
 class CROSSGUARD_API UCrossguardGameplayAbility : public UGameplayAbility
 {

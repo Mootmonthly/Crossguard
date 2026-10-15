@@ -49,7 +49,9 @@ void UCrossguardMultiscaleAbility::RefreshAura()
 	{
 		return;
 	}
-	if (ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted) || ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead))
+	// Off while Muted or dead, and without Plate armor (Skills.json requirement).
+	if (ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted) || ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead)
+		|| !ASC->HasMatchingGameplayTag(CrossguardTags::Equipment_Armor_Plate))
 	{
 		RemoveAll();
 		return;

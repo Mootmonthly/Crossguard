@@ -250,6 +250,7 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
     if (!weapons.length) return null;
     if (weapons.every((w) => MELEE.includes(w))) return "Melee";
     if (weapons.every((w) => RANGED.includes(w))) return "Ranged";
+    if (weapons.every((w) => CASTING.includes(w))) return null; // Spells: neither Melee nor Ranged
     return undefined; // invalid mix
   }
   function pct(v) { return `${+(v * 100).toFixed(3)}%`; }
@@ -293,7 +294,10 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
     if (!CATEGORIES.includes(s.category)) errs.push("Pick a category.");
     if (s.rarity !== null && !RARITIES.includes(s.rarity)) errs.push("Rarity must be one of the listed rarities, or not set.");
     const tag = weaponTagFor(s.requirements.weapons);
-    if (tag === undefined) errs.push("Required weapons mix melee and ranged (or include a casting weapon); split them into separate skills.");
+    if (tag === undefined) errs.push("Required weapons mix melee, ranged and casting weapons; split them into separate skills.");
+    const req = s.requirements.weapons;
+    if (s.category === "Spell" && !(req.length === CASTING.length && CASTING.every((w) => req.includes(w))))
+      errs.push("Every Spell requires a casting weapon: tick exactly Wand and MagicStaff (Two-Handed Staff).");
     for (const field of ["cooldownSec", "durationSec"]) {
       const v = s[field];
       if (v !== null && !(typeof v === "number" && v >= 0)) errs.push(`${field === "cooldownSec" ? "Cooldown" : "Duration"} must be a number, 0 or more, or blank.`);
@@ -546,7 +550,13 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
           textField("Name", s.name, (v) => { s.name = v; if (isNew && !idTouched) { s.id = v.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, ""); const idEl = $("f-id"); if (idEl) idEl.value = s.id; } touch(); }, { id: "f-name" }),
           textField("Id", s.id, (v) => { idTouched = true; s.id = v.trim(); touch(); }, { id: "f-id", mono: true, readonly: !isNew, hint: isNew ? "snake_case; cannot change after creating" : "Fixed. Duplicate to rename." }),
           numberField("Capacity cost", s.capacityCost, (v) => { s.capacityCost = v; touch(); }, { step: "1", min: "0" }),
-          selectField("Category", s.category, CATEGORIES.map((c) => [c, c]), (v) => { s.category = v; if (v === "Passive") s.cooldownSec = null; touch(); rerender(); }),
+          selectField("Category", s.category, CATEGORIES.map((c) => [c, c]), (v) => {
+            s.category = v;
+            if (v === "Passive") s.cooldownSec = null;
+            // Spells are cast with a Wand or a Two-Handed Staff.
+            if (v === "Spell") s.requirements.weapons.splice(0, s.requirements.weapons.length, ...CASTING);
+            touch(); rerender();
+          }),
           selectField("Source", s.source, SOURCES.map((c) => [c, c === "Editor" ? "Skill Forge" : c]), (v) => { s.source = v; touch(); })),
         h("div", { class: "field wide" }, h("span", { text: "Tags" }), checkGroup(TAGS, s.tags, touch))),
       section("Skill Gem",

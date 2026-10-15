@@ -83,6 +83,11 @@ Code and data must follow it.
 - Skills granted while another skill is active (Dragonification's Flare Breath and Flight)
   are usable during it, and **cannot be equipped** alongside it.
 - Cleave is an **Art**.
+- **Every Spell requires a casting weapon**: a Wand or a Two-Handed Staff (not a quarterstaff), in
+  either hand. Exception: in dragon form, Flare Breath and Flight are cast without one. Casting
+  weapons do not make a skill Melee or Ranged for CDR.
+- **Skill Gems have a rarity** (Common to Mystic), one per gem, no affixes. It only sets loot drop
+  chances and never changes the skill. Set per skill in the Skill Forge.
 - Fireball, Flare Breath, Greater Heal, Benediction and Summon Tiger are **Spells**.
   Greater Heal and Benediction are Magical Healing.
 - Mastery cooldown reductions ("Melee Skills -10% Cooldown") apply **only while wielding**
@@ -137,7 +142,7 @@ Rulings for the first skills built in C++ (defaults proposed and accepted, plus 
 | Stealth | Invisible to everyone outside your party (and to minions) for 12 s. Attacking, casting or taking damage ends it early. The exit bonus (+10% speed, +25% Attack Bonus for 3 s) applies however it ends, except death or Mute. Later: an indicator so teammates can tell you are stealthed. |
 | Immutable | Crowd control = Slow, Blind, knock-up, Grounding (later Silence, Stun, Root). **Mute is not crowd control.** Equipped (and not Muted): permanently immune. Activated: you and party members within 10 m immune for 5 s. Existing crowd control is not removed. |
 | Splinter of Winter | Dagger attacks: +5 Magic Damage and -10% speed for 3 s. |
-| Multiscale | +15% Attack and Magic Resistance to you, every party member and party minions, at any distance. Two Multiscales do not stack. Off while you are Muted or dead. Also comes with The Mithril Knight. |
+| Multiscale | Requires Plate armor (Skill Forge). +15% Attack and Magic Resistance to you, every party member and party minions, at any distance. Two Multiscales do not stack. Off while you are Muted or dead. Also comes with The Mithril Knight. |
 | Hunter's Tracking | Footprints of enemy players from the last 30 s, on your screen only, for enemies your client knows about (about 150 m). Stealthed enemies leave none. Off while Muted or dead. The +20 m hearing waits for the sound system. |
 
 Dropped items land about 1.5 m ahead (never through a wall) and lie there until picked up (interact key) or the raid ends; a pickup takes what
