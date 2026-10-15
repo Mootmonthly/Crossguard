@@ -26,7 +26,7 @@ order changes.
 | Inventory | Server-authoritative 10 × 5 grid, Backpack and Quiver, stacking by type and rarity, equip through the inventory, Skill Gems, potions and bandages (Q to ready, left click to use). |
 | Death | Ragdoll, lootable body for every death, E to loot, revive returns what was not looted. |
 | Economy | Gold coins carried in raids, banked on extraction; banked gold; selling gemstones to vendors; buying stash tabs. |
-| World | Extraction zones, doors, locks and lockpicking (5 s scaled by Dexterity). |
+| World | Extract portals (points of interest, 60 s channel, 30 s open), extraction zones, doors, locks and lockpicking. |
 | Teams | Parties up to 8 via `?Party=`, friendly fire always on. |
 
 ## Milestone 0: Verify what is written
@@ -46,6 +46,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 
 | Item | Needs | Notes |
 | --- | --- | --- |
+| Extract portals | Editor | Built in code: summon with X inside a point of interest after 10 min, 60 s channel, open 30 s for anyone. Needs points of interest placed and beam/portal visuals. |
 | Extraction points | Editor | Built in code (`ACrossguardExtractionZone`, 5 s placeholder). Needs placing in maps; the trip to the hub needs the hub and saving. |
 | Raid end on failure | Code, Decision | When does a raid end for a dead player: when they leave, after a timer, when the match ends? |
 | Stash | Editor | Built in code: per character, 10 × 30 tabs (up to 3 more at 3000 gold), Skill Gems learnable from it. Needs the stash UI in the hub. |

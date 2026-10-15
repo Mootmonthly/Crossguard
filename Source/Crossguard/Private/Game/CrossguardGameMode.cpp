@@ -4,6 +4,7 @@
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "Crossguard.h"
+#include "Engine/World.h"
 #include "Game/CrossguardPlayerState.h"
 #include "Game/CrossguardTeamLibrary.h"
 #include "GameFramework/PlayerController.h"
@@ -152,4 +153,15 @@ void ACrossguardGameMode::HandleExtraction(ACrossguardCharacter* Character)
 	const int32 Xp = PlayerState->EndRaid(true);
 	UE_LOG(LogCrossguard, Log, TEXT("%s extracted: %d XP banked, %d gold banked in total"), *Character->GetName(), Xp, PlayerState->GetGold());
 	OnPlayerExtracted.Broadcast(Character);
+}
+
+void ACrossguardGameMode::StartPlay()
+{
+	Super::StartPlay();
+	RaidStartSeconds = GetWorld()->GetTimeSeconds();
+}
+
+float ACrossguardGameMode::GetRaidElapsedSeconds() const
+{
+	return bIsRaid ? GetWorld()->GetTimeSeconds() - RaidStartSeconds : 0.0f;
 }

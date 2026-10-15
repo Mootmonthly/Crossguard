@@ -37,6 +37,19 @@ namespace Crossguard
 		int Extract = 35;
 	};
 
+	struct FPortalConfig
+	{
+		// Seconds after the raid starts before anyone can summon an extract portal.
+		double UnlockSeconds = 600.0;
+		// Channel before the portal opens. Damage does not interrupt it.
+		double ChannelSeconds = 60.0;
+		// How long the portal stays open once it opens.
+		double OpenSeconds = 30.0;
+		// The summoner's team must keep someone alive within this distance (cm) of the portal
+		// while it channels, or it collapses.
+		double KeepAliveRadius = 1000.0;
+	};
+
 	struct FEconomyConfig
 	{
 		// Seconds to pick a lock at 0% Dexterity (10 AGI). Lockpicking cannot fail.

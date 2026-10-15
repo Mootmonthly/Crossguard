@@ -142,6 +142,10 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Progression")
 	void BeginRaid();
 
+	// One extract portal per player per raid. Server only.
+	bool HasSummonedPortal() const { return bPortalSummoned; }
+	void MarkPortalSummoned() { bPortalSummoned = true; }
+
 	// Server. Ends the raid: extracting banks the raid XP (plus the extraction reward) and moves
 	// the gold coins the character carries into the gold balance; failing to extract loses the raid
 	// XP. Returns the XP banked.
@@ -231,6 +235,9 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_Progression)
 	TArray<FName> SkillLibrary;
+
+	// Server only; reset by BeginRaid.
+	bool bPortalSummoned = false;
 
 	Crossguard::FProgressionConfig ProgressionConfig;
 	Crossguard::FXpConfig XpConfig;

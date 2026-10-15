@@ -46,6 +46,16 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Crossguard")
 	FCrossguardPlayerExtracted OnPlayerExtracted;
 
+	virtual void StartPlay() override;
+
+	// Seconds into the raid before extract portals can be summoned. Lower it to test.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard", meta = (ClampMin = "0"))
+	float PortalUnlockSeconds = 600.0f;
+
+	// Seconds since the raid started (0 outside raid maps).
+	UFUNCTION(BlueprintPure, Category = "Crossguard")
+	float GetRaidElapsedSeconds() const;
+
 	// Raid maps hold XP until extraction and block between-raid actions (learning Skill Gems,
 	// changing attributes). Turn off for a hub / test map where those should work.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard")
@@ -60,6 +70,7 @@ private:
 	FString JoinTeam(AController* Controller, const std::string& Key, const FString& Party);
 
 	Crossguard::FTeamRegistry Teams;
+	float RaidStartSeconds = 0.0f;
 	// Controller -> registry key, so Logout can find the player.
 	TMap<TWeakObjectPtr<const AController>, FString> PlayerKeys;
 };

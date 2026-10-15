@@ -4,6 +4,7 @@
 #include "CrossguardRules/Economy.h"
 #include "CrossguardRules/Experience.h"
 #include "CrossguardRules/Inventory.h"
+#include "CrossguardRules/Portal.h"
 #include "CrossguardRules/Items.h"
 #include "CrossguardRules/Loadout.h"
 #include "CrossguardRules/Progression.h"
@@ -724,6 +725,38 @@ static void TestEconomy()
 	CHECK_NEAR(LockpickSeconds(Config, -5.0), 50.0);
 }
 
+static void TestPortal()
+{
+	const FPortalConfig Config;
+	CHECK(CanSummonPortal(Config, true, 600.0, true, false) == EPortalSummonError::None);
+	CHECK(CanSummonPortal(Config, true, 599.0, true, false) == EPortalSummonError::TooEarly);
+	CHECK(CanSummonPortal(Config, true, 900.0, false, false) == EPortalSummonError::OutsidePointOfInterest);
+	CHECK(CanSummonPortal(Config, true, 900.0, true, true) == EPortalSummonError::AlreadySummoned);
+	CHECK(CanSummonPortal(Config, false, 900.0, true, false) == EPortalSummonError::NotInRaid);
+
+	// Channels 60 s while kept, then stays open 30 s.
+	FExtractPortal Portal(Config);
+	CHECK(Portal.Advance(59.0, true) == EPortalState::Channeling);
+	CHECK_NEAR(Portal.GetSecondsLeft(), 1.0);
+	CHECK(!Portal.CanEnter());
+	CHECK(Portal.Advance(2.0, true) == EPortalState::Open);
+	CHECK(Portal.CanEnter());
+	// The extra second counted toward the open time.
+	CHECK_NEAR(Portal.GetSecondsLeft(), 29.0);
+	// Keepers do not matter once open.
+	CHECK(Portal.Advance(28.0, false) == EPortalState::Open);
+	CHECK(Portal.Advance(1.0, false) == EPortalState::Closed);
+	CHECK(!Portal.CanEnter());
+	CHECK_NEAR(Portal.GetSecondsLeft(), 0.0);
+	CHECK(Portal.Advance(5.0, true) == EPortalState::Closed);
+
+	// Losing every keeper collapses the channel for good.
+	FExtractPortal Abandoned(Config);
+	CHECK(Abandoned.Advance(30.0, true) == EPortalState::Channeling);
+	CHECK(Abandoned.Advance(0.25, false) == EPortalState::Collapsed);
+	CHECK(Abandoned.Advance(60.0, true) == EPortalState::Collapsed);
+}
+
 int main()
 {
 	TestProgression();
@@ -742,6 +775,7 @@ int main()
 	TestInventoryGrid();
 	TestSkillLibrary();
 	TestEconomy();
+	TestPortal();
 
 	std::printf("%d checks, %d failures\n", GChecks, GFailures);
 	return GFailures == 0 ? 0 : 1;

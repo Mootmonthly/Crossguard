@@ -186,6 +186,22 @@ Independent of category, a skill is:
 - Each season: five respec tokens, a shared stash tab (usable by all of the account's characters),
   several stacks of common healing items, some throwables and lockpicks.
 
+## Extraction
+
+From the design doc: after 10 minutes, players can summon an extract portal anywhere inside a
+point of interest instead of only using fixed extraction points. Ruled details:
+
+- Unlocks 10 minutes after the raid starts, the same for every player.
+- Only inside a point of interest. One portal per player per raid.
+- The portal channels for 60 s where it was summoned, with a beam of light into the sky that nearby
+  players can see. The summoner can move around and defend it; damage does not interrupt it. The
+  channel needs the summoner's side within 10 m.
+- Once open it lasts 30 s. Anyone can step in and extract, enemies included.
+- Fixed extraction points also exist.
+- Assumed until ruled otherwise: "within 10 m" is satisfied by any living member of the summoner's
+  team (the summoner alone when solo), and the channel collapses only when none are left; a
+  collapsed portal still uses up the player's one summon; summoning is on X (placeholder).
+
 ## Camera
 
 - First-person camera.

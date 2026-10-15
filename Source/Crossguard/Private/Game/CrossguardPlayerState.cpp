@@ -150,6 +150,7 @@ void ACrossguardPlayerState::BeginRaid()
 	{
 		bInRaid = true;
 		RaidXp = 0;
+		bPortalSummoned = false;
 		ProgressionChanged();
 	}
 }

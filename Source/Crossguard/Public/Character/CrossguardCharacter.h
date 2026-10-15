@@ -11,6 +11,7 @@
 
 #include "CrossguardCharacter.generated.h"
 
+class ACrossguardExtractPortal;
 class ACrossguardLootContainer;
 class UCameraComponent;
 class UCrossguardAttributeSet;
@@ -55,6 +56,11 @@ public:
 	// server; clients forward it.
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Interaction")
 	void TryInteract();
+
+	// X: summons an extract portal at the character's feet: once per raid, inside a point of
+	// interest, 10 minutes into the raid. Runs on the server; clients forward it.
+	UFUNCTION(BlueprintCallable, Category = "Crossguard|Extraction")
+	void TrySummonPortal();
 
 	// True while picking a lock (for a progress bar). Owner only.
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Interaction")
@@ -179,6 +185,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
 	TObjectPtr<UInputAction> ReadyItemAction;
 
+	// X: summon an extract portal (placeholder key).
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> SummonPortalAction;
+
+	// Spawned by TrySummonPortal. Set a Blueprint subclass with the beam and portal visuals.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Extraction")
+	TSubclassOf<ACrossguardExtractPortal> PortalClass;
+
 	// Spawned on death to hold what the character carried.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Inventory")
 	TSubclassOf<ACrossguardLootContainer> BodyContainerClass;
@@ -230,6 +244,9 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void ServerInteract();
+
+	UFUNCTION(Server, Reliable)
+	void ServerSummonPortal();
 	// Server. The nearest interactable within its range that the camera is facing.
 	AActor* FindInteractTarget() const;
 	// Server. Lockpicking: 5 s scaled by Dexterity, cannot fail. Needs Ability.Lockpicking or a

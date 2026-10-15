@@ -157,7 +157,16 @@ across seamless travel; not saved yet. Shared tabs (subscription) need the backe
 
 ### Extraction
 
-`ACrossguardExtractionZone` (place in raid maps): a living player who stays inside for
+Extract portals: `ACrossguardCharacter::TrySummonPortal` (X) spawns an `ACrossguardExtractPortal`
+at the character's feet when `Crossguard::CanSummonPortal` allows it: in a raid, at least the game
+mode's `PortalUnlockSeconds` (600) in, inside an `ACrossguardPointOfInterest` box, first summon this
+raid. The portal follows `Crossguard::FExtractPortal`: it channels 60 s while a living member of the
+summoner's team is within 10 m (else it collapses), then opens 30 s; anyone stepping into its
+`EnterArea` extracts through `HandleExtraction`. `BeamMesh` shows while channeling and `PortalMesh`
+while open; give them meshes or effects in a Blueprint subclass and set it as the character's
+`PortalClass`. Lower `PortalUnlockSeconds` to test.
+
+Fixed points: `ACrossguardExtractionZone` (place in raid maps): a living player who stays inside for
 `ExtractSeconds` (placeholder 5 s) extracts through `ACrossguardGameMode::HandleExtraction`, which
 calls `EndRaid(true)` and broadcasts `OnPlayerExtracted`. Leaving for the hub is not built (needs
 the hub and saved progression); the character stays in the map, now between raids.

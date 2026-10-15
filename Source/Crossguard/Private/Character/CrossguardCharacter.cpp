@@ -8,10 +8,15 @@
 #include "Combat/CrossguardWeaponAttackAbility.h"
 #include "Crossguard.h"
 #include "CrossguardRules/Economy.h"
+#include "CrossguardRules/Portal.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
+#include "Game/CrossguardExtractPortal.h"
+#include "Game/CrossguardGameMode.h"
 #include "Game/CrossguardPlayerState.h"
+#include "Game/CrossguardPointOfInterest.h"
+#include "Game/CrossguardTeamLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "InputAction.h"
@@ -58,6 +63,7 @@ ACrossguardCharacter::ACrossguardCharacter()
 	GetMesh()->SetOwnerNoSee(true);
 
 	BodyContainerClass = ACrossguardLootContainer::StaticClass();
+	PortalClass = ACrossguardExtractPortal::StaticClass();
 }
 
 void ACrossguardCharacter::EnsureDefaultInput()
@@ -77,6 +83,7 @@ void ACrossguardCharacter::EnsureDefaultInput()
 	MakeAction(SecondaryActionInput, TEXT("IA_Secondary"), EInputActionValueType::Boolean);
 	MakeAction(InteractAction, TEXT("IA_Interact"), EInputActionValueType::Boolean);
 	MakeAction(ReadyItemAction, TEXT("IA_ReadyItem"), EInputActionValueType::Boolean);
+	MakeAction(SummonPortalAction, TEXT("IA_SummonPortal"), EInputActionValueType::Boolean);
 
 	if (DefaultMappingContext != nullptr)
 	{
@@ -105,6 +112,7 @@ void ACrossguardCharacter::EnsureDefaultInput()
 	Context->MapKey(SecondaryActionInput, EKeys::RightMouseButton);
 	Context->MapKey(InteractAction, EKeys::E);
 	Context->MapKey(ReadyItemAction, EKeys::Q);
+	Context->MapKey(SummonPortalAction, EKeys::X);
 	DefaultMappingContext = Context;
 }
 
@@ -129,6 +137,7 @@ void ACrossguardCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	Input->BindAction(SecondaryActionInput, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnSecondary);
 	Input->BindAction(InteractAction, ETriggerEvent::Started, this, &ACrossguardCharacter::TryInteract);
 	Input->BindAction(ReadyItemAction, ETriggerEvent::Started, this, &ACrossguardCharacter::OnReadyItem);
+	Input->BindAction(SummonPortalAction, ETriggerEvent::Started, this, &ACrossguardCharacter::TrySummonPortal);
 }
 
 void ACrossguardCharacter::PawnClientRestart()
@@ -607,4 +616,50 @@ void ACrossguardCharacter::SetDeadVisuals(bool bDead)
 	BodyMesh->SetRelativeTransform(MeshRelativeTransform);
 	Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+}
+
+void ACrossguardCharacter::TrySummonPortal()
+{
+	if (HasAuthority())
+	{
+		ServerSummonPortal_Implementation();
+	}
+	else
+	{
+		ServerSummonPortal();
+	}
+}
+
+void ACrossguardCharacter::ServerSummonPortal_Implementation()
+{
+	ACrossguardPlayerState* Progression = GetPlayerState<ACrossguardPlayerState>();
+	const ACrossguardGameMode* GameMode = GetWorld()->GetAuthGameMode<ACrossguardGameMode>();
+	if (Progression == nullptr || GameMode == nullptr || PortalClass == nullptr
+		|| AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Dead))
+	{
+		return;
+	}
+
+	Crossguard::FPortalConfig Config;
+	Config.UnlockSeconds = GameMode->PortalUnlockSeconds;
+	const Crossguard::EPortalSummonError Error = Crossguard::CanSummonPortal(Config, Progression->IsInRaid(), GameMode->GetRaidElapsedSeconds(),
+		ACrossguardPointOfInterest::IsInsideAny(GetWorld(), GetActorLocation()), Progression->HasSummonedPortal());
+	if (Error != Crossguard::EPortalSummonError::None)
+	{
+		UE_LOG(LogCrossguard, Log, TEXT("%s cannot summon a portal: error %d"), *GetName(), static_cast<int32>(Error));
+		return;
+	}
+
+	// At the feet, so the beam rises from the ground.
+	const FVector Feet = GetActorLocation() - FVector(0.0f, 0.0f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	ACrossguardExtractPortal* Portal = GetWorld()->SpawnActor<ACrossguardExtractPortal>(PortalClass, FTransform(GetActorRotation(), Feet), Params);
+	if (Portal == nullptr)
+	{
+		return;
+	}
+	Portal->Initialize(this, UCrossguardTeamLibrary::GetTeamId(this));
+	Progression->MarkPortalSummoned();
+	UE_LOG(LogCrossguard, Log, TEXT("%s summoned an extract portal"), *GetName());
 }
