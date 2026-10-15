@@ -107,7 +107,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Matchmaking with parties | Code | Must pass `?Party=<key>` in the travel URL. |
 | Backend and accounts | Decision, Code | Persistence, purchases, auction house. |
 | Platform store | Decision, Code | Steam or other; purchases verified server-side. |
-| Anti-cheat review | Code | e.g. body contents replicate to everyone today; AI ability system init on clients. |
+| Anti-cheat review | Code | e.g. body contents replicate to everyone today. |
 
 ## Open questions
 
@@ -125,6 +125,10 @@ Decisions that block items above. Answers go into design-decisions.md.
 | Is drinking a potion instant? Does bandaging slow movement? | Consumables (currently: instant, full speed) |
 | Respec price? | Store |
 | Jewelry, quarterstaffs, two-handed pavise shields, the Beastial transformation for Neckbite | Later content |
+| What does Silence do, as opposed to Mute? | Neckbite, crowd control |
+| Tiger and Greater Demon stats (HP, damage, speed, size)? Is the Pet Gem (Tiger) used up? | Summon Tiger, Summon Greater Demon |
+| Block and parry: how much a shield block stops, the parry window, what a parry does | Block and parry, Triple Thrust piercing |
+| Spear stats (no spear in the weapon data yet) | Spear skills (Triple Thrust, Spear Mastery, Spear of Liscor) |
 
 ## Placeholders to replace
 
