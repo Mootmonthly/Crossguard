@@ -13,6 +13,7 @@ STATS = {"AttackDamage", "MagicDamage", "AttackResistance"}
 DELIVERIES = {"MeleeSwing", "Hitscan", "Projectile", "None"}
 MAX_RARITY_LEVEL = 5
 GRID_WIDTH, GRID_HEIGHT = 10, 5  # main inventory grid
+ITEMS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Data", "Items", "Items.json")
 ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 
 
@@ -65,6 +66,7 @@ WEAPON_SPEC = {
     "perRarity": (lambda v: is_num(v) and v >= 0, "number >= 0"),
     "attackSpeed": (lambda v: v is None or isinstance(v, dict), "object or null"),
     "delivery": enum(DELIVERIES),
+    "ammo": (lambda v: v is None or isinstance(v, str), "null or an Ammo item id"),
     "canParry": (lambda v: isinstance(v, bool), "boolean"),
 }
 SPEED_SPEC = {
@@ -73,8 +75,18 @@ SPEED_SPEC = {
 }
 
 
-def validate(weapons):
+def load_ammo_ids(path=ITEMS_PATH):
+    """Ids of the Ammo entries in Items.json."""
+    with open(path, encoding="utf-8") as f:
+        items = json.load(f)
+    return {i["id"] for i in items if isinstance(i, dict) and i.get("category") == "Ammo"
+            and isinstance(i.get("id"), str)}
+
+
+def validate(weapons, ammo_ids=None):
     errors = []
+    if ammo_ids is None:
+        ammo_ids = load_ammo_ids()
     if not isinstance(weapons, list):
         return ["top level must be a JSON array"]
 
@@ -110,6 +122,10 @@ def validate(weapons):
         rng = w.get("range")
         stat = w.get("stat")
         wtype = w.get("weaponType")
+
+        ammo = w.get("ammo")
+        if isinstance(ammo, str) and ammo not in ammo_ids:
+            err(f"ammo '{ammo}' is not an Ammo item in Items.json (known: {sorted(ammo_ids)})")
 
         # attackSpeed null iff delivery None
         if "attackSpeed" in w and (speed is None or isinstance(speed, dict)) and delivery in DELIVERIES:
@@ -159,7 +175,12 @@ def main(argv):
     except (OSError, ValueError) as e:
         print(f"ERROR: cannot load {path}: {e}")
         return 1
-    errors = validate(weapons)
+    try:
+        ammo_ids = load_ammo_ids()
+    except (OSError, ValueError) as e:
+        print(f"ERROR: cannot load {ITEMS_PATH}: {e}")
+        return 1
+    errors = validate(weapons, ammo_ids)
     if errors:
         for e in errors:
             print("ERROR:", e)

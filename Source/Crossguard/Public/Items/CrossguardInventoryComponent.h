@@ -205,6 +205,14 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	int32 AddItem(const FCrossguardInventoryItem& NewItem);
 
+	// How many of a table item (any rarity) the inventory holds, across every container.
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	int32 CountItem(FName ItemId) const;
+
+	// Server. Uses up Count of a table item (any rarity): Quiver first, then the main grid, then
+	// the Backpack. False, changing nothing, if there are not enough.
+	bool ConsumeItem(FName ItemId, int32 Count = 1);
+
 	// Server. Removes a whole stack. False if there is no such item.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	bool RemoveItem(int32 ItemId);

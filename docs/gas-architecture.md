@@ -110,6 +110,8 @@ camera direction. The body mesh is hidden from its owner until first-person arms
   the weapon's AD/MD at its rarity; the attack interval (weapon speed ÷ (1 + Action Speed)) limits
   the rate. Melee swings sweep for pawns in front; wands trace on the `Weapon` channel; bows and
   staffs spawn `ACrossguardProjectile` (set per-weapon projectile Blueprints for speed).
+- Ammo: a weapon with `ammo` in its data (the bow: `arrow`) uses one per shot, taken from the
+  Quiver first, then the main grid, then the Backpack. No ammo, no shot.
 
 ## Inventory
 

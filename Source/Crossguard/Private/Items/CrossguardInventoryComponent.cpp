@@ -299,6 +299,48 @@ int32 UCrossguardInventoryComponent::AddItem(const FCrossguardInventoryItem& New
 	return Remaining;
 }
 
+int32 UCrossguardInventoryComponent::CountItem(FName ItemId) const
+{
+	int32 Total = 0;
+	for (const FCrossguardInventoryItem& Item : Items)
+	{
+		if (IsTableItem(Item.Category) && Item.ItemId == ItemId)
+		{
+			Total += Item.Count;
+		}
+	}
+	return Total;
+}
+
+bool UCrossguardInventoryComponent::ConsumeItem(FName ItemId, int32 Count)
+{
+	if (!IsServer() || ItemId.IsNone() || Count <= 0 || CountItem(ItemId) < Count)
+	{
+		return false;
+	}
+	int32 Remaining = Count;
+	for (const ECrossguardInventoryContainer Container : AmmoOrder)
+	{
+		for (int32 Index = Items.Num() - 1; Index >= 0 && Remaining > 0; --Index)
+		{
+			FCrossguardInventoryItem& Item = Items[Index];
+			if (Item.Container != Container || !IsTableItem(Item.Category) || Item.ItemId != ItemId)
+			{
+				continue;
+			}
+			const int32 Taken = FMath::Min(Remaining, Item.Count);
+			Item.Count -= Taken;
+			Remaining -= Taken;
+			if (Item.Count <= 0)
+			{
+				Items.RemoveAt(Index);
+			}
+		}
+	}
+	OnInventoryChanged.Broadcast();
+	return true;
+}
+
 bool UCrossguardInventoryComponent::RemoveItem(int32 ItemId)
 {
 	const int32 Index = IndexOfItem(ItemId);

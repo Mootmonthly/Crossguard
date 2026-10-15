@@ -20,6 +20,9 @@ struct FCrossguardWeaponItem;
 // - Hitscan: line trace from the eyes (wand).
 // - Projectile: spawns ProjectileClasses[weapon id], or DefaultProjectileClass (bow, staff).
 //
+// Weapons with an AmmoId (bows: "arrow") use up one per attack from the inventory, Quiver first,
+// and cannot attack without it. Characters without an inventory (AI) shoot freely.
+//
 // Hit detection runs on the server. Placeholder until animations and weapon collision exist.
 UCLASS()
 class CROSSGUARD_API UCrossguardWeaponAttackAbility : public UCrossguardGameplayAbility

@@ -36,6 +36,10 @@ def enum(values):
     return (lambda v: isinstance(v, str) and v in values, "one of %s" % sorted(values))
 
 
+def is_num(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
 def grid_size(v):
     return isinstance(v, int) and not isinstance(v, bool) and v >= 1
 
@@ -47,6 +51,14 @@ ITEM_SPEC = {
     "gridWidth": (grid_size, "integer >= 1"),
     "gridHeight": (grid_size, "integer >= 1"),
     "maxStack": (grid_size, "integer >= 1"),
+}
+
+
+CONSUMABLE_SPEC = {
+    "healAmount": (lambda v: is_num(v) and v > 0, "number > 0"),
+    "healPerRarity": (lambda v: is_num(v) and v >= 0, "number >= 0"),
+    "healDuration": (lambda v: is_num(v) and v > 0, "number > 0"),
+    "useTime": (lambda v: is_num(v) and v >= 0, "number >= 0"),
 }
 
 
@@ -71,9 +83,16 @@ def validate(items):
                 err("duplicate id")
             seen.add(iid)
             ids.append(iid)
-        check_fields(it, ITEM_SPEC, "item", err)
+        if isinstance(it, dict) and it.get("category") == "Consumable":
+            check_fields(it, {**ITEM_SPEC, **CONSUMABLE_SPEC}, "item", err)
+        else:
+            check_fields(it, ITEM_SPEC, "item", err)
         if not isinstance(it, dict):
             continue
+        if it.get("category") != "Consumable":
+            for name in CONSUMABLE_SPEC:
+                if name in it:
+                    err(f"field '{name}' is only allowed for Consumable items")
 
         gw, gh = it.get("gridWidth"), it.get("gridHeight")
         if grid_size(gw) and grid_size(gh) and (max(gw, gh) > GRID_WIDTH or min(gw, gh) > GRID_HEIGHT):

@@ -5,7 +5,23 @@
 		"Category": "Ammo",
 		"GridWidth": 1,
 		"GridHeight": 3,
-		"MaxStack": 20
+		"MaxStack": 20,
+		"HealAmount": 0,
+		"HealPerRarity": 0,
+		"HealDuration": 0,
+		"UseTime": 0
+	},
+	{
+		"Name": "bandage",
+		"DisplayName": "Bandage",
+		"Category": "Consumable",
+		"GridWidth": 1,
+		"GridHeight": 1,
+		"MaxStack": 5,
+		"HealAmount": 10,
+		"HealPerRarity": 0,
+		"HealDuration": 2,
+		"UseTime": 2
 	},
 	{
 		"Name": "bolt",
@@ -13,6 +29,22 @@
 		"Category": "Ammo",
 		"GridWidth": 1,
 		"GridHeight": 2,
-		"MaxStack": 20
+		"MaxStack": 20,
+		"HealAmount": 0,
+		"HealPerRarity": 0,
+		"HealDuration": 0,
+		"UseTime": 0
+	},
+	{
+		"Name": "healing_potion",
+		"DisplayName": "Healing Potion",
+		"Category": "Consumable",
+		"GridWidth": 1,
+		"GridHeight": 1,
+		"MaxStack": 5,
+		"HealAmount": 15,
+		"HealPerRarity": 5,
+		"HealDuration": 10,
+		"UseTime": 0
 	}
 ]

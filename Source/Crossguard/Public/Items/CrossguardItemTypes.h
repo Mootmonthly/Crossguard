@@ -144,6 +144,10 @@ struct CROSSGUARD_API FCrossguardWeaponRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	ECrossguardAttackDelivery Delivery = ECrossguardAttackDelivery::None;
 
+	// Row in the item table each attack uses up (e.g. "arrow"). None: no ammo.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	FName AmmoId;
+
 	// Parries with right click when the off hand is empty.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	bool bCanParry = false;
@@ -249,6 +253,22 @@ struct CROSSGUARD_API FCrossguardItemRow : public FTableRowBase
 	// Most items one inventory stack holds.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
 	int32 MaxStack = 1;
+
+	// Consumables only: HP restored at Common.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	float HealAmount = 0.0f;
+
+	// Consumables only: extra HP per rarity level.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	float HealPerRarity = 0.0f;
+
+	// Consumables only: seconds the healing is spread over.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	float HealDuration = 0.0f;
+
+	// Consumables only: seconds the player channels (holds left click) to use it. 0: instant.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	float UseTime = 0.0f;
 };
 
 // A rolled affix on an item instance.

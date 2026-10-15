@@ -8,6 +8,7 @@
 #include "Combat/CrossguardProjectile.h"
 #include "Engine/World.h"
 #include "Items/CrossguardEquipmentComponent.h"
+#include "Items/CrossguardInventoryComponent.h"
 
 // "Weapon" trace channel, defined in Config/DefaultEngine.ini. Blocked by default.
 #define CROSSGUARD_TRACE_WEAPON ECC_GameTraceChannel1
@@ -26,6 +27,19 @@ namespace
 		const AActor* Avatar = ActorInfo != nullptr ? ActorInfo->AvatarActor.Get() : nullptr;
 		return Avatar != nullptr ? Avatar->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
 	}
+
+	UCrossguardInventoryComponent* FindInventory(const FGameplayAbilityActorInfo* ActorInfo)
+	{
+		const AActor* Avatar = ActorInfo != nullptr ? ActorInfo->AvatarActor.Get() : nullptr;
+		return Avatar != nullptr ? Avatar->FindComponentByClass<UCrossguardInventoryComponent>() : nullptr;
+	}
+
+	// Weapons without ammo always have it. Characters without an inventory (AI) shoot freely.
+	bool HasAmmo(const FCrossguardWeaponRow& Weapon, const FGameplayAbilityActorInfo* ActorInfo)
+	{
+		const UCrossguardInventoryComponent* Inventory = FindInventory(ActorInfo);
+		return Weapon.AmmoId.IsNone() || Inventory == nullptr || Inventory->CountItem(Weapon.AmmoId) > 0;
+	}
 }
 
 bool UCrossguardWeaponAttackAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -37,7 +51,8 @@ bool UCrossguardWeaponAttackAbility::CanActivateAbility(const FGameplayAbilitySp
 	}
 	const UCrossguardEquipmentComponent* Equipment = FindEquipment(ActorInfo);
 	const FCrossguardWeaponRow* Weapon = Equipment != nullptr ? Equipment->GetWeaponRow(Slot) : nullptr;
-	return Weapon != nullptr && Weapon->Delivery != ECrossguardAttackDelivery::None && Equipment->GetAttackInterval(Slot) > 0.0f;
+	return Weapon != nullptr && Weapon->Delivery != ECrossguardAttackDelivery::None && Equipment->GetAttackInterval(Slot) > 0.0f
+		&& HasAmmo(*Weapon, ActorInfo);
 }
 
 void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -57,6 +72,14 @@ void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecH
 
 	if (ActorInfo->IsNetAuthority())
 	{
+		// Each shot uses up one ammo (bows: one arrow).
+		UCrossguardInventoryComponent* Inventory = FindInventory(ActorInfo);
+		if (!Weapon->AmmoId.IsNone() && Inventory != nullptr && !Inventory->ConsumeItem(Weapon->AmmoId))
+		{
+			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+			return;
+		}
+
 		const FCrossguardWeaponItem& Item = Equipment->GetItem(Slot);
 		const FGameplayEffectSpecHandle Spec = MakeWeaponDamageSpec(*Weapon, Item);
 		switch (Weapon->Delivery)

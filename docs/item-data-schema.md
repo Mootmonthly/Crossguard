@@ -33,6 +33,7 @@ checks it.
 | `perRarity` | number ≥ 0 | Added per rarity level. |
 | `attackSpeed` | object or null | `{"attacks": A, "perSeconds": S}`: A attacks every S seconds, so the interval is S / A. `null` for items that do not attack (shields). |
 | `delivery` | enum | How an attack lands: `MeleeSwing`, `Hitscan`, `Projectile`, or `None`. |
+| `ammo` | string or null | `id` of an `Ammo` entry in `Data/Items/Items.json` that each attack uses up (the bow uses `arrow`). `null`: no ammo. Exported as `AmmoId`, `None` for null. |
 | `canParry` | boolean | Right click parries when the off hand is empty. All two-handed weapons except bows; selected one-handed weapons (none yet). Never shields or bows. |
 
 Value at a rarity = `baseValue + perRarity × level`.
@@ -81,7 +82,21 @@ writes `ItemTable.json` (row struct `CrossguardItemRow`).
 | `gridWidth`, `gridHeight` | integer ≥ 1 | Squares one item takes in the inventory grid, unrotated; must fit the main grid (see [Grid size](#grid-size)). |
 | `maxStack` | integer ≥ 1 | Most items one inventory stack holds. Set by category: Ammo 20, Throwable 3, Consumable 5. |
 
-Prototype items: Arrow (1 × 3, stack 20) and Bolt (1 × 2, stack 20).
+Consumables also have these fields; other categories must not have them. The exporter writes
+`HealAmount`, `HealPerRarity`, `HealDuration` and `UseTime` for every row (0 for non-consumables).
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `healAmount` | number > 0 | HP restored at Common. |
+| `healPerRarity` | number ≥ 0 | Extra HP per rarity level (Common 0 ... Mystic 5). |
+| `healDuration` | number > 0 | Seconds the healing is spread over. |
+| `useTime` | number ≥ 0 | Seconds the player channels (holds left click) to use it. 0: instant. |
+
+HP restored at a rarity = `healAmount + healPerRarity × level`.
+
+Prototype items: Arrow (1 × 3, stack 20), Bolt (1 × 2, stack 20), Bandage (1 × 1, stack 5, heals
+10 over 2 s, 2 s use time) and Healing Potion (1 × 1, stack 5, heals 15 + 5 per rarity level over
+10 s, instant).
 
 ## Equipment slots
 
