@@ -8,8 +8,12 @@
     "stat": "AttackDamage",
     "baseValue": 27,
     "perRarity": 2,
-    "attackSpeed": { "attacks": 1.2, "perSeconds": 1 },
-    "delivery": "MeleeSwing"
+    "attackSpeed": {
+      "attacks": 1.2,
+      "perSeconds": 1
+    },
+    "delivery": "MeleeSwing",
+    "canParry": false
   },
   {
     "id": "axe_two_handed",
@@ -20,8 +24,12 @@
     "stat": "AttackDamage",
     "baseValue": 35,
     "perRarity": 3,
-    "attackSpeed": { "attacks": 1, "perSeconds": 1.2 },
-    "delivery": "MeleeSwing"
+    "attackSpeed": {
+      "attacks": 1,
+      "perSeconds": 1.2
+    },
+    "delivery": "MeleeSwing",
+    "canParry": true
   },
   {
     "id": "bow",
@@ -32,8 +40,12 @@
     "stat": "AttackDamage",
     "baseValue": 30,
     "perRarity": 2,
-    "attackSpeed": { "attacks": 1, "perSeconds": 1 },
-    "delivery": "Projectile"
+    "attackSpeed": {
+      "attacks": 1,
+      "perSeconds": 1
+    },
+    "delivery": "Projectile",
+    "canParry": false
   },
   {
     "id": "dagger_one_handed",
@@ -44,8 +56,12 @@
     "stat": "AttackDamage",
     "baseValue": 17,
     "perRarity": 1,
-    "attackSpeed": { "attacks": 3, "perSeconds": 1 },
-    "delivery": "MeleeSwing"
+    "attackSpeed": {
+      "attacks": 3,
+      "perSeconds": 1
+    },
+    "delivery": "MeleeSwing",
+    "canParry": false
   },
   {
     "id": "shield_one_handed",
@@ -57,19 +73,24 @@
     "baseValue": 0.08,
     "perRarity": 0.02,
     "attackSpeed": null,
-    "delivery": "None"
+    "delivery": "None",
+    "canParry": false
   },
   {
     "id": "staff_two_handed",
     "name": "Two-Handed Staff",
-    "weaponType": "Staff",
+    "weaponType": "MagicStaff",
     "handedness": "TwoHanded",
     "range": "Ranged",
     "stat": "MagicDamage",
     "baseValue": 30,
     "perRarity": 3,
-    "attackSpeed": { "attacks": 1, "perSeconds": 1.3 },
-    "delivery": "Projectile"
+    "attackSpeed": {
+      "attacks": 1,
+      "perSeconds": 1.3
+    },
+    "delivery": "Projectile",
+    "canParry": true
   },
   {
     "id": "sword_one_handed",
@@ -80,8 +101,12 @@
     "stat": "AttackDamage",
     "baseValue": 30,
     "perRarity": 2,
-    "attackSpeed": { "attacks": 1, "perSeconds": 1 },
-    "delivery": "MeleeSwing"
+    "attackSpeed": {
+      "attacks": 1,
+      "perSeconds": 1
+    },
+    "delivery": "MeleeSwing",
+    "canParry": false
   },
   {
     "id": "sword_two_handed",
@@ -92,8 +117,12 @@
     "stat": "AttackDamage",
     "baseValue": 37,
     "perRarity": 3,
-    "attackSpeed": { "attacks": 1, "perSeconds": 1.4 },
-    "delivery": "MeleeSwing"
+    "attackSpeed": {
+      "attacks": 1,
+      "perSeconds": 1.4
+    },
+    "delivery": "MeleeSwing",
+    "canParry": true
   },
   {
     "id": "wand_one_handed",
@@ -104,7 +133,11 @@
     "stat": "MagicDamage",
     "baseValue": 15,
     "perRarity": 2,
-    "attackSpeed": { "attacks": 1.2, "perSeconds": 1 },
-    "delivery": "Hitscan"
+    "attackSpeed": {
+      "attacks": 1.2,
+      "perSeconds": 1
+    },
+    "delivery": "Hitscan",
+    "canParry": false
   }
 ]

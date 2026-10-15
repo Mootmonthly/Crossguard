@@ -8,9 +8,10 @@ import sys
 CATEGORIES = {"Active", "Spell", "Art", "Passive"}
 WEAPON_TAGS = {"Melee", "Ranged"}
 TAGS = {"Minion", "Buff", "Debuff", "Summon", "Heal", "Raid"}
-MELEE = {"Sword", "Axe", "Dagger", "Spear", "Mace", "Staff", "Hammer", "Shield", "AnyMelee", "TwoHandedMelee"}
+MELEE = {"Sword", "Axe", "Dagger", "Spear", "Mace", "Quarterstaff", "Hammer", "Shield", "AnyMelee", "TwoHandedMelee"}
 RANGED = {"Bow", "Crossbow", "Sling", "Throwing"}
-WEAPONS = MELEE | RANGED | {"Wand"}
+# Magic casting weapons are neither Melee nor Ranged skill weapons.
+WEAPONS = MELEE | RANGED | {"Wand", "MagicStaff"}
 ARMOR = {"Plate", "PlateAllSlots"}
 STATS = {"STR", "AGI", "INT", "AllAttributes", "MHP", "MHPB", "AD", "AAD", "ADB", "AR", "AP",
          "Dexterity", "ActionSpeed", "MoveSpeed", "PH", "APH", "PHB", "MD", "AMD", "MDB", "MR", "MH",

@@ -5,8 +5,8 @@ import os
 import re
 import sys
 
-WEAPON_TYPES = {"Sword", "Axe", "Dagger", "Spear", "Mace", "Staff", "Hammer", "Shield", "Bow",
-                "Crossbow", "Sling", "Throwing", "Wand", "AnyMelee", "TwoHandedMelee"}
+WEAPON_TYPES = {"Sword", "Axe", "Dagger", "Spear", "Mace", "Quarterstaff", "Hammer", "Shield", "Bow",
+                "Crossbow", "Sling", "Throwing", "Wand", "MagicStaff", "AnyMelee", "TwoHandedMelee"}
 HANDEDNESS = {"OneHanded", "TwoHanded"}
 RANGES = {"Melee", "Ranged"}
 STATS = {"AttackDamage", "MagicDamage", "AttackResistance"}
@@ -58,6 +58,7 @@ WEAPON_SPEC = {
     "perRarity": (lambda v: is_num(v) and v >= 0, "number >= 0"),
     "attackSpeed": (lambda v: v is None or isinstance(v, dict), "object or null"),
     "delivery": enum(DELIVERIES),
+    "canParry": (lambda v: isinstance(v, bool), "boolean"),
 }
 SPEED_SPEC = {
     "attacks": (positive, "number > 0"),
@@ -120,6 +121,9 @@ def validate(weapons):
             err(f"Melee range requires delivery MeleeSwing or None, got '{delivery}'")
         if rng == "Ranged" and delivery in DELIVERIES and delivery not in ("Hitscan", "Projectile"):
             err(f"Ranged range requires delivery Hitscan or Projectile, got '{delivery}'")
+        # Shields block instead; bows cannot parry.
+        if w.get("canParry") is True and w.get("weaponType") in ("Shield", "Bow"):
+            err(f"{w.get('weaponType')} cannot parry")
 
     if ids != sorted(ids):
         for a, b in zip(ids, ids[1:]):

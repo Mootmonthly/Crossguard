@@ -17,15 +17,26 @@ enum class ECrossguardEquipError : uint8
 	None,
 	UnknownWeapon,
 	ShieldInMainHand,
-	OffHandNotShield,
+	TwoHandedInOffHand,
 	TwoHandedWithOffHand,
 	NotReady,
+};
+
+// Mirrors Crossguard::ESecondaryAction: what right click does.
+UENUM(BlueprintType)
+enum class ECrossguardSecondaryAction : uint8
+{
+	None,
+	OffHandAttack,
+	Block,
+	Parry,
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCrossguardEquipmentChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCrossguardEquipRejected, ECrossguardEquipmentSlot, Slot, ECrossguardEquipError, Error);
 
-// Main-hand and off-hand weapons (docs/item-data-schema.md, "Equipment slots").
+// Main-hand and off-hand weapons (docs/item-data-schema.md, "Equipment slots"). Dual wielding:
+// any one-handed weapon fits the off hand.
 //
 // The server validates every change, then re-applies one UCrossguardEquipmentEffect holding the
 // items' stats (shield AR) and the Equipment.Wielding.* tags that mastery effects and skill
@@ -61,9 +72,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	bool SatisfiesWeaponRequirement(const TArray<ECrossguardWeaponType>& AnyOf) const;
 
-	// Seconds between main-hand attacks after Action Speed. 0 if the main hand cannot attack.
+	// Seconds between attacks with the weapon in Slot, after Action Speed. 0 if it cannot attack.
 	UFUNCTION(BlueprintPure, Category = "Equipment")
-	float GetAttackInterval() const;
+	float GetAttackInterval(ECrossguardEquipmentSlot Slot) const;
+
+	UFUNCTION(BlueprintPure, Category = "Equipment")
+	ECrossguardSecondaryAction GetSecondaryAction() const;
 
 	UPROPERTY(BlueprintAssignable, Category = "Equipment")
 	FCrossguardEquipmentChanged OnEquipmentChanged;

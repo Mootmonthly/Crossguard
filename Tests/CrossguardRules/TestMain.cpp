@@ -5,6 +5,7 @@
 #include "CrossguardRules/Loadout.h"
 #include "CrossguardRules/Progression.h"
 #include "CrossguardRules/Stats.h"
+#include "CrossguardRules/Teams.h"
 
 #include <cmath>
 #include <cstdio>
@@ -263,7 +264,7 @@ static void TestEquipment()
 	const FEquippedWeapon Shield{EWeaponType::Shield, EHandedness::OneHanded, true};
 	const FEquippedWeapon Dagger{EWeaponType::Dagger, EHandedness::OneHanded, true};
 	const FEquippedWeapon Bow{EWeaponType::Bow, EHandedness::TwoHanded, false};
-	const FEquippedWeapon Staff{EWeaponType::Staff, EHandedness::TwoHanded, false};
+	const FEquippedWeapon Staff{EWeaponType::MagicStaff, EHandedness::TwoHanded, false};
 	const FEquippedWeapon Wildcard{EWeaponType::AnyMelee, EHandedness::OneHanded, true};
 
 	CHECK(ValidateEquipment({}) == EEquipError::None);
@@ -271,7 +272,11 @@ static void TestEquipment()
 	CHECK(ValidateEquipment({GreatSword, std::nullopt}) == EEquipError::None);
 	CHECK(ValidateEquipment({std::nullopt, Shield}) == EEquipError::None);
 	CHECK(ValidateEquipment({GreatSword, Shield}) == EEquipError::TwoHandedWithOffHand);
-	CHECK(ValidateEquipment({Sword, Dagger}) == EEquipError::OffHandNotShield);
+	// Dual wielding: any one-handed weapon fits the off hand.
+	CHECK(ValidateEquipment({Sword, Dagger}) == EEquipError::None);
+	CHECK(ValidateEquipment({Dagger, Dagger}) == EEquipError::None);
+	CHECK(ValidateEquipment({Sword, GreatSword}) == EEquipError::TwoHandedInOffHand);
+	CHECK(ValidateEquipment({std::nullopt, GreatSword}) == EEquipError::TwoHandedInOffHand);
 	CHECK(ValidateEquipment({Shield, std::nullopt}) == EEquipError::ShieldInMainHand);
 	CHECK(ValidateEquipment({Wildcard, std::nullopt}) == EEquipError::WildcardType);
 
@@ -296,6 +301,27 @@ static void TestEquipment()
 	CHECK(!SatisfiesWeaponRequirement({EWeaponType::TwoHandedMelee}, SwordAndBoard));
 	CHECK(!SatisfiesWeaponRequirement({EWeaponType::TwoHandedMelee}, {Bow, std::nullopt}));
 	CHECK(!SatisfiesWeaponRequirement({EWeaponType::TwoHandedMelee}, {Staff, std::nullopt}));
+}
+
+static void TestSecondaryAction()
+{
+	const FEquippedWeapon Sword{EWeaponType::Sword, EHandedness::OneHanded, true, true, false};
+	const FEquippedWeapon Dagger{EWeaponType::Dagger, EHandedness::OneHanded, true, true, false};
+	const FEquippedWeapon ParryingSword{EWeaponType::Sword, EHandedness::OneHanded, true, true, true};
+	const FEquippedWeapon GreatSword{EWeaponType::Sword, EHandedness::TwoHanded, true, true, true};
+	const FEquippedWeapon Bow{EWeaponType::Bow, EHandedness::TwoHanded, false, true, false};
+	const FEquippedWeapon Shield{EWeaponType::Shield, EHandedness::OneHanded, true, false, false};
+
+	CHECK(SecondaryAction({Sword, Dagger}) == ESecondaryAction::OffHandAttack);
+	CHECK(SecondaryAction({Sword, Shield}) == ESecondaryAction::Block);
+	CHECK(SecondaryAction({std::nullopt, Shield}) == ESecondaryAction::Block);
+	CHECK(SecondaryAction({GreatSword, std::nullopt}) == ESecondaryAction::Parry);
+	CHECK(SecondaryAction({ParryingSword, std::nullopt}) == ESecondaryAction::Parry);
+	CHECK(SecondaryAction({Sword, std::nullopt}) == ESecondaryAction::None);
+	CHECK(SecondaryAction({Bow, std::nullopt}) == ESecondaryAction::None);
+	CHECK(SecondaryAction(FEquipment{}) == ESecondaryAction::None);
+	// Parry needs the off hand empty.
+	CHECK(SecondaryAction({ParryingSword, Dagger}) == ESecondaryAction::OffHandAttack);
 }
 
 static void TestAffixRolls()
@@ -365,6 +391,68 @@ static void TestAffixRolls()
 	CHECK(bSawMax);
 }
 
+static void TestTeams()
+{
+	FTeamRegistry Teams;
+
+	// A party of 8 shares one team.
+	int PartyTeam = -1;
+	for (int I = 0; I < 8; ++I)
+	{
+		const FTeamJoinResult Joined = Teams.Join("p" + std::to_string(I), "party-a");
+		CHECK(Joined.IsValid());
+		if (I == 0)
+		{
+			PartyTeam = Joined.TeamId;
+		}
+		CHECK(Joined.TeamId == PartyTeam);
+	}
+	CHECK(Teams.TeamSize(PartyTeam) == 8);
+
+	// A ninth is refused, and CanJoin agrees without changing anything.
+	CHECK(Teams.CanJoin("p8", "party-a") == ETeamJoinError::TeamFull);
+	CHECK(Teams.Join("p8", "party-a").Error == ETeamJoinError::TeamFull);
+	CHECK(!Teams.TeamOf("p8"));
+	CHECK(Teams.TeamSize(PartyTeam) == 8);
+
+	// Solo players get their own teams.
+	const FTeamJoinResult SoloA = Teams.Join("solo-a", "");
+	const FTeamJoinResult SoloB = Teams.Join("solo-b", "");
+	CHECK(SoloA.IsValid() && SoloB.IsValid());
+	CHECK(SoloA.TeamId != SoloB.TeamId);
+	CHECK(SoloA.TeamId != PartyTeam);
+	CHECK(Teams.TeamSize(SoloA.TeamId) == 1);
+
+	// Another party gets another team.
+	const FTeamJoinResult OtherParty = Teams.Join("q0", "party-b");
+	CHECK(OtherParty.IsValid() && OtherParty.TeamId != PartyTeam);
+
+	CHECK(Teams.AreAllies("p0", "p7"));
+	CHECK(!Teams.AreAllies("p0", "q0"));
+	CHECK(!Teams.AreAllies("solo-a", "solo-b"));
+	CHECK(!Teams.AreAllies("p0", "nobody"));
+	CHECK(Teams.AreAllies("solo-a", "solo-a"));
+
+	CHECK(Teams.Join("p0", "party-a").Error == ETeamJoinError::AlreadyInMatch);
+	CHECK(Teams.Join("", "party-a").Error == ETeamJoinError::InvalidPlayer);
+
+	// Leaving frees a slot; rejoining with the party key returns to the same team.
+	CHECK(Teams.Leave("p3"));
+	CHECK(!Teams.Leave("p3"));
+	CHECK(Teams.TeamSize(PartyTeam) == 7);
+	CHECK(!Teams.TeamOf("p3"));
+	const FTeamJoinResult Rejoined = Teams.Join("p3", "party-a");
+	CHECK(Rejoined.IsValid() && Rejoined.TeamId == PartyTeam);
+
+	// The cap is configurable.
+	FMatchConfig Duos;
+	Duos.MaxTeamSize = 2;
+	FTeamRegistry DuoTeams(Duos);
+	CHECK(DuoTeams.Join("a", "x").IsValid());
+	CHECK(DuoTeams.Join("b", "x").IsValid());
+	CHECK(DuoTeams.Join("c", "x").Error == ETeamJoinError::TeamFull);
+}
+
 static void TestIncludeCycle()
 {
 	FSkillCatalog Catalog;
@@ -384,6 +472,8 @@ int main()
 	TestIncludeCycle();
 	TestRarityAndWeapons();
 	TestEquipment();
+	TestSecondaryAction();
+	TestTeams();
 	TestAffixRolls();
 
 	std::printf("%d checks, %d failures\n", GChecks, GFailures);

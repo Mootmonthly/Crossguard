@@ -25,7 +25,7 @@ checks it.
 | --- | --- | --- |
 | `id` | string | `snake_case`, unique. |
 | `name` | string | Display name. |
-| `weaponType` | enum | A `WeaponType` from `docs/skill-data-schema.md`: `Sword`, `Axe`, `Dagger`, `Shield`, `Bow`, `Wand`, `Staff`, ... Skill requirements match on this. |
+| `weaponType` | enum | A `WeaponType` from `docs/skill-data-schema.md`: `Sword`, `Axe`, `Dagger`, `Shield`, `Bow`, `Wand`, `MagicStaff`, ... Skill requirements match on this. |
 | `handedness` | enum | `OneHanded` or `TwoHanded`. |
 | `range` | enum | `Melee` or `Ranged`. |
 | `stat` | enum | What the weapon provides: `AttackDamage` or `MagicDamage` (base damage per attack), or `AttackResistance` (shields: a fraction added to AR while equipped). |
@@ -33,14 +33,18 @@ checks it.
 | `perRarity` | number ≥ 0 | Added per rarity level. |
 | `attackSpeed` | object or null | `{"attacks": A, "perSeconds": S}`: A attacks every S seconds, so the interval is S / A. `null` for items that do not attack (shields). |
 | `delivery` | enum | How an attack lands: `MeleeSwing`, `Hitscan`, `Projectile`, or `None`. |
+| `canParry` | boolean | Right click parries when the off hand is empty. All two-handed weapons except bows; selected one-handed weapons (none yet). Never shields or bows. |
 
 Value at a rarity = `baseValue + perRarity × level`.
 
 Attack interval = `(perSeconds / attacks) / (1 + ActionSpeed)`. ActionSpeed is the
 character's stat (0 at 10 AGI). The divisor is floored at 0.1.
 
-## Equipment slots (prototype)
+## Equipment slots
 
-- **Main hand**: any weapon.
-- **Off hand**: a one-handed shield, only when the main hand is one-handed.
-- A two-handed weapon takes both hands.
+- **Main hand**: any weapon except a shield. Left click: its basic attack.
+- **Off hand**: any one-handed weapon, including a shield.
+- A two-handed weapon goes in the main hand and leaves the off hand empty (no shield either;
+  two-handed pavise shields come later).
+- **Right click**: off-hand basic attack when dual wielding; block with a shield; parry when the
+  off hand is empty and the main-hand weapon can parry; otherwise nothing.

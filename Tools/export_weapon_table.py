@@ -32,6 +32,7 @@ def row(weapon):
         "Attacks": speed.get("attacks", 0),
         "PerSeconds": speed.get("perSeconds", 0),
         "Delivery": weapon["delivery"],
+        "bCanParry": weapon["canParry"],
     }
 
 

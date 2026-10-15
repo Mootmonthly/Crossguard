@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/CrossguardGameplayAbility.h"
 #include "CoreMinimal.h"
+#include "Items/CrossguardItemTypes.h"
 
 #include "CrossguardWeaponAttackAbility.generated.h"
 
@@ -9,7 +10,8 @@ class ACrossguardProjectile;
 struct FCrossguardWeaponRow;
 struct FCrossguardWeaponItem;
 
-// Basic attack with the main-hand weapon. Damage = the weapon's AD or MD at its rarity, through the
+// Basic attack with the weapon in Slot (left click: main hand; right click when dual wielding:
+// off hand, see UCrossguardOffHandAttackAbility). Each hand keeps its own attack interval. Damage = the weapon's AD or MD at its rarity, through the
 // damage formula. The ability stays active for the attack interval (weapon speed after Action
 // Speed), which is what limits the attack rate.
 //
@@ -26,6 +28,9 @@ class CROSSGUARD_API UCrossguardWeaponAttackAbility : public UCrossguardGameplay
 
 public:
 	UCrossguardWeaponAttackAbility();
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Attack")
+	ECrossguardEquipmentSlot Slot = ECrossguardEquipmentSlot::MainHand;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Attack", meta = (ClampMin = "0"))
 	float MeleeRange = 220.0f;
@@ -48,7 +53,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Attack", meta = (ClampMin = "0"))
 	float ClientRecoveryTolerance = 0.05f;
 
-	// Fails without a main-hand weapon that attacks, so the client never predicts a doomed attack.
+	// Fails without an attacking weapon in Slot, so the client never predicts a doomed attack.
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr,
 		FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
@@ -64,4 +69,14 @@ private:
 
 	UFUNCTION()
 	void OnAttackRecovered();
+};
+
+// Off-hand basic attack (dual wielding).
+UCLASS()
+class CROSSGUARD_API UCrossguardOffHandAttackAbility : public UCrossguardWeaponAttackAbility
+{
+	GENERATED_BODY()
+
+public:
+	UCrossguardOffHandAttackAbility();
 };

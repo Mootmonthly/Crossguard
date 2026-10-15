@@ -50,6 +50,12 @@ namespace Crossguard
 		double CdrCap = 0.50;
 	};
 
+	struct FMatchConfig
+	{
+		// Largest premade team that can enter a match together.
+		int MaxTeamSize = 8;
+	};
+
 	struct FItemConfig
 	{
 		// Affix slots by rarity level (Common..Mystic). PLACEHOLDER, following Dark and Darker.

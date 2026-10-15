@@ -38,11 +38,12 @@ Rulings in `docs/design-decisions.md` override the Drive docs.
 | `items` | string[] | Required items, e.g. `"Pet Gem (Tiger)"`. |
 | `forms` | string[] | Required forms, e.g. `"Bestial"`. |
 
-WeaponType: `Sword`, `Axe`, `Dagger`, `Spear`, `Mace`, `Staff`, `Hammer`, `Shield`, `Bow`,
-`Crossbow`, `Sling`, `Throwing`, `Wand`, `AnyMelee`, `TwoHandedMelee`.
+WeaponType: `Sword`, `Axe`, `Dagger`, `Spear`, `Mace`, `Quarterstaff`, `Hammer`, `Shield`, `Bow`,
+`Crossbow`, `Sling`, `Throwing`, `Wand`, `MagicStaff`, `AnyMelee`, `TwoHandedMelee`.
+`Quarterstaff` is the blunt melee staff; `MagicStaff` is the magic casting staff.
 
 `weaponTag` is `Melee` if every listed weapon is a melee weapon (`Sword`, `Axe`, `Dagger`,
-`Spear`, `Mace`, `Staff`, `Hammer`, `Shield`, `AnyMelee`, `TwoHandedMelee`), `Ranged` if every
+`Spear`, `Mace`, `Quarterstaff`, `Hammer`, `Shield`, `AnyMelee`, `TwoHandedMelee`), `Ranged` if every
 listed weapon is ranged (`Bow`, `Crossbow`, `Sling`, `Throwing`), `null` if `weapons` is empty.
 
 ### Modifier

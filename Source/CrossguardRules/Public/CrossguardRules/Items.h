@@ -43,7 +43,8 @@ namespace Crossguard
 		Dagger,
 		Spear,
 		Mace,
-		Staff,
+		// Blunt two-handed melee (Trauma Mastery).
+		Quarterstaff,
 		Hammer,
 		Shield,
 		Bow,
@@ -51,6 +52,8 @@ namespace Crossguard
 		Sling,
 		Throwing,
 		Wand,
+		// Two-handed magic casting weapon.
+		MagicStaff,
 		// Requirement only: any equipped melee weapon.
 		AnyMelee,
 		// Requirement only: a two-handed melee weapon in the main hand.
@@ -68,6 +71,10 @@ namespace Crossguard
 		EWeaponType Type = EWeaponType::Sword;
 		EHandedness Handedness = EHandedness::OneHanded;
 		bool bMelee = true;
+		// Has a basic attack (shields do not).
+		bool bAttacks = true;
+		// Can parry with right click when the other hand is empty.
+		bool bCanParry = false;
 	};
 
 	struct FEquipment
@@ -81,14 +88,29 @@ namespace Crossguard
 		None,
 		// Shields go in the off hand.
 		ShieldInMainHand,
-		// Only a shield can go in the off hand (prototype; dual wielding undecided).
-		OffHandNotShield,
+		// Two-handed weapons go in the main hand.
+		TwoHandedInOffHand,
+		// A two-handed main hand leaves no hand free (pavises come later).
 		TwoHandedWithOffHand,
 		// AnyMelee / TwoHandedMelee are requirement wildcards, not items.
 		WildcardType,
 	};
 
 	CROSSGUARDRULES_API EEquipError ValidateEquipment(const FEquipment& Equipment);
+
+	// What right click does (docs/design-decisions.md, "Items and weapons").
+	enum class ESecondaryAction
+	{
+		None,
+		// Basic attack with the off-hand weapon (dual wielding).
+		OffHandAttack,
+		// Shield in the off hand.
+		Block,
+		// Empty off hand and a main-hand weapon that can parry.
+		Parry,
+	};
+
+	CROSSGUARDRULES_API ESecondaryAction SecondaryAction(const FEquipment& Equipment);
 
 	// True if the equipment satisfies any one of the listed weapon types. Empty list: true.
 	// A concrete type matches either hand regardless of handedness (a two-handed sword is a Sword).

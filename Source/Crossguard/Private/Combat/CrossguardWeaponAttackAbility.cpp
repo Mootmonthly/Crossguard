@@ -36,8 +36,8 @@ bool UCrossguardWeaponAttackAbility::CanActivateAbility(const FGameplayAbilitySp
 		return false;
 	}
 	const UCrossguardEquipmentComponent* Equipment = FindEquipment(ActorInfo);
-	const FCrossguardWeaponRow* Weapon = Equipment != nullptr ? Equipment->GetWeaponRow(ECrossguardEquipmentSlot::MainHand) : nullptr;
-	return Weapon != nullptr && Weapon->Delivery != ECrossguardAttackDelivery::None && Equipment->GetAttackInterval() > 0.0f;
+	const FCrossguardWeaponRow* Weapon = Equipment != nullptr ? Equipment->GetWeaponRow(Slot) : nullptr;
+	return Weapon != nullptr && Weapon->Delivery != ECrossguardAttackDelivery::None && Equipment->GetAttackInterval(Slot) > 0.0f;
 }
 
 void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -46,8 +46,8 @@ void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecH
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
 	const UCrossguardEquipmentComponent* Equipment = FindEquipment(ActorInfo);
-	const FCrossguardWeaponRow* Weapon = Equipment != nullptr ? Equipment->GetWeaponRow(ECrossguardEquipmentSlot::MainHand) : nullptr;
-	const float Interval = Equipment != nullptr ? Equipment->GetAttackInterval() : 0.0f;
+	const FCrossguardWeaponRow* Weapon = Equipment != nullptr ? Equipment->GetWeaponRow(Slot) : nullptr;
+	const float Interval = Equipment != nullptr ? Equipment->GetAttackInterval(Slot) : 0.0f;
 
 	if (Weapon == nullptr || Interval <= 0.0f || !CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
@@ -57,7 +57,7 @@ void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecH
 
 	if (ActorInfo->IsNetAuthority())
 	{
-		const FCrossguardWeaponItem& Item = Equipment->GetItem(ECrossguardEquipmentSlot::MainHand);
+		const FCrossguardWeaponItem& Item = Equipment->GetItem(Slot);
 		const FGameplayEffectSpecHandle Spec = MakeWeaponDamageSpec(*Weapon, Item);
 		switch (Weapon->Delivery)
 		{
@@ -83,6 +83,11 @@ void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecH
 	UAbilityTask_WaitDelay* Recovery = UAbilityTask_WaitDelay::WaitDelay(this, RecoverySeconds);
 	Recovery->OnFinish.AddDynamic(this, &UCrossguardWeaponAttackAbility::OnAttackRecovered);
 	Recovery->ReadyForActivation();
+}
+
+UCrossguardOffHandAttackAbility::UCrossguardOffHandAttackAbility()
+{
+	Slot = ECrossguardEquipmentSlot::OffHand;
 }
 
 void UCrossguardWeaponAttackAbility::OnAttackRecovered()
@@ -114,7 +119,7 @@ FGameplayEffectSpecHandle UCrossguardWeaponAttackAbility::MakeWeaponDamageSpec(c
 
 void UCrossguardWeaponAttackAbility::ApplyDamageTo(AActor* Target, const FGameplayEffectSpecHandle& Spec) const
 {
-	// TODO: skip allies once teams exist (no friendly fire).
+	// Friendly fire is always on: allies are hit too.
 	if (Target == nullptr || Target == GetAvatarActorFromActorInfo() || !Spec.IsValid())
 	{
 		return;

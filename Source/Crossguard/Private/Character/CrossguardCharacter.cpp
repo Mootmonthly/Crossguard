@@ -20,6 +20,7 @@ ACrossguardCharacter::ACrossguardCharacter()
 	LoadoutComponent = CreateDefaultSubobject<UCrossguardLoadoutComponent>(TEXT("LoadoutComponent"));
 	EquipmentComponent = CreateDefaultSubobject<UCrossguardEquipmentComponent>(TEXT("EquipmentComponent"));
 	WeaponAttackAbilityClass = UCrossguardWeaponAttackAbility::StaticClass();
+	OffHandAttackAbilityClass = UCrossguardOffHandAttackAbility::StaticClass();
 
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
 }
@@ -44,11 +45,31 @@ void ACrossguardCharacter::PossessedBy(AController* NewController)
 	InitializeAbilitySystem();
 	AbilitySystemComponent->InitializeAttributes(Level, AttributeAllocation);
 
-	if (WeaponAttackAbilityClass != nullptr && !bWeaponAttackGranted)
+	if (!bWeaponAttackGranted)
 	{
 		bWeaponAttackGranted = true;
-		AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(WeaponAttackAbilityClass, 1, INDEX_NONE, this));
+		for (const TSubclassOf<UCrossguardWeaponAttackAbility>& AttackClass : {WeaponAttackAbilityClass, OffHandAttackAbilityClass})
+		{
+			if (AttackClass != nullptr)
+			{
+				AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AttackClass, 1, INDEX_NONE, this));
+			}
+		}
 	}
+}
+
+bool ACrossguardCharacter::TrySecondaryAction()
+{
+	switch (EquipmentComponent->GetSecondaryAction())
+	{
+	case ECrossguardSecondaryAction::OffHandAttack:
+		return OffHandAttackAbilityClass != nullptr && AbilitySystemComponent->TryActivateAbilityByClass(OffHandAttackAbilityClass);
+	case ECrossguardSecondaryAction::Block:
+	case ECrossguardSecondaryAction::Parry:
+	case ECrossguardSecondaryAction::None:
+		return false;
+	}
+	return false;
 }
 
 bool ACrossguardCharacter::TryWeaponAttack()

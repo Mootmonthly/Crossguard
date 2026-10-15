@@ -10,7 +10,8 @@
 		"PerRarity": 2,
 		"Attacks": 1.2,
 		"PerSeconds": 1,
-		"Delivery": "MeleeSwing"
+		"Delivery": "MeleeSwing",
+		"bCanParry": false
 	},
 	{
 		"Name": "axe_two_handed",
@@ -23,7 +24,8 @@
 		"PerRarity": 3,
 		"Attacks": 1,
 		"PerSeconds": 1.2,
-		"Delivery": "MeleeSwing"
+		"Delivery": "MeleeSwing",
+		"bCanParry": true
 	},
 	{
 		"Name": "bow",
@@ -36,7 +38,8 @@
 		"PerRarity": 2,
 		"Attacks": 1,
 		"PerSeconds": 1,
-		"Delivery": "Projectile"
+		"Delivery": "Projectile",
+		"bCanParry": false
 	},
 	{
 		"Name": "dagger_one_handed",
@@ -49,7 +52,8 @@
 		"PerRarity": 1,
 		"Attacks": 3,
 		"PerSeconds": 1,
-		"Delivery": "MeleeSwing"
+		"Delivery": "MeleeSwing",
+		"bCanParry": false
 	},
 	{
 		"Name": "shield_one_handed",
@@ -62,12 +66,13 @@
 		"PerRarity": 0.02,
 		"Attacks": 0,
 		"PerSeconds": 0,
-		"Delivery": "None"
+		"Delivery": "None",
+		"bCanParry": false
 	},
 	{
 		"Name": "staff_two_handed",
 		"DisplayName": "Two-Handed Staff",
-		"WeaponType": "Staff",
+		"WeaponType": "MagicStaff",
 		"Handedness": "TwoHanded",
 		"Range": "Ranged",
 		"Stat": "MagicDamage",
@@ -75,7 +80,8 @@
 		"PerRarity": 3,
 		"Attacks": 1,
 		"PerSeconds": 1.3,
-		"Delivery": "Projectile"
+		"Delivery": "Projectile",
+		"bCanParry": true
 	},
 	{
 		"Name": "sword_one_handed",
@@ -88,7 +94,8 @@
 		"PerRarity": 2,
 		"Attacks": 1,
 		"PerSeconds": 1,
-		"Delivery": "MeleeSwing"
+		"Delivery": "MeleeSwing",
+		"bCanParry": false
 	},
 	{
 		"Name": "sword_two_handed",
@@ -101,7 +108,8 @@
 		"PerRarity": 3,
 		"Attacks": 1,
 		"PerSeconds": 1.4,
-		"Delivery": "MeleeSwing"
+		"Delivery": "MeleeSwing",
+		"bCanParry": true
 	},
 	{
 		"Name": "wand_one_handed",
@@ -114,6 +122,7 @@
 		"PerRarity": 2,
 		"Attacks": 1.2,
 		"PerSeconds": 1,
-		"Delivery": "Hitscan"
+		"Delivery": "Hitscan",
+		"bCanParry": false
 	}
 ]

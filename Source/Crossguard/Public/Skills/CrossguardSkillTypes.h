@@ -33,7 +33,8 @@ enum class ECrossguardWeaponType : uint8
 	Dagger,
 	Spear,
 	Mace,
-	Staff,
+	// Blunt two-handed melee (Trauma Mastery).
+	Quarterstaff,
 	Hammer,
 	Shield,
 	Bow,
@@ -41,6 +42,8 @@ enum class ECrossguardWeaponType : uint8
 	Sling,
 	Throwing,
 	Wand,
+	// Two-handed magic casting weapon.
+	MagicStaff,
 	AnyMelee,
 	TwoHandedMelee,
 };

@@ -28,9 +28,14 @@ public:
 	UCrossguardLoadoutComponent* GetLoadoutComponent() const { return LoadoutComponent; }
 	UCrossguardEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
 
-	// Basic attack with the main-hand weapon. Bind to the attack input.
+	// Left click: basic attack with the main-hand weapon.
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Combat")
 	bool TryWeaponAttack();
+
+	// Right click: off-hand attack when dual wielding. Block (shield) and parry are not built yet
+	// and return false.
+	UFUNCTION(BlueprintCallable, Category = "Crossguard|Combat")
+	bool TrySecondaryAction();
 
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
@@ -63,6 +68,10 @@ protected:
 	// Granted on possession.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Combat")
 	TSubclassOf<UCrossguardWeaponAttackAbility> WeaponAttackAbilityClass;
+
+	// Granted on possession.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Combat")
+	TSubclassOf<UCrossguardWeaponAttackAbility> OffHandAttackAbilityClass;
 
 	// Set its SkillCatalog in the character Blueprint.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Abilities")

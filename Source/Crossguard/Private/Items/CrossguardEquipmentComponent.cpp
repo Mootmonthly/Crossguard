@@ -15,7 +15,7 @@ static_assert(static_cast<int>(ECrossguardWeaponType::Axe) == static_cast<int>(C
 static_assert(static_cast<int>(ECrossguardWeaponType::Dagger) == static_cast<int>(Crossguard::EWeaponType::Dagger), "Weapon type enums out of sync");
 static_assert(static_cast<int>(ECrossguardWeaponType::Spear) == static_cast<int>(Crossguard::EWeaponType::Spear), "Weapon type enums out of sync");
 static_assert(static_cast<int>(ECrossguardWeaponType::Mace) == static_cast<int>(Crossguard::EWeaponType::Mace), "Weapon type enums out of sync");
-static_assert(static_cast<int>(ECrossguardWeaponType::Staff) == static_cast<int>(Crossguard::EWeaponType::Staff), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::Quarterstaff) == static_cast<int>(Crossguard::EWeaponType::Quarterstaff), "Weapon type enums out of sync");
 static_assert(static_cast<int>(ECrossguardWeaponType::Hammer) == static_cast<int>(Crossguard::EWeaponType::Hammer), "Weapon type enums out of sync");
 static_assert(static_cast<int>(ECrossguardWeaponType::Shield) == static_cast<int>(Crossguard::EWeaponType::Shield), "Weapon type enums out of sync");
 static_assert(static_cast<int>(ECrossguardWeaponType::Bow) == static_cast<int>(Crossguard::EWeaponType::Bow), "Weapon type enums out of sync");
@@ -23,6 +23,7 @@ static_assert(static_cast<int>(ECrossguardWeaponType::Crossbow) == static_cast<i
 static_assert(static_cast<int>(ECrossguardWeaponType::Sling) == static_cast<int>(Crossguard::EWeaponType::Sling), "Weapon type enums out of sync");
 static_assert(static_cast<int>(ECrossguardWeaponType::Throwing) == static_cast<int>(Crossguard::EWeaponType::Throwing), "Weapon type enums out of sync");
 static_assert(static_cast<int>(ECrossguardWeaponType::Wand) == static_cast<int>(Crossguard::EWeaponType::Wand), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::MagicStaff) == static_cast<int>(Crossguard::EWeaponType::MagicStaff), "Weapon type enums out of sync");
 static_assert(static_cast<int>(ECrossguardWeaponType::AnyMelee) == static_cast<int>(Crossguard::EWeaponType::AnyMelee), "Weapon type enums out of sync");
 static_assert(static_cast<int>(ECrossguardWeaponType::TwoHandedMelee) == static_cast<int>(Crossguard::EWeaponType::TwoHandedMelee), "Weapon type enums out of sync");
 
@@ -42,7 +43,7 @@ namespace
 		case ECrossguardWeaponType::Dagger: return CrossguardTags::Equipment_Wielding_Dagger;
 		case ECrossguardWeaponType::Spear: return CrossguardTags::Equipment_Wielding_Spear;
 		case ECrossguardWeaponType::Mace: return CrossguardTags::Equipment_Wielding_Mace;
-		case ECrossguardWeaponType::Staff: return CrossguardTags::Equipment_Wielding_Staff;
+		case ECrossguardWeaponType::Quarterstaff: return CrossguardTags::Equipment_Wielding_Quarterstaff;
 		case ECrossguardWeaponType::Hammer: return CrossguardTags::Equipment_Wielding_Hammer;
 		case ECrossguardWeaponType::Shield: return CrossguardTags::Equipment_Wielding_Shield;
 		case ECrossguardWeaponType::Bow: return CrossguardTags::Equipment_Wielding_Bow;
@@ -50,6 +51,7 @@ namespace
 		case ECrossguardWeaponType::Sling: return CrossguardTags::Equipment_Wielding_Sling;
 		case ECrossguardWeaponType::Throwing: return CrossguardTags::Equipment_Wielding_Throwing;
 		case ECrossguardWeaponType::Wand: return CrossguardTags::Equipment_Wielding_Wand;
+		case ECrossguardWeaponType::MagicStaff: return CrossguardTags::Equipment_Wielding_MagicStaff;
 		case ECrossguardWeaponType::AnyMelee: return CrossguardTags::Equipment_Wielding_AnyMelee;
 		case ECrossguardWeaponType::TwoHandedMelee: return CrossguardTags::Equipment_Wielding_TwoHandedMelee;
 		}
@@ -62,7 +64,7 @@ namespace
 		{
 		case Crossguard::EEquipError::None: return ECrossguardEquipError::None;
 		case Crossguard::EEquipError::ShieldInMainHand: return ECrossguardEquipError::ShieldInMainHand;
-		case Crossguard::EEquipError::OffHandNotShield: return ECrossguardEquipError::OffHandNotShield;
+		case Crossguard::EEquipError::TwoHandedInOffHand: return ECrossguardEquipError::TwoHandedInOffHand;
 		case Crossguard::EEquipError::TwoHandedWithOffHand: return ECrossguardEquipError::TwoHandedWithOffHand;
 		case Crossguard::EEquipError::WildcardType: return ECrossguardEquipError::UnknownWeapon;
 		}
@@ -121,6 +123,8 @@ Crossguard::FEquipment UCrossguardEquipmentComponent::BuildRulesEquipment(const 
 		Weapon.Type = ToRulesWeaponType(Row->WeaponType);
 		Weapon.Handedness = Row->Handedness == ECrossguardHandedness::TwoHanded ? Crossguard::EHandedness::TwoHanded : Crossguard::EHandedness::OneHanded;
 		Weapon.bMelee = Row->IsMelee();
+		Weapon.bAttacks = Row->Attacks > 0.0f && Row->Delivery != ECrossguardAttackDelivery::None;
+		Weapon.bCanParry = Row->bCanParry;
 		return Weapon;
 	};
 
@@ -141,9 +145,21 @@ bool UCrossguardEquipmentComponent::SatisfiesWeaponRequirement(const TArray<ECro
 	return Crossguard::SatisfiesWeaponRequirement(Required, BuildRulesEquipment(MainHand, OffHand));
 }
 
-float UCrossguardEquipmentComponent::GetAttackInterval() const
+ECrossguardSecondaryAction UCrossguardEquipmentComponent::GetSecondaryAction() const
 {
-	const FCrossguardWeaponRow* Row = GetWeaponRow(ECrossguardEquipmentSlot::MainHand);
+	switch (Crossguard::SecondaryAction(BuildRulesEquipment(MainHand, OffHand)))
+	{
+	case Crossguard::ESecondaryAction::None: return ECrossguardSecondaryAction::None;
+	case Crossguard::ESecondaryAction::OffHandAttack: return ECrossguardSecondaryAction::OffHandAttack;
+	case Crossguard::ESecondaryAction::Block: return ECrossguardSecondaryAction::Block;
+	case Crossguard::ESecondaryAction::Parry: return ECrossguardSecondaryAction::Parry;
+	}
+	return ECrossguardSecondaryAction::None;
+}
+
+float UCrossguardEquipmentComponent::GetAttackInterval(ECrossguardEquipmentSlot Slot) const
+{
+	const FCrossguardWeaponRow* Row = GetWeaponRow(Slot);
 	if (Row == nullptr)
 	{
 		return 0.0f;

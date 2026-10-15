@@ -102,6 +102,10 @@ struct CROSSGUARD_API FCrossguardWeaponRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	ECrossguardAttackDelivery Delivery = ECrossguardAttackDelivery::None;
 
+	// Parries with right click when the off hand is empty.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	bool bCanParry = false;
+
 	bool IsMelee() const { return Range == ECrossguardWeaponRange::Melee; }
 };
 

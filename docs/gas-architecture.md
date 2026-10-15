@@ -96,10 +96,22 @@ Might = one Infinite effect adding 10 to Strength.
   tags (and `AnyMelee`, `TwoHandedMelee`). Mastery effects use these as tag requirements, e.g.
   Sword Mastery's Infinite effect requires `Equipment.Wielding.Sword`, so its bonuses and its
   Melee CDR only apply while a sword is held.
+- Right click: `ACrossguardCharacter::TrySecondaryAction()` attacks with the off-hand weapon
+  (`UCrossguardOffHandAttackAbility`) when dual wielding. Block and parry are not built yet.
 - `ACrossguardCharacter::TryWeaponAttack()` activates `UCrossguardWeaponAttackAbility`: damage is
   the weapon's AD/MD at its rarity; the attack interval (weapon speed ÷ (1 + Action Speed)) limits
   the rate. Melee swings sweep for pawns in front; wands trace on the `Weapon` channel; bows and
   staffs spawn `ACrossguardProjectile` (set per-weapon projectile Blueprints for speed).
+
+## Teams
+
+- `ACrossguardGameMode` (default pawn `ACrossguardCharacter`, player state
+  `ACrossguardPlayerState`) assigns teams on login from the `?Party=<key>` URL option through
+  `Crossguard::FTeamRegistry`: same key, same team, up to 8. Logins past the cap are refused.
+- `ACrossguardPlayerState::TeamId` replicates to everyone; it also implements
+  `IGenericTeamAgentInterface` for AI perception.
+- `UCrossguardTeamLibrary::GetTeamId` / `AreAllies` work on pawns, controllers and player states.
+- Friendly fire is always on: nothing checks teams before applying damage.
 
 ## Checks
 
@@ -114,7 +126,6 @@ and the rules unit tests.
 - Client-side ability system init for pawns without a PlayerState (AI). Players are covered by
   `OnRep_PlayerState`.
 - Animations, weapon-on-weapon collision (fencing), input bindings.
-- Teams: attacks currently damage any actor with an ability system (no friendly-fire check).
 - Affix pool and applying affix stats.
 - Inventory: the server currently trusts the item a client asks to equip. Once inventory exists,
   equip by inventory slot and look the item up on the server.

@@ -92,9 +92,9 @@ namespace Crossguard
 		}
 		if (Equipment.OffHand)
 		{
-			if (Equipment.OffHand->Type != EWeaponType::Shield)
+			if (Equipment.OffHand->Handedness == EHandedness::TwoHanded)
 			{
-				return EEquipError::OffHandNotShield;
+				return EEquipError::TwoHandedInOffHand;
 			}
 			if (Equipment.MainHand && Equipment.MainHand->Handedness == EHandedness::TwoHanded)
 			{
@@ -102,6 +102,23 @@ namespace Crossguard
 			}
 		}
 		return EEquipError::None;
+	}
+
+	ESecondaryAction SecondaryAction(const FEquipment& Equipment)
+	{
+		if (Equipment.OffHand)
+		{
+			if (Equipment.OffHand->Type == EWeaponType::Shield)
+			{
+				return ESecondaryAction::Block;
+			}
+			return Equipment.OffHand->bAttacks ? ESecondaryAction::OffHandAttack : ESecondaryAction::None;
+		}
+		if (Equipment.MainHand && Equipment.MainHand->bCanParry)
+		{
+			return ESecondaryAction::Parry;
+		}
+		return ESecondaryAction::None;
 	}
 
 	bool SatisfiesWeaponRequirement(const std::vector<EWeaponType>& AnyOf, const FEquipment& Equipment)

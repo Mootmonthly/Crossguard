@@ -113,6 +113,15 @@ Independent of category, a skill is:
 
 "Melee Skills -10% Cooldown" style effects apply to skills with the matching weapon tag.
 
+## Teams and friendly fire
+
+- Players enter a match solo or in a premade team of **up to 8**. Matchmaking passes the party
+  key as the `?Party=<key>` travel URL option; the game mode puts everyone with the same key on
+  one team. Without a key, a player is a team of one.
+- **Friendly fire is always on.** This overrides the design doc's "no friendly fire". Teams only
+  decide who counts as an ally (party skills like Multiscale, UI).
+- Idea, not built: an AGI skill "Disable Friendly Fire".
+
 ## Items and weapons
 
 - Rarities: Common, Uncommon, Rare, Epic, Legendary, Mystic (levels 0–5). Rarity raises a
@@ -132,10 +141,30 @@ Independent of category, a skill is:
 | Two-Handed Staff | 30 MD | +3 | once every 1.3 s; slower projectile |
 
 - Action Speed divides the attack interval: interval ÷ (1 + Action Speed).
-- Pending confirmation (current placeholders): affix slots 0/1/2/3/4/5 by rarity; off hand
-  takes only a shield (no dual wielding); a two-handed weapon blocks the off hand; masteries
-  match weapon type regardless of handedness (Sword Mastery works with both swords); the
-  Two-Handed Staff is a ranged magic weapon, not a melee weapon.
+- **Dual wielding**: any one-handed weapon fits the off hand. Left click attacks with the main
+  hand, right click with the off hand. With a shield in the off hand, right click blocks. With the
+  off hand empty, right click parries if the main-hand weapon can parry: every two-handed weapon
+  except bows, and selected one-handed weapons (none chosen yet). Block and parry are not built.
+- A two-handed weapon cannot be used with a shield (two-handed pavise shields come later).
+- Masteries match weapon type regardless of handedness (Sword Mastery covers both swords).
+- Staffs: the Two-Handed Staff is a magic weapon (`MagicStaff`) and does not count for Trauma
+  Mastery. Quarterstaffs (`Quarterstaff`, blunt two-handed melee) come later and do.
+- Shield Bash will be an Art.
+
+### Affixes
+
+Weapons and armor have different affix pools. Weapon pools:
+
+| Weapon damage | Affixes |
+| --- | --- |
+| AD weapons | AAD, Action Speed, AP, True Damage, ADB, CDR, STR, AGI, INT, Dexterity |
+| MD weapons | AMD, Action Speed, Magic Penetration, True Damage, MDB, Cast Speed, CDR, STR, AGI, INT, Dexterity |
+
+- True Damage ignores all resistances.
+- Magic Penetration is new: the magic counterpart of AP.
+- Pending: affix value ranges; affix slots per rarity (placeholder 0/1/2/3/4/5); exactly how True
+  Damage combines with the damage formula; whether affix CDR and Cast Speed apply to every skill
+  category.
 
 ## Formulas
 
@@ -173,4 +202,3 @@ All values live in one config (`FScalingConfig` in `CrossguardRules`):
 
 ## Open questions
 
-- There is no magic penetration stat.

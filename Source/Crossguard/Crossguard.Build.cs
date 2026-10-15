@@ -11,6 +11,7 @@ public class Crossguard : ModuleRules
 			"Core",
 			"CoreUObject",
 			"Engine",
+			"AIModule",
 			"InputCore",
 			"EnhancedInput",
 			"GameplayAbilities",
