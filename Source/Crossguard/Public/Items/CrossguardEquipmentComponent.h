@@ -114,6 +114,11 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Equipment|Armor")
 	FCrossguardArmorEquipRejected OnArmorEquipRejected;
 
+	// Server only. Applies the equipment effect for the current (possibly empty) equipment, so
+	// stats like EmptyArmorSlots are right before the first equip. Call after the ability system
+	// is initialized.
+	void InitializeEquipmentEffect();
+
 	UPROPERTY(BlueprintAssignable, Category = "Equipment")
 	FCrossguardEquipmentChanged OnEquipmentChanged;
 

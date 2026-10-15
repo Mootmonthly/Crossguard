@@ -53,9 +53,9 @@ bool UCrossguardAbilitySystemComponent::InitializeAttributes(int32 Level, const 
 
 	// Each change fires OnDerivationInputChanged; the explicit call below covers the case where
 	// nothing changed.
-	SetNumericAttributeBase(UCrossguardAttributeSet::GetStrengthAttribute(), Allocation.Strength);
-	SetNumericAttributeBase(UCrossguardAttributeSet::GetAgilityAttribute(), Allocation.Agility);
-	SetNumericAttributeBase(UCrossguardAttributeSet::GetIntelligenceAttribute(), Allocation.Intelligence);
+	SetNumericAttributeBase(UCrossguardAttributeSet::GetStrengthAttribute(), static_cast<float>(Allocation.Strength));
+	SetNumericAttributeBase(UCrossguardAttributeSet::GetAgilityAttribute(), static_cast<float>(Allocation.Agility));
+	SetNumericAttributeBase(UCrossguardAttributeSet::GetIntelligenceAttribute(), static_cast<float>(Allocation.Intelligence));
 	RecomputeDerivedStats();
 
 	SetNumericAttributeBase(UCrossguardAttributeSet::GetHealthAttribute(), GetNumericAttribute(UCrossguardAttributeSet::GetMaxHealthAttribute()));

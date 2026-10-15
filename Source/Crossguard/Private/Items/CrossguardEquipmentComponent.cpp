@@ -362,6 +362,14 @@ void UCrossguardEquipmentComponent::ApplyEquip(ECrossguardEquipmentSlot Slot, co
 	OnEquipmentChanged.Broadcast();
 }
 
+void UCrossguardEquipmentComponent::InitializeEquipmentEffect()
+{
+	if (GetOwner() != nullptr && GetOwner()->HasAuthority())
+	{
+		RefreshEquipmentEffect();
+	}
+}
+
 void UCrossguardEquipmentComponent::RefreshEquipmentEffect()
 {
 	UCrossguardAbilitySystemComponent* ASC = GetAbilitySystem();
@@ -441,6 +449,11 @@ void UCrossguardEquipmentComponent::RefreshEquipmentEffect()
 			if (float* Total = Stats.Find(Stat.Stat))
 			{
 				*Total += UCrossguardItemLibrary::GetArmorStatValue(Stat, Piece.Rarity);
+			}
+			else
+			{
+				UE_LOG(LogCrossguard, Warning, TEXT("Armor stat %s on %s is not an equipment stat"), *Stat.Stat.ToString(),
+					*Piece.ArmorId.ToString());
 			}
 		}
 		AddAffixes(Piece.Affixes, Piece.ArmorId);

@@ -51,6 +51,7 @@ void ACrossguardCharacter::PossessedBy(AController* NewController)
 	// Server.
 	InitializeAbilitySystem();
 	AbilitySystemComponent->InitializeAttributes(Level, AttributeAllocation);
+	EquipmentComponent->InitializeEquipmentEffect();
 
 	if (!bWeaponAttackGranted)
 	{
