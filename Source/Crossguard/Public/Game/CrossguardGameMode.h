@@ -7,6 +7,10 @@
 
 #include "CrossguardGameMode.generated.h"
 
+class ACrossguardCharacter;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardPlayerExtracted, ACrossguardCharacter*, Character);
+
 // Match game mode. Assigns teams on login from the "Party" URL option: players joining with the
 // same ?Party=<key> share a team (up to 8); players without one each get their own team.
 // Matchmaking must put the party key in the travel URL.
@@ -33,6 +37,14 @@ public:
 	// XP to the killer's player: PlayerKill for a player-controlled victim, otherwise the victim's
 	// KillXpSource. No XP for killing yourself or an ally.
 	virtual void HandleKill(AActor* Victim, AActor* Killer);
+
+	// Server. Called by an extraction zone: ends the raid for the character's player as a success.
+	// Dead characters (State.Dead) cannot extract.
+	virtual void HandleExtraction(ACrossguardCharacter* Character);
+
+	// After a successful extraction. Hook the trip to the hub here once it exists.
+	UPROPERTY(BlueprintAssignable, Category = "Crossguard")
+	FCrossguardPlayerExtracted OnPlayerExtracted;
 
 	// Raid maps hold XP until extraction and block between-raid actions (learning Skill Gems,
 	// changing attributes). Turn off for a hub / test map where those should work.

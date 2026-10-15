@@ -144,6 +144,13 @@ start; `GrantStashTab()` (server) adds one once tab purchases exist. Between rai
 `RequestMoveInStash` moves, rotates and merges, `RequestUseStashItem` learns a Skill Gem. Copied
 across seamless travel; not saved yet. Shared tabs (subscription) need the backend.
 
+### Extraction
+
+`ACrossguardExtractionZone` (place in raid maps): a living player who stays inside for
+`ExtractSeconds` (placeholder 5 s) extracts through `ACrossguardGameMode::HandleExtraction`, which
+calls `EndRaid(true)` and broadcasts `OnPlayerExtracted`. Leaving for the hub is not built (needs
+the hub and saved progression); the character stays in the map, now between raids.
+
 ### Gold and vendors
 
 - Gold coins are `Currency` items (stacks of 100) while carried. `EndRaid(true)` moves every coin

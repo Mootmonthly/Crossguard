@@ -44,7 +44,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 
 | Item | Needs | Notes |
 | --- | --- | --- |
-| Extraction points | Code, Editor | A volume that ends the raid for a player (`EndRaid(true)`, +35 XP). Placement in levels is editor work. |
+| Extraction points | Editor | Built in code (`ACrossguardExtractionZone`, 5 s placeholder). Needs placing in maps; the trip to the hub needs the hub and saving. |
 | Raid end on failure | Code, Decision | When does a raid end for a dead player: when they leave, after a timer, when the match ends? |
 | Stash | Editor | Built in code: per character, 10 × 30 tabs (up to 3 more at 3000 gold), Skill Gems learnable from it. Needs the stash UI in the hub. Buying tabs waits on gold. |
 | Shared stash tabs | Code, Decision | Subscription benefit: tabs shared by all of an account's characters. Needs accounts and the backend. |

@@ -1,6 +1,8 @@
 #include "Game/CrossguardGameMode.h"
 
 #include "Character/CrossguardCharacter.h"
+#include "AbilitySystem/CrossguardGameplayTags.h"
+#include "AbilitySystemComponent.h"
 #include "Crossguard.h"
 #include "Game/CrossguardPlayerState.h"
 #include "Game/CrossguardTeamLibrary.h"
@@ -137,4 +139,17 @@ void ACrossguardGameMode::HandleKill(AActor* Victim, AActor* Killer)
 	{
 		KillerState->AwardXp(Monster->KillXpSource);
 	}
+}
+
+void ACrossguardGameMode::HandleExtraction(ACrossguardCharacter* Character)
+{
+	ACrossguardPlayerState* PlayerState = Character != nullptr ? Character->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	const UAbilitySystemComponent* ASC = Character != nullptr ? Character->GetAbilitySystemComponent() : nullptr;
+	if (PlayerState == nullptr || !PlayerState->IsInRaid() || ASC == nullptr || ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead))
+	{
+		return;
+	}
+	const int32 Xp = PlayerState->EndRaid(true);
+	UE_LOG(LogCrossguard, Log, TEXT("%s extracted: %d XP banked, %d gold banked in total"), *Character->GetName(), Xp, PlayerState->GetGold());
+	OnPlayerExtracted.Broadcast(Character);
 }
