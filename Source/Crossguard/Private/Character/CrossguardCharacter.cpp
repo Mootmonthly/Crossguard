@@ -33,6 +33,7 @@
 #include "TimerManager.h"
 #include "Skills/CrossguardLoadoutComponent.h"
 #include "Skills/CrossguardSkillAbility.h"
+#include "Skills/CrossguardTrackingComponent.h"
 
 ACrossguardCharacter::ACrossguardCharacter()
 {
@@ -47,6 +48,8 @@ ACrossguardCharacter::ACrossguardCharacter()
 	LoadoutComponent = CreateDefaultSubobject<UCrossguardLoadoutComponent>(TEXT("LoadoutComponent"));
 	EquipmentComponent = CreateDefaultSubobject<UCrossguardEquipmentComponent>(TEXT("EquipmentComponent"));
 	InventoryComponent = CreateDefaultSubobject<UCrossguardInventoryComponent>(TEXT("InventoryComponent"));
+	TrackingComponent = CreateDefaultSubobject<UCrossguardTrackingComponent>(TEXT("TrackingComponent"));
+	TrackingComponent->SetupAttachment(GetRootComponent());
 	WeaponAttackAbilityClass = UCrossguardWeaponAttackAbility::StaticClass();
 	OffHandAttackAbilityClass = UCrossguardOffHandAttackAbility::StaticClass();
 

@@ -21,6 +21,7 @@ struct FInputActionValue;
 class UCrossguardEquipmentComponent;
 class UCrossguardWeaponAttackAbility;
 class UCrossguardLoadoutComponent;
+class UCrossguardTrackingComponent;
 struct FOnAttributeChangeData;
 
 // Player character. Owns its ability system: a character's stats and skills live and die with it,
@@ -275,6 +276,10 @@ protected:
 	// Set its ItemTable in the character Blueprint.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Inventory")
 	TObjectPtr<UCrossguardInventoryComponent> InventoryComponent;
+
+	// [Hunter's Tracking] footprints, drawn on this character's own screen only.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Skills")
+	TObjectPtr<UCrossguardTrackingComponent> TrackingComponent;
 
 	// Set its SkillCatalog in the character Blueprint.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Abilities")
