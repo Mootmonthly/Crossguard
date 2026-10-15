@@ -29,7 +29,8 @@ namespace
 	{
 		return Category == ECrossguardItemCategory::Ammo || Category == ECrossguardItemCategory::Consumable
 			|| Category == ECrossguardItemCategory::Throwable || Category == ECrossguardItemCategory::Material
-			|| Category == ECrossguardItemCategory::Currency || Category == ECrossguardItemCategory::Trinket;
+			|| Category == ECrossguardItemCategory::Currency || Category == ECrossguardItemCategory::Trinket
+			|| Category == ECrossguardItemCategory::Tool;
 	}
 
 	FCrossguardInventoryResult Fail(ECrossguardInventoryError Error)
@@ -64,6 +65,7 @@ static_assert(static_cast<int>(ECrossguardItemCategory::Consumable) == static_ca
 static_assert(static_cast<int>(ECrossguardItemCategory::Throwable) == static_cast<int>(Crossguard::EItemCategory::Throwable), "Item category enums out of sync");
 static_assert(static_cast<int>(ECrossguardItemCategory::Currency) == static_cast<int>(Crossguard::EItemCategory::Currency), "Item category enums out of sync");
 static_assert(static_cast<int>(ECrossguardItemCategory::Trinket) == static_cast<int>(Crossguard::EItemCategory::Trinket), "Item category enums out of sync");
+static_assert(static_cast<int>(ECrossguardItemCategory::Tool) == static_cast<int>(Crossguard::EItemCategory::Tool), "Item category enums out of sync");
 static_assert(static_cast<int>(ECrossguardItemCategory::Other) == static_cast<int>(Crossguard::EItemCategory::Other), "Item category enums out of sync");
 static_assert(static_cast<int>(ECrossguardInventoryContainer::Main) == static_cast<int>(Crossguard::EContainerKind::Main), "Container enums out of sync");
 static_assert(static_cast<int>(ECrossguardInventoryContainer::Backpack) == static_cast<int>(Crossguard::EContainerKind::Backpack), "Container enums out of sync");
@@ -183,6 +185,7 @@ bool UCrossguardInventoryComponent::GetGridSize(const FCrossguardInventoryItem& 
 	case ECrossguardItemCategory::Material:
 	case ECrossguardItemCategory::Currency:
 	case ECrossguardItemCategory::Trinket:
+	case ECrossguardItemCategory::Tool:
 	case ECrossguardItemCategory::Other:
 		break;
 	}

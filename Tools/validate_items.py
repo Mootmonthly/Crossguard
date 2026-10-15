@@ -5,9 +5,9 @@ import os
 import re
 import sys
 
-CATEGORIES = {"Ammo", "Consumable", "Throwable", "Material", "Currency", "Trinket"}
+CATEGORIES = {"Ammo", "Consumable", "Throwable", "Material", "Currency", "Trinket", "Tool"}
 GRID_WIDTH, GRID_HEIGHT = 10, 5  # main inventory grid
-# Stack size is set per category (docs/design-decisions.md). Materials and trinkets are not ruled yet.
+# Stack size is set per category (docs/design-decisions.md). Materials, trinkets and tools are not ruled yet.
 STACK_BY_CATEGORY = {"Ammo": 20, "Throwable": 3, "Consumable": 5, "Currency": 100}
 ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 
@@ -67,6 +67,22 @@ CONSUMABLE_SPEC = {
     "useTime": (lambda v: is_num(v) and v >= 0, "number >= 0"),
 }
 
+WEAPON_TYPES = {
+    "Sword", "Axe", "Dagger", "Spear", "Mace", "Quarterstaff", "Hammer", "Shield",
+    "Bow", "Crossbow", "Sling", "Throwing", "Wand", "MagicStaff",
+}
+
+THROWABLE_SPEC = {
+    "throwDamageType": enum({"Attack", "Magic"}),
+    "throwDamage": (lambda v: is_num(v) and v > 0, "number > 0"),
+    "throwDamagePerRarity": (lambda v: is_num(v) and v >= 0, "number >= 0"),
+    "throwRadius": (lambda v: is_num(v) and v >= 0, "number >= 0"),
+    "throwDotPerSecond": (lambda v: is_num(v) and v >= 0, "number >= 0"),
+    "throwDotSeconds": (lambda v: is_num(v) and v >= 0, "number >= 0"),
+    "countsAsWeapon": (lambda v: v is None or (isinstance(v, str) and v in WEAPON_TYPES),
+                       "null or one of %s" % sorted(WEAPON_TYPES)),
+}
+
 
 def validate(items):
     errors = []
@@ -89,16 +105,27 @@ def validate(items):
                 err("duplicate id")
             seen.add(iid)
             ids.append(iid)
+        spec = dict(ITEM_SPEC)
         if isinstance(it, dict) and it.get("category") == "Consumable":
-            check_fields(it, {**ITEM_SPEC, **CONSUMABLE_SPEC}, "item", err)
-        else:
-            check_fields(it, ITEM_SPEC, "item", err)
+            spec.update(CONSUMABLE_SPEC)
+        if isinstance(it, dict) and it.get("category") == "Throwable":
+            spec.update(THROWABLE_SPEC)
+        check_fields(it, spec, "item", err)
         if not isinstance(it, dict):
             continue
         if it.get("category") != "Consumable":
             for name in CONSUMABLE_SPEC:
                 if name in it:
                     err(f"field '{name}' is only allowed for Consumable items")
+        if it.get("category") != "Throwable":
+            for name in THROWABLE_SPEC:
+                if name in it:
+                    err(f"field '{name}' is only allowed for Throwable items")
+        elif is_num(it.get("throwDotPerSecond")) and is_num(it.get("throwDotSeconds")):
+            if it["throwDotPerSecond"] > 0 and it["throwDotSeconds"] <= 0:
+                err("throwDotSeconds must be > 0 when throwDotPerSecond > 0")
+            if it["throwDotPerSecond"] == 0 and it["throwDotSeconds"] != 0:
+                err("throwDotSeconds must be 0 when throwDotPerSecond is 0")
 
         gw, gh = it.get("gridWidth"), it.get("gridHeight")
         if grid_size(gw) and grid_size(gh) and (max(gw, gh) > GRID_WIDTH or min(gw, gh) > GRID_HEIGHT):

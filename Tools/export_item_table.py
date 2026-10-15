@@ -32,6 +32,14 @@ def row(item):
         "HealPerRarity": item.get("healPerRarity", 0),
         "HealDuration": item.get("healDuration", 0),
         "UseTime": item.get("useTime", 0),
+        "ThrowDamageType": item.get("throwDamageType", "Attack"),
+        "ThrowDamage": item.get("throwDamage", 0),
+        "ThrowDamagePerRarity": item.get("throwDamagePerRarity", 0),
+        "ThrowRadiusMeters": item.get("throwRadius", 0),
+        "ThrowDotPerSecond": item.get("throwDotPerSecond", 0),
+        "ThrowDotSeconds": item.get("throwDotSeconds", 0),
+        "CountsAsWeapon": item.get("countsAsWeapon") or "Sword",
+        "bHasCountsAsWeapon": item.get("countsAsWeapon") is not None,
     }
 
 

@@ -44,6 +44,23 @@
     "sellPerRarity": 50
   },
   {
+    "id": "explosive_bottle",
+    "name": "Explosive Bottle",
+    "category": "Throwable",
+    "gridWidth": 1,
+    "gridHeight": 3,
+    "maxStack": 3,
+    "sellValue": 0,
+    "sellPerRarity": 0,
+    "throwDamageType": "Magic",
+    "throwDamage": 10,
+    "throwDamagePerRarity": 0,
+    "throwRadius": 3,
+    "throwDotPerSecond": 3,
+    "throwDotSeconds": 5,
+    "countsAsWeapon": null
+  },
+  {
     "id": "gold_coin",
     "name": "Gold Coin",
     "category": "Currency",
@@ -68,6 +85,16 @@
     "useTime": 0
   },
   {
+    "id": "lockpick",
+    "name": "Lockpick",
+    "category": "Tool",
+    "gridWidth": 1,
+    "gridHeight": 1,
+    "maxStack": 3,
+    "sellValue": 0,
+    "sellPerRarity": 0
+  },
+  {
     "id": "ruby",
     "name": "Ruby",
     "category": "Trinket",
@@ -86,5 +113,39 @@
     "maxStack": 1,
     "sellValue": 50,
     "sellPerRarity": 50
+  },
+  {
+    "id": "throwing_axe",
+    "name": "Throwing Axe",
+    "category": "Throwable",
+    "gridWidth": 1,
+    "gridHeight": 3,
+    "maxStack": 3,
+    "sellValue": 0,
+    "sellPerRarity": 0,
+    "throwDamageType": "Attack",
+    "throwDamage": 25,
+    "throwDamagePerRarity": 2,
+    "throwRadius": 0,
+    "throwDotPerSecond": 0,
+    "throwDotSeconds": 0,
+    "countsAsWeapon": "Axe"
+  },
+  {
+    "id": "throwing_knife",
+    "name": "Throwing Knife",
+    "category": "Throwable",
+    "gridWidth": 1,
+    "gridHeight": 3,
+    "maxStack": 3,
+    "sellValue": 0,
+    "sellPerRarity": 0,
+    "throwDamageType": "Attack",
+    "throwDamage": 15,
+    "throwDamagePerRarity": 2,
+    "throwRadius": 0,
+    "throwDotPerSecond": 0,
+    "throwDotSeconds": 0,
+    "countsAsWeapon": "Dagger"
   }
 ]
