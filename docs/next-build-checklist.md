@@ -60,6 +60,21 @@ On `BP_CrossguardCharacter` → **Crossguard | Debug**:
 | Place an `ACrossguardDoor` (give it a mesh), press F | It snaps open and closed. |
 | Tick the door's Lock → bLocked, press F | Nothing without a lockpick; with the `Ability.Lockpicking` tag it opens after 5 s. |
 
+Skills: put them in `DebugSkills` (Skill Capacity permitting; raise `Level` with
+`bUseDebugProgression`), select with Q, cast with E. A second PIE client or a dummy is the target.
+
+| Test | Expected |
+| --- | --- |
+| `fireball` at the dummy | 50+ damage on hit; standing within 2 m of the blast hurts you for 15. |
+| `heal` at a damaged dummy, then at nothing | The dummy heals 20; then you heal 20. |
+| `mute` at the second client, who then tries a skill and left click | Skills fail, left click still attacks; 5 damage per second for 10 s. `mute` at nothing: no cooldown. |
+| `eldritch_shield`, then take a sword hit | -10 HP on cast; the hit is absorbed (`AttackShield` in `showdebug abilitysystem`). |
+| `chop_down` with an axe, then hit the dummy | 110% damage, the dummy slowed for 2 s. A flying target falls. |
+| `shooting_star` with a sword, facing the second client | You dash 10 m through them; they take 50 and get `State.Blinded` for 2 s. |
+| `dragonification` | Max HP +50%, 1 / 2 and other skills refused; Flare Breath and Flight appear on Q; all gone after 45 s. |
+| `flight`: Space / Left Ctrl | You rise and descend; you fall after 20 s. |
+| `summon_skeletons` (needs a NavMesh Bounds Volume) | 6 cylinders appear, attack the dummy, follow you otherwise, vanish after 60 s; casting again replaces them. |
+
 Passive skills: put `heroic_might` (or a mastery) in `DebugSkills` and check
 `showdebug abilitysystem`: Strength +10 (masteries only while their weapon is held).
 

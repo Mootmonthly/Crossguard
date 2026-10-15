@@ -15,12 +15,12 @@ order changes.
 
 | Area | What exists |
 | --- | --- |
-| Rules library | Engine-free C++ for formulas, progression, XP, loadouts, items, affixes, armor, teams, inventory grid; 339 unit-test checks. |
+| Rules library | Engine-free C++ for formulas, progression, XP, loadouts, items, affixes, armor, teams, inventory grid; 386 unit-test checks. |
 | Data pipeline | JSON → validators → Unreal data tables, cross-checked against the C++ structs (`Tools/run_checks.sh`). 49 skills, 9 weapons, 16 armor pieces, 23 affixes, 4 general items. |
 | Character | First-person camera, Enhanced Input built in code, GAS stats derived from STR/AGI/INT. |
 | Combat | Weapon attacks (melee sweep, hitscan wand, projectiles), damage and healing formulas, dual wield, cooldowns with CDR cap. Bows use arrows. |
 | Equipment | Main hand / off hand, six armor slots, rolled affixes, equipment stats and tags. |
-| Skills | Loadout validation (Capacity, bundles, superseded skills), Skill Library gating. Passive stat bonuses play from the skill data. **No active skills implemented yet.** |
+| Skills | Loadout validation (Capacity, bundles, superseded skills), Skill Library gating. Passive stat bonuses play from the skill data. 10 skills playable from C++: Fireball, Heal, Mute, Eldritch Shield, Chop Down, Shooting Star, Dragonification (Flare Breath, Flight), Summon Skeletons. |
 | Progression | XP sources, level curve, raid XP banked on extraction, attribute allocation, paid respec tokens. Session only, not saved. |
 | Stash | Per-character tabs of 10 × 30, between raids only. Not saved yet. |
 | Inventory | Server-authoritative 10 × 5 grid, Backpack and Quiver, stacking by type and rarity, equip through the inventory, Skill Gems, hotbar keys 3–7 for potions, bandages and throwables, two weapon sets on 1 and 2. |
@@ -35,7 +35,7 @@ Several systems were written without an editor build. Do this before building mo
 
 | Item | Needs | Notes |
 | --- | --- | --- |
-| Build and fix compile errors | Editor | Progression, inventory, bodies, revive, ammo, consumables, stash, gold, vendors, lockpicking, doors and extraction are uncompiled. |
+| Build and fix compile errors | Editor | Progression, inventory, bodies, revive, ammo, consumables, stash, gold, vendors, lockpicking, doors, extraction and the 10 skills are uncompiled. |
 | Import new tables | Editor | `DT_Items` (row `CrossguardItemRow`); reimport `DT_Weapons`, `DT_Armor`. Set `InventoryComponent.ItemTable`. |
 | Playtest each system | Editor | Debug options on the character: `DebugInventory`, `bDebugLootTakesAll`, `DebugReviveDelay`, `bUseDebugProgression`; turn off the game mode's `bIsRaid` to test the stash and vendors. |
 | Two-client PIE check | Editor | `Equipment.Wielding.*` tags reach other clients; bodies ragdoll on every client. |
@@ -63,11 +63,12 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 
 | Item | Needs | Notes |
 | --- | --- | --- |
-| Implement skills | Code | 49 skills in the data, none playable yet. Start with the ones the first raids need. |
+| Implement skills | Code | 10 of 49 playable (first batch). Next batch: pick from the data. |
+| Skill visuals | Editor | Fireball, breath, shield, Blind screen effect, dragon form, skeleton meshes. |
 | Passives on others and free-text mechanics | Code | Data-driven passives cover Self stat modifiers (masteries, Heroic Might, Cor Leonis, ...); party auras, on-hit slows and mechanics like Hunter's Tracking still need code. |
 | Block (shields) and parry | Code | Right-click actions already chosen by the rules; not built. |
-| Status effects | Code | Slow, Mute, Silence, crowd control, damage shields (Eldritch Shield). |
-| Minions | Code | Summon Tiger and minion CDR. |
+| Status effects | Code | Silence, stuns and other crowd control. (Slow, Mute, Blind and Attack Damage shields exist.) |
+| Minions | Code | Summon Tiger, Summon Greater Demon, minion CDR. Skeletons exist. |
 | Animations, first-person arms | Editor | Melee hits are sphere sweeps until weapon collision exists. |
 | Weapon-on-weapon collision (fencing) | Code, Editor | |
 

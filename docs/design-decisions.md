@@ -106,6 +106,25 @@ Code and data must follow it.
 | Hunter's Tracking | Always on (Passive) |
 | Armor Mastery | Multiplies AR by 1.10 (30% AR becomes 33%) |
 
+### First playable skills
+
+Rulings for the first skills built in C++ (defaults proposed and accepted, plus the changes noted).
+
+| Skill | Ruling |
+| --- | --- |
+| Fireball | Flies at **30 m/s** where you aim. 50 (0.5) Magic Damage to what it hits, 15 to everyone else within 2 m, you included. Explodes after 10 s if it hits nothing. |
+| Heal | 20 Magical Healing to whoever is under the crosshair within 15 m, **ally or enemy**; yourself if nobody is there. |
+| Mute | Target under the crosshair within 20 m. 10 s: no skills, passives off, 5 Magic Damage per second. **Basic attacks still work.** With nobody there it fails and the cooldown does not start. |
+| Eldritch Shield | Lose 10 HP (never below 1); a 12 s barrier absorbs 45 Attack Damage. Magic Damage passes through. |
+| Chop Down | Readies the next melee axe attack for 10 s. That attack deals 110% weapon damage, slows everyone it hits by 50% for 2 s, and Grounds flying targets (their Flight ends). Used up hit or miss. |
+| Shooting Star | Dash 10 m in 0.3 s through characters (not walls); 50 Attack Damage to everyone in the path, once each. Everyone within 30 m looking at you (within 45°, line of sight) is Blinded 2 s, **allies included**. |
+| Dragonification | 45 s: +50% Max HP (Health keeps its percentage), +25% Attack and Magic Resistance, Flare Breath and Flight granted. Weapons are put away and cannot be drawn; other skills cannot be cast. Passives keep working. |
+| Flare Breath | 3 s, 6 m, 60° cone where you aim. 40 (0.5) Magic Damage the first time someone is caught, then 25 (0.5) per second while inside (every 0.25 s). |
+| Flight | 20 s. Space rises, Left Ctrl descends, fly speed = walk speed. You fall when it ends, when Dragonification ends, or when Grounded. |
+| Summon Skeletons | 5 Warriors (40 HP, 10 Attack Damage per second in melee) and 1 Mage (30 HP, Fireball every 8 s, stops 8 m from its target) for 60 s. Recasting dismisses the old ones. Targets: nearest enemy player within 30 m, else nearest enemy non-player, else follow you. On your team; their kills give you the XP; killing them gives none. |
+
+All skills end on death.
+
 ### Skill categories
 
 Each skill has exactly one category. Cast time and CDR stats are split by category.

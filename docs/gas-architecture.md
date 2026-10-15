@@ -36,6 +36,31 @@ Every skill is a subclass (C++ or Blueprint) of `UCrossguardGameplayAbility`. Se
 - `CooldownTags`: one unique tag per skill, e.g. `Cooldown.Skill.Fireball`.
 - `RequiredWeapons`: any one must be equipped to activate (e.g. Cleave: `AnyMelee`).
 
+### Skills built in C++
+
+These need no editor setup: `CrossguardNativeSkills` maps their ids to classes, and the catalog
+falls back to it when `AbilityClasses` has no entry. An `AbilityClasses` entry (e.g. a Blueprint
+subclass with visuals) wins. Catalog data validation also flags cooldowns that differ from the data.
+
+| Skill | Class | Notes |
+| --- | --- | --- |
+| Fireball | `UCrossguardFireballAbility` | `ACrossguardSpellProjectile` (direct hit + splash). `LaunchFireball` is shared with the Skeleton Mage. |
+| Heal | `UCrossguardHealAbility` | `FindAimedTarget` (pawn sweep from the eyes). |
+| Mute | `UCrossguardMuteAbility` | `UCrossguardMuteEffect`: periodic damage + `State.Muted`. Every skill has `State.Muted` in `ActivationBlockedTags` except basic attacks and passives; data passives remove their stats while muted. |
+| Eldritch Shield | `UCrossguardEldritchShieldAbility` | `AttackShield` attribute, used up by the damage execution before Health (Attack Damage only). |
+| Chop Down | `UCrossguardChopDownAbility` | Adds `State.ChopDownReady`; `UCrossguardWeaponAttackAbility` reads it on the next melee axe attack. |
+| Shooting Star | `UCrossguardShootingStarAbility` | Root motion dash (predicted); path damage and Blind (`State.Blinded`) on the server. |
+| Dragonification | `UCrossguardDragonificationAbility` | `State.Dragonified` (blocks other skills and drawing weapons), `UCrossguardTimedStatsEffect`, grants Flare Breath and Flight until it ends. |
+| Flare Breath | `UCrossguardFlareBreathAbility` | Server timer every 0.25 s, cone overlap. |
+| Flight | `UCrossguardFlightAbility` | `MOVE_Flying` on server and owner; asset tag `Ability.Flight`, owned tag `State.Flying`. |
+| Summon Skeletons | `UCrossguardSummonSkeletonsAbility` | `ACrossguardMinion` + `ACrossguardMinionController`. Minions need a NavMesh to path; without one they walk straight. |
+
+Shared helpers are on `UCrossguardSkillAbility`: damage / healing specs, `ApplyStatus` (timed state
+tag), `ApplySlow`, `GetAim`, `FindAimedTarget`.
+
+Blinded has no screen effect yet: the HUD should white out while the local character has
+`State.Blinded`.
+
 ### Cooldowns
 
 Every ability uses the native `UCrossguardCooldownEffect` by default (no asset needed). The ability
@@ -66,7 +91,8 @@ The executions call the same formulas as the unit tests in `Tests/CrossguardRule
 2. In the editor, import `SkillTable.json` as a Data Table with row struct `CrossguardSkillRow`
    (first time: drag it into `Content/Data/`, save as `DT_Skills`). Later: right-click → Reimport.
 3. Create one `CrossguardSkillCatalog` data asset (`DA_SkillCatalog`). Set `SkillTable` to
-   `DT_Skills` and add each implemented skill to `AbilityClasses` (skill id → ability class).
+   `DT_Skills`. Skills built in C++ are found automatically; add an `AbilityClasses` entry
+   (skill id → ability class) only for Blueprint skills or Blueprint subclasses with visuals.
    Data validation flags ids not in the table and classes whose `SkillId` or category disagree.
 
 ## Loadout
@@ -303,7 +329,7 @@ and the rules unit tests.
 - Passive effects on other characters (party auras, on-hit slows) and free-text mechanics.
 - Restricting when the loadout can change (e.g. only between raids).
 - Saving progression; extraction points; a revive spell.
-- Shields (Eldritch Shield), CC, Mute, Silence, minions.
+- Silence, stuns and other CC; Blind's screen effect; skeleton meshes and animations.
 - Client-side ability system init for pawns without a PlayerState (AI). Players are covered by
   `OnRep_PlayerState`.
 - Animations, weapon-on-weapon collision (fencing).
