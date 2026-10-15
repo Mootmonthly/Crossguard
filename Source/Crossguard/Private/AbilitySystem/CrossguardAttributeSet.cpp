@@ -1,6 +1,7 @@
 #include "AbilitySystem/CrossguardAttributeSet.h"
 
 #include "AbilitySystem/CrossguardGameplayTags.h"
+#include "Character/CrossguardCharacter.h"
 #include "Crossguard.h"
 #include "Engine/World.h"
 #include "Game/CrossguardGameMode.h"
@@ -125,6 +126,11 @@ void UCrossguardAttributeSet::PostGameplayEffectExecute(const FGameplayEffectMod
 			{
 				// Server. Clients add the same tag in OnRep_Health when the replicated Health reaches 0.
 				MarkDead();
+				ACrossguardCharacter* Character = Cast<ACrossguardCharacter>(GetOwningActor());
+				if (bWasAlive && Character != nullptr)
+				{
+					Character->HandleDeath();
+				}
 				const UWorld* World = GetOwningActor() != nullptr ? GetOwningActor()->GetWorld() : nullptr;
 				ACrossguardGameMode* GameMode = World != nullptr ? World->GetAuthGameMode<ACrossguardGameMode>() : nullptr;
 				if (bWasAlive && GameMode != nullptr)

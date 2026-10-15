@@ -79,7 +79,7 @@ writes `ItemTable.json` (row struct `CrossguardItemRow`).
 | `name` | string | Display name. |
 | `category` | enum | `Ammo`, `Consumable`, `Throwable`, `Material`. Mirrors the same-named entries of `ECrossguardItemCategory`. |
 | `gridWidth`, `gridHeight` | integer ≥ 1 | Squares one item takes in the inventory grid, unrotated; must fit the main grid (see [Grid size](#grid-size)). |
-| `maxStack` | integer ≥ 1 | Most items one inventory stack holds. |
+| `maxStack` | integer ≥ 1 | Most items one inventory stack holds. Set by category: Ammo 20, Throwable 3, Consumable 5. |
 
 Prototype items: Arrow (1 × 3, stack 20) and Bolt (1 × 2, stack 20).
 

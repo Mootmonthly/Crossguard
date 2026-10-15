@@ -11,6 +11,7 @@
 
 #include "CrossguardCharacter.generated.h"
 
+class ACrossguardLootContainer;
 class UCameraComponent;
 class UCrossguardAttributeSet;
 class UInputAction;
@@ -48,6 +49,15 @@ public:
 	// and return false.
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Combat")
 	bool TrySecondaryAction();
+
+	// E: opens the loot container (a body, later a chest) in front of the character, within its
+	// InteractRange. Runs on the server; clients forward it.
+	UFUNCTION(BlueprintCallable, Category = "Crossguard|Interaction")
+	void TryInteract();
+
+	// Server. Called when Health reaches 0: everything the character carries and wears moves into a
+	// lootable body at its feet. Nothing is spawned if it carried nothing.
+	void HandleDeath();
 
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	// Adds the mapping context for the local player.
@@ -101,6 +111,10 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
 	TArray<FCrossguardInventoryItem> DebugInventory;
 
+	// Testing until the inventory UI exists: opening a container takes everything that fits.
+	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
+	bool bDebugLootTakesAll = false;
+
 	// Replace each debug item's affixes with a random roll for its rarity.
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
 	bool bRollDebugAffixes = false;
@@ -130,6 +144,13 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
 	TObjectPtr<UInputAction> SecondaryActionInput;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> InteractAction;
+
+	// Spawned on death to hold what the character carried.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Inventory")
+	TSubclassOf<ACrossguardLootContainer> BodyContainerClass;
 
 	// MaxWalkSpeed at 100% MoveSpeed.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Movement", meta = (ClampMin = "0"))
@@ -171,6 +192,11 @@ private:
 	void OnLook(const FInputActionValue& Value);
 	void OnAttack();
 	void OnSecondary();
+
+	UFUNCTION(Server, Reliable)
+	void ServerInteract();
+	// Server. The nearest container within reach that the camera is facing.
+	ACrossguardLootContainer* FindInteractTarget() const;
 
 	void InitializeAbilitySystem();
 	// Copies level and allocation from the player state. Returns true if either changed.

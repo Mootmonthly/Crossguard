@@ -127,7 +127,19 @@ camera direction. The body mesh is hidden from its owner until first-person arms
 - `AddItem` (server) tops up stacks first, then finds the first free spot; ammo tries the Quiver
   first. Dropping a stack on the top-left square of the same item merges them.
 - Using a Skill Gem learns its skill (between raids) and consumes the gem.
+- Stacks combine only the same item at the same rarity.
 - Testing: the character's `DebugInventory` items are added at spawn.
+
+### Bodies and loot containers
+
+- On death (`ACrossguardCharacter::HandleDeath`), everything the character wears and carries moves
+  into an `ACrossguardLootContainer` spawned where it died: a 10-wide grid that grows taller to fit.
+- E (`TryInteract`) opens the nearest container in front of you within its `InteractRange`
+  (250 cm). Then `RequestTakeFromContainer(ItemId)` / `RequestPutInContainer(ItemId)` move stacks;
+  the server re-checks range and that you are alive on every move. Dead characters cannot use their
+  inventory.
+- Container contents replicate to everyone; the open container replicates to its looter.
+- Testing without UI: `bDebugLootTakesAll` on the character takes everything that fits on open.
 
 ## Armor
 
@@ -204,7 +216,8 @@ and the rules unit tests.
   `OnRep_PlayerState`.
 - Animations, weapon-on-weapon collision (fencing).
 - Affix pool and applying affix stats.
-- Inventory UI, world pickups and drops, the death drop, stash and guild bank, splitting stacks,
-  using consumables, bows consuming arrows.
+- Inventory and loot UI, single-item drops and pickups in the world, stash and guild bank,
+  splitting stacks, using consumables, bows consuming arrows, treasure chests (reuse
+  `ACrossguardLootContainer`), reviving, a body that stays when the pawn is removed.
 - Verify in two-client PIE (`showdebug abilitysystem`) that `Equipment.Wielding.*` tags reach
   simulated proxies; they are added to the equipment effect spec's dynamic granted tags.

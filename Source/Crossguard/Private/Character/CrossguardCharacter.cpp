@@ -14,7 +14,9 @@
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
 #include "Engine/DataTable.h"
+#include "EngineUtils.h"
 #include "Items/CrossguardEquipmentComponent.h"
+#include "Items/CrossguardLootContainer.h"
 #include "Net/UnrealNetwork.h"
 #include "Skills/CrossguardLoadoutComponent.h"
 
@@ -47,6 +49,8 @@ ACrossguardCharacter::ACrossguardCharacter()
 	FirstPersonCamera->bUsePawnControlRotation = true;
 
 	GetMesh()->SetOwnerNoSee(true);
+
+	BodyContainerClass = ACrossguardLootContainer::StaticClass();
 }
 
 void ACrossguardCharacter::EnsureDefaultInput()
@@ -64,6 +68,7 @@ void ACrossguardCharacter::EnsureDefaultInput()
 	MakeAction(JumpAction, TEXT("IA_Jump"), EInputActionValueType::Boolean);
 	MakeAction(AttackAction, TEXT("IA_Attack"), EInputActionValueType::Boolean);
 	MakeAction(SecondaryActionInput, TEXT("IA_Secondary"), EInputActionValueType::Boolean);
+	MakeAction(InteractAction, TEXT("IA_Interact"), EInputActionValueType::Boolean);
 
 	if (DefaultMappingContext != nullptr)
 	{
@@ -90,6 +95,7 @@ void ACrossguardCharacter::EnsureDefaultInput()
 	Context->MapKey(JumpAction, EKeys::SpaceBar);
 	Context->MapKey(AttackAction, EKeys::LeftMouseButton);
 	Context->MapKey(SecondaryActionInput, EKeys::RightMouseButton);
+	Context->MapKey(InteractAction, EKeys::E);
 	DefaultMappingContext = Context;
 }
 
@@ -110,6 +116,7 @@ void ACrossguardCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	// Triggered fires every frame while held: holding the button keeps attacking at the weapon's rate.
 	Input->BindAction(AttackAction, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnAttack);
 	Input->BindAction(SecondaryActionInput, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnSecondary);
+	Input->BindAction(InteractAction, ETriggerEvent::Started, this, &ACrossguardCharacter::TryInteract);
 }
 
 void ACrossguardCharacter::PawnClientRestart()
@@ -329,4 +336,86 @@ void ACrossguardCharacter::ApplyMoveSpeed(float MoveSpeed)
 {
 	// Server and owning client both set it so client-side movement prediction agrees.
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed * FMath::Max(MoveSpeed, 0.0f);
+}
+
+void ACrossguardCharacter::TryInteract()
+{
+	if (HasAuthority())
+	{
+		ServerInteract_Implementation();
+	}
+	else
+	{
+		ServerInteract();
+	}
+}
+
+void ACrossguardCharacter::ServerInteract_Implementation()
+{
+	ACrossguardLootContainer* Target = FindInteractTarget();
+	if (Target == nullptr || !InventoryComponent->OpenLootContainer(Target))
+	{
+		return;
+	}
+	UE_LOG(LogCrossguard, Log, TEXT("%s opened %s (%d items)"), *GetName(), *Target->GetName(), Target->GetItems().Num());
+
+	if (bDebugLootTakesAll)
+	{
+		TArray<int32> Ids;
+		for (const FCrossguardInventoryItem& Item : Target->GetItems())
+		{
+			Ids.Add(Item.Id);
+		}
+		for (const int32 Id : Ids)
+		{
+			InventoryComponent->RequestTakeFromContainer(Id);
+		}
+	}
+}
+
+ACrossguardLootContainer* ACrossguardCharacter::FindInteractTarget() const
+{
+	FVector EyeLocation;
+	FRotator EyeRotation;
+	GetActorEyesViewPoint(EyeLocation, EyeRotation);
+	const FVector Forward = EyeRotation.Vector();
+
+	ACrossguardLootContainer* Best = nullptr;
+	float BestDistance = TNumericLimits<float>::Max();
+	for (TActorIterator<ACrossguardLootContainer> It(GetWorld()); It; ++It)
+	{
+		ACrossguardLootContainer* Container = *It;
+		const FVector ToContainer = Container->GetActorLocation() - EyeLocation;
+		const float Distance = FVector::Dist(GetActorLocation(), Container->GetActorLocation());
+		// Roughly in front: within about 60 degrees of where the camera looks.
+		if (Distance <= Container->InteractRange && Distance < BestDistance && FVector::DotProduct(ToContainer.GetSafeNormal(), Forward) >= 0.5f)
+		{
+			Best = Container;
+			BestDistance = Distance;
+		}
+	}
+	return Best;
+}
+
+void ACrossguardCharacter::HandleDeath()
+{
+	if (!HasAuthority() || BodyContainerClass == nullptr)
+	{
+		return;
+	}
+	TArray<FCrossguardInventoryItem> Dropped = InventoryComponent->TakeEverything();
+	if (Dropped.IsEmpty())
+	{
+		return;
+	}
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	ACrossguardLootContainer* Body = GetWorld()->SpawnActor<ACrossguardLootContainer>(BodyContainerClass, GetActorTransform(), Params);
+	if (Body == nullptr)
+	{
+		UE_LOG(LogCrossguard, Warning, TEXT("%s died but its body container could not be spawned; %d items lost"), *GetName(), Dropped.Num());
+		return;
+	}
+	Body->InitializeContents(Dropped);
 }

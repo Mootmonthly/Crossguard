@@ -1,8 +1,12 @@
 #include "Items/CrossguardInventoryComponent.h"
 
+#include "AbilitySystem/CrossguardGameplayTags.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
 #include "Crossguard.h"
 #include "Engine/DataTable.h"
 #include "GameFramework/Pawn.h"
+#include "Items/CrossguardLootContainer.h"
 #include "Net/UnrealNetwork.h"
 #include "Skills/CrossguardLoadoutComponent.h"
 
@@ -71,6 +75,7 @@ void UCrossguardInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeP
 	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, Items, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, EquippedBackpack, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, EquippedQuiver, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, OpenContainer, COND_OwnerOnly);
 }
 
 bool UCrossguardInventoryComponent::IsServer() const
@@ -190,7 +195,7 @@ FIntPoint UCrossguardInventoryComponent::GetItemSize(const FCrossguardInventoryI
 	return GetGridSize(Item, Size) ? FIntPoint(Size.Width, Size.Height) : FIntPoint::ZeroValue;
 }
 
-int32 UCrossguardInventoryComponent::GetMaxStack(const FCrossguardInventoryItem& Item) const
+int32 UCrossguardInventoryComponent::LookUpMaxStack(const FCrossguardInventoryItem& Item) const
 {
 	const FCrossguardItemRow* Row = IsTableItem(Item.Category) && ItemTable != nullptr && !Item.ItemId.IsNone()
 		? ItemTable->FindRow<FCrossguardItemRow>(Item.ItemId, TEXT("Inventory"), false)
@@ -198,9 +203,17 @@ int32 UCrossguardInventoryComponent::GetMaxStack(const FCrossguardInventoryItem&
 	return Row != nullptr ? FMath::Max(1, Row->MaxStack) : 1;
 }
 
-bool UCrossguardInventoryComponent::CanStackWith(const FCrossguardInventoryItem& A, const FCrossguardInventoryItem& B) const
+bool UCrossguardInventoryComponent::ResolveItemData(FCrossguardInventoryItem& Item) const
 {
-	return IsTableItem(A.Category) && A.Category == B.Category && A.ItemId == B.ItemId && GetMaxStack(A) > 1;
+	Crossguard::FGridSize GridSize;
+	if (!GetGridSize(Item, GridSize))
+	{
+		return false;
+	}
+	Item.Size = FIntPoint(GridSize.Width, GridSize.Height);
+	Item.MaxStack = LookUpMaxStack(Item);
+	Item.Count = FMath::Clamp(Item.Count, 1, Item.MaxStack);
+	return true;
 }
 
 bool UCrossguardInventoryComponent::Accepts(ECrossguardInventoryContainer Container, ECrossguardItemCategory Category) const
@@ -214,10 +227,9 @@ Crossguard::FInventoryGrid UCrossguardInventoryComponent::BuildGrid(ECrossguardI
 	Crossguard::FInventoryGrid Grid(Crossguard::FGridSize{Size.X, Size.Y});
 	for (const FCrossguardInventoryItem& Item : Items)
 	{
-		Crossguard::FGridSize ItemSize;
-		if (Item.Container == Container && Item.Id != IgnoreId && GetGridSize(Item, ItemSize))
+		if (Item.Container == Container && Item.Id != IgnoreId)
 		{
-			Grid.Place(Item.Id, ItemSize, {Item.Position.X, Item.Position.Y, Item.bRotated});
+			Grid.Place(Item.Id, {Item.Size.X, Item.Size.Y}, {Item.Position.X, Item.Position.Y, Item.bRotated});
 		}
 	}
 	return Grid;
@@ -225,11 +237,7 @@ Crossguard::FInventoryGrid UCrossguardInventoryComponent::BuildGrid(ECrossguardI
 
 bool UCrossguardInventoryComponent::FindPlacement(FCrossguardInventoryItem& Item) const
 {
-	Crossguard::FGridSize Size;
-	if (!GetGridSize(Item, Size))
-	{
-		return false;
-	}
+	const Crossguard::FGridSize Size{Item.Size.X, Item.Size.Y};
 	const ECrossguardInventoryContainer* Order = Item.Category == ECrossguardItemCategory::Ammo ? AmmoOrder : AllContainers;
 	for (int32 OrderIndex = 0; OrderIndex < UE_ARRAY_COUNT(AllContainers); ++OrderIndex)
 	{
@@ -248,7 +256,7 @@ bool UCrossguardInventoryComponent::FindPlacement(FCrossguardInventoryItem& Item
 
 bool UCrossguardInventoryComponent::PlaceNewItem(FCrossguardInventoryItem Item)
 {
-	if (!FindPlacement(Item))
+	if (!ResolveItemData(Item) || !FindPlacement(Item))
 	{
 		return false;
 	}
@@ -257,32 +265,29 @@ bool UCrossguardInventoryComponent::PlaceNewItem(FCrossguardInventoryItem Item)
 	return true;
 }
 
-int32 UCrossguardInventoryComponent::AddItem(const FCrossguardInventoryItem& Item)
+int32 UCrossguardInventoryComponent::AddItem(const FCrossguardInventoryItem& NewItem)
 {
-	Crossguard::FGridSize Size;
-	int32 Remaining = FMath::Max(1, Item.Count);
-	if (!IsServer() || !GetGridSize(Item, Size))
+	int32 Remaining = FMath::Max(1, NewItem.Count);
+	FCrossguardInventoryItem Item = NewItem;
+	Item.Count = 1;
+	if (!IsServer() || !ResolveItemData(Item))
 	{
 		return Remaining;
 	}
 
-	// Top up existing stacks, in the order new stacks would be placed.
-	const int32 MaxStack = GetMaxStack(Item);
-	if (MaxStack > 1)
+	// Top up existing stacks of the same item and rarity first.
+	for (FCrossguardInventoryItem& Stack : Items)
 	{
-		for (FCrossguardInventoryItem& Stack : Items)
+		if (Remaining > 0 && Stack.CanStackWith(Item))
 		{
-			if (Remaining > 0 && CanStackWith(Stack, Item))
-			{
-				Crossguard::MergeStacks(Stack.Count, Remaining, MaxStack);
-			}
+			Crossguard::MergeStacks(Stack.Count, Remaining, Stack.MaxStack);
 		}
 	}
 
 	while (Remaining > 0)
 	{
 		FCrossguardInventoryItem Stack = Item;
-		Stack.Count = FMath::Min(Remaining, MaxStack);
+		Stack.Count = FMath::Min(Remaining, Item.MaxStack);
 		if (!PlaceNewItem(Stack))
 		{
 			break;
@@ -437,12 +442,16 @@ void UCrossguardInventoryComponent::Finish(const FCrossguardInventoryResult& Res
 
 FCrossguardInventoryResult UCrossguardInventoryComponent::MoveItem(int32 ItemId, ECrossguardInventoryContainer Container, FIntPoint Position, bool bRotated)
 {
+	if (IsOwnerDead())
+	{
+		return Fail(ECrossguardInventoryError::OwnerDead);
+	}
 	const int32 Index = IndexOfItem(ItemId);
-	Crossguard::FGridSize Size;
-	if (Index == INDEX_NONE || !GetGridSize(Items[Index], Size))
+	if (Index == INDEX_NONE)
 	{
 		return Fail(ECrossguardInventoryError::UnknownItem);
 	}
+	const Crossguard::FGridSize Size{Items[Index].Size.X, Items[Index].Size.Y};
 	if (GetContainerSize(Container).X == 0)
 	{
 		return Fail(ECrossguardInventoryError::NoContainer);
@@ -456,9 +465,9 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::MoveItem(int32 ItemId,
 
 	// Dropped onto the top-left square of a stack of the same item: merge.
 	const int32 TargetIndex = IndexOfItem(Grid.ItemAt(Position.X, Position.Y));
-	if (TargetIndex != INDEX_NONE && Items[TargetIndex].Position == Position && CanStackWith(Items[TargetIndex], Items[Index]))
+	if (TargetIndex != INDEX_NONE && Items[TargetIndex].Position == Position && Items[TargetIndex].CanStackWith(Items[Index]))
 	{
-		const int32 Moved = Crossguard::MergeStacks(Items[TargetIndex].Count, Items[Index].Count, GetMaxStack(Items[Index]));
+		const int32 Moved = Crossguard::MergeStacks(Items[TargetIndex].Count, Items[Index].Count, Items[TargetIndex].MaxStack);
 		if (Moved == 0)
 		{
 			return Fail(ECrossguardInventoryError::InvalidPosition);
@@ -483,6 +492,10 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::MoveItem(int32 ItemId,
 
 FCrossguardInventoryResult UCrossguardInventoryComponent::EquipItem(int32 ItemId, ECrossguardEquipmentSlot Slot)
 {
+	if (IsOwnerDead())
+	{
+		return Fail(ECrossguardInventoryError::OwnerDead);
+	}
 	UCrossguardEquipmentComponent* Equipment = GetEquipment();
 	const int32 Index = IndexOfItem(ItemId);
 	if (Equipment == nullptr)
@@ -593,6 +606,10 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::EquipContainer(const F
 
 FCrossguardInventoryResult UCrossguardInventoryComponent::UnequipWeapon(ECrossguardEquipmentSlot Slot)
 {
+	if (IsOwnerDead())
+	{
+		return Fail(ECrossguardInventoryError::OwnerDead);
+	}
 	UCrossguardEquipmentComponent* Equipment = GetEquipment();
 	if (Equipment == nullptr)
 	{
@@ -620,6 +637,10 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::UnequipWeapon(ECrossgu
 
 FCrossguardInventoryResult UCrossguardInventoryComponent::UnequipArmor(ECrossguardArmorSlot Slot)
 {
+	if (IsOwnerDead())
+	{
+		return Fail(ECrossguardInventoryError::OwnerDead);
+	}
 	UCrossguardEquipmentComponent* Equipment = GetEquipment();
 	if (Equipment == nullptr)
 	{
@@ -647,6 +668,10 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::UnequipArmor(ECrossgua
 
 FCrossguardInventoryResult UCrossguardInventoryComponent::UnequipContainer(ECrossguardInventoryContainer Container)
 {
+	if (IsOwnerDead())
+	{
+		return Fail(ECrossguardInventoryError::OwnerDead);
+	}
 	if (Container == ECrossguardInventoryContainer::Main)
 	{
 		return Fail(ECrossguardInventoryError::NoContainer);
@@ -674,6 +699,10 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::UnequipContainer(ECros
 
 FCrossguardInventoryResult UCrossguardInventoryComponent::UseItem(int32 ItemId)
 {
+	if (IsOwnerDead())
+	{
+		return Fail(ECrossguardInventoryError::OwnerDead);
+	}
 	const int32 Index = IndexOfItem(ItemId);
 	if (Index == INDEX_NONE)
 	{
@@ -707,4 +736,193 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::UseItem(int32 ItemId)
 		Items.RemoveAt(Index);
 	}
 	return {};
+}
+
+// --- Death and loot containers -------------------------------------------------------------------
+
+bool UCrossguardInventoryComponent::IsOwnerDead() const
+{
+	const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
+	return ASC != nullptr && ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead);
+}
+
+bool UCrossguardInventoryComponent::CanReach(const ACrossguardLootContainer* Container) const
+{
+	return Container != nullptr && GetOwner() != nullptr && !IsOwnerDead()
+		&& FVector::Dist(GetOwner()->GetActorLocation(), Container->GetActorLocation()) <= Container->InteractRange;
+}
+
+bool UCrossguardInventoryComponent::OpenLootContainer(ACrossguardLootContainer* Container)
+{
+	if (!IsServer() || !CanReach(Container))
+	{
+		return false;
+	}
+	OpenContainer = Container;
+	OnOpenContainerChanged.Broadcast();
+	return true;
+}
+
+void UCrossguardInventoryComponent::RequestCloseContainer()
+{
+	if (IsServer())
+	{
+		OpenContainer = nullptr;
+		OnOpenContainerChanged.Broadcast();
+	}
+	else
+	{
+		ServerCloseContainer();
+	}
+}
+
+void UCrossguardInventoryComponent::ServerCloseContainer_Implementation()
+{
+	RequestCloseContainer();
+}
+
+void UCrossguardInventoryComponent::OnRep_OpenContainer()
+{
+	OnOpenContainerChanged.Broadcast();
+}
+
+void UCrossguardInventoryComponent::RequestTakeFromContainer(int32 ContainerItemId)
+{
+	if (IsServer())
+	{
+		Finish(TakeFromContainer(ContainerItemId));
+	}
+	else
+	{
+		ServerTakeFromContainer(ContainerItemId);
+	}
+}
+
+void UCrossguardInventoryComponent::ServerTakeFromContainer_Implementation(int32 ContainerItemId)
+{
+	Finish(TakeFromContainer(ContainerItemId));
+}
+
+void UCrossguardInventoryComponent::RequestPutInContainer(int32 ItemId)
+{
+	if (IsServer())
+	{
+		Finish(PutInContainer(ItemId));
+	}
+	else
+	{
+		ServerPutInContainer(ItemId);
+	}
+}
+
+void UCrossguardInventoryComponent::ServerPutInContainer_Implementation(int32 ItemId)
+{
+	Finish(PutInContainer(ItemId));
+}
+
+FCrossguardInventoryResult UCrossguardInventoryComponent::TakeFromContainer(int32 ContainerItemId)
+{
+	if (IsOwnerDead())
+	{
+		return Fail(ECrossguardInventoryError::OwnerDead);
+	}
+	if (OpenContainer == nullptr)
+	{
+		return Fail(ECrossguardInventoryError::NoContainerOpen);
+	}
+	if (!CanReach(OpenContainer))
+	{
+		return Fail(ECrossguardInventoryError::OutOfRange);
+	}
+	FCrossguardInventoryItem Item;
+	if (!OpenContainer->FindItem(ContainerItemId, Item))
+	{
+		return Fail(ECrossguardInventoryError::UnknownItem);
+	}
+
+	const int32 Left = AddItem(Item);
+	if (Left >= Item.Count)
+	{
+		return Fail(ECrossguardInventoryError::NoRoom);
+	}
+	OpenContainer->SetItemCount(ContainerItemId, Left);
+	return {};
+}
+
+FCrossguardInventoryResult UCrossguardInventoryComponent::PutInContainer(int32 ItemId)
+{
+	if (IsOwnerDead())
+	{
+		return Fail(ECrossguardInventoryError::OwnerDead);
+	}
+	if (OpenContainer == nullptr)
+	{
+		return Fail(ECrossguardInventoryError::NoContainerOpen);
+	}
+	if (!CanReach(OpenContainer))
+	{
+		return Fail(ECrossguardInventoryError::OutOfRange);
+	}
+	const int32 Index = IndexOfItem(ItemId);
+	if (Index == INDEX_NONE)
+	{
+		return Fail(ECrossguardInventoryError::UnknownItem);
+	}
+	if (!OpenContainer->AddItem(Items[Index]))
+	{
+		return Fail(ECrossguardInventoryError::NoRoom);
+	}
+	Items.RemoveAt(Index);
+	return {};
+}
+
+TArray<FCrossguardInventoryItem> UCrossguardInventoryComponent::TakeEverything()
+{
+	TArray<FCrossguardInventoryItem> Taken;
+	if (!IsServer())
+	{
+		return Taken;
+	}
+
+	// Equipped gear first, so it sits at the top of the body's grid. Off hand before main hand:
+	// an off-hand weapon without a main hand may not validate on its own.
+	if (UCrossguardEquipmentComponent* Equipment = GetEquipment())
+	{
+		for (const ECrossguardEquipmentSlot Slot : {ECrossguardEquipmentSlot::OffHand, ECrossguardEquipmentSlot::MainHand})
+		{
+			FCrossguardInventoryItem Item;
+			Item.Category = ECrossguardItemCategory::Weapon;
+			Item.Weapon = Equipment->GetItem(Slot);
+			if (!Item.Weapon.IsEmpty() && ResolveItemData(Item) && Equipment->Equip(Slot, FCrossguardWeaponItem()) == ECrossguardEquipError::None)
+			{
+				Taken.Add(Item);
+			}
+		}
+		for (uint8 SlotIndex = 0; SlotIndex < static_cast<uint8>(Crossguard::ArmorSlotCount); ++SlotIndex)
+		{
+			const ECrossguardArmorSlot Slot = static_cast<ECrossguardArmorSlot>(SlotIndex);
+			FCrossguardInventoryItem Item;
+			Item.Category = ECrossguardItemCategory::Armor;
+			Item.Armor = Equipment->GetArmorItem(Slot);
+			if (!Item.Armor.IsEmpty() && ResolveItemData(Item) && Equipment->EquipArmor(Slot, FCrossguardArmorItem()) == ECrossguardEquipError::None)
+			{
+				Taken.Add(Item);
+			}
+		}
+	}
+
+	for (FCrossguardInventoryItem* Slot : {&EquippedBackpack, &EquippedQuiver})
+	{
+		if (!Slot->IsEmpty() && ResolveItemData(*Slot))
+		{
+			Taken.Add(*Slot);
+		}
+		*Slot = FCrossguardInventoryItem();
+	}
+
+	Taken.Append(Items);
+	Items.Reset();
+	OpenContainer = nullptr;
+	OnInventoryChanged.Broadcast();
+	return Taken;
 }

@@ -7,6 +7,8 @@ import sys
 
 CATEGORIES = {"Ammo", "Consumable", "Throwable", "Material"}
 GRID_WIDTH, GRID_HEIGHT = 10, 5  # main inventory grid
+# Stack size is set per category (docs/design-decisions.md). Materials are not ruled yet.
+STACK_BY_CATEGORY = {"Ammo": 20, "Throwable": 3, "Consumable": 5}
 ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 
 
@@ -76,6 +78,10 @@ def validate(items):
         gw, gh = it.get("gridWidth"), it.get("gridHeight")
         if grid_size(gw) and grid_size(gh) and (max(gw, gh) > GRID_WIDTH or min(gw, gh) > GRID_HEIGHT):
             err(f"size {gw}x{gh} does not fit the {GRID_WIDTH}x{GRID_HEIGHT} inventory grid")
+
+        expected = STACK_BY_CATEGORY.get(it.get("category"))
+        if expected is not None and it.get("maxStack") != expected:
+            err(f"maxStack must be {expected} for {it.get('category')}")
 
     if ids != sorted(ids):
         for a, b in zip(ids, ids[1:]):

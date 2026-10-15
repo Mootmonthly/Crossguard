@@ -9,6 +9,7 @@
 
 #include "CrossguardInventoryComponent.generated.h"
 
+class ACrossguardLootContainer;
 class UDataTable;
 
 // Mirrors Crossguard::EContainerKind.
@@ -43,6 +44,11 @@ enum class ECrossguardInventoryError : uint8
 	NotUsable,
 	// See ProgressionError (e.g. learning a Skill Gem during a raid).
 	CannotLearn,
+	// Dead characters cannot use their inventory; their body is looted instead.
+	OwnerDead,
+	// No container is open, or it is too far away.
+	NoContainerOpen,
+	OutOfRange,
 	NotReady,
 };
 
@@ -95,13 +101,23 @@ struct CROSSGUARD_API FCrossguardInventoryItem
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	ECrossguardInventoryContainer ContainerKind = ECrossguardInventoryContainer::Backpack;
 
-	// Category Container: sets its size (Common 5 squares ... Mystic 30).
+	// Container: sets its size (Common 5 squares ... Mystic 30). Ammo, Consumable, Throwable,
+	// Material: stacks only combine items of the same id and rarity. Weapons and armor use the
+	// rarity in Weapon / Armor.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	ECrossguardRarity Rarity = ECrossguardRarity::Common;
 
-	// Stack size, up to the item table's MaxStack. 1 for everything else.
+	// Stack size, up to MaxStack.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item", meta = (ClampMin = "1"))
 	int32 Count = 1;
+
+	// Set by the server from the item data when the item enters an inventory: unrotated size in
+	// squares, and the most one stack holds.
+	UPROPERTY(BlueprintReadOnly, Category = "Item")
+	FIntPoint Size = FIntPoint::ZeroValue;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Item")
+	int32 MaxStack = 1;
 
 	// Where it sits. Set by the server.
 	UPROPERTY(BlueprintReadOnly, Category = "Item")
@@ -116,6 +132,12 @@ struct CROSSGUARD_API FCrossguardInventoryItem
 	bool bRotated = false;
 
 	bool IsEmpty() const { return Id == 0; }
+
+	// Stacks combine only the same item at the same rarity, and only stackable items.
+	bool CanStackWith(const FCrossguardInventoryItem& Other) const
+	{
+		return MaxStack > 1 && Category == Other.Category && ItemId == Other.ItemId && Rarity == Other.Rarity;
+	}
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCrossguardInventoryChanged);
@@ -126,8 +148,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardInventoryRejected, const 
 // server moves its own copy, so a client can never equip or use an item it does not have.
 // Equipping moves an item between the grid and UCrossguardEquipmentComponent.
 //
-// Not built yet: dropping and picking up items in the world, the death drop, the stash and guild
-// bank, splitting stacks, using consumables.
+// On death everything (equipped gear included) moves into a lootable body (ACrossguardLootContainer).
+//
+// Not built yet: dropping and picking up single items in the world, the stash and guild bank,
+// splitting stacks, using consumables.
 UCLASS(ClassGroup = (Crossguard), meta = (BlueprintSpawnableComponent))
 class CROSSGUARD_API UCrossguardInventoryComponent : public UActorComponent
 {
@@ -171,7 +195,7 @@ public:
 	// Server. Adds the item wherever it fits: stackables top up existing stacks first; ammo tries the
 	// Quiver first, then the main grid, then the Backpack. Returns how many did not fit (0: all).
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
-	int32 AddItem(const FCrossguardInventoryItem& Item);
+	int32 AddItem(const FCrossguardInventoryItem& NewItem);
 
 	// Server. Removes a whole stack. False if there is no such item.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
@@ -204,8 +228,35 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void RequestUseItem(int32 ItemId);
 
+	// Loot containers (bodies, later chests). Open one with the character's interact key.
+	UFUNCTION(BlueprintPure, Category = "Inventory|Loot")
+	ACrossguardLootContainer* GetOpenContainer() const { return OpenContainer; }
+
+	// Server. Opens a container if the owner is alive and in range. False otherwise.
+	bool OpenLootContainer(ACrossguardLootContainer* Container);
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Loot")
+	void RequestCloseContainer();
+
+	// Moves a stack from the open container into the inventory (stacking first). Whatever does not
+	// fit stays in the container.
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Loot")
+	void RequestTakeFromContainer(int32 ContainerItemId);
+
+	// Moves a stack from the inventory into the open container.
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Loot")
+	void RequestPutInContainer(int32 ItemId);
+
+	// Server. Death: empties the inventory, the Backpack and Quiver slots and every equipment slot,
+	// and returns all of it as items with their data filled in.
+	TArray<FCrossguardInventoryItem> TakeEverything();
+
 	UPROPERTY(BlueprintAssignable, Category = "Inventory")
 	FCrossguardInventoryChanged OnInventoryChanged;
+
+	// The open container changed (opened, closed).
+	UPROPERTY(BlueprintAssignable, Category = "Inventory|Loot")
+	FCrossguardInventoryChanged OnOpenContainerChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "Inventory")
 	FCrossguardInventoryRejected OnInventoryRejected;
@@ -229,8 +280,20 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerUseItem(int32 ItemId);
 
+	UFUNCTION(Server, Reliable)
+	void ServerCloseContainer();
+
+	UFUNCTION(Server, Reliable)
+	void ServerTakeFromContainer(int32 ContainerItemId);
+
+	UFUNCTION(Server, Reliable)
+	void ServerPutInContainer(int32 ItemId);
+
 	UFUNCTION(Client, Reliable)
 	void ClientInventoryRejected(const FCrossguardInventoryResult& Result);
+
+	UFUNCTION()
+	void OnRep_OpenContainer();
 
 	UFUNCTION()
 	void OnRep_Inventory();
@@ -243,13 +306,19 @@ private:
 	FCrossguardInventoryResult UnequipArmor(ECrossguardArmorSlot Slot);
 	FCrossguardInventoryResult UnequipContainer(ECrossguardInventoryContainer Container);
 	FCrossguardInventoryResult UseItem(int32 ItemId);
+	FCrossguardInventoryResult TakeFromContainer(int32 ContainerItemId);
+	FCrossguardInventoryResult PutInContainer(int32 ItemId);
+	// The open container, if it still exists and the owner is in range.
+	bool CanReach(const ACrossguardLootContainer* Container) const;
+	bool IsOwnerDead() const;
 
 	// Server: logs and sends a failure to the owning client. Success broadcasts OnInventoryChanged.
 	void Finish(const FCrossguardInventoryResult& Result);
 
 	bool GetGridSize(const FCrossguardInventoryItem& Item, Crossguard::FGridSize& OutSize) const;
-	int32 GetMaxStack(const FCrossguardInventoryItem& Item) const;
-	bool CanStackWith(const FCrossguardInventoryItem& A, const FCrossguardInventoryItem& B) const;
+	int32 LookUpMaxStack(const FCrossguardInventoryItem& Item) const;
+	// Fills Size and MaxStack from the data tables. False if the item's data is missing.
+	bool ResolveItemData(FCrossguardInventoryItem& Item) const;
 	bool Accepts(ECrossguardInventoryContainer Container, ECrossguardItemCategory Category) const;
 	// The occupied squares of one container, leaving out IgnoreId.
 	Crossguard::FInventoryGrid BuildGrid(ECrossguardInventoryContainer Container, int32 IgnoreId = 0) const;
@@ -269,6 +338,9 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_Inventory)
 	FCrossguardInventoryItem EquippedQuiver;
+
+	UPROPERTY(ReplicatedUsing = OnRep_OpenContainer)
+	TObjectPtr<ACrossguardLootContainer> OpenContainer;
 
 	// Server only.
 	int32 NextItemId = 1;

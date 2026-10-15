@@ -135,12 +135,17 @@ Independent of category, a skill is:
   shield 2 × 2; two-handed weapons and bows 2 × 4; helm, gloves, boots, cape 2 × 2; chest and legs
   2 × 3; Skill Gems, potions and bandages 1 × 1; throwables (explosive bottles, throwing knives and
   axes, javelins) 1 × 3.
-- Arrows are 1 × 3 and Bolts 1 × 2, each stacking up to 20 in the same squares.
+- Arrows are 1 × 3 and Bolts 1 × 2, each stacking up to 20 in the same squares. Throwables stack
+  up to 3, consumables (potions, bandages) up to 5.
+- Stacks only combine items of the same type **and** rarity: a Common health potion does not stack
+  with a Rare one.
 - Placeholders: Backpack and Quiver items take 2 × 2 while not equipped. Gloves, boots, cape and
   legs sizes were not given.
 - Backpacks and Quivers are extra containers that add 5–30 squares by rarity, in steps of 5
   (Common 5 … Mystic 30). Quivers only hold Arrows and Bolts.
 - On death, all equipped gear and the raid inventory drop. No insurance for now.
+- The body is a container: walk up, press the interact key (E) and take items from it, like opening
+  a treasure chest. Anyone can loot it, teammates included. Items can also be put into it.
 - Skill Gems are items. Only between raids, right-clicking a gem in the inventory or stash learns
   its skill permanently into the character's Skill Library and consumes the gem. A skill already
   in the library cannot be learned again (the gem is kept). Gems can also be sold on the auction
