@@ -97,13 +97,19 @@ void ACrossguardMinionController::Tick(float DeltaSeconds)
 		StopMovement();
 		return;
 	}
+	// Its summoner left the game: it goes too (otherwise orphans would fight each other).
+	if (Minion->GetSummoner() == nullptr)
+	{
+		Minion->Dismiss();
+		return;
+	}
 
 	RethinkCountdown -= DeltaSeconds;
 	if (RethinkCountdown <= 0.0f)
 	{
 		RethinkCountdown = RethinkSeconds;
 		Target = FindTarget(*Minion);
-		const bool bMage = Minion->Role == ECrossguardMinionRole::Mage;
+		const bool bMage = Minion->MinionRole == ECrossguardMinionRole::Mage;
 		if (AActor* Enemy = Target.Get())
 		{
 			MoveToward(Enemy, bMage ? Minion->KeepDistance : Minion->AttackRange * 0.5f);
@@ -126,7 +132,7 @@ void ACrossguardMinionController::Tick(float DeltaSeconds)
 		{
 			SetFocus(Enemy);
 			// The Mage needs to see its target; the Warrior checks its reach itself.
-			if (Minion->Role != ECrossguardMinionRole::Mage || LineOfSightTo(Enemy))
+			if (Minion->MinionRole != ECrossguardMinionRole::Mage || LineOfSightTo(Enemy))
 			{
 				Minion->TryAttack(Enemy);
 			}

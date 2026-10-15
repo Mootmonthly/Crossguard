@@ -29,14 +29,23 @@ public:
 	// Slows Target by Fraction (0.5 = -50% Movement Speed) for Seconds, with State.Slowed.
 	static void ApplySlow(UAbilitySystemComponent* Source, UAbilitySystemComponent* Target, float Fraction, float Seconds);
 
+	// Server. Cancels every skill ability running on ASC (death, Mute). Passives and basic attacks
+	// are left alone.
+	static void CancelActiveSkills(UAbilitySystemComponent* ASC);
+
 	// The character's eyes: where aimed skills and projectiles start.
 	void GetAim(FVector& OutLocation, FVector& OutDirection) const;
 
-	// The first actor with an ability system under the crosshair within Range (cm), not the caster.
+	// The first living actor with an ability system under the crosshair within Range (cm), not the
+	// caster.
 	AActor* FindAimedTarget(float Range) const;
 
 protected:
 	// Instant skills: commit (cooldown) and end. False if the commit failed (the ability has ended).
 	bool CommitOrCancel(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo);
+
+	// For a timer running on both sides (WaitDelay, root motion): ends the ability, replicating the
+	// end only from the server, so a client never cuts the server's ability short.
+	void EndOnTimer();
 };

@@ -62,6 +62,12 @@ bool UCrossguardAbilitySystemComponent::InitializeAttributes(int32 Level, const 
 	return true;
 }
 
+void UCrossguardAbilitySystemComponent::SetFixedMaxHealth(float Fixed)
+{
+	FixedMaxHealth = FMath::Max(Fixed, 0.0f);
+	RecomputeDerivedStats();
+}
+
 void UCrossguardAbilitySystemComponent::OnDerivationInputChanged(const FOnAttributeChangeData& Data)
 {
 	RecomputeDerivedStats();
@@ -84,7 +90,7 @@ void UCrossguardAbilitySystemComponent::RecomputeDerivedStats()
 	const double Mhpb = GetNumericAttribute(UCrossguardAttributeSet::GetMaxHealthBonusAttribute());
 
 	const TPair<FGameplayAttribute, double> BaseValues[] = {
-		{UCrossguardAttributeSet::GetMaxHealthAttribute(), Crossguard::ApplyMaxHpBonus(Stats.MaxHp, Mhpb)},
+		{UCrossguardAttributeSet::GetMaxHealthAttribute(), Crossguard::ApplyMaxHpBonus(FixedMaxHealth > 0.0f ? FixedMaxHealth : Stats.MaxHp, Mhpb)},
 		{UCrossguardAttributeSet::GetAttackDamageBonusAttribute(), Stats.Adb},
 		{UCrossguardAttributeSet::GetAttackResistanceAttribute(), Stats.Ar},
 		{UCrossguardAttributeSet::GetPhysicalHealingBonusAttribute(), Stats.Phb},

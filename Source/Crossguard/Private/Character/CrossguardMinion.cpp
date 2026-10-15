@@ -11,6 +11,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Net/UnrealNetwork.h"
 #include "Skills/CrossguardSpellSkills.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -23,6 +24,10 @@ ACrossguardMinion::ACrossguardMinion()
 	// AI turns toward where it moves.
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
+
+	// The base character hides its mesh from its owner (first person); a minion's owner is its
+	// summoner, who must see it.
+	GetMesh()->SetOwnerNoSee(false);
 
 	// Visible without any art: a cylinder the size of the capsule.
 	PlaceholderMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PlaceholderMesh"));
@@ -42,16 +47,23 @@ ACrossguardMinion::ACrossguardMinion()
 void ACrossguardMinion::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
-	// Fixed Health instead of level-based attributes.
+	// Fixed Health instead of level-based attributes, kept when buffs change the attributes.
 	UCrossguardAbilitySystemComponent* ASC = GetCrossguardAbilitySystemComponent();
-	ASC->SetNumericAttributeBase(UCrossguardAttributeSet::GetMaxHealthAttribute(), MinionHealth);
-	ASC->SetNumericAttributeBase(UCrossguardAttributeSet::GetHealthAttribute(), MinionHealth);
+	ASC->SetFixedMaxHealth(MinionHealth);
+	ASC->SetNumericAttributeBase(UCrossguardAttributeSet::GetHealthAttribute(),
+		ASC->GetNumericAttribute(UCrossguardAttributeSet::GetMaxHealthAttribute()));
+}
+
+void ACrossguardMinion::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ACrossguardMinion, Summoner);
 }
 
 FGenericTeamId ACrossguardMinion::GetGenericTeamId() const
 {
-	const ACrossguardCharacter* Owner = Summoner.Get();
-	return Owner != nullptr ? Owner->GetGenericTeamId() : FGenericTeamId::NoTeam;
+	const ACrossguardCharacter* SummonerCharacter = Summoner.Get();
+	return SummonerCharacter != nullptr ? SummonerCharacter->GetGenericTeamId() : FGenericTeamId::NoTeam;
 }
 
 bool ACrossguardMinion::IsAlive() const
@@ -70,7 +82,7 @@ bool ACrossguardMinion::TryAttack(AActor* Target)
 		return false;
 	}
 
-	if (Role == ECrossguardMinionRole::Mage)
+	if (MinionRole == ECrossguardMinionRole::Mage)
 	{
 		FVector Eyes;
 		FRotator Unused;

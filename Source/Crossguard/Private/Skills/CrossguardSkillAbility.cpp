@@ -65,6 +65,37 @@ void UCrossguardSkillAbility::ApplySlow(UAbilitySystemComponent* Source, UAbilit
 	Target->ApplyGameplayEffectSpecToSelf(*Spec.Data);
 }
 
+void UCrossguardSkillAbility::CancelActiveSkills(UAbilitySystemComponent* ASC)
+{
+	if (ASC == nullptr)
+	{
+		return;
+	}
+	// Collected first: ending Dragonification removes the skills it granted.
+	TArray<FGameplayAbilitySpecHandle> Running;
+	for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+	{
+		if (Spec.IsActive() && Spec.Ability != nullptr && Spec.Ability->IsA<UCrossguardSkillAbility>())
+		{
+			Running.Add(Spec.Handle);
+		}
+	}
+	for (const FGameplayAbilitySpecHandle& Handle : Running)
+	{
+		ASC->CancelAbilityHandle(Handle);
+	}
+}
+
+void UCrossguardSkillAbility::EndOnTimer()
+{
+	const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
+	if (ActorInfo == nullptr || !IsActive())
+	{
+		return;
+	}
+	EndAbility(GetCurrentAbilitySpecHandle(), ActorInfo, GetCurrentActivationInfo(), ActorInfo->IsNetAuthority(), false);
+}
+
 void UCrossguardSkillAbility::GetAim(FVector& OutLocation, FVector& OutDirection) const
 {
 	const AActor* Avatar = GetAvatarActorFromActorInfo();
@@ -97,7 +128,8 @@ AActor* UCrossguardSkillAbility::FindAimedTarget(float Range) const
 	for (const FHitResult& Hit : Hits)
 	{
 		AActor* Candidate = Hit.GetActor();
-		if (Candidate != nullptr && Candidate != Avatar && UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Candidate) != nullptr)
+		const UAbilitySystemComponent* CandidateASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Candidate);
+		if (Candidate != nullptr && Candidate != Avatar && CandidateASC != nullptr && !CandidateASC->HasMatchingGameplayTag(CrossguardTags::State_Dead))
 		{
 			return Candidate;
 		}

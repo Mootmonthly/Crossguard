@@ -7,6 +7,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Components/CapsuleComponent.h"
+#include "Engine/OverlapResult.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/Character.h"
@@ -54,6 +55,7 @@ UCrossguardShootingStarAbility::UCrossguardShootingStarAbility()
 	BaseCooldownSeconds = 60.0f;
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_ShootingStar);
 	RequiredWeapons.Add(ECrossguardWeaponType::Sword);
+	SetAssetTags(FGameplayTagContainer(CrossguardTags::Skill_Weapon_Melee));
 }
 
 void UCrossguardShootingStarAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -100,7 +102,9 @@ void UCrossguardShootingStarAbility::OnDashFinished()
 	{
 		DamagePath();
 	}
-	EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), true, false);
+	// The server's dash may finish after the client's: only the server's end replicates, so the
+	// client never cuts the server's dash (and its damage) short.
+	EndOnTimer();
 }
 
 void UCrossguardShootingStarAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -249,7 +253,7 @@ void UCrossguardDragonificationAbility::ActivateAbility(const FGameplayAbilitySp
 
 void UCrossguardDragonificationAbility::OnFormExpired()
 {
-	EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), true, false);
+	EndOnTimer();
 }
 
 void UCrossguardDragonificationAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -349,7 +353,7 @@ void UCrossguardFlareBreathAbility::BreathTick()
 
 void UCrossguardFlareBreathAbility::OnBreathFinished()
 {
-	EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), true, false);
+	EndOnTimer();
 }
 
 void UCrossguardFlareBreathAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -402,7 +406,7 @@ void UCrossguardFlightAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 
 void UCrossguardFlightAbility::OnFlightExpired()
 {
-	EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), true, false);
+	EndOnTimer();
 }
 
 void UCrossguardFlightAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

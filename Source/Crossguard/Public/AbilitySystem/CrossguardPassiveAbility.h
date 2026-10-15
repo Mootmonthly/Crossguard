@@ -12,7 +12,7 @@ class UGameplayEffect;
 //
 // Activates on the server as soon as it is granted and stays active. While active it applies
 // PassiveEffects to the owner (Infinite-duration effects holding the stat modifiers); they are
-// removed when the ability ends, e.g. when the skill is unequipped.
+// removed when the ability ends, e.g. when the skill is unequipped, and while Muted.
 UCLASS(Abstract)
 class CROSSGUARD_API UCrossguardPassiveAbility : public UCrossguardGameplayAbility
 {
@@ -35,6 +35,9 @@ public:
 private:
 	void TryActivatePassive(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) const;
 	void RemoveAppliedEffects(const FGameplayAbilityActorInfo* ActorInfo);
+	void ApplyPassiveEffects();
+	void OnPassiveMutedChanged(const FGameplayTag Tag, int32 Count);
 
 	TArray<FActiveGameplayEffectHandle> AppliedEffects;
+	FDelegateHandle PassiveMutedHandle;
 };

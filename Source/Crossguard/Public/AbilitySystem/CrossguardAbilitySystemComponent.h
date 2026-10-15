@@ -43,6 +43,9 @@ public:
 	// Cast time reduction for a category. Uncapped.
 	float GetCastTimeReduction(ECrossguardSkillCategory Category) const;
 
+	// Server. Max HP no longer derives from STR (minions): Fixed, then Max HP Bonus. 0 = derived.
+	void SetFixedMaxHealth(float Fixed);
+
 	const Crossguard::FProgressionConfig& GetProgressionConfig() const { return ProgressionConfig; }
 	const Crossguard::FScalingConfig& GetScalingConfig() const { return ScalingConfig; }
 
@@ -56,4 +59,5 @@ private:
 	Crossguard::FProgressionConfig ProgressionConfig;
 	Crossguard::FScalingConfig ScalingConfig;
 	bool bDerivationInputsBound = false;
+	float FixedMaxHealth = 0.0f;
 };

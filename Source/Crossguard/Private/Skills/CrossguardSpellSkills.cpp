@@ -163,6 +163,8 @@ void UCrossguardMuteAbility::ActivateAbility(const FGameplayAbilitySpecHandle Ha
 			Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Coefficient, 1.0f);
 			Spec.Data->DynamicGrantedTags.AddTag(CrossguardTags::State_Muted);
 			TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
+			// Skills already running stop too (Flight, Dragonification, a shield, a breath).
+			CancelActiveSkills(TargetASC);
 		}
 	}
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
@@ -201,7 +203,7 @@ void UCrossguardEldritchShieldAbility::ActivateAbility(const FGameplayAbilitySpe
 
 void UCrossguardEldritchShieldAbility::OnShieldExpired()
 {
-	EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), true, false);
+	EndOnTimer();
 }
 
 void UCrossguardEldritchShieldAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -224,6 +226,7 @@ UCrossguardChopDownAbility::UCrossguardChopDownAbility()
 	BaseCooldownSeconds = 25.0f;
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_ChopDown);
 	RequiredWeapons.Add(ECrossguardWeaponType::Axe);
+	SetAssetTags(FGameplayTagContainer(CrossguardTags::Skill_Weapon_Melee));
 }
 
 void UCrossguardChopDownAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -251,6 +254,21 @@ UCrossguardSummonSkeletonsAbility::UCrossguardSummonSkeletonsAbility()
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_SummonSkeletons);
 	WarriorClass = ACrossguardMinion::StaticClass();
 	MageClass = ACrossguardMinion::StaticClass();
+	SetAssetTags(FGameplayTagContainer(CrossguardTags::Skill_Minion));
+}
+
+void UCrossguardSummonSkeletonsAbility::OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+	// Unequipped: the skeletons go with the skill.
+	for (const TWeakObjectPtr<ACrossguardMinion>& Old : Minions)
+	{
+		if (ACrossguardMinion* Minion = Old.Get())
+		{
+			Minion->Dismiss();
+		}
+	}
+	Minions.Reset();
+	Super::OnRemoveAbility(ActorInfo, Spec);
 }
 
 void UCrossguardSummonSkeletonsAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -304,7 +322,7 @@ void UCrossguardSummonSkeletonsAbility::Summon(TSubclassOf<ACrossguardMinion> Cl
 	{
 		return;
 	}
-	Minion->Role = Role;
+	Minion->MinionRole = Role;
 	Minion->MinionHealth = Health;
 	Minion->SetSummoner(Summoner);
 	Minion->FinishSpawning(Transform);

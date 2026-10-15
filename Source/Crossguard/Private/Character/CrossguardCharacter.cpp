@@ -633,19 +633,7 @@ void ACrossguardCharacter::HandleDeath()
 	GetWorldTimerManager().SetTimer(ReviveWindowTimer, this, &ACrossguardCharacter::OnReviveWindowExpired,
 		static_cast<float>(Crossguard::FDeathConfig().ReviveWindowSeconds), false);
 	// Skills in progress stop: Flight ends (the body falls), dragon form ends, channels stop.
-	// Collected first: ending Dragonification removes the skills it granted.
-	TArray<FGameplayAbilitySpecHandle> ActiveSkills;
-	for (const FGameplayAbilitySpec& Spec : AbilitySystemComponent->GetActivatableAbilities())
-	{
-		if (Spec.IsActive() && Spec.Ability != nullptr && Spec.Ability->IsA<UCrossguardSkillAbility>())
-		{
-			ActiveSkills.Add(Spec.Handle);
-		}
-	}
-	for (const FGameplayAbilitySpecHandle& Handle : ActiveSkills)
-	{
-		AbilitySystemComponent->CancelAbilityHandle(Handle);
-	}
+	UCrossguardSkillAbility::CancelActiveSkills(AbilitySystemComponent);
 	// Hands drop whatever they held; a revived character draws a weapon set again with 1 / 2.
 	InventoryComponent->ReleaseHeldItem();
 	EquipmentComponent->HolsterWeapons();

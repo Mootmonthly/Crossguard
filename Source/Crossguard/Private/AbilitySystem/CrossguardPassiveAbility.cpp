@@ -66,6 +66,24 @@ void UCrossguardPassiveAbility::ActivateAbility(const FGameplayAbilitySpecHandle
 		return;
 	}
 
+	if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
+	{
+		PassiveMutedHandle = ASC->RegisterGameplayTagEvent(CrossguardTags::State_Muted, EGameplayTagEventType::NewOrRemoved)
+			.AddUObject(this, &UCrossguardPassiveAbility::OnPassiveMutedChanged);
+	}
+	ApplyPassiveEffects();
+	// Stays active until unequipped.
+}
+
+void UCrossguardPassiveAbility::ApplyPassiveEffects()
+{
+	const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
+	UAbilitySystemComponent* ASC = ActorInfo != nullptr ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
+	// Muted: off until it ends.
+	if (ASC == nullptr || !IsActive() || ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted))
+	{
+		return;
+	}
 	for (const TSubclassOf<UGameplayEffect>& EffectClass : PassiveEffects)
 	{
 		if (EffectClass == nullptr)
@@ -73,18 +91,29 @@ void UCrossguardPassiveAbility::ActivateAbility(const FGameplayAbilitySpecHandle
 			continue;
 		}
 		const FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(EffectClass, GetAbilityLevel());
-		const FActiveGameplayEffectHandle Applied = ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
+		const FActiveGameplayEffectHandle Applied = ApplyGameplayEffectSpecToOwner(GetCurrentAbilitySpecHandle(), ActorInfo,
+			GetCurrentActivationInfo(), SpecHandle);
 		if (Applied.IsValid())
 		{
 			AppliedEffects.Add(Applied);
 		}
 	}
-	// Stays active until unequipped.
+}
+
+void UCrossguardPassiveAbility::OnPassiveMutedChanged(const FGameplayTag Tag, int32 Count)
+{
+	RemoveAppliedEffects(GetCurrentActorInfo());
+	ApplyPassiveEffects();
 }
 
 void UCrossguardPassiveAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
+	if (UAbilitySystemComponent* ASC = ActorInfo != nullptr ? ActorInfo->AbilitySystemComponent.Get() : nullptr)
+	{
+		ASC->RegisterGameplayTagEvent(CrossguardTags::State_Muted, EGameplayTagEventType::NewOrRemoved).Remove(PassiveMutedHandle);
+	}
+	PassiveMutedHandle.Reset();
 	RemoveAppliedEffects(ActorInfo);
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

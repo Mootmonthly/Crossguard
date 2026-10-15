@@ -19,7 +19,7 @@ enum class ECrossguardMinionRole : uint8
 
 // A summoned character ([Summon Skeletons]) on its summoner's team, run by
 // ACrossguardMinionController. No loot, no body, no kill XP; it vanishes when it dies or its time
-// runs out. Its kills count as its summoner's. Placeholder look: a cylinder until a Blueprint
+// runs out, or when its summoner leaves the game. Its kills count as its summoner's. Placeholder look: a cylinder until a Blueprint
 // subclass sets a mesh.
 UCLASS()
 class CROSSGUARD_API ACrossguardMinion : public ACrossguardCharacter
@@ -30,7 +30,7 @@ public:
 	ACrossguardMinion();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Minion")
-	ECrossguardMinionRole Role = ECrossguardMinionRole::Warrior;
+	ECrossguardMinionRole MinionRole = ECrossguardMinionRole::Warrior;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Minion", meta = (ClampMin = "1"))
 	float MinionHealth = 40.0f;
@@ -73,12 +73,16 @@ public:
 
 	virtual void HandleDeath() override;
 	virtual void PossessedBy(AController* NewController) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Crossguard|Minion")
 	TObjectPtr<UStaticMeshComponent> PlaceholderMesh;
 
 private:
+	// Replicated so clients can tell whose side it is on (nameplates, ally checks).
+	UPROPERTY(Replicated)
 	TWeakObjectPtr<ACrossguardCharacter> Summoner;
+
 	double NextAttackTime = 0.0;
 };

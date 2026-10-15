@@ -110,9 +110,11 @@ void UCrossguardDamageExecution::Execute_Implementation(const FGameplayEffectCus
 		Total += Crossguard::CalculateDamage(Input);
 	}
 
-	// A barrier ([Eldritch Shield]) absorbs Attack Damage first and is used up by it.
+	// A barrier ([Eldritch Shield]) absorbs Attack Damage first and is used up by it. True Damage
+	// (added to the attack part above) goes through.
 	const float Shield = Capture(ExecutionParams, EvalParams, Statics.AttackShieldDef);
-	const double Absorbed = FMath::Min(AttackTotal, static_cast<double>(FMath::Max(Shield, 0.0f)));
+	const double Absorbable = FMath::Max(AttackTotal - (AttackBase > 0.0f ? FMath::Max(static_cast<double>(TrueDamage), 0.0) : 0.0), 0.0);
+	const double Absorbed = FMath::Min(Absorbable, static_cast<double>(FMath::Max(Shield, 0.0f)));
 	if (Absorbed > 0.0)
 	{
 		Total -= Absorbed;
