@@ -9,6 +9,8 @@ python3 Tools/validate_weapons.py
 python3 Tools/export_weapon_table.py --check
 python3 Tools/validate_affixes.py
 python3 Tools/export_affix_table.py --check
+python3 Tools/validate_armor.py
+python3 Tools/export_armor_table.py --check
 python3 Tools/check_table_types.py
 
 cmake -S Tests/CrossguardRules -B build/rules-tests >/dev/null

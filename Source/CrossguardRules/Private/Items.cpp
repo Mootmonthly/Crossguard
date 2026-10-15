@@ -137,6 +137,43 @@ namespace Crossguard
 		return false;
 	}
 
+	int CountEmptyArmorSlots(const FArmorLoadout& Armor)
+	{
+		int Empty = 0;
+		for (const std::optional<EArmorType>& Piece : Armor)
+		{
+			Empty += Piece ? 0 : 1;
+		}
+		return Empty;
+	}
+
+	bool SatisfiesArmorRequirement(EArmorRequirement Requirement, const FArmorLoadout& Armor)
+	{
+		const auto IsPlate = [&Armor](EArmorSlot Slot)
+		{
+			const std::optional<EArmorType>& Piece = Armor[static_cast<size_t>(Slot)];
+			return Piece && *Piece == EArmorType::Plate;
+		};
+		switch (Requirement)
+		{
+		case EArmorRequirement::None:
+			return true;
+		case EArmorRequirement::Plate:
+			for (int Slot = 0; Slot < ArmorSlotCount; ++Slot)
+			{
+				if (IsPlate(static_cast<EArmorSlot>(Slot)))
+				{
+					return true;
+				}
+			}
+			return false;
+		case EArmorRequirement::PlateAllSlots:
+			return IsPlate(EArmorSlot::Head) && IsPlate(EArmorSlot::Chest) && IsPlate(EArmorSlot::Hands) && IsPlate(EArmorSlot::Legs)
+				&& IsPlate(EArmorSlot::Feet);
+		}
+		return false;
+	}
+
 	std::vector<FRolledAffix> RollAffixes(const std::vector<FAffixDefinition>& Pool, int Count, uint64_t Seed)
 	{
 		FSplitMix64 Rng{Seed};

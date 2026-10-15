@@ -335,6 +335,38 @@ static void TestSecondaryAction()
 	CHECK(SecondaryAction({ParryingSword, Dagger}) == ESecondaryAction::OffHandAttack);
 }
 
+static void TestArmor()
+{
+	FArmorLoadout Armor{};
+	CHECK(CountEmptyArmorSlots(Armor) == 6);
+	CHECK(SatisfiesArmorRequirement(EArmorRequirement::None, Armor));
+	CHECK(!SatisfiesArmorRequirement(EArmorRequirement::Plate, Armor));
+	CHECK(!SatisfiesArmorRequirement(EArmorRequirement::PlateAllSlots, Armor));
+
+	// One plate piece satisfies [Armor Mastery].
+	Armor[static_cast<size_t>(EArmorSlot::Hands)] = EArmorType::Plate;
+	CHECK(SatisfiesArmorRequirement(EArmorRequirement::Plate, Armor));
+	CHECK(CountEmptyArmorSlots(Armor) == 5);
+
+	// [The Mithril Knight]: plate in the five body slots; the Back slot does not matter.
+	for (const EArmorSlot Slot : {EArmorSlot::Head, EArmorSlot::Chest, EArmorSlot::Legs})
+	{
+		Armor[static_cast<size_t>(Slot)] = EArmorType::Plate;
+	}
+	CHECK(!SatisfiesArmorRequirement(EArmorRequirement::PlateAllSlots, Armor));
+	Armor[static_cast<size_t>(EArmorSlot::Feet)] = EArmorType::Leather;
+	CHECK(!SatisfiesArmorRequirement(EArmorRequirement::PlateAllSlots, Armor));
+	Armor[static_cast<size_t>(EArmorSlot::Feet)] = EArmorType::Plate;
+	CHECK(SatisfiesArmorRequirement(EArmorRequirement::PlateAllSlots, Armor));
+	Armor[static_cast<size_t>(EArmorSlot::Back)] = EArmorType::Cloth;
+	CHECK(SatisfiesArmorRequirement(EArmorRequirement::PlateAllSlots, Armor));
+
+	// [Cor Leonis] counts all six slots.
+	CHECK(CountEmptyArmorSlots(Armor) == 0);
+	Armor[static_cast<size_t>(EArmorSlot::Back)].reset();
+	CHECK(CountEmptyArmorSlots(Armor) == 1);
+}
+
 static void TestAffixRolls()
 {
 	const std::vector<FAffixDefinition> Pool{
@@ -496,6 +528,7 @@ int main()
 	TestEquipment();
 	TestSecondaryAction();
 	TestTeams();
+	TestArmor();
 	TestAffixRolls();
 
 	std::printf("%d checks, %d failures\n", GChecks, GFailures);

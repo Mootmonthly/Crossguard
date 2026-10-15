@@ -103,6 +103,18 @@ Might = one Infinite effect adding 10 to Strength.
   the rate. Melee swings sweep for pawns in front; wands trace on the `Weapon` channel; bows and
   staffs spawn `ACrossguardProjectile` (set per-weapon projectile Blueprints for speed).
 
+## Armor
+
+- Import `Data/Items/ArmorTable.json` (row struct `CrossguardArmorRow`, `DT_Armor`) and set it as
+  the character's `EquipmentComponent.ArmorTable`.
+- `RequestEquipArmor(Item)` puts a piece in its own slot; `RequestUnequipArmor(Slot)` empties one.
+- The equipment effect adds armor stats and affixes, sets `EmptyArmorSlots` (0–6), and grants
+  `Equipment.Armor.Plate` (any plate piece) and `Equipment.Armor.PlateAllSlots` (plate in the five
+  body slots).
+- Skill effects use them: [Cor Leonis] modifiers use an attribute-based magnitude of
+  `EmptyArmorSlots` × 0.05; [Armor Mastery] and [The Mithril Knight] effects require the plate tags.
+  Abilities can also set `RequiredArmor`.
+
 ## Teams
 
 - `ACrossguardGameMode` (default pawn `ACrossguardCharacter`, player state

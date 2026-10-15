@@ -44,4 +44,8 @@ namespace CrossguardTags
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Equipment_Wielding_MagicStaff);
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Equipment_Wielding_AnyMelee);
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Equipment_Wielding_TwoHandedMelee);
+
+	// Armor requirements, granted by the equipment effect ([Armor Mastery], [The Mithril Knight]).
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Equipment_Armor_Plate);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Equipment_Armor_PlateAllSlots);
 }

@@ -38,6 +38,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard")
 	TArray<ECrossguardWeaponType> RequiredWeapons;
 
+	// Armor needed to activate ([The Mithril Knight]: PlateAllSlots).
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard")
+	ECrossguardArmorRequirement RequiredArmor = ECrossguardArmorRequirement::None;
+
 	// Before cast time reduction. 0 means instant.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Cast", meta = (ClampMin = "0"))
 	float BaseCastTimeSeconds = 0.0f;

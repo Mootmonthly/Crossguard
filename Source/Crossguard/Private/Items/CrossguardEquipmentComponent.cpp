@@ -27,6 +27,19 @@ static_assert(static_cast<int>(ECrossguardWeaponType::MagicStaff) == static_cast
 static_assert(static_cast<int>(ECrossguardWeaponType::AnyMelee) == static_cast<int>(Crossguard::EWeaponType::AnyMelee), "Weapon type enums out of sync");
 static_assert(static_cast<int>(ECrossguardWeaponType::TwoHandedMelee) == static_cast<int>(Crossguard::EWeaponType::TwoHandedMelee), "Weapon type enums out of sync");
 
+static_assert(static_cast<int>(ECrossguardArmorSlot::Head) == static_cast<int>(Crossguard::EArmorSlot::Head), "Armor slot enums out of sync");
+static_assert(static_cast<int>(ECrossguardArmorSlot::Chest) == static_cast<int>(Crossguard::EArmorSlot::Chest), "Armor slot enums out of sync");
+static_assert(static_cast<int>(ECrossguardArmorSlot::Hands) == static_cast<int>(Crossguard::EArmorSlot::Hands), "Armor slot enums out of sync");
+static_assert(static_cast<int>(ECrossguardArmorSlot::Legs) == static_cast<int>(Crossguard::EArmorSlot::Legs), "Armor slot enums out of sync");
+static_assert(static_cast<int>(ECrossguardArmorSlot::Feet) == static_cast<int>(Crossguard::EArmorSlot::Feet), "Armor slot enums out of sync");
+static_assert(static_cast<int>(ECrossguardArmorSlot::Back) == static_cast<int>(Crossguard::EArmorSlot::Back), "Armor slot enums out of sync");
+static_assert(static_cast<int>(ECrossguardArmorType::Cloth) == static_cast<int>(Crossguard::EArmorType::Cloth), "Armor type enums out of sync");
+static_assert(static_cast<int>(ECrossguardArmorType::Leather) == static_cast<int>(Crossguard::EArmorType::Leather), "Armor type enums out of sync");
+static_assert(static_cast<int>(ECrossguardArmorType::Plate) == static_cast<int>(Crossguard::EArmorType::Plate), "Armor type enums out of sync");
+static_assert(static_cast<int>(ECrossguardArmorRequirement::None) == static_cast<int>(Crossguard::EArmorRequirement::None), "Armor requirement enums out of sync");
+static_assert(static_cast<int>(ECrossguardArmorRequirement::Plate) == static_cast<int>(Crossguard::EArmorRequirement::Plate), "Armor requirement enums out of sync");
+static_assert(static_cast<int>(ECrossguardArmorRequirement::PlateAllSlots) == static_cast<int>(Crossguard::EArmorRequirement::PlateAllSlots), "Armor requirement enums out of sync");
+
 namespace
 {
 	Crossguard::EWeaponType ToRulesWeaponType(ECrossguardWeaponType Type)
@@ -75,6 +88,7 @@ namespace
 UCrossguardEquipmentComponent::UCrossguardEquipmentComponent()
 {
 	SetIsReplicatedByDefault(true);
+	Armor.SetNum(Crossguard::ArmorSlotCount);
 }
 
 void UCrossguardEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -84,6 +98,7 @@ void UCrossguardEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimeP
 	// Everyone sees what you are holding.
 	DOREPLIFETIME(UCrossguardEquipmentComponent, MainHand);
 	DOREPLIFETIME(UCrossguardEquipmentComponent, OffHand);
+	DOREPLIFETIME(UCrossguardEquipmentComponent, Armor);
 }
 
 UCrossguardAbilitySystemComponent* UCrossguardEquipmentComponent::GetAbilitySystem() const
@@ -98,6 +113,50 @@ const FCrossguardWeaponRow* UCrossguardEquipmentComponent::FindWeapon(FName Weap
 		return nullptr;
 	}
 	return WeaponTable->FindRow<FCrossguardWeaponRow>(WeaponId, TEXT("UCrossguardEquipmentComponent::FindWeapon"), false);
+}
+
+const FCrossguardArmorRow* UCrossguardEquipmentComponent::FindArmor(FName ArmorId) const
+{
+	if (ArmorTable == nullptr || ArmorId.IsNone())
+	{
+		return nullptr;
+	}
+	return ArmorTable->FindRow<FCrossguardArmorRow>(ArmorId, TEXT("UCrossguardEquipmentComponent::FindArmor"), false);
+}
+
+const FCrossguardArmorItem& UCrossguardEquipmentComponent::GetArmorItem(ECrossguardArmorSlot Slot) const
+{
+	static const FCrossguardArmorItem Empty;
+	const int32 Index = static_cast<int32>(Slot);
+	return Armor.IsValidIndex(Index) ? Armor[Index] : Empty;
+}
+
+const FCrossguardArmorRow* UCrossguardEquipmentComponent::GetArmorRow(ECrossguardArmorSlot Slot) const
+{
+	return FindArmor(GetArmorItem(Slot).ArmorId);
+}
+
+Crossguard::FArmorLoadout UCrossguardEquipmentComponent::BuildArmorLoadout() const
+{
+	Crossguard::FArmorLoadout Loadout{};
+	for (int32 Index = 0; Index < Crossguard::ArmorSlotCount && Index < Armor.Num(); ++Index)
+	{
+		if (const FCrossguardArmorRow* Row = FindArmor(Armor[Index].ArmorId))
+		{
+			Loadout[Index] = static_cast<Crossguard::EArmorType>(static_cast<uint8>(Row->ArmorType));
+		}
+	}
+	return Loadout;
+}
+
+bool UCrossguardEquipmentComponent::SatisfiesArmorRequirement(ECrossguardArmorRequirement Requirement) const
+{
+	return Crossguard::SatisfiesArmorRequirement(static_cast<Crossguard::EArmorRequirement>(static_cast<uint8>(Requirement)), BuildArmorLoadout());
+}
+
+int32 UCrossguardEquipmentComponent::GetEmptyArmorSlotCount() const
+{
+	return Crossguard::CountEmptyArmorSlots(BuildArmorLoadout());
 }
 
 const FCrossguardWeaponItem& UCrossguardEquipmentComponent::GetItem(ECrossguardEquipmentSlot Slot) const
@@ -186,6 +245,76 @@ void UCrossguardEquipmentComponent::RequestUnequip(ECrossguardEquipmentSlot Slot
 	RequestEquip(Slot, FCrossguardWeaponItem());
 }
 
+void UCrossguardEquipmentComponent::RequestEquipArmor(const FCrossguardArmorItem& Item)
+{
+	const FCrossguardArmorRow* Row = FindArmor(Item.ArmorId);
+	if (Row == nullptr)
+	{
+		OnArmorEquipRejected.Broadcast(ECrossguardArmorSlot::Head, ECrossguardEquipError::UnknownArmor);
+		return;
+	}
+	if (GetOwner() != nullptr && GetOwner()->HasAuthority())
+	{
+		ApplyArmorEquip(Row->Slot, Item);
+	}
+	else
+	{
+		ServerEquipArmor(Row->Slot, Item);
+	}
+}
+
+void UCrossguardEquipmentComponent::RequestUnequipArmor(ECrossguardArmorSlot Slot)
+{
+	if (GetOwner() != nullptr && GetOwner()->HasAuthority())
+	{
+		ApplyArmorEquip(Slot, FCrossguardArmorItem());
+	}
+	else
+	{
+		ServerEquipArmor(Slot, FCrossguardArmorItem());
+	}
+}
+
+void UCrossguardEquipmentComponent::ServerEquipArmor_Implementation(ECrossguardArmorSlot Slot, const FCrossguardArmorItem& Item)
+{
+	ApplyArmorEquip(Slot, Item);
+}
+
+void UCrossguardEquipmentComponent::ClientArmorEquipRejected_Implementation(ECrossguardArmorSlot Slot, ECrossguardEquipError Error)
+{
+	OnArmorEquipRejected.Broadcast(Slot, Error);
+}
+
+void UCrossguardEquipmentComponent::ApplyArmorEquip(ECrossguardArmorSlot Slot, const FCrossguardArmorItem& Item)
+{
+	ECrossguardEquipError Error = ECrossguardEquipError::None;
+	const FCrossguardArmorRow* Row = FindArmor(Item.ArmorId);
+	if (ArmorTable == nullptr || GetAbilitySystem() == nullptr || !Armor.IsValidIndex(static_cast<int32>(Slot)))
+	{
+		Error = ECrossguardEquipError::NotReady;
+	}
+	else if (!Item.IsEmpty() && Row == nullptr)
+	{
+		Error = ECrossguardEquipError::UnknownArmor;
+	}
+	else if (Row != nullptr && Row->Slot != Slot)
+	{
+		Error = ECrossguardEquipError::WrongArmorSlot;
+	}
+
+	if (Error != ECrossguardEquipError::None)
+	{
+		UE_LOG(LogCrossguard, Log, TEXT("Armor equip rejected for %s: slot %d, error %d"), *GetNameSafe(GetOwner()),
+			static_cast<int32>(Slot), static_cast<int32>(Error));
+		ClientArmorEquipRejected(Slot, Error);
+		return;
+	}
+
+	Armor[static_cast<int32>(Slot)] = Item;
+	RefreshEquipmentEffect();
+	OnEquipmentChanged.Broadcast();
+}
+
 void UCrossguardEquipmentComponent::ServerEquip_Implementation(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item)
 {
 	ApplyEquip(Slot, Item);
@@ -259,6 +388,24 @@ void UCrossguardEquipmentComponent::RefreshEquipmentEffect()
 		Stats.Add(Name, 0.0f);
 	}
 
+	const auto AddAffixes = [this, &Stats](const TArray<FCrossguardAffix>& Affixes, FName ItemId)
+	{
+		for (const FCrossguardAffix& Affix : Affixes)
+		{
+			const FCrossguardAffixRow* AffixRow = AffixTable != nullptr
+				? AffixTable->FindRow<FCrossguardAffixRow>(Affix.AffixId, TEXT("RefreshEquipmentEffect"), false)
+				: nullptr;
+			float* Total = AffixRow != nullptr ? Stats.Find(AffixRow->Stat) : nullptr;
+			if (Total == nullptr)
+			{
+				UE_LOG(LogCrossguard, Warning, TEXT("Affix %s on %s does not map to an equipment stat"), *Affix.AffixId.ToString(),
+					*ItemId.ToString());
+				continue;
+			}
+			*Total += Affix.Value;
+		}
+	};
+
 	const Crossguard::FEquipment Equipment = BuildRulesEquipment(MainHand, OffHand);
 	for (const FCrossguardWeaponItem* Item : {&MainHand, &OffHand})
 	{
@@ -271,20 +418,7 @@ void UCrossguardEquipmentComponent::RefreshEquipmentEffect()
 		{
 			Stats.FindChecked(FName(TEXT("AttackResistance"))) += UCrossguardItemLibrary::GetWeaponValue(*Row, Item->Rarity);
 		}
-		for (const FCrossguardAffix& Affix : Item->Affixes)
-		{
-			const FCrossguardAffixRow* AffixRow = AffixTable != nullptr
-				? AffixTable->FindRow<FCrossguardAffixRow>(Affix.AffixId, TEXT("RefreshEquipmentEffect"), false)
-				: nullptr;
-			float* Total = AffixRow != nullptr ? Stats.Find(AffixRow->Stat) : nullptr;
-			if (Total == nullptr)
-			{
-				UE_LOG(LogCrossguard, Warning, TEXT("Affix %s on %s does not map to an equipment stat"), *Affix.AffixId.ToString(),
-					*Item->WeaponId.ToString());
-				continue;
-			}
-			*Total += Affix.Value;
-		}
+		AddAffixes(Item->Affixes, Item->WeaponId);
 		Spec.Data->DynamicGrantedTags.AddTag(WieldingTag(Row->WeaponType));
 	}
 	for (const ECrossguardWeaponType Wildcard : {ECrossguardWeaponType::AnyMelee, ECrossguardWeaponType::TwoHandedMelee})
@@ -293,6 +427,33 @@ void UCrossguardEquipmentComponent::RefreshEquipmentEffect()
 		{
 			Spec.Data->DynamicGrantedTags.AddTag(WieldingTag(Wildcard));
 		}
+	}
+
+	for (const FCrossguardArmorItem& Piece : Armor)
+	{
+		const FCrossguardArmorRow* Row = FindArmor(Piece.ArmorId);
+		if (Row == nullptr)
+		{
+			continue;
+		}
+		for (const FCrossguardArmorStat& Stat : Row->Stats)
+		{
+			if (float* Total = Stats.Find(Stat.Stat))
+			{
+				*Total += UCrossguardItemLibrary::GetArmorStatValue(Stat, Piece.Rarity);
+			}
+		}
+		AddAffixes(Piece.Affixes, Piece.ArmorId);
+	}
+	const Crossguard::FArmorLoadout Loadout = BuildArmorLoadout();
+	Stats.FindChecked(FName(TEXT("EmptyArmorSlots"))) = static_cast<float>(Crossguard::CountEmptyArmorSlots(Loadout));
+	if (Crossguard::SatisfiesArmorRequirement(Crossguard::EArmorRequirement::Plate, Loadout))
+	{
+		Spec.Data->DynamicGrantedTags.AddTag(CrossguardTags::Equipment_Armor_Plate);
+	}
+	if (Crossguard::SatisfiesArmorRequirement(Crossguard::EArmorRequirement::PlateAllSlots, Loadout))
+	{
+		Spec.Data->DynamicGrantedTags.AddTag(CrossguardTags::Equipment_Armor_PlateAllSlots);
 	}
 
 	for (const TPair<FName, float>& Stat : Stats)

@@ -5,6 +5,7 @@
 #include "CrossguardRules/Config.h"
 #include "CrossguardRules/RulesApi.h"
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -115,6 +116,44 @@ namespace Crossguard
 	// True if the equipment satisfies any one of the listed weapon types. Empty list: true.
 	// A concrete type matches either hand regardless of handedness (a two-handed sword is a Sword).
 	CROSSGUARDRULES_API bool SatisfiesWeaponRequirement(const std::vector<EWeaponType>& AnyOf, const FEquipment& Equipment);
+
+	// Armor (docs/item-data-schema.md, "Armor slots and requirements").
+	enum class EArmorSlot
+	{
+		Head,
+		Chest,
+		Hands,
+		Legs,
+		Feet,
+		// Capes; later backpacks and quivers. Not armor for plate requirements.
+		Back,
+	};
+
+	constexpr int ArmorSlotCount = 6;
+
+	enum class EArmorType
+	{
+		Cloth,
+		Leather,
+		Plate,
+	};
+
+	enum class EArmorRequirement
+	{
+		None,
+		// At least one plate piece ([Armor Mastery]).
+		Plate,
+		// Plate in Head, Chest, Hands, Legs and Feet; Back excluded ([The Mithril Knight]).
+		PlateAllSlots,
+	};
+
+	// Armor type worn in each slot, indexed by EArmorSlot; empty if nothing is worn.
+	using FArmorLoadout = std::array<std::optional<EArmorType>, ArmorSlotCount>;
+
+	// All six slots count ([Cor Leonis]).
+	CROSSGUARDRULES_API int CountEmptyArmorSlots(const FArmorLoadout& Armor);
+
+	CROSSGUARDRULES_API bool SatisfiesArmorRequirement(EArmorRequirement Requirement, const FArmorLoadout& Armor);
 
 	// Affixes. Values roll uniformly in [Min, Max], snapped down to a multiple of Step above Min.
 	struct FAffixDefinition

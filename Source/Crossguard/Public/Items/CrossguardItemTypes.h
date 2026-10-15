@@ -63,6 +63,26 @@ enum class ECrossguardEquipmentSlot : uint8
 	OffHand,
 };
 
+UENUM(BlueprintType)
+enum class ECrossguardArmorSlot : uint8
+{
+	Head,
+	Chest,
+	Hands,
+	Legs,
+	Feet,
+	// Capes; later backpacks and quivers.
+	Back,
+};
+
+UENUM(BlueprintType)
+enum class ECrossguardArmorType : uint8
+{
+	Cloth,
+	Leather,
+	Plate,
+};
+
 // One row per weapon class. Row name = weapon id (e.g. "sword_one_handed").
 USTRUCT(BlueprintType)
 struct CROSSGUARD_API FCrossguardWeaponRow : public FTableRowBase
@@ -137,6 +157,46 @@ struct CROSSGUARD_API FCrossguardAffixRow : public FTableRowBase
 	TArray<FName> Pools;
 };
 
+USTRUCT(BlueprintType)
+struct CROSSGUARD_API FCrossguardArmorStat
+{
+	GENERATED_BODY()
+
+	// Attribute name on UCrossguardAttributeSet.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Armor")
+	FName Stat;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Armor")
+	float BaseValue = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Armor")
+	float PerRarity = 0.0f;
+};
+
+// One row per armor piece. Row name = armor id (e.g. "plate_helm"). Generated from
+// Data/Items/Armor.json by Tools/export_armor_table.py.
+USTRUCT(BlueprintType)
+struct CROSSGUARD_API FCrossguardArmorRow : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Armor")
+	FText DisplayName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Armor")
+	ECrossguardArmorSlot Slot = ECrossguardArmorSlot::Head;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Armor")
+	ECrossguardArmorType ArmorType = ECrossguardArmorType::Cloth;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Armor")
+	TArray<FCrossguardArmorStat> Stats;
+
+	// PlateArmor, LeatherArmor, ClothArmor.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Armor")
+	FName AffixPool;
+};
+
 // A rolled affix on an item instance.
 USTRUCT(BlueprintType)
 struct CROSSGUARD_API FCrossguardAffix
@@ -170,6 +230,25 @@ struct CROSSGUARD_API FCrossguardWeaponItem
 	bool IsEmpty() const { return WeaponId.IsNone(); }
 };
 
+// A specific armor piece: which piece, rarity and rolled affixes.
+USTRUCT(BlueprintType)
+struct CROSSGUARD_API FCrossguardArmorItem
+{
+	GENERATED_BODY()
+
+	// Row in the armor table. None: empty slot.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	FName ArmorId;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	ECrossguardRarity Rarity = ECrossguardRarity::Common;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	TArray<FCrossguardAffix> Affixes;
+
+	bool IsEmpty() const { return ArmorId.IsNone(); }
+};
+
 UCLASS()
 class CROSSGUARD_API UCrossguardItemLibrary : public UBlueprintFunctionLibrary
 {
@@ -193,6 +272,15 @@ public:
 	// The affix pool a weapon rolls from: AttackWeapon (AD), MagicWeapon (MD) or Shield (AR).
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Items")
 	static FName GetAffixPool(const FCrossguardWeaponRow& Weapon);
+
+	// An armor stat's value at the item's rarity.
+	UFUNCTION(BlueprintPure, Category = "Crossguard|Items")
+	static float GetArmorStatValue(const FCrossguardArmorStat& Stat, ECrossguardRarity Rarity);
+
+	// Server only. A new armor item with affixes from the piece's pool. Same Seed, same item.
+	UFUNCTION(BlueprintCallable, Category = "Crossguard|Items")
+	static FCrossguardArmorItem RollArmorItem(const UDataTable* AffixTable, FName ArmorId, const FCrossguardArmorRow& Armor,
+		ECrossguardRarity Rarity, int64 Seed);
 
 	// Server only. A new weapon item with as many distinct affixes from its pool as its rarity
 	// allows. The same Seed always gives the same item.

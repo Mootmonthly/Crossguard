@@ -9,6 +9,39 @@ namespace
 	{
 		return static_cast<Crossguard::ERarity>(static_cast<uint8>(Rarity));
 	}
+
+	// Distinct affixes from Pool, as many as the rarity has slots. Deterministic per Seed.
+	TArray<FCrossguardAffix> RollAffixesFromPool(const UDataTable* AffixTable, FName Pool, ECrossguardRarity Rarity, int64 Seed)
+	{
+		TArray<FCrossguardAffix> Affixes;
+		if (AffixTable == nullptr || Pool.IsNone())
+		{
+			return Affixes;
+		}
+
+		// Sorted by row name so the same seed rolls the same affixes regardless of table order.
+		TArray<FName> RowNames = AffixTable->GetRowNames();
+		RowNames.Sort(FNameLexicalLess());
+		std::vector<Crossguard::FAffixDefinition> Definitions;
+		for (const FName& RowName : RowNames)
+		{
+			const FCrossguardAffixRow* Row = AffixTable->FindRow<FCrossguardAffixRow>(RowName, TEXT("RollAffixesFromPool"), false);
+			if (Row != nullptr && Row->Pools.Contains(Pool))
+			{
+				Definitions.push_back({std::string(TCHAR_TO_UTF8(*RowName.ToString())), Row->Min, Row->Max, Row->Step});
+			}
+		}
+
+		const int Slots = Crossguard::AffixSlots(Crossguard::FItemConfig(), ToRulesRarity(Rarity));
+		for (const Crossguard::FRolledAffix& Rolled : Crossguard::RollAffixes(Definitions, Slots, static_cast<uint64>(Seed)))
+		{
+			FCrossguardAffix Affix;
+			Affix.AffixId = FName(UTF8_TO_TCHAR(Rolled.Id.c_str()));
+			Affix.Value = static_cast<float>(Rolled.Value);
+			Affixes.Add(Affix);
+		}
+		return Affixes;
+	}
 }
 
 // The two enums must stay in the same order.
@@ -61,34 +94,22 @@ FCrossguardWeaponItem UCrossguardItemLibrary::RollWeaponItem(const UDataTable* A
 	FCrossguardWeaponItem Item;
 	Item.WeaponId = WeaponId;
 	Item.Rarity = Rarity;
+	Item.Affixes = RollAffixesFromPool(AffixTable, GetAffixPool(Weapon), Rarity, Seed);
+	return Item;
+}
 
-	const FName Pool = GetAffixPool(Weapon);
-	if (AffixTable == nullptr || Pool.IsNone())
-	{
-		return Item;
-	}
+float UCrossguardItemLibrary::GetArmorStatValue(const FCrossguardArmorStat& Stat, ECrossguardRarity Rarity)
+{
+	return static_cast<float>(Crossguard::ValueAtRarity(Stat.BaseValue, Stat.PerRarity, ToRulesRarity(Rarity)));
+}
 
-	// Sorted by row name so the same seed rolls the same affixes regardless of table order.
-	TArray<FName> RowNames = AffixTable->GetRowNames();
-	RowNames.Sort(FNameLexicalLess());
-	std::vector<Crossguard::FAffixDefinition> Definitions;
-	for (const FName& RowName : RowNames)
-	{
-		const FCrossguardAffixRow* Row = AffixTable->FindRow<FCrossguardAffixRow>(RowName, TEXT("RollWeaponItem"), false);
-		if (Row != nullptr && Row->Pools.Contains(Pool))
-		{
-			Definitions.push_back({std::string(TCHAR_TO_UTF8(*RowName.ToString())), Row->Min, Row->Max, Row->Step});
-		}
-	}
-
-	const int Slots = Crossguard::AffixSlots(Crossguard::FItemConfig(), ToRulesRarity(Rarity));
-	for (const Crossguard::FRolledAffix& Rolled : Crossguard::RollAffixes(Definitions, Slots, static_cast<uint64>(Seed)))
-	{
-		FCrossguardAffix Affix;
-		Affix.AffixId = FName(UTF8_TO_TCHAR(Rolled.Id.c_str()));
-		Affix.Value = static_cast<float>(Rolled.Value);
-		Item.Affixes.Add(Affix);
-	}
+FCrossguardArmorItem UCrossguardItemLibrary::RollArmorItem(const UDataTable* AffixTable, FName ArmorId, const FCrossguardArmorRow& Armor,
+	ECrossguardRarity Rarity, int64 Seed)
+{
+	FCrossguardArmorItem Item;
+	Item.ArmorId = ArmorId;
+	Item.Rarity = Rarity;
+	Item.Affixes = RollAffixesFromPool(AffixTable, Armor.AffixPool, Rarity, Seed);
 	return Item;
 }
 

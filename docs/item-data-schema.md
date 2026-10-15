@@ -57,12 +57,47 @@ character's stat (0 at 10 AGI). The divisor is floored at 0.1.
 | --- | --- | --- |
 | `id` | string | `snake_case`, unique. |
 | `name` | string | Display name. |
-| `stat` | enum | The attribute it adds to, by its `UCrossguardAttributeSet` name: `AttackResistance`, `MagicResistance`, `MaxHealth`, `MaxHealthBonus`, `AdditionalAttackDamage`, `AdditionalMagicDamage`, `ActionSpeed`, `AttackPenetration`, `MagicPenetration`, `TrueDamage`, `AttackDamageBonus`, `MagicDamageBonus`, `ActiveCooldownReduction`, `SpellCooldownReduction`, `ArtCooldownReduction`, `ActiveCastTimeReduction`, `SpellCastTimeReduction`, `ArtCastTimeReduction`, `Strength`, `Agility`, `Intelligence`, `Dexterity`. Unique across affixes. |
+| `stat` | enum | The attribute it adds to, by its `UCrossguardAttributeSet` name: `AttackResistance`, `MagicResistance`, `MaxHealth`, `MaxHealthBonus`, `AdditionalAttackDamage`, `AdditionalMagicDamage`, `ActionSpeed`, `AttackPenetration`, `MagicPenetration`, `TrueDamage`, `AttackDamageBonus`, `MagicDamageBonus`, `ActiveCooldownReduction`, `SpellCooldownReduction`, `ArtCooldownReduction`, `ActiveCastTimeReduction`, `SpellCastTimeReduction`, `ArtCastTimeReduction`, `Strength`, `Agility`, `Intelligence`, `Dexterity`, `MoveSpeed`. Unique across affixes. |
 | `min`, `max` | number | Roll range, inclusive. Percent stats are fractions (`0.02` = 2%). |
 | `step` | number > 0 | Values land on `min + k × step`. |
-| `pools` | string[] | Which items can roll it: `AttackWeapon` (weapons dealing AD), `MagicWeapon` (weapons dealing MD), `Shield`. Armor pools come later. |
+| `pools` | string[] | Which items can roll it: `AttackWeapon` (weapons dealing AD), `MagicWeapon` (weapons dealing MD), `Shield`, `PlateArmor`, `LeatherArmor`, `ClothArmor`. |
 
 Rolling: an item gets as many distinct affixes from its pool as its rarity has slots
 (`Crossguard::RollAffixes`, deterministic per seed).
 
 Flat Max HP from affixes is added after Max HP Bonus: `Max HP = derived × (1 + MHPB) + flat`.
+
+## Armor
+
+`Data/Items/Armor.json` is a JSON array of armor pieces, sorted by `id`. For the prototype there is
+one set per armor type. `Tools/validate_armor.py` checks it.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | string | `snake_case`, unique. |
+| `name` | string | Display name. |
+| `slot` | enum | `Head`, `Chest`, `Hands`, `Legs`, `Feet`, `Back`. |
+| `armorType` | enum | `Cloth`, `Leather`, `Plate`. |
+| `stats` | object[] | Base stats while worn: `{"stat", "baseValue", "perRarity"}`. `stat` is an attribute name the equipment effect applies (`AttackResistance`, `MagicResistance`, `MoveSpeed`, ...), each at most once per piece. Fractions: `0.04` = 4%. |
+| `affixPool` | enum | `PlateArmor`, `LeatherArmor`, `ClothArmor`: the pool its affixes roll from. Must match `armorType`. |
+
+Value at a rarity = `baseValue + perRarity × level`, as for weapons.
+
+Prototype values per piece at Common (Chest and Legs double them; rarity adds +1% per level to AR
+and MR, not to Plate's Move Speed penalty):
+
+| Type | AR | MR | Move Speed |
+| --- | --- | --- | --- |
+| Plate | 4% | 0% | −1% |
+| Leather | 2% | 2% | 0% |
+| Cloth | 0% | 4% | 0% |
+
+The Back slot holds capes for now (Cloth Cape). Backpacks and quivers come with inventory.
+
+## Armor slots and requirements
+
+- Six slots: Head, Chest, Hands, Legs, Feet, Back. Jewelry is a separate system, later.
+- `Plate` requirement ([Armor Mastery]): at least one plate piece worn (pending confirmation).
+- `PlateAllSlots` ([The Mithril Knight]): plate in Head, Chest, Hands, Legs and Feet. Back is
+  excluded.
+- Empty armor slots ([Cor Leonis]): all six slots count.

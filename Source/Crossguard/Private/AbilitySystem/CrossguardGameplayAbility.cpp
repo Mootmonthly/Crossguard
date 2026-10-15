@@ -19,13 +19,13 @@ bool UCrossguardGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHa
 	{
 		return false;
 	}
-	if (RequiredWeapons.IsEmpty())
+	if (RequiredWeapons.IsEmpty() && RequiredArmor == ECrossguardArmorRequirement::None)
 	{
 		return true;
 	}
 	const AActor* Avatar = ActorInfo != nullptr ? ActorInfo->AvatarActor.Get() : nullptr;
 	const UCrossguardEquipmentComponent* Equipment = Avatar != nullptr ? Avatar->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
-	return Equipment != nullptr && Equipment->SatisfiesWeaponRequirement(RequiredWeapons);
+	return Equipment != nullptr && Equipment->SatisfiesWeaponRequirement(RequiredWeapons) && Equipment->SatisfiesArmorRequirement(RequiredArmor);
 }
 
 const UCrossguardAbilitySystemComponent* UCrossguardGameplayAbility::GetCrossguardAbilitySystemComponent() const

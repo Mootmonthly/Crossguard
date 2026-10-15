@@ -4,6 +4,7 @@
 Data/Skills/SkillTable.json -> FCrossguardSkillRow (CrossguardSkillTypes.h)
 Data/Items/WeaponTable.json -> FCrossguardWeaponRow (CrossguardItemTypes.h)
 Data/Items/AffixTable.json -> FCrossguardAffixRow (CrossguardItemTypes.h)
+Data/Items/ArmorTable.json -> FCrossguardArmorRow (CrossguardItemTypes.h)
 
 Every JSON field must be a UPROPERTY of the matching struct, every struct field must be present,
 and every enum value must be an entry of the C++ enum. Catches drift between the exporter and the
@@ -24,6 +25,7 @@ TABLES = [
     (REPO / "Data" / "Skills" / "SkillTable.json", "FCrossguardSkillRow"),
     (REPO / "Data" / "Items" / "WeaponTable.json", "FCrossguardWeaponRow"),
     (REPO / "Data" / "Items" / "AffixTable.json", "FCrossguardAffixRow"),
+    (REPO / "Data" / "Items" / "ArmorTable.json", "FCrossguardArmorRow"),
 ]
 
 
@@ -100,8 +102,14 @@ def main():
         if row["Stat"] not in stats:
             print(f"ERROR: AffixTable.json: {row['Name']}.Stat: {row['Stat']!r} is not applied by UCrossguardEquipmentEffect")
             failed = True
+    armor = json.loads((REPO / "Data" / "Items" / "ArmorTable.json").read_text(encoding="utf-8"))
+    for row in armor:
+        for stat in row["Stats"]:
+            if stat["Stat"] not in stats:
+                print(f"ERROR: ArmorTable.json: {row['Name']}: {stat['Stat']!r} is not applied by UCrossguardEquipmentEffect")
+                failed = True
     if not failed:
-        print(f"OK: every affix stat is applied by UCrossguardEquipmentEffect ({len(stats)} stats)")
+        print(f"OK: every affix and armor stat is applied by UCrossguardEquipmentEffect ({len(stats)} stats)")
     return 1 if failed else 0
 
 

@@ -1,0 +1,276 @@
+[
+	{
+		"Name": "cloth_cape",
+		"DisplayName": "Cloth Cape",
+		"Slot": "Back",
+		"ArmorType": "Cloth",
+		"Stats": [
+			{
+				"Stat": "MagicResistance",
+				"BaseValue": 0.04,
+				"PerRarity": 0.01
+			}
+		],
+		"AffixPool": "ClothArmor"
+	},
+	{
+		"Name": "cloth_hood",
+		"DisplayName": "Cloth Hood",
+		"Slot": "Head",
+		"ArmorType": "Cloth",
+		"Stats": [
+			{
+				"Stat": "MagicResistance",
+				"BaseValue": 0.04,
+				"PerRarity": 0.01
+			}
+		],
+		"AffixPool": "ClothArmor"
+	},
+	{
+		"Name": "cloth_leggings",
+		"DisplayName": "Cloth Leggings",
+		"Slot": "Legs",
+		"ArmorType": "Cloth",
+		"Stats": [
+			{
+				"Stat": "MagicResistance",
+				"BaseValue": 0.08,
+				"PerRarity": 0.01
+			}
+		],
+		"AffixPool": "ClothArmor"
+	},
+	{
+		"Name": "cloth_robe",
+		"DisplayName": "Cloth Robe",
+		"Slot": "Chest",
+		"ArmorType": "Cloth",
+		"Stats": [
+			{
+				"Stat": "MagicResistance",
+				"BaseValue": 0.08,
+				"PerRarity": 0.01
+			}
+		],
+		"AffixPool": "ClothArmor"
+	},
+	{
+		"Name": "cloth_shoes",
+		"DisplayName": "Cloth Shoes",
+		"Slot": "Feet",
+		"ArmorType": "Cloth",
+		"Stats": [
+			{
+				"Stat": "MagicResistance",
+				"BaseValue": 0.04,
+				"PerRarity": 0.01
+			}
+		],
+		"AffixPool": "ClothArmor"
+	},
+	{
+		"Name": "cloth_wraps",
+		"DisplayName": "Cloth Wraps",
+		"Slot": "Hands",
+		"ArmorType": "Cloth",
+		"Stats": [
+			{
+				"Stat": "MagicResistance",
+				"BaseValue": 0.04,
+				"PerRarity": 0.01
+			}
+		],
+		"AffixPool": "ClothArmor"
+	},
+	{
+		"Name": "leather_boots",
+		"DisplayName": "Leather Boots",
+		"Slot": "Feet",
+		"ArmorType": "Leather",
+		"Stats": [
+			{
+				"Stat": "AttackResistance",
+				"BaseValue": 0.02,
+				"PerRarity": 0.01
+			},
+			{
+				"Stat": "MagicResistance",
+				"BaseValue": 0.02,
+				"PerRarity": 0.01
+			}
+		],
+		"AffixPool": "LeatherArmor"
+	},
+	{
+		"Name": "leather_cap",
+		"DisplayName": "Leather Cap",
+		"Slot": "Head",
+		"ArmorType": "Leather",
+		"Stats": [
+			{
+				"Stat": "AttackResistance",
+				"BaseValue": 0.02,
+				"PerRarity": 0.01
+			},
+			{
+				"Stat": "MagicResistance",
+				"BaseValue": 0.02,
+				"PerRarity": 0.01
+			}
+		],
+		"AffixPool": "LeatherArmor"
+	},
+	{
+		"Name": "leather_gloves",
+		"DisplayName": "Leather Gloves",
+		"Slot": "Hands",
+		"ArmorType": "Leather",
+		"Stats": [
+			{
+				"Stat": "AttackResistance",
+				"BaseValue": 0.02,
+				"PerRarity": 0.01
+			},
+			{
+				"Stat": "MagicResistance",
+				"BaseValue": 0.02,
+				"PerRarity": 0.01
+			}
+		],
+		"AffixPool": "LeatherArmor"
+	},
+	{
+		"Name": "leather_jerkin",
+		"DisplayName": "Leather Jerkin",
+		"Slot": "Chest",
+		"ArmorType": "Leather",
+		"Stats": [
+			{
+				"Stat": "AttackResistance",
+				"BaseValue": 0.04,
+				"PerRarity": 0.01
+			},
+			{
+				"Stat": "MagicResistance",
+				"BaseValue": 0.04,
+				"PerRarity": 0.01
+			}
+		],
+		"AffixPool": "LeatherArmor"
+	},
+	{
+		"Name": "leather_trousers",
+		"DisplayName": "Leather Trousers",
+		"Slot": "Legs",
+		"ArmorType": "Leather",
+		"Stats": [
+			{
+				"Stat": "AttackResistance",
+				"BaseValue": 0.04,
+				"PerRarity": 0.01
+			},
+			{
+				"Stat": "MagicResistance",
+				"BaseValue": 0.04,
+				"PerRarity": 0.01
+			}
+		],
+		"AffixPool": "LeatherArmor"
+	},
+	{
+		"Name": "plate_cuirass",
+		"DisplayName": "Plate Cuirass",
+		"Slot": "Chest",
+		"ArmorType": "Plate",
+		"Stats": [
+			{
+				"Stat": "AttackResistance",
+				"BaseValue": 0.08,
+				"PerRarity": 0.01
+			},
+			{
+				"Stat": "MoveSpeed",
+				"BaseValue": -0.02,
+				"PerRarity": 0.0
+			}
+		],
+		"AffixPool": "PlateArmor"
+	},
+	{
+		"Name": "plate_gauntlets",
+		"DisplayName": "Plate Gauntlets",
+		"Slot": "Hands",
+		"ArmorType": "Plate",
+		"Stats": [
+			{
+				"Stat": "AttackResistance",
+				"BaseValue": 0.04,
+				"PerRarity": 0.01
+			},
+			{
+				"Stat": "MoveSpeed",
+				"BaseValue": -0.01,
+				"PerRarity": 0.0
+			}
+		],
+		"AffixPool": "PlateArmor"
+	},
+	{
+		"Name": "plate_greaves",
+		"DisplayName": "Plate Greaves",
+		"Slot": "Legs",
+		"ArmorType": "Plate",
+		"Stats": [
+			{
+				"Stat": "AttackResistance",
+				"BaseValue": 0.08,
+				"PerRarity": 0.01
+			},
+			{
+				"Stat": "MoveSpeed",
+				"BaseValue": -0.02,
+				"PerRarity": 0.0
+			}
+		],
+		"AffixPool": "PlateArmor"
+	},
+	{
+		"Name": "plate_helm",
+		"DisplayName": "Plate Helm",
+		"Slot": "Head",
+		"ArmorType": "Plate",
+		"Stats": [
+			{
+				"Stat": "AttackResistance",
+				"BaseValue": 0.04,
+				"PerRarity": 0.01
+			},
+			{
+				"Stat": "MoveSpeed",
+				"BaseValue": -0.01,
+				"PerRarity": 0.0
+			}
+		],
+		"AffixPool": "PlateArmor"
+	},
+	{
+		"Name": "plate_sabatons",
+		"DisplayName": "Plate Sabatons",
+		"Slot": "Feet",
+		"ArmorType": "Plate",
+		"Stats": [
+			{
+				"Stat": "AttackResistance",
+				"BaseValue": 0.04,
+				"PerRarity": 0.01
+			},
+			{
+				"Stat": "MoveSpeed",
+				"BaseValue": -0.01,
+				"PerRarity": 0.0
+			}
+		],
+		"AffixPool": "PlateArmor"
+	}
+]

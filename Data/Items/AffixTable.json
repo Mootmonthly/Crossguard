@@ -9,7 +9,8 @@
 		"Pools": [
 			"AttackWeapon",
 			"MagicWeapon",
-			"Shield"
+			"Shield",
+			"LeatherArmor"
 		]
 	},
 	{
@@ -70,7 +71,10 @@
 		"Step": 1,
 		"Pools": [
 			"AttackWeapon",
-			"MagicWeapon"
+			"MagicWeapon",
+			"PlateArmor",
+			"LeatherArmor",
+			"ClothArmor"
 		]
 	},
 	{
@@ -128,7 +132,8 @@
 		"Max": 0.05,
 		"Step": 0.01,
 		"Pools": [
-			"Shield"
+			"Shield",
+			"PlateArmor"
 		]
 	},
 	{
@@ -141,7 +146,8 @@
 		"Pools": [
 			"AttackWeapon",
 			"MagicWeapon",
-			"Shield"
+			"Shield",
+			"LeatherArmor"
 		]
 	},
 	{
@@ -153,7 +159,10 @@
 		"Step": 1,
 		"Pools": [
 			"AttackWeapon",
-			"MagicWeapon"
+			"MagicWeapon",
+			"PlateArmor",
+			"LeatherArmor",
+			"ClothArmor"
 		]
 	},
 	{
@@ -186,7 +195,9 @@
 		"Max": 0.05,
 		"Step": 0.01,
 		"Pools": [
-			"Shield"
+			"Shield",
+			"PlateArmor",
+			"ClothArmor"
 		]
 	},
 	{
@@ -197,7 +208,10 @@
 		"Max": 3,
 		"Step": 1,
 		"Pools": [
-			"Shield"
+			"Shield",
+			"PlateArmor",
+			"LeatherArmor",
+			"ClothArmor"
 		]
 	},
 	{
@@ -208,7 +222,21 @@
 		"Max": 0.05,
 		"Step": 0.01,
 		"Pools": [
-			"Shield"
+			"Shield",
+			"PlateArmor",
+			"LeatherArmor",
+			"ClothArmor"
+		]
+	},
+	{
+		"Name": "move_speed",
+		"DisplayName": "Move Speed",
+		"Stat": "MoveSpeed",
+		"Min": 0.02,
+		"Max": 0.05,
+		"Step": 0.01,
+		"Pools": [
+			"LeatherArmor"
 		]
 	},
 	{
@@ -220,7 +248,8 @@
 		"Step": 0.01,
 		"Pools": [
 			"MagicWeapon",
-			"Shield"
+			"Shield",
+			"ClothArmor"
 		]
 	},
 	{
@@ -233,7 +262,8 @@
 		"Pools": [
 			"AttackWeapon",
 			"MagicWeapon",
-			"Shield"
+			"Shield",
+			"ClothArmor"
 		]
 	},
 	{
@@ -245,7 +275,10 @@
 		"Step": 1,
 		"Pools": [
 			"AttackWeapon",
-			"MagicWeapon"
+			"MagicWeapon",
+			"PlateArmor",
+			"LeatherArmor",
+			"ClothArmor"
 		]
 	},
 	{

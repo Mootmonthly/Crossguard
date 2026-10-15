@@ -9,7 +9,8 @@
     "pools": [
       "AttackWeapon",
       "MagicWeapon",
-      "Shield"
+      "Shield",
+      "LeatherArmor"
     ]
   },
   {
@@ -70,7 +71,10 @@
     "step": 1,
     "pools": [
       "AttackWeapon",
-      "MagicWeapon"
+      "MagicWeapon",
+      "PlateArmor",
+      "LeatherArmor",
+      "ClothArmor"
     ]
   },
   {
@@ -128,7 +132,8 @@
     "max": 0.05,
     "step": 0.01,
     "pools": [
-      "Shield"
+      "Shield",
+      "PlateArmor"
     ]
   },
   {
@@ -141,7 +146,8 @@
     "pools": [
       "AttackWeapon",
       "MagicWeapon",
-      "Shield"
+      "Shield",
+      "LeatherArmor"
     ]
   },
   {
@@ -153,7 +159,10 @@
     "step": 1,
     "pools": [
       "AttackWeapon",
-      "MagicWeapon"
+      "MagicWeapon",
+      "PlateArmor",
+      "LeatherArmor",
+      "ClothArmor"
     ]
   },
   {
@@ -186,7 +195,9 @@
     "max": 0.05,
     "step": 0.01,
     "pools": [
-      "Shield"
+      "Shield",
+      "PlateArmor",
+      "ClothArmor"
     ]
   },
   {
@@ -197,7 +208,10 @@
     "max": 3,
     "step": 1,
     "pools": [
-      "Shield"
+      "Shield",
+      "PlateArmor",
+      "LeatherArmor",
+      "ClothArmor"
     ]
   },
   {
@@ -208,7 +222,21 @@
     "max": 0.05,
     "step": 0.01,
     "pools": [
-      "Shield"
+      "Shield",
+      "PlateArmor",
+      "LeatherArmor",
+      "ClothArmor"
+    ]
+  },
+  {
+    "id": "move_speed",
+    "name": "Move Speed",
+    "stat": "MoveSpeed",
+    "min": 0.02,
+    "max": 0.05,
+    "step": 0.01,
+    "pools": [
+      "LeatherArmor"
     ]
   },
   {
@@ -220,7 +248,8 @@
     "step": 0.01,
     "pools": [
       "MagicWeapon",
-      "Shield"
+      "Shield",
+      "ClothArmor"
     ]
   },
   {
@@ -233,7 +262,8 @@
     "pools": [
       "AttackWeapon",
       "MagicWeapon",
-      "Shield"
+      "Shield",
+      "ClothArmor"
     ]
   },
   {
@@ -245,7 +275,10 @@
     "step": 1,
     "pools": [
       "AttackWeapon",
-      "MagicWeapon"
+      "MagicWeapon",
+      "PlateArmor",
+      "LeatherArmor",
+      "ClothArmor"
     ]
   },
   {

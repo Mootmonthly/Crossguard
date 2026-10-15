@@ -35,4 +35,7 @@ namespace CrossguardTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_MagicStaff, "Equipment.Wielding.MagicStaff", "Holding a magic staff.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_AnyMelee, "Equipment.Wielding.AnyMelee", "Holding any melee weapon (shields count).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_TwoHandedMelee, "Equipment.Wielding.TwoHandedMelee", "Holding a two-handed melee weapon in the main hand.");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Armor_Plate, "Equipment.Armor.Plate", "Wearing at least one plate piece.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Armor_PlateAllSlots, "Equipment.Armor.PlateAllSlots", "Plate in Head, Chest, Hands, Legs and Feet.");
 }

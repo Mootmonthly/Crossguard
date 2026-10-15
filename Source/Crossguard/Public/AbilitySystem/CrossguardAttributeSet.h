@@ -139,6 +139,12 @@ public:
 	FGameplayAttributeData ArtCastTimeReduction; // Art (AGI)
 	CROSSGUARD_ATTRIBUTE_ACCESSORS(UCrossguardAttributeSet, ArtCastTimeReduction)
 
+	// Empty armor slots (0-6), set by the equipment effect. [Cor Leonis] scales its bonuses with it
+	// through attribute-based magnitudes.
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes|Equipment", ReplicatedUsing = OnRep_EmptyArmorSlots)
+	FGameplayAttributeData EmptyArmorSlots;
+	CROSSGUARD_ATTRIBUTE_ACCESSORS(UCrossguardAttributeSet, EmptyArmorSlots)
+
 	// Meta attributes: server-only inputs from the damage and healing executions, applied to
 	// Health in PostGameplayEffectExecute. Not replicated.
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes|Meta")
@@ -180,6 +186,8 @@ protected:
 	void OnRep_MagicPenetration(const FGameplayAttributeData& OldValue);
 	UFUNCTION()
 	void OnRep_TrueDamage(const FGameplayAttributeData& OldValue);
+	UFUNCTION()
+	void OnRep_EmptyArmorSlots(const FGameplayAttributeData& OldValue);
 	UFUNCTION()
 	void OnRep_AdditionalPhysicalHealing(const FGameplayAttributeData& OldValue);
 	UFUNCTION()

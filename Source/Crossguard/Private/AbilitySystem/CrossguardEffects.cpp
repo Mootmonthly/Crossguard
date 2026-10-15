@@ -45,6 +45,7 @@ namespace
 			UCrossguardAttributeSet::GetActiveCastTimeReductionAttribute(),
 			UCrossguardAttributeSet::GetSpellCastTimeReductionAttribute(),
 			UCrossguardAttributeSet::GetArtCastTimeReductionAttribute(),
+			UCrossguardAttributeSet::GetEmptyArmorSlotsAttribute(),
 		};
 		return Attributes;
 	}

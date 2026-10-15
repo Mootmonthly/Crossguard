@@ -32,6 +32,7 @@ void UCrossguardAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, MagicResistance, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, MagicPenetration, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, TrueDamage, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, EmptyArmorSlots, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, AdditionalPhysicalHealing, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, PhysicalHealingBonus, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, AdditionalMagicalHealing, COND_OwnerOnly, REPNOTIFY_Always);
@@ -209,6 +210,11 @@ void UCrossguardAttributeSet::OnRep_MagicPenetration(const FGameplayAttributeDat
 void UCrossguardAttributeSet::OnRep_TrueDamage(const FGameplayAttributeData& OldValue)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UCrossguardAttributeSet, TrueDamage, OldValue);
+}
+
+void UCrossguardAttributeSet::OnRep_EmptyArmorSlots(const FGameplayAttributeData& OldValue)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UCrossguardAttributeSet, EmptyArmorSlots, OldValue);
 }
 
 void UCrossguardAttributeSet::OnRep_AdditionalPhysicalHealing(const FGameplayAttributeData& OldValue)

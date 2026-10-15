@@ -5,12 +5,12 @@ import os
 import re
 import sys
 
-STATS = {"AttackResistance", "MagicResistance", "MaxHealth", "MaxHealthBonus", "AdditionalAttackDamage", "AdditionalMagicDamage", "ActionSpeed", "AttackPenetration",
+STATS = {"MoveSpeed", "AttackResistance", "MagicResistance", "MaxHealth", "MaxHealthBonus", "AdditionalAttackDamage", "AdditionalMagicDamage", "ActionSpeed", "AttackPenetration",
          "MagicPenetration", "TrueDamage", "AttackDamageBonus", "MagicDamageBonus",
          "ActiveCooldownReduction", "SpellCooldownReduction", "ArtCooldownReduction",
          "ActiveCastTimeReduction", "SpellCastTimeReduction", "ArtCastTimeReduction",
          "Strength", "Agility", "Intelligence", "Dexterity"}
-POOLS = {"AttackWeapon", "MagicWeapon", "Shield"}
+POOLS = {"AttackWeapon", "MagicWeapon", "Shield", "PlateArmor", "LeatherArmor", "ClothArmor"}
 ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 GRID_TOLERANCE = 1e-9
 
