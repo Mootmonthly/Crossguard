@@ -26,7 +26,7 @@ ACrossguardWorldItem::ACrossguardWorldItem()
 void ACrossguardWorldItem::Interact(ACrossguardCharacter* User)
 {
 	UCrossguardInventoryComponent* Inventory = User != nullptr ? User->GetInventoryComponent() : nullptr;
-	if (!HasAuthority() || Inventory == nullptr || Item.IsEmpty())
+	if (!HasAuthority() || Inventory == nullptr || Item.Count <= 0)
 	{
 		return;
 	}
@@ -38,7 +38,7 @@ void ACrossguardWorldItem::Interact(ACrossguardCharacter* User)
 	}
 	if (Left == Item.Count)
 	{
-		UE_LOG(LogCrossguard, Log, TEXT("%s cannot pick up %s: no room"), *User->GetName(), *Item.ItemId.ToString());
+		UE_LOG(LogCrossguard, Log, TEXT("%s cannot pick up %s (no room, or its item data is missing)"), *User->GetName(), *Item.ItemId.ToString());
 	}
 	Item.Count = Left;
 }

@@ -514,28 +514,39 @@ void UCrossguardInventoryComponent::ServerDropItem_Implementation(int32 ItemId)
 
 FCrossguardInventoryResult UCrossguardInventoryComponent::DropItem(int32 ItemId)
 {
-	if (IsOwnerActorDead())
+	if (IsOwnerDead())
 	{
-		return Fail(ECrossguardInventoryError::OwnerActorDead);
+		return Fail(ECrossguardInventoryError::OwnerDead);
 	}
 	const int32 Index = IndexOfItem(ItemId);
-	const AActor* OwnerActor = GetOwnerActor();
+	const AActor* OwnerActor = GetOwner();
 	if (Index == INDEX_NONE || OwnerActor == nullptr)
 	{
 		return Fail(ECrossguardInventoryError::UnknownItem);
 	}
+	// The stack in hand: put it away first, which also stops a bandage channel.
+	if (Items[Index].Id == ReadiedItemId)
+	{
+		ReleaseHeldItem();
+	}
 
-	// On the ground 60 cm ahead: world geometry under that point, else the owner's feet.
+	// On the ground about 1.5 m ahead (far enough to be in view when picking it up), never through a
+	// wall: world geometry only, the ground found from 2 m above (stairs), else at hand height.
 	UWorld* World = GetWorld();
-	const FVector Ahead = OwnerActor->GetActorLocation() + OwnerActor->GetActorForwardVector() * 60.0f;
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(CrossguardDropItem), false, OwnerActor);
+	const FVector From = OwnerActor->GetActorLocation();
+	FVector Ahead = From + OwnerActor->GetActorForwardVector() * 150.0f;
+	FHitResult Wall;
+	if (World->LineTraceSingleByObjectType(Wall, From, Ahead, FCollisionObjectQueryParams(ECC_WorldStatic), Params))
+	{
+		Ahead = Wall.ImpactPoint - OwnerActor->GetActorForwardVector() * 30.0f;
+	}
 	FHitResult Ground;
-	const FVector Spot = World->LineTraceSingleByObjectType(Ground, Ahead, Ahead - FVector(0.0f, 0.0f, 300.0f),
+	const FVector Spot = World->LineTraceSingleByObjectType(Ground, Ahead + FVector(0.0f, 0.0f, 200.0f), Ahead - FVector(0.0f, 0.0f, 300.0f),
 		FCollisionObjectQueryParams(ECC_WorldStatic), Params) ? Ground.ImpactPoint + FVector(0.0f, 0.0f, 12.5f) : Ahead;
 
-	FCrossguardInventoryItem Dropped = Items[Index];
 	// The next inventory assigns its own id and place.
-	Dropped.Id = 0;
+	FCrossguardInventoryItem Dropped = Items[Index];
 	Dropped.bWasEquipped = false;
 	const FTransform Transform(OwnerActor->GetActorRotation(), Spot);
 	const TSubclassOf<ACrossguardWorldItem> Class = WorldItemClass != nullptr ? WorldItemClass

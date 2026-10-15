@@ -411,8 +411,8 @@ void UCrossguardPartingTheLandAbility::ActivateAbility(const FGameplayAbilitySpe
 			}
 			Hit.Add(Target);
 			ApplyToTarget(ASC, Target, Spec);
-			// Knock-up: crowd control.
-			if (!IsCrowdControlImmune(TargetASC))
+			// Knock-up: crowd control. Not on a body.
+			if (!IsCrowdControlImmune(TargetASC) && !TargetASC->HasMatchingGameplayTag(CrossguardTags::State_Dead))
 			{
 				ApplyStatus(ASC, TargetASC, CrossguardTags::State_KnockedUp, PartingKnockUpSeconds);
 				if (ACharacter* Character = Cast<ACharacter>(Target))
@@ -420,7 +420,8 @@ void UCrossguardPartingTheLandAbility::ActivateAbility(const FGameplayAbilitySpe
 					Character->LaunchCharacter(FVector(0.0f, 0.0f, PartingKnockUpSpeed), false, true);
 				}
 				// A player's own client predicts its movement: launch there too.
-				if (ACrossguardCharacter* Player = Cast<ACrossguardCharacter>(Target); Player != nullptr && Player->IsPlayerControlled())
+				if (ACrossguardCharacter* Player = Cast<ACrossguardCharacter>(Target);
+					Player != nullptr && Player->IsPlayerControlled() && !Player->IsLocallyControlled())
 				{
 					Player->ClientLaunch(FVector(0.0f, 0.0f, PartingKnockUpSpeed));
 				}

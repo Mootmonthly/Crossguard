@@ -9,7 +9,7 @@ class UAbilitySystemComponent;
 
 // [Multiscale] (Passive): you and every party member (and party minions) have +15% Attack and Magic
 // Resistance, wherever they are. Two Multiscales do not stack (State.Multiscale). Off while you are
-// Muted. Also part of [The Mithril Knight]. Server: rechecked every second (joins, deaths, Mute).
+// Muted or dead. Also part of [The Mithril Knight]. Server: rechecked every second (joins, deaths, Mute).
 UCLASS()
 class CROSSGUARD_API UCrossguardMultiscaleAbility : public UCrossguardPassiveAbility
 {
@@ -29,10 +29,12 @@ private:
 
 	FTimerHandle RefreshTimer;
 	TMap<TWeakObjectPtr<UAbilitySystemComponent>, FActiveGameplayEffectHandle> Applied;
+	FDelegateHandle MutedHandle;
+	FDelegateHandle DeadHandle;
 };
 
 // [Hunter's Tracking] (Passive): see enemy players' footsteps from the last 30 s
-// (UCrossguardTrackingComponent on your screen only). Off while Muted. The extra hearing range
+// (UCrossguardTrackingComponent on your screen only). Off while Muted or dead. The extra hearing range
 // waits for the sound system.
 UCLASS()
 class CROSSGUARD_API UCrossguardHuntersTrackingAbility : public UCrossguardPassiveAbility
@@ -55,4 +57,5 @@ private:
 
 	FActiveGameplayEffectHandle MarkerHandle;
 	FDelegateHandle MutedHandle;
+	FDelegateHandle DeadHandle;
 };

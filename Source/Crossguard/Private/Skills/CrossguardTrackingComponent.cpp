@@ -28,7 +28,10 @@ UCrossguardTrackingComponent::UCrossguardTrackingComponent()
 	SetUsingAbsoluteRotation(true);
 	SetUsingAbsoluteScale(true);
 	SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SetCanEverAffectNavigation(false);
 	SetCastShadow(false);
+	// Only the tracker fills it; this keeps it off other screens even so.
+	SetOnlyOwnerSee(true);
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cylinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 	if (Cylinder.Succeeded())
 	{
@@ -38,7 +41,12 @@ UCrossguardTrackingComponent::UCrossguardTrackingComponent()
 
 bool UCrossguardTrackingComponent::IsTracking() const
 {
+	// Cheap test first: every character has this component, only a local player can track.
 	const APawn* Pawn = Cast<APawn>(GetOwner());
+	if (Pawn == nullptr || !Pawn->IsLocallyControlled() || !Pawn->IsPlayerControlled())
+	{
+		return false;
+	}
 	const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Pawn);
 	return Pawn != nullptr && Pawn->IsLocallyControlled() && ASC != nullptr && ASC->HasMatchingGameplayTag(CrossguardTags::Passive_HuntersTracking);
 }
@@ -114,8 +122,11 @@ void UCrossguardTrackingComponent::RecordSteps(double Now)
 void UCrossguardTrackingComponent::Rebuild()
 {
 	ClearInstances();
+	TArray<FTransform> Transforms;
+	Transforms.Reserve(Footprints.Num());
 	for (const FFootprint& Print : Footprints)
 	{
-		AddInstance(FTransform(FRotator(0.0f, Print.Yaw, 0.0f), Print.Location, FootprintScale), true);
+		Transforms.Emplace(FRotator(0.0f, Print.Yaw, 0.0f), Print.Location, FootprintScale);
 	}
+	AddInstances(Transforms, false, true);
 }

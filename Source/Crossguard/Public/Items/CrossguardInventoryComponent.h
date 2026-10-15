@@ -292,7 +292,7 @@ public:
 	void RequestUseItem(int32 ItemId);
 
 	// Drops a whole stack from a grid (inventory, Backpack, Quiver) on the ground in front of the
-	// owner. Worn gear is unequipped first.
+	// owner. Worn gear has to be unequipped into a grid first.
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void RequestDropItem(int32 ItemId);
 

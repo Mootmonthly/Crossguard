@@ -589,14 +589,16 @@ void ACrossguardCharacter::InitializeAbilitySystem()
 		AbilitySystemComponent->RegisterGameplayTagEvent(CrossguardTags::State_Stealthed, EGameplayTagEventType::NewOrRemoved)
 			.AddUObject(this, &ACrossguardCharacter::OnStealthChanged);
 	}
-	UpdateStealthVisibility();
+	// Already stealthed when this machine first sees it: start the re-checks too.
+	OnStealthChanged(CrossguardTags::State_Stealthed, AbilitySystemComponent->GetTagCount(CrossguardTags::State_Stealthed));
 }
 
 void ACrossguardCharacter::OnStealthChanged(const FGameplayTag Tag, int32 Count)
 {
 	UpdateStealthVisibility();
-	// While stealthed, re-check twice a second: the local viewer's pawn or team may change.
-	if (Count > 0)
+	// While stealthed, re-check twice a second: the local viewer's pawn or team may change. A
+	// dedicated server draws nothing.
+	if (Count > 0 && GetNetMode() != NM_DedicatedServer)
 	{
 		GetWorldTimerManager().SetTimer(StealthVisibilityTimer, this, &ACrossguardCharacter::UpdateStealthVisibility, 0.5f, true);
 	}

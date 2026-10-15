@@ -12,6 +12,7 @@
 #include "Game/CrossguardTeamLibrary.h"
 #include "Skills/CrossguardLightOrb.h"
 #include "Skills/CrossguardWall.h"
+#include "TimerManager.h"
 
 namespace
 {
@@ -100,7 +101,8 @@ void UCrossguardBenedictionAbility::ActivateAbility(const FGameplayAbilitySpecHa
 	if (ActorInfo->IsNetAuthority())
 	{
 		// The nearer of a living character under the crosshair and a body near it.
-		AActor* Living = FindAimedTarget(BenedictionRange);
+		AActor* const AimedLiving = FindAimedTarget(BenedictionRange);
+		AActor* Living = AimedLiving;
 		ACrossguardCharacter* Body = FindAimedBody(BenedictionRange);
 		const FVector From = ActorInfo->AvatarActor->GetActorLocation();
 		if (Living != nullptr && Body != nullptr)
@@ -119,8 +121,8 @@ void UCrossguardBenedictionAbility::ActivateAbility(const FGameplayAbilitySpecHa
 		const bool bRevived = Body != nullptr && Body->Revive(1.0f);
 		if (!bRevived)
 		{
-			// Full HP: heal by Max HP, no healing bonus.
-			UAbilitySystemComponent* TargetASC = Living != nullptr ? UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Living)
+			// Full HP: heal by Max HP, no healing bonus. A failed revive heals whoever was aimed at.
+			UAbilitySystemComponent* TargetASC = AimedLiving != nullptr ? UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(AimedLiving)
 				: ActorInfo->AbilitySystemComponent.Get();
 			if (TargetASC != nullptr)
 			{
@@ -298,7 +300,9 @@ void UCrossguardStealthAbility::OnHealthChanged(const FOnAttributeChangeData& Da
 	}
 	else if (Data.NewValue < Data.OldValue)
 	{
-		BreakStealth();
+		// Next tick: a hit's own Mute ([Purge Shot]) lands just after its damage, and then counts
+		// as a Mute ending (no exit bonus).
+		GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]() { BreakStealth(); }));
 	}
 }
 

@@ -29,6 +29,12 @@ void UCrossguardMultiscaleAbility::ActivateAbility(const FGameplayAbilitySpecHan
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 	if (IsActive() && ActorInfo->IsNetAuthority())
 	{
+		// Mute and death switch it off at once; the timer covers joins and leaves.
+		const auto Refresh = [this](const FGameplayTag, int32) { RefreshAura(); };
+		MutedHandle = ActorInfo->AbilitySystemComponent->RegisterGameplayTagEvent(CrossguardTags::State_Muted, EGameplayTagEventType::NewOrRemoved)
+			.AddWeakLambda(this, Refresh);
+		DeadHandle = ActorInfo->AbilitySystemComponent->RegisterGameplayTagEvent(CrossguardTags::State_Dead, EGameplayTagEventType::NewOrRemoved)
+			.AddWeakLambda(this, Refresh);
 		RefreshAura();
 		GetWorld()->GetTimerManager().SetTimer(RefreshTimer, FTimerDelegate::CreateUObject(this, &UCrossguardMultiscaleAbility::RefreshAura),
 			MultiscaleRefreshSeconds, true);
@@ -43,7 +49,7 @@ void UCrossguardMultiscaleAbility::RefreshAura()
 	{
 		return;
 	}
-	if (ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted))
+	if (ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted) || ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead))
 	{
 		RemoveAll();
 		return;
@@ -64,6 +70,12 @@ void UCrossguardMultiscaleAbility::RefreshAura()
 	for (auto It = Applied.CreateIterator(); It; ++It)
 	{
 		UAbilitySystemComponent* Target = It->Key.Get();
+		// Removed by something else: forget it so it is applied again below.
+		if (Target != nullptr && Target->GetActiveGameplayEffect(It->Value) == nullptr)
+		{
+			It.RemoveCurrent();
+			continue;
+		}
 		if (Target == nullptr || !Wanted.Contains(Target))
 		{
 			if (Target != nullptr)
@@ -116,6 +128,13 @@ void UCrossguardMultiscaleAbility::EndAbility(const FGameplayAbilitySpecHandle H
 	{
 		World->GetTimerManager().ClearTimer(RefreshTimer);
 	}
+	if (UAbilitySystemComponent* ASC = ActorInfo != nullptr ? ActorInfo->AbilitySystemComponent.Get() : nullptr)
+	{
+		ASC->RegisterGameplayTagEvent(CrossguardTags::State_Muted, EGameplayTagEventType::NewOrRemoved).Remove(MutedHandle);
+		ASC->RegisterGameplayTagEvent(CrossguardTags::State_Dead, EGameplayTagEventType::NewOrRemoved).Remove(DeadHandle);
+	}
+	MutedHandle.Reset();
+	DeadHandle.Reset();
 	RemoveAll();
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
@@ -136,6 +155,8 @@ void UCrossguardHuntersTrackingAbility::ActivateAbility(const FGameplayAbilitySp
 	{
 		MutedHandle = ASC->RegisterGameplayTagEvent(CrossguardTags::State_Muted, EGameplayTagEventType::NewOrRemoved)
 			.AddUObject(this, &UCrossguardHuntersTrackingAbility::OnMutedChanged);
+		DeadHandle = ASC->RegisterGameplayTagEvent(CrossguardTags::State_Dead, EGameplayTagEventType::NewOrRemoved)
+			.AddUObject(this, &UCrossguardHuntersTrackingAbility::OnMutedChanged);
 		UpdateMarker();
 	}
 }
@@ -152,7 +173,8 @@ void UCrossguardHuntersTrackingAbility::UpdateMarker()
 	{
 		return;
 	}
-	const bool bWanted = IsActive() && !ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted);
+	const bool bWanted = IsActive() && !ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted)
+		&& !ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead);
 	if (bWanted && !MarkerHandle.IsValid())
 	{
 		const FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(UCrossguardMarkerEffect::StaticClass(), 1.0f, ASC->MakeEffectContext());
@@ -175,12 +197,14 @@ void UCrossguardHuntersTrackingAbility::EndAbility(const FGameplayAbilitySpecHan
 	if (UAbilitySystemComponent* ASC = ActorInfo != nullptr ? ActorInfo->AbilitySystemComponent.Get() : nullptr)
 	{
 		ASC->RegisterGameplayTagEvent(CrossguardTags::State_Muted, EGameplayTagEventType::NewOrRemoved).Remove(MutedHandle);
+		ASC->RegisterGameplayTagEvent(CrossguardTags::State_Dead, EGameplayTagEventType::NewOrRemoved).Remove(DeadHandle);
 		if (MarkerHandle.IsValid())
 		{
 			ASC->RemoveActiveGameplayEffect(MarkerHandle);
 		}
 	}
 	MutedHandle.Reset();
+	DeadHandle.Reset();
 	MarkerHandle.Invalidate();
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
