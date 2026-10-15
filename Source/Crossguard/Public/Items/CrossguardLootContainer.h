@@ -38,8 +38,8 @@ public:
 	// item fits. Items must already have their Size set (they come from an inventory).
 	void InitializeContents(const TArray<FCrossguardInventoryItem>& NewItems);
 
-	UFUNCTION(BlueprintPure, Category = "Loot")
 	// Server. Clients read UCrossguardInventoryComponent::GetOpenContainerItems.
+	UFUNCTION(BlueprintPure, Category = "Loot")
 	const TArray<FCrossguardInventoryItem>& GetItems() const { return Items; }
 
 	UFUNCTION(BlueprintPure, Category = "Loot")
