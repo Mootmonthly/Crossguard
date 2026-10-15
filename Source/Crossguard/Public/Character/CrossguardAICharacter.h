@@ -99,6 +99,9 @@ public:
 	// Server. Raises its guard toward Attacker for Seconds (it reacts to swings: CrossguardGuard).
 	void RaiseGuard(AActor* Attacker, float Seconds);
 
+	// Where its raised guard faces (toward the swing it reacted to).
+	FVector GetGuardDirection() const { return GuardDirection.IsNearlyZero() ? GetActorForwardVector() : GuardDirection; }
+
 	// Skill ids (Data/Skills/Skills.json), granted on possession.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|AI")
 	TArray<FName> SkillIds;
@@ -152,6 +155,7 @@ private:
 	double NextAttackTime = 0.0;
 	double NextSkillCheckTime = 0.0;
 	FTimerHandle GuardTimer;
+	FVector GuardDirection = FVector::ZeroVector;
 	TWeakObjectPtr<AActor> SkillAimTarget;
 
 	TArray<FGameplayAbilitySpecHandle> GrantedSkills;

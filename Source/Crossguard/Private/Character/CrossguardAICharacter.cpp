@@ -306,7 +306,7 @@ bool ACrossguardAICharacter::TryAttack(AActor* Target)
 		else
 		{
 			// Through the target's guard; AI in reach may raise theirs first.
-			CrossguardGuard::NotifyMeleeAttack(this, AttackRange);
+			CrossguardGuard::NotifyMeleeAttack(this, AttackRange, Target);
 			FCrossguardHit Hit;
 			Hit.Attacker = this;
 			Hit.ImpactPower = ImpactPower;
@@ -382,13 +382,14 @@ void ACrossguardAICharacter::RaiseGuard(AActor* Attacker, float Seconds)
 	{
 		return;
 	}
-	// Face the swing: an AI's guard faces where its body does.
-	const FVector ToAttacker = Attacker->GetActorLocation() - GetActorLocation();
-	SetActorRotation(FRotator(0.0f, ToAttacker.Rotation().Yaw, 0.0f));
 	if (GuardAbilityClass == nullptr || !ASC->TryActivateAbilityByClass(GuardAbilityClass))
 	{
 		return;
 	}
+	// Faces the swing, and its guard keeps facing it for the duration.
+	const FVector ToAttacker = Attacker->GetActorLocation() - GetActorLocation();
+	SetActorRotation(FRotator(0.0f, ToAttacker.Rotation().Yaw, 0.0f));
+	GuardDirection = ToAttacker.GetSafeNormal2D();
 	GetWorldTimerManager().SetTimer(GuardTimer, FTimerDelegate::CreateWeakLambda(this, [this]()
 	{
 		if (UCrossguardAbilitySystemComponent* GuardASC = GetCrossguardAbilitySystemComponent())

@@ -422,19 +422,22 @@ An explosion has none and is never stopped. When a hit meets a guard, the differ
 
 - The attacker wins: the defender takes that share of the hit (and the stun).
 - The defender wins (mirror rule): the hit is stopped; the attacker takes that share of the
-  defender's weapon damage (a shield deals none) and the stun.
+  defender's weapon damage (a shield deals none) and the stun. Assumption: melee only; a stopped
+  arrow or throw does not reach back to its thrower.
+- Shares apply to the finished hit (bonuses and True Damage included).
 - A **parry** the defender does not lose (a tie or a win): the next attack within 3 s gets +50%
   Attack Damage Bonus, and +10% Action Speed for 3 s.
 - Skills that deal Attack Damage (Cleave, Triple Thrust, Shooting Star, Parting the Land) are
   checked the same way with the caster's weapon. Triple Thrust pierces: a hit the guard would stop
   deals 50% instead. Parting the Land's knock-up only lands if its damage does.
 - A stopped hit carries no on-hit effects (slows, Mute, Silence).
-- **Stun** is crowd control (Immutable makes you immune): no moving, attacking, guarding or skills;
-  running skills and the guard stop.
+- **Stun** is crowd control (Immutable makes you immune): no moving, jumping, attacking, throwing,
+  item use, guarding or skills; running skills and the guard stop. Never on a body.
+- Guarding also stops throwing; a parry's speed bonus does not stack (a new parry restarts it).
 - A missed guard is its own punishment: the hit lands in full.
-- Monsters and summons guard too: when a melee attack starts against one in reach, it raises its
-  guard toward the attacker half the time, for 1 s (assumption), with its weapon's Impact Power
-  (3 unarmed).
+- Monsters and summons guard too: when a melee attack is aimed at one (its target, or in reach
+  within 60° of the attacker's facing; never an ally's swing), it raises its guard toward the
+  attacker half the time, for 1 s (assumption), with its weapon's Impact Power (3 unarmed).
 
 ## Trading
 

@@ -8,6 +8,7 @@
 #include "Crossguard.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "Game/CrossguardTeamLibrary.h"
 #include "GameFramework/Pawn.h"
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Items/CrossguardItemTypes.h"
@@ -18,6 +19,8 @@ namespace
 	// Assumption: an AI raises its guard against half of the melee attacks aimed at it, for this long.
 	constexpr float AIGuardChance = 0.5f;
 	constexpr float AIGuardSeconds = 1.0f;
+	// A player's swing threatens AIs this far either side of where it faces.
+	constexpr float AISwingHalfAngleDegrees = 60.0f;
 	// Long enough to outlast any guard: removed when the guard ends.
 	constexpr float GuardSlowSeconds = 3600.0f;
 
@@ -70,9 +73,10 @@ namespace
 	// Where the guard faces: a player's view (the mouse moves it); an AI's body.
 	FVector GuardFacing(const AActor* Defender)
 	{
-		if (Defender->IsA<ACrossguardAICharacter>())
+		if (const ACrossguardAICharacter* AI = Cast<ACrossguardAICharacter>(Defender))
 		{
-			return Defender->GetActorForwardVector();
+			// Toward the swing it raised it against, whichever way it turns meanwhile.
+			return AI->GetGuardDirection();
 		}
 		const APawn* Pawn = Cast<APawn>(Defender);
 		return Pawn != nullptr ? Pawn->GetBaseAimRotation().Vector() : Defender->GetActorForwardVector();
@@ -93,14 +97,14 @@ namespace CrossguardGuard
 		return GuardConfig;
 	}
 
-	int32 ImpactPowerOf(const AActor* Attacker)
+	int32 ImpactPowerOf(const AActor* Attacker, ECrossguardEquipmentSlot Slot)
 	{
 		if (const ACrossguardAICharacter* AI = Cast<ACrossguardAICharacter>(Attacker))
 		{
 			return AI->ImpactPower;
 		}
 		const UCrossguardEquipmentComponent* Equipment = Attacker != nullptr ? Attacker->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
-		const FCrossguardWeaponRow* Weapon = Equipment != nullptr ? Equipment->GetWeaponRow(ECrossguardEquipmentSlot::MainHand) : nullptr;
+		const FCrossguardWeaponRow* Weapon = Equipment != nullptr ? Equipment->GetWeaponRow(Slot) : nullptr;
 		return Weapon != nullptr ? Weapon->ImpactPower : Config().UnarmedImpactPower;
 	}
 
@@ -112,7 +116,9 @@ namespace CrossguardGuard
 
 	void Stun(UAbilitySystemComponent* Source, UAbilitySystemComponent* Target, float Seconds)
 	{
-		if (Target == nullptr || Seconds <= 0.0f || UCrossguardSkillAbility::IsCrowdControlImmune(Target))
+		// Not on a body (a revive would come back rooted).
+		if (Target == nullptr || Seconds <= 0.0f || UCrossguardSkillAbility::IsCrowdControlImmune(Target)
+			|| Target->HasMatchingGameplayTag(CrossguardTags::State_Dead))
 		{
 			return;
 		}
@@ -168,7 +174,7 @@ namespace CrossguardGuard
 		if (Outcome.DefenderDamage > 0.0 || Magic > 0.0f)
 		{
 			FGameplayEffectSpec Reduced(*Spec.Data);
-			Reduced.SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, Attack * static_cast<float>(Outcome.DefenderDamage));
+			Reduced.SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_AttackShare, static_cast<float>(Outcome.DefenderDamage));
 			if (Source != nullptr)
 			{
 				Source->ApplyGameplayEffectSpecToTarget(Reduced, TargetASC);
@@ -181,13 +187,15 @@ namespace CrossguardGuard
 		Stun(Source, TargetASC, static_cast<float>(Outcome.DefenderStunSeconds));
 
 		// Mirror rule: the losing attacker takes the defender's weapon (a shield: nothing) and a stun.
-		UAbilitySystemComponent* AttackerASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Hit.Attacker);
+		// Assumption: only in melee (a blocked arrow cannot reach back to its archer).
+		UAbilitySystemComponent* AttackerASC = Hit.bRanged ? nullptr : UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Hit.Attacker);
 		if (AttackerASC != nullptr && Outcome.AttackerDamage > 0.0 && Guard.WeaponDamage > 0.0f)
 		{
 			const FGameplayEffectSpecHandle Back = TargetASC->MakeOutgoingSpec(UCrossguardDamageEffect::StaticClass(), 1.0f, TargetASC->MakeEffectContext());
 			if (Back.IsValid())
 			{
-				Back.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, Guard.WeaponDamage * static_cast<float>(Outcome.AttackerDamage));
+				Back.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, Guard.WeaponDamage);
+				Back.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_AttackShare, static_cast<float>(Outcome.AttackerDamage));
 				Back.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, 0.0f);
 				TargetASC->ApplyGameplayEffectSpecToTarget(*Back.Data, AttackerASC);
 			}
@@ -199,26 +207,43 @@ namespace CrossguardGuard
 		{
 			const float Seconds = static_cast<float>(Config().ParryBonusSeconds);
 			UCrossguardSkillAbility::ApplyStatus(TargetASC, TargetASC, CrossguardTags::State_NextAttack_Riposte, Seconds);
+			// One speed bonus at a time: a new parry restarts it.
+			TargetASC->RemoveActiveEffectsWithGrantedTags(FGameplayTagContainer(CrossguardTags::State_RiposteSpeed));
 			const TMap<FName, float> Faster = {{TEXT("ActionSpeed"), static_cast<float>(Config().ParryActionSpeed)}};
-			UCrossguardSkillAbility::ApplyTimedStats(TargetASC, TargetASC, Faster, Seconds, false);
+			UCrossguardSkillAbility::ApplyTimedStats(TargetASC, TargetASC, Faster, Seconds, false, CrossguardTags::State_RiposteSpeed);
 		}
 		return static_cast<float>(Outcome.DefenderDamage);
 	}
 
-	void NotifyMeleeAttack(AActor* Attacker, float Reach)
+	void NotifyMeleeAttack(AActor* Attacker, float Reach, AActor* Target)
 	{
 		UWorld* World = Attacker != nullptr ? Attacker->GetWorld() : nullptr;
 		if (World == nullptr || !Attacker->HasAuthority())
 		{
 			return;
 		}
-		for (TActorIterator<ACrossguardAICharacter> It(World); It; ++It)
+		// Only AIs the swing is aimed at: Target, or those in reach in front of the attacker; never
+		// the attacker's allies.
+		const auto React = [Attacker](ACrossguardAICharacter* AI)
 		{
-			ACrossguardAICharacter* AI = *It;
-			if (AI != Attacker && AI->IsAlive() && FVector::Dist(AI->GetActorLocation(), Attacker->GetActorLocation()) <= Reach
-				&& FMath::FRand() < AIGuardChance)
+			if (AI != nullptr && AI != Attacker && AI->IsAlive() && !UCrossguardTeamLibrary::AreAllies(Attacker, AI) && FMath::FRand() < AIGuardChance)
 			{
 				AI->RaiseGuard(Attacker, AIGuardSeconds);
+			}
+		};
+		if (Target != nullptr)
+		{
+			React(Cast<ACrossguardAICharacter>(Target));
+			return;
+		}
+		const float MinDot = FMath::Cos(FMath::DegreesToRadians(AISwingHalfAngleDegrees));
+		for (TActorIterator<ACrossguardAICharacter> It(World); It; ++It)
+		{
+			const FVector ToAI = It->GetActorLocation() - Attacker->GetActorLocation();
+			if (ToAI.Size() <= Reach + It->GetSimpleCollisionRadius()
+				&& FVector::DotProduct(Attacker->GetActorForwardVector(), ToAI.GetSafeNormal2D()) >= MinDot)
+			{
+				React(*It);
 			}
 		}
 	}

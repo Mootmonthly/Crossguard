@@ -56,6 +56,7 @@ void ACrossguardProjectile::HandleImpact(AActor* OtherActor, const FHitResult& H
 			FCrossguardHit GuardHit;
 			GuardHit.Attacker = GetInstigator();
 			GuardHit.ImpactPower = ImpactPower;
+			GuardHit.bRanged = true;
 			GuardHit.Origin = GetActorLocation() - Movement->Velocity.GetSafeNormal() * 1000.0f;
 			const float Through = CrossguardGuard::ApplyHit(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetInstigator()), OtherActor,
 				DamageSpec, GuardHit);

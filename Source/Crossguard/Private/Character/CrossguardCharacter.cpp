@@ -807,6 +807,9 @@ void ACrossguardCharacter::HandleDeath()
 		static_cast<float>(Crossguard::FDeathConfig().ReviveWindowSeconds), false);
 	// Skills in progress stop: Flight ends (the body falls), dragon form ends, channels stop.
 	UCrossguardSkillAbility::CancelActiveSkills(AbilitySystemComponent);
+	// The guard too (not a skill): its slow and State.Guarding go.
+	const FGameplayTagContainer GuardTag(CrossguardTags::Ability_Guard);
+	AbilitySystemComponent->CancelAbilities(&GuardTag);
 	// Hands drop whatever they held; a revived character draws a weapon set again with 1 / 2.
 	InventoryComponent->ReleaseHeldItem();
 	EquipmentComponent->HolsterWeapons();
@@ -1171,4 +1174,10 @@ void ACrossguardCharacter::GuildGive(const FString& PlayerId, int32 SlotId)
 	{
 		Guild->RequestGiveItem(PlayerId, SlotId);
 	}
+}
+
+bool ACrossguardCharacter::CanJumpInternal_Implementation() const
+{
+	return Super::CanJumpInternal_Implementation()
+		&& (AbilitySystemComponent == nullptr || !AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Stunned));
 }

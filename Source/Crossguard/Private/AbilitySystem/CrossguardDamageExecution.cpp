@@ -96,7 +96,9 @@ void UCrossguardDamageExecution::Execute_Implementation(const FGameplayEffectCus
 		Input.Resistance = Capture(ExecutionParams, EvalParams, Statics.AttackResistanceDef);
 		Input.Penetration = Capture(ExecutionParams, EvalParams, Statics.AttackPenetrationDef);
 		Input.TrueDamage = TrueDamage;
-		AttackTotal = Crossguard::CalculateDamage(Input);
+		// A guard lets through only a share of the finished hit (True Damage included).
+		AttackTotal = Crossguard::CalculateDamage(Input)
+			* FMath::Max(Spec.GetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_AttackShare, false, 1.0f), 0.0f);
 		Total += AttackTotal;
 	}
 	if (MagicBase > 0.0f)

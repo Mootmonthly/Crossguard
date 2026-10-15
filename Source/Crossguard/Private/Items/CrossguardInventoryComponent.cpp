@@ -1422,8 +1422,17 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::StartUse()
 	const FCrossguardInventoryItem Item = Items[Index];
 	const FCrossguardItemRow* Row = ItemTable != nullptr ? ItemTable->FindRow<FCrossguardItemRow>(Item.ItemId, TEXT("Inventory"), false) : nullptr;
 	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
+	// Stunned: nothing; guarding: no throwing (it is an attack).
+	if (ASC != nullptr && ASC->HasMatchingGameplayTag(CrossguardTags::State_Stunned))
+	{
+		return Fail(ECrossguardInventoryError::NotReady);
+	}
 	if (Row != nullptr && Row->Category == ECrossguardItemCategory::Throwable)
 	{
+		if (ASC != nullptr && ASC->HasMatchingGameplayTag(CrossguardTags::State_Guarding))
+		{
+			return Fail(ECrossguardInventoryError::NotReady);
+		}
 		return Throw(Index, *Row);
 	}
 	if (Row == nullptr || Row->HealAmount <= 0.0f || Row->HealDuration <= 0.0f)

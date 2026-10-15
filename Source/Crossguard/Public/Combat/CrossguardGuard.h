@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "CrossguardRules/Guard.h"
 #include "GameplayEffectTypes.h"
+#include "Items/CrossguardItemTypes.h"
 
 #include "CrossguardGuard.generated.h"
 
@@ -20,6 +21,9 @@ struct CROSSGUARD_API FCrossguardHit
 	FVector Origin = FVector::ZeroVector;
 	// [Triple Thrust]: passes through a guard that would stop it, for half.
 	bool bPiercing = false;
+	// Arrows and throws: a guard that wins stops them but cannot strike back (no mirror damage or
+	// stun on the attacker).
+	bool bRanged = false;
 };
 
 // Block and parry (docs/design-decisions.md, Block and parry; rules: Crossguard::ResolveGuard).
@@ -33,9 +37,9 @@ namespace CrossguardGuard
 {
 	CROSSGUARD_API const Crossguard::FGuardConfig& Config();
 
-	// The Impact Power an actor attacks with: its main-hand weapon; an AI character's own;
-	// natural attacks otherwise.
-	CROSSGUARD_API int32 ImpactPowerOf(const AActor* Attacker);
+	// The Impact Power an actor attacks with: the weapon in Slot; an AI character's own; natural
+	// attacks otherwise.
+	CROSSGUARD_API int32 ImpactPowerOf(const AActor* Attacker, ECrossguardEquipmentSlot Slot = ECrossguardEquipmentSlot::MainHand);
 
 	// Whether Actor can raise a guard: AI characters always; players with a shield in the off hand
 	// (block) or a weapon that parries and an empty off hand (parry).
@@ -49,8 +53,9 @@ namespace CrossguardGuard
 	// guarding or skills; running skills and the guard stop.
 	CROSSGUARD_API void Stun(UAbilitySystemComponent* Source, UAbilitySystemComponent* Target, float Seconds);
 
-	// Server. A melee attack is starting: AI characters in Attacker's reach may raise their guard.
-	CROSSGUARD_API void NotifyMeleeAttack(AActor* Attacker, float Reach);
+	// Server. A melee attack is starting: the AI it is aimed at (Target, or else those in Reach in
+	// front of Attacker; never its allies) may raise its guard.
+	CROSSGUARD_API void NotifyMeleeAttack(AActor* Attacker, float Reach, AActor* Target = nullptr);
 }
 
 // Right click held with a shield (block) or a weapon that parries (parry); AI characters raise it

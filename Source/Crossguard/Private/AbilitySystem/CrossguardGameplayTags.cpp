@@ -13,6 +13,7 @@ namespace CrossguardTags
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Damage_Attack, "SetByCaller.Damage.Attack", "Base Attack Damage (weapon AD or skill amount).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Damage_AttackBonus, "SetByCaller.Damage.AttackBonus", "Extra Attack Damage Bonus for this hit only (a parry's riposte).");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Damage_AttackShare, "SetByCaller.Damage.AttackShare", "Share of the finished Attack Damage (True Damage included) that lands (a guard); 1 when unset.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Damage_Magic, "SetByCaller.Damage.Magic", "Base Magic Damage.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Healing_Physical, "SetByCaller.Healing.Physical", "Base Physical Healing.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Healing_Magical, "SetByCaller.Healing.Magical", "Base Magical Healing.");
@@ -35,6 +36,7 @@ namespace CrossguardTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_NextAttack_PurgeShot, "State.NextAttack.PurgeShot", "Next bow or crossbow attack: +10 Magic Damage and a 3 s Mute (Purge Shot).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_NextAttack_Neckbite, "State.NextAttack.Neckbite", "Next melee attack: +10 Magic Damage and a 2 s Silence (Neckbite).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_NextAttack_Riposte, "State.NextAttack.Riposte", "Next attack: +50% Attack Damage Bonus (a parry).");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_RiposteSpeed, "State.RiposteSpeed", "+10% Action Speed for 3 s after a parry (one at a time).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_ArcaneArrows, "State.ArcaneArrows", "Bow attacks deal +5 Magic Damage (Arcane Arrows).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_HealBlocked, "State.HealBlocked", "Cannot be healed (Shade Blow).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Stealthed, "State.Stealthed", "Invisible to enemies (Stealth).");

@@ -40,6 +40,9 @@ public:
 
 	// The player state's team, for AI perception (which asks the pawn, not the player state).
 	virtual FGenericTeamId GetGenericTeamId() const override;
+
+	// No jumping while stunned.
+	virtual bool CanJumpInternal_Implementation() const override;
 	UCrossguardAbilitySystemComponent* GetCrossguardAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UCrossguardLoadoutComponent* GetLoadoutComponent() const { return LoadoutComponent; }
 	UCrossguardEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }

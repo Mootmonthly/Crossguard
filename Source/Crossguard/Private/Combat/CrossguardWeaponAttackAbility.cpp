@@ -382,7 +382,7 @@ bool UCrossguardWeaponAttackAbility::ApplyDamageTo(AActor* Target, const FGamepl
 	AActor* Avatar = GetAvatarActorFromActorInfo();
 	FCrossguardHit Hit;
 	Hit.Attacker = Avatar;
-	Hit.ImpactPower = CrossguardGuard::ImpactPowerOf(Avatar);
+	Hit.ImpactPower = CrossguardGuard::ImpactPowerOf(Avatar, Slot);
 	FRotator Unused;
 	Avatar->GetActorEyesViewPoint(Hit.Origin, Unused);
 	return CrossguardGuard::ApplyHit(GetAbilitySystemComponentFromActorInfo(), Target, Spec, Hit) > 0.0f;
@@ -470,7 +470,7 @@ void UCrossguardWeaponAttackAbility::SpawnProjectile(const FGameplayEffectSpecHa
 	if (Projectile != nullptr)
 	{
 		Projectile->DamageSpec = Spec;
-		Projectile->ImpactPower = CrossguardGuard::ImpactPowerOf(Avatar);
+		Projectile->ImpactPower = CrossguardGuard::ImpactPowerOf(Avatar, Slot);
 		Projectile->OnHitSpecs = Riders.OnHitSpecs;
 		Projectile->bCancelSkillsOnHit = Riders.bCancelSkills;
 		Projectile->FinishSpawning(SpawnTransform);
