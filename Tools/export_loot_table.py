@@ -5,8 +5,9 @@ Usage:
   python3 Tools/export_loot_table.py           # write Data/Loot/LootTable.json
   python3 Tools/export_loot_table.py --check   # exit 1 if LootTable.json is out of date
 
-LootTables.json is the source of truth. Import LootTable.json in the editor as a Data Table with
-row struct CrossguardLootTableRow.
+LootTables.json is the source of truth, plus each mob's loot in Data/Mobs/Mobs.json (exported as the
+table "mob_<mob id>"). Import LootTable.json in the editor as a Data Table with row struct
+CrossguardLootTableRow.
 """
 
 import json
@@ -16,6 +17,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 SOURCE = REPO / "Data" / "Loot" / "LootTables.json"
 OUTPUT = REPO / "Data" / "Loot" / "LootTable.json"
+MOBS = REPO / "Data" / "Mobs" / "Mobs.json"
 RARITIES = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mystic"]
 
 
@@ -46,6 +48,8 @@ def render(tables):
 def main(argv):
     check = "--check" in argv[1:]
     tables = json.loads(SOURCE.read_text(encoding="utf-8"))
+    if MOBS.exists():
+        tables += [{"id": "mob_" + m["id"], **m["loot"]} for m in json.loads(MOBS.read_text(encoding="utf-8"))]
     text = render(tables)
     if check:
         current = OUTPUT.read_text(encoding="utf-8") if OUTPUT.exists() else None

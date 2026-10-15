@@ -18,6 +18,11 @@ class CROSSGUARD_API ACrossguardMonster : public ACrossguardAICharacter
 public:
 	ACrossguardMonster();
 
+	// A row of Data/Mobs/Mobs.json (the game mode's MobTable). Set: the monster takes that mob's
+	// stats, loot and kill XP when the game starts, over everything below.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Monster")
+	FName MobId;
+
 	// cm from the monster.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Monster", meta = (ClampMin = "0"))
 	float AggroRange = 1500.0f;
@@ -30,7 +35,18 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void OnDamaged(AActor* Attacker, float Damage) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 private:
+	// Server. MobId's row from the game mode's MobTable, if any.
+	void ApplyMobData();
+
+	UFUNCTION()
+	void OnRep_MobScale();
+
 	FVector HomeLocation = FVector::ZeroVector;
+
+	// The mob's size, replicated so every machine shows it.
+	UPROPERTY(ReplicatedUsing = OnRep_MobScale)
+	float MobScale = 1.0f;
 };

@@ -272,5 +272,56 @@
 				"CountMax": 2
 			}
 		]
+	},
+	{
+		"Name": "mob_example_brute",
+		"RollsMin": 0,
+		"RollsMax": 2,
+		"NothingWeight": 40,
+		"RarityWeights": [
+			60,
+			25,
+			10,
+			4,
+			1,
+			0
+		],
+		"Entries": [
+			{
+				"Kind": "Gold",
+				"Id": "None",
+				"Weight": 30,
+				"CountMin": 5,
+				"CountMax": 25
+			},
+			{
+				"Kind": "Item",
+				"Id": "healing_potion",
+				"Weight": 8,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Weapon",
+				"Id": "None",
+				"Weight": 5,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Armor",
+				"Id": "None",
+				"Weight": 5,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "SkillGem",
+				"Id": "None",
+				"Weight": 2,
+				"CountMin": 1,
+				"CountMax": 1
+			}
+		]
 	}
 ]

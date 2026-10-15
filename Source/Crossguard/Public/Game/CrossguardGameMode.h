@@ -71,6 +71,11 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Loot")
 	FCrossguardLootSources Loot;
 
+	// Imported from Data/Mobs/MobTable.json. Row struct: CrossguardMobRow. Monsters with a MobId
+	// take their stats from it.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Mobs")
+	TObjectPtr<UDataTable> MobTable;
+
 	// Server. Rolls a loot table with a fresh random seed. Empty if the table or data is missing.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Loot")
 	TArray<FCrossguardInventoryItem> RollLoot(FName TableId);

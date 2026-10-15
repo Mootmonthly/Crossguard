@@ -1,0 +1,19 @@
+[
+	{
+		"Name": "example_brute",
+		"DisplayName": "Example Brute",
+		"Kind": "Monster",
+		"CombatRole": "Warrior",
+		"Health": 80,
+		"AttackDamage": 12,
+		"AttackInterval": 1.5,
+		"AttackRange": 200,
+		"FireballInterval": 8,
+		"KeepDistance": 800,
+		"AggroRange": 1500,
+		"LeashRange": 3000,
+		"MoveSpeed": 450.0,
+		"Scale": 1,
+		"LootTableId": "mob_example_brute"
+	}
+]

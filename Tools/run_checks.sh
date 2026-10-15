@@ -14,7 +14,9 @@ python3 Tools/export_armor_table.py --check
 python3 Tools/validate_items.py
 python3 Tools/export_item_table.py --check
 python3 Tools/validate_loot.py
+python3 Tools/validate_mobs.py
 python3 Tools/export_loot_table.py --check
+python3 Tools/export_mob_table.py --check
 python3 Tools/check_table_types.py
 
 cmake -S Tests/CrossguardRules -B build/rules-tests >/dev/null

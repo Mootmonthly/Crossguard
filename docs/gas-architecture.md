@@ -323,7 +323,9 @@ Warrior or Mage attack (`CombatRole`), a placeholder cylinder. Two kinds:
   `LeashRange`), targets players and minions it can see, never other monsters, drops a body with
   its `LootTableId` roll, gives its killer `KillXpSource` XP.
 
-Both path on the NavMesh, or walk straight without one.
+Both path on the NavMesh, or walk straight without one. A monster with a `MobId` takes its stats,
+loot table and kill XP from the game mode's `MobTable` (`Data/Mobs/Mobs.json`, edited in the Mob
+Forge, [mob-data-schema.md](mob-data-schema.md)).
 
 ## Loot
 

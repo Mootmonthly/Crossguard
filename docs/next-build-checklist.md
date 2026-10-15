@@ -26,6 +26,10 @@ Loot: import `Data/Loot/LootTable.json` as `DT_Loot` (row struct `CrossguardLoot
 `BP_CrossguardGameMode` → **Crossguard | Loot**, set Loot Tables `DT_Loot`, Weapon / Armor / Affix /
 Item tables (`DT_Weapons`, `DT_Armor`, `DT_Affixes`, `DT_Items`) and Skill Catalog `DA_SkillCatalog`.
 
+Mobs: import `Data/Mobs/MobTable.json` as `DT_Mobs` (row struct `CrossguardMobRow`) and set the game
+mode's **Crossguard | Mobs → Mob Table** to it. A placed `ACrossguardMonster` with **Mob Id**
+`example_brute` takes that mob's stats.
+
 ## 3. Character settings
 
 If `BP_CrossguardCharacter` has its own **Default Mapping Context** set, clear it (or add the new

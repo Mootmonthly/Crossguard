@@ -1,0 +1,617 @@
+<title>Crossguard Mob Forge</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: workbench, the Skill Forge's sibling: mob index on the left, the open mob's sheet on the right; stacks on phones. */
+:root {
+  --bg: #f0eeee;
+  --surface: #ffffff;
+  --sunken: #f7f5f5;
+  --ink: #221a1b;
+  --muted: #6b5f61;
+  --line: #ddd5d6;
+  --accent: #9e2b35;
+  --accent-ink: #ffffff;
+  --accent-soft: #f6e1e3;
+  --warn: #a8570b;
+  --warn-soft: #fbecd9;
+  --bad: #b3261e;
+  --bad-soft: #fbe3e1;
+  --good: #2b7a3d;
+  --boss: #7a4fb5;
+  --r-common: #6e7681; --r-uncommon: #2f8a43; --r-rare: #2f6bc4; --r-epic: #8a46c4; --r-legendary: #c47a12; --r-mystic: #c42f6b;
+  --font-display: "Cinzel", "Trajan Pro", Georgia, serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 6px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161213; --surface: #1f191a; --sunken: #1a1516; --ink: #ece4e5; --muted: #a8999b;
+    --line: #3a2f31; --accent: #e0636d; --accent-ink: #2a0b0e; --accent-soft: #3d1c20;
+    --warn: #e6a35a; --warn-soft: #3a2a16; --bad: #f08a82; --bad-soft: #3d1c1a; --good: #6cc581; --boss: #b694ef;
+    --r-common: #a3abb5; --r-uncommon: #6cc581; --r-rare: #6fa3ef; --r-epic: #bb8cf0; --r-legendary: #f0b25a; --r-mystic: #f07aa8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161213; --surface: #1f191a; --sunken: #1a1516; --ink: #ece4e5; --muted: #a8999b;
+  --line: #3a2f31; --accent: #e0636d; --accent-ink: #2a0b0e; --accent-soft: #3d1c20;
+  --warn: #e6a35a; --warn-soft: #3a2a16; --bad: #f08a82; --bad-soft: #3d1c1a; --good: #6cc581; --boss: #b694ef;
+  --r-common: #a3abb5; --r-uncommon: #6cc581; --r-rare: #6fa3ef; --r-epic: #bb8cf0; --r-legendary: #f0b25a; --r-mystic: #f07aa8;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px;
+}
+* { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { max-width: 1280px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.brand { display: flex; flex-direction: column; gap: 2px; margin-right: auto; }
+.brand h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; letter-spacing: .04em; margin: 0; text-wrap: balance; }
+.brand p { margin: 0; color: var(--muted); max-width: 62ch; }
+.sync-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--sunken); border: 1px solid var(--line); font-size: .85rem; }
+.sync-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); }
+.sync-chip.pending { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+.sync-chip.pending .dot { background: var(--warn); }
+
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 7px 14px; border-radius: var(--radius); cursor: pointer; font-weight: 500; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.danger { color: var(--bad); }
+.btn.danger.armed { background: var(--bad); border-color: var(--bad); color: var(--surface); }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.btn.small { padding: 3px 9px; font-size: .85rem; }
+
+.notice { padding: 10px 14px; border-radius: var(--radius); background: var(--warn-soft); color: var(--warn); }
+
+.workbench { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 820px) { .workbench { grid-template-columns: minmax(0, 1fr); } }
+
+.index { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); display: flex; flex-direction: column; min-width: 0; }
+.index-tools { padding: 12px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--line); }
+.index-tools input[type="search"] { width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--sunken); }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filter { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 2px 10px; font-size: .8rem; cursor: pointer; }
+.filter[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.mob-list { list-style: none; margin: 0; padding: 4px; max-height: 70vh; overflow-y: auto; }
+@media (max-width: 820px) { .mob-list { max-height: 40vh; } }
+.mob-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; padding: 8px 10px; border-radius: var(--radius); cursor: pointer; border: 1px solid transparent; width: 100%; text-align: left; background: none; }
+.mob-item:hover { background: var(--sunken); }
+.mob-item[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.mob-item .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mob-item .meta { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: .8rem; }
+.mob-item .id { font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mob-item.deleted .name { text-decoration: line-through; color: var(--muted); }
+.hp { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: .8rem; color: var(--muted); }
+.kind { font-size: .72rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.kind.Boss { color: var(--boss); }
+.pending-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); margin-left: auto; }
+.list-empty { padding: 20px 14px; color: var(--muted); }
+
+.editor { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
+.editor-head { padding: 16px 18px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.editor-head h2 { font-family: var(--font-display); font-size: 1.3rem; margin: 0; letter-spacing: .03em; text-wrap: balance; }
+.editor-head .summary { color: var(--muted); font-size: .9rem; width: 100%; }
+.editor-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.editor-body { padding: 18px; display: flex; flex-direction: column; gap: 22px; }
+.editor-empty { padding: 40px 24px; color: var(--muted); display: flex; flex-direction: column; gap: 8px; }
+.editor-empty strong { color: var(--ink); font-size: 1.05rem; }
+
+fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 0; margin-bottom: 10px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field > span { font-size: .82rem; color: var(--muted); }
+.field input, .field select, .field textarea, .row input, .row select {
+  padding: 6px 9px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--sunken); min-width: 0; width: 100%;
+}
+.field input[type="number"], .row input[type="number"] { font-variant-numeric: tabular-nums; }
+.field input[readonly] { background: transparent; border-style: dashed; color: var(--muted); }
+.field textarea { min-height: 70px; resize: vertical; }
+.field.wide { grid-column: 1 / -1; }
+.hint { font-size: .78rem; color: var(--muted); }
+.mono { font-family: var(--font-mono); }
+.inactive { opacity: .55; }
+
+.rarities { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 560px) { .rarities { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.rarity-cell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.rarity-cell > span { font-size: .78rem; font-weight: 600; }
+.rarity-cell .pct { font-family: var(--font-mono); font-size: .75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rarity-cell input { padding: 5px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--sunken); width: 100%; }
+.r-Common { color: var(--r-common); } .r-Uncommon { color: var(--r-uncommon); } .r-Rare { color: var(--r-rare); }
+.r-Epic { color: var(--r-epic); } .r-Legendary { color: var(--r-legendary); } .r-Mystic { color: var(--r-mystic); }
+
+.rows { display: flex; flex-direction: column; gap: 8px; }
+.row { display: grid; gap: 8px; align-items: end; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--sunken); }
+.row.drop { grid-template-columns: minmax(100px, 1fr) minmax(140px, 2fr) repeat(3, minmax(64px, .7fr)) auto; }
+@media (max-width: 700px) { .row.drop { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.row label { display: flex; flex-direction: column; gap: 3px; font-size: .75rem; color: var(--muted); min-width: 0; }
+.row .remove { align-self: center; }
+.row .reads { grid-column: 1 / -1; font-size: .8rem; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.row .reads .chance { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.loot-summary { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .85rem; padding: 10px 12px; border-radius: var(--radius); background: var(--accent-soft); }
+.loot-summary b { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 500; }
+
+.errors { border-radius: var(--radius); background: var(--bad-soft); color: var(--bad); padding: 10px 14px; }
+.errors ul { margin: 6px 0 0; padding-left: 18px; }
+.status { font-size: .85rem; color: var(--muted); min-height: 1.2em; }
+.status.ok { color: var(--good); } .status.bad { color: var(--bad); }
+.badge-pending { font-size: .75rem; padding: 2px 8px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); }
+.badge-deleted { font-size: .75rem; padding: 2px 8px; border-radius: 999px; background: var(--bad-soft); color: var(--bad); }
+@media (prefers-reduced-motion: no-preference) { .mob-item, .btn, .filter { transition: background-color .12s, border-color .12s; } }
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Mob Forge</h1>
+      <p>Create Crossguard's monsters and bosses: stats, behaviour and what they drop. Saved changes wait here until you ask Claude to sync them into <span class="mono">Mobs.json</span>.</p>
+    </div>
+    <span class="sync-chip" id="sync-chip"><span class="dot"></span><span id="sync-text">Connecting…</span></span>
+    <button class="btn primary" id="new-mob" type="button">New mob</button>
+  </header>
+  <div class="notice" id="notice" hidden></div>
+
+  <div class="workbench">
+    <aside class="index" aria-label="Mobs">
+      <div class="index-tools">
+        <input type="search" id="search" placeholder="Search name or id" aria-label="Search mobs">
+        <div class="filters" id="filters" role="group" aria-label="Filter mobs"></div>
+      </div>
+      <ul class="mob-list" id="mob-list"></ul>
+    </aside>
+
+    <section class="editor" id="editor" aria-live="polite">
+      <div class="editor-empty">
+        <strong>Waiting for the mob list</strong>
+        <span>Mobs appear on the left once the forge connects. Pick one to edit it, or start a new mob.</span>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  // Schema enums: keep in step with docs/mob-data-schema.md and Tools/validate_mobs.py.
+  const KINDS = ["Monster", "Boss"];
+  const ROLES = ["Warrior", "Mage"];
+  const RARITIES = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mystic"];
+  const DROP_KINDS = ["Gold", "Item", "Weapon", "Armor", "SkillGem"];
+  const DROP_LABELS = { Gold: "Gold coins", Item: "Item", Weapon: "Weapon", Armor: "Armor", SkillGem: "Skill Gem" };
+  const WILDCARD = ["Weapon", "Armor", "SkillGem"];
+  const ONE_AT_A_TIME = ["Weapon", "Armor", "SkillGem"];
+  const ID_RE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
+  const PLAYER_WALK = 4.5; // m/s, a player's base walk speed
+
+  const $ = (id) => document.getElementById(id);
+  function h(tag, attrs = {}, ...children) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v === undefined || v === null || v === false) continue;
+      if (k === "class") el.className = v;
+      else if (k === "text") el.textContent = v;
+      else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+      else if (k === "value") el.value = v;
+      else if (k === "checked") el.checked = !!v;
+      else el.setAttribute(k, v === true ? "" : v);
+    }
+    for (const c of children.flat()) if (c !== null && c !== undefined && c !== false) el.append(c instanceof Node ? c : String(c));
+    return el;
+  }
+  const clone = (v) => JSON.parse(JSON.stringify(v));
+  const nowIso = () => new Date().toISOString();
+  const num = (v) => (v === "" || v === null || v === undefined ? NaN : Number(v));
+  const fmt = (v, digits = 1) => (Number.isFinite(v) ? (+v.toFixed(digits)).toString() : "–");
+
+  // ---- State ----
+  let db = null;
+  let canWrite = true;
+  const store = new Map(); // id -> { mob, meta }
+  let refs = { weapons: [], armor: [], items: [], skills: [] };
+  let selectedId = null;
+  let draft = null;
+  let isNew = false;
+  let dirty = false;
+  let filter = "All";
+  let deleteArmed = false;
+  let saving = false;
+  let idTouched = false;
+
+  function isPending(entry) {
+    const m = entry.meta || {};
+    return !!m.deleted || !m.syncedAt || (m.updatedAt && m.updatedAt > m.syncedAt);
+  }
+
+  function blankMob() {
+    return {
+      id: "", name: "", kind: "Monster", combatRole: "Warrior",
+      health: 80, attackDamage: 12, attackInterval: 1.5, attackRange: 2, fireballInterval: 8, keepDistance: 8,
+      aggroRange: 15, leashRange: 30, moveSpeed: 4.5, scale: 1,
+      loot: {
+        rolls: [0, 2], nothingWeight: 40,
+        rarityWeights: { Common: 60, Uncommon: 25, Rare: 10, Epic: 4, Legendary: 1, Mystic: 0 },
+        entries: [{ kind: "Gold", id: null, weight: 30, count: [5, 25] }],
+      },
+      description: "", notes: [],
+    };
+  }
+
+  // ---- Reference data (written by Claude at each sync) ----
+  function refList(kind) {
+    return kind === "Weapon" ? refs.weapons : kind === "Armor" ? refs.armor : kind === "Item" ? refs.items : kind === "SkillGem" ? refs.skills : [];
+  }
+  function refKnown(kind, id) {
+    const list = refList(kind);
+    return !list.length || list.some((r) => r.id === id);
+  }
+  function gemRarity(id) {
+    const s = refs.skills.find((r) => r.id === id);
+    return s ? s.rarity : null;
+  }
+
+  // ---- Loot maths ----
+  function lootStats(loot) {
+    const weights = loot.entries.map((e) => Math.max(0, num(e.weight) || 0));
+    const total = weights.reduce((a, b) => a + b, 0) + Math.max(0, num(loot.nothingWeight) || 0);
+    const chances = weights.map((w) => (total > 0 ? w / total : 0));
+    const avgRolls = ((num(loot.rolls[0]) || 0) + (num(loot.rolls[1]) || 0)) / 2;
+    const somethingChance = chances.reduce((a, b) => a + b, 0);
+    const rarityTotal = RARITIES.reduce((a, r) => a + Math.max(0, num(loot.rarityWeights[r]) || 0), 0);
+    return { chances, avgRolls, expectedDrops: avgRolls * somethingChance, rarityTotal };
+  }
+  const pct = (v) => `${fmt(v * 100, v * 100 < 10 ? 1 : 0)}%`;
+
+  // ---- Validation (mirrors Tools/validate_mobs.py and Tools/validate_loot.py) ----
+  function validate(m) {
+    const errs = [];
+    if (!ID_RE.test(m.id || "")) errs.push("Id must be snake_case, e.g. cave_troll.");
+    if (isNew && store.has(m.id)) errs.push(`Id "${m.id}" is already used.`);
+    if (!m.name || !m.name.trim()) errs.push("Name is required.");
+    const positive = { health: "Health", attackInterval: "Attack interval", attackRange: "Attack range", fireballInterval: "Fireball interval", leashRange: "Leash range", scale: "Size" };
+    for (const [k, label] of Object.entries(positive)) if (!(num(m[k]) > 0)) errs.push(`${label} must be above 0.`);
+    const nonNeg = { attackDamage: "Attack damage", keepDistance: "Keep distance", aggroRange: "Aggro range", moveSpeed: "Move speed" };
+    for (const [k, label] of Object.entries(nonNeg)) if (!(num(m[k]) >= 0)) errs.push(`${label} must be 0 or more.`);
+    if (num(m.aggroRange) > num(m.leashRange)) errs.push("Aggro range is larger than leash range: it would pick fights it must not chase.");
+    const loot = m.loot;
+    const [rmin, rmax] = loot.rolls;
+    if (!(Number.isInteger(rmin) && Number.isInteger(rmax) && rmin >= 0 && rmin <= rmax)) errs.push("Drops per kill: whole numbers, min 0 or more, max at least min.");
+    if (!(Number.isInteger(loot.nothingWeight) && loot.nothingWeight >= 0)) errs.push("Nothing weight must be a whole number, 0 or more.");
+    if (!RARITIES.every((r) => Number.isInteger(loot.rarityWeights[r]) && loot.rarityWeights[r] >= 0)) errs.push("Rarity weights must be whole numbers, 0 or more.");
+    else if (lootStats(loot).rarityTotal <= 0) errs.push("Give at least one rarity a weight above 0.");
+    if (!loot.entries.length) errs.push("Add at least one drop.");
+    loot.entries.forEach((e, i) => {
+      const where = `Drop ${i + 1}`;
+      if (!(Number.isInteger(e.weight) && e.weight >= 0)) errs.push(`${where}: weight must be a whole number, 0 or more.`);
+      const [cmin, cmax] = e.count;
+      if (!(Number.isInteger(cmin) && Number.isInteger(cmax) && cmin >= 1 && cmin <= cmax)) errs.push(`${where}: count must be whole numbers, min 1 or more, max at least min.`);
+      if (e.kind === "Item" && !e.id) errs.push(`${where}: pick which item.`);
+      if (e.id && e.kind !== "Gold" && !refKnown(e.kind, e.id)) errs.push(`${where}: no ${DROP_LABELS[e.kind].toLowerCase()} with id "${e.id}".`);
+    });
+    return errs;
+  }
+
+  function summary(m) {
+    const bits = [m.kind, m.combatRole, `${fmt(num(m.health), 0)} HP`];
+    if (m.combatRole === "Warrior") bits.push(`${fmt(num(m.attackDamage))} per ${fmt(num(m.attackInterval))} s`);
+    else bits.push(`Fireball every ${fmt(num(m.fireballInterval))} s`);
+    bits.push(`aggro ${fmt(num(m.aggroRange))} m`, `leash ${fmt(num(m.leashRange))} m`);
+    return bits.join(" · ");
+  }
+
+  // ---- Index ----
+  function renderFilters() {
+    $("filters").replaceChildren(...["All", ...KINDS, "Pending"].map((f) =>
+      h("button", { class: "filter", type: "button", "aria-pressed": String(filter === f), onclick: () => { filter = f; renderFilters(); renderList(); } }, f)));
+  }
+  function renderList() {
+    const q = $("search").value.trim().toLowerCase();
+    const items = [...store.entries()]
+      .filter(([id, e]) => filter === "All" || (filter === "Pending" ? isPending(e) : e.mob.kind === filter))
+      .filter(([id, e]) => !q || id.includes(q) || (e.mob.name || "").toLowerCase().includes(q))
+      .sort((a, b) => (a[1].mob.name || a[0]).localeCompare(b[1].mob.name || b[0]));
+    const list = $("mob-list");
+    if (!items.length) {
+      list.replaceChildren(h("li", { class: "list-empty", text: store.size ? "No mobs match." : "No mobs yet. Start one with New mob." }));
+      return;
+    }
+    list.replaceChildren(...items.map(([id, e]) => {
+      const m = e.mob;
+      return h("li", {}, h("button", {
+        class: "mob-item" + (e.meta && e.meta.deleted ? " deleted" : ""), type: "button",
+        "aria-current": String(id === selectedId && !isNew), onclick: () => select(id),
+      },
+        h("span", { class: "name", text: m.name || id }),
+        h("span", { class: "hp", title: "Health", text: `${fmt(num(m.health), 0)} HP` }),
+        h("span", { class: "meta" },
+          h("span", { class: `kind ${m.kind}`, text: m.kind }),
+          h("span", { class: "id", text: id }),
+          isPending(e) ? h("span", { class: "pending-dot", title: "Waiting for sync" }) : null)));
+    }));
+  }
+  function renderSyncChip() {
+    const pending = [...store.values()].filter(isPending).length;
+    $("sync-chip").classList.toggle("pending", pending > 0);
+    $("sync-text").textContent = !db ? "Offline" : pending ? `${pending} change${pending === 1 ? "" : "s"} waiting for sync` : `All ${store.size} mob${store.size === 1 ? "" : "s"} synced`;
+  }
+
+  // ---- Selection ----
+  let leaveArmedAt = 0;
+  function confirmLeave() {
+    if (Date.now() - leaveArmedAt < 4000) { leaveArmedAt = 0; return true; }
+    leaveArmedAt = Date.now();
+    setStatus("You have unsaved changes. Click again within 4 seconds to discard them.", "bad");
+    return false;
+  }
+  function select(id) {
+    if (dirty && !confirmLeave()) return;
+    selectedId = id; isNew = false; dirty = false; deleteArmed = false; idTouched = false;
+    draft = clone(store.get(id).mob);
+    renderList(); renderEditor();
+  }
+  function startNew() {
+    if (dirty && !confirmLeave()) return;
+    selectedId = null; isNew = true; dirty = false; deleteArmed = false; idTouched = false;
+    draft = blankMob();
+    renderList(); renderEditor();
+    const first = $("f-name"); if (first) first.focus();
+  }
+
+  // ---- Editor ----
+  function touch() { dirty = true; refreshHeader(); }
+  function setStatus(msg, kind = "") { const el = $("status"); if (el) { el.textContent = msg; el.className = "status " + kind; } }
+  function section(title, ...content) { return h("fieldset", {}, h("legend", { text: title }), ...content); }
+  function textField(label, value, oninput, opts = {}) {
+    return h("label", { class: "field" + (opts.wide ? " wide" : "") }, h("span", { text: label }),
+      h("input", { type: "text", id: opts.id, value: value ?? "", class: opts.mono ? "mono" : null, readonly: opts.readonly, placeholder: opts.placeholder, oninput: (e) => oninput(e.target.value) }),
+      opts.hint ? h("span", { class: "hint", text: opts.hint }) : null);
+  }
+  function numberField(label, value, oninput, opts = {}) {
+    return h("label", { class: "field" + (opts.inactive ? " inactive" : "") }, h("span", { text: label }),
+      h("input", { type: "number", id: opts.id, step: opts.step || "any", min: opts.min, value: Number.isFinite(value) ? value : "", oninput: (e) => { oninput(num(e.target.value)); if (opts.live) opts.live(); } }),
+      opts.hint ? h("span", { class: "hint", text: opts.hint }) : null);
+  }
+  function selectField(label, value, options, onchange, opts = {}) {
+    return h("label", { class: "field" }, h("span", { text: label }),
+      h("select", { id: opts.id, onchange: (e) => onchange(e.target.value) },
+        options.map(([v, text]) => h("option", { value: v, selected: v === value ? "selected" : null }, text))),
+      opts.hint ? h("span", { class: "hint", text: opts.hint }) : null);
+  }
+
+  function lootSection(m, rerender) {
+    const loot = m.loot;
+    const stats = lootStats(loot);
+    const refreshLoot = () => { const box = $("loot-box"); if (box) box.replaceWith(lootSection(m, rerender)); touch(); };
+    const rarityCells = RARITIES.map((r) => {
+      const w = Math.max(0, num(loot.rarityWeights[r]) || 0);
+      return h("label", { class: "rarity-cell" },
+        h("span", { class: `r-${r}`, text: r }),
+        h("input", { type: "number", min: "0", step: "1", id: `rw-${r}`, value: loot.rarityWeights[r], onchange: (e) => { loot.rarityWeights[r] = num(e.target.value); refreshLoot(); } }),
+        h("span", { class: "pct", text: stats.rarityTotal > 0 ? pct(w / stats.rarityTotal) : "–" }));
+    });
+    const rows = loot.entries.map((e, i) => {
+      const listId = `drop-ids-${i}`;
+      const isGem = e.kind === "SkillGem";
+      const fixedRarity = isGem && e.id ? gemRarity(e.id) : null;
+      const reads = [h("span", {}, "Chance per drop: ", h("span", { class: "chance", text: pct(stats.chances[i] || 0) }))];
+      if (isGem && !e.id) reads.push(h("span", { text: "Any Skill Gem: rolls a rarity below, then a skill of that rarity." }));
+      if (fixedRarity) reads.push(h("span", { class: `r-${fixedRarity}`, text: `Drops at its skill's rarity: ${fixedRarity}` }));
+      if ((e.kind === "Weapon" || e.kind === "Armor") && !e.id) reads.push(h("span", { text: `Any ${e.kind.toLowerCase()}, at a rolled rarity with rolled affixes.` }));
+      return h("div", { class: "row drop" },
+        h("label", {}, "Drops", h("select", { id: `drop-kind-${i}`, onchange: (ev) => {
+          e.kind = ev.target.value;
+          e.id = e.kind === "Gold" ? null : (WILDCARD.includes(e.kind) ? null : e.id);
+          if (ONE_AT_A_TIME.includes(e.kind)) e.count = [1, 1];
+          refreshLoot();
+        } }, DROP_KINDS.map((k) => h("option", { value: k, selected: k === e.kind ? "selected" : null }, DROP_LABELS[k])))),
+        e.kind === "Gold"
+          ? h("label", {}, "Which", h("input", { type: "text", value: "Gold coins", readonly: true, id: `drop-id-${i}` }))
+          : h("label", {}, "Which",
+              h("input", { type: "text", list: listId, id: `drop-id-${i}`, class: "mono", value: e.id ?? "", placeholder: WILDCARD.includes(e.kind) ? "any (leave empty)" : "item id",
+                onchange: (ev) => { const v = ev.target.value.trim().toLowerCase(); e.id = v || null; refreshLoot(); } }),
+              h("datalist", { id: listId }, refList(e.kind).map((r) => h("option", { value: r.id }, r.name || r.id)))),
+        h("label", {}, "Weight", h("input", { type: "number", min: "0", step: "1", id: `drop-weight-${i}`, value: e.weight, onchange: (ev) => { e.weight = num(ev.target.value); refreshLoot(); } })),
+        h("label", {}, "Min", h("input", { type: "number", min: "1", step: "1", id: `drop-min-${i}`, value: e.count[0], disabled: ONE_AT_A_TIME.includes(e.kind) ? "disabled" : null, onchange: (ev) => { e.count[0] = num(ev.target.value); refreshLoot(); } })),
+        h("label", {}, "Max", h("input", { type: "number", min: "1", step: "1", id: `drop-max-${i}`, value: e.count[1], disabled: ONE_AT_A_TIME.includes(e.kind) ? "disabled" : null, onchange: (ev) => { e.count[1] = num(ev.target.value); refreshLoot(); } })),
+        h("button", { class: "btn small danger remove", type: "button", onclick: () => { loot.entries.splice(i, 1); refreshLoot(); } }, "Remove"),
+        h("div", { class: "reads" }, reads));
+    });
+    return h("div", { id: "loot-box", class: "rows" },
+      h("div", { class: "grid" },
+        numberField("Drops per kill, min", loot.rolls[0], (v) => { loot.rolls[0] = v; }, { step: "1", min: "0", id: "rolls-min", live: refreshLoot }),
+        numberField("Drops per kill, max", loot.rolls[1], (v) => { loot.rolls[1] = v; }, { step: "1", min: "0", id: "rolls-max", live: refreshLoot }),
+        numberField("Nothing weight", loot.nothingWeight, (v) => { loot.nothingWeight = v; }, { step: "1", min: "0", id: "nothing-weight", live: refreshLoot, hint: "Each drop can come up empty." })),
+      h("div", { class: "loot-summary" },
+        h("span", {}, "Expected drops per kill: ", h("b", { text: fmt(stats.expectedDrops, 2) })),
+        h("span", {}, "Empty drop chance: ", h("b", { text: pct(1 - stats.chances.reduce((a, b) => a + b, 0)) }))),
+      h("div", { class: "field wide" }, h("span", { text: "Rarity odds (weapons, armor, items and any Skill Gem)" }), h("div", { class: "rarities" }, rarityCells)),
+      ...rows,
+      h("div", {}, h("button", { class: "btn small", type: "button", onclick: () => { loot.entries.push({ kind: "Item", id: null, weight: 10, count: [1, 1] }); refreshLoot(); } }, "Add drop")));
+  }
+
+  function renderEditor() {
+    const editor = $("editor");
+    if (!draft) {
+      editor.replaceChildren(h("div", { class: "editor-empty" },
+        h("strong", { text: store.size ? "Pick a mob to edit" : "No mobs in the forge yet" }),
+        h("span", { text: store.size ? "Choose one from the list, or start a new mob." : "Start a new mob, or ask Claude to load the current list." })));
+      return;
+    }
+    const m = draft;
+    const rerender = () => renderEditor();
+    const entry = selectedId ? store.get(selectedId) : null;
+    const mage = m.combatRole === "Mage";
+
+    const head = h("div", { class: "editor-head" },
+      h("h2", { id: "editor-title", text: m.name || (isNew ? "New mob" : m.id) }),
+      entry && entry.meta && entry.meta.deleted ? h("span", { class: "badge-deleted", text: "Marked for deletion" }) : entry && isPending(entry) ? h("span", { class: "badge-pending", text: "Waiting for sync" }) : null,
+      h("div", { class: "editor-actions" },
+        h("button", { class: "btn primary", type: "button", id: "save", onclick: save, disabled: !canWrite ? "disabled" : null }, isNew ? "Create mob" : "Save changes"),
+        h("button", { class: "btn", type: "button", id: "discard", onclick: discard }, isNew ? "Cancel" : "Discard edits"),
+        !isNew ? h("button", { class: "btn", type: "button", id: "duplicate", onclick: duplicate }, "Duplicate") : null,
+        !isNew && entry && !(entry.meta && entry.meta.deleted) ? h("button", { class: "btn danger" + (deleteArmed ? " armed" : ""), type: "button", id: "delete", onclick: remove, disabled: !canWrite ? "disabled" : null }, deleteArmed ? "Click again to delete" : "Delete") : null,
+        !isNew && entry && entry.meta && entry.meta.deleted ? h("button", { class: "btn", type: "button", id: "restore", onclick: restore, disabled: !canWrite ? "disabled" : null }, "Restore") : null,
+        h("button", { class: "btn", type: "button", id: "copy-json", onclick: copyJson }, "Copy JSON")),
+      h("div", { class: "summary", id: "summary", text: summary(m) }),
+      h("div", { class: "status", id: "status" }));
+
+    const errs = validate(m);
+    const errorBox = h("div", { class: "errors", id: "errors", hidden: errs.length ? null : "hidden" },
+      h("strong", { text: "Fix before saving" }), h("ul", {}, errs.map((e) => h("li", { text: e }))));
+
+    const body = h("div", { class: "editor-body" },
+      errorBox,
+      section("Identity",
+        h("div", { class: "grid" },
+          textField("Name", m.name, (v) => { m.name = v; if (isNew && !idTouched) { m.id = v.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, ""); const idEl = $("f-id"); if (idEl) idEl.value = m.id; } touch(); }, { id: "f-name" }),
+          textField("Id", m.id, (v) => { idTouched = true; m.id = v.trim(); touch(); }, { id: "f-id", mono: true, readonly: !isNew, hint: isNew ? "snake_case; cannot change after creating" : "Fixed. Duplicate to rename." }),
+          selectField("Kind", m.kind, KINDS.map((k) => [k, k]), (v) => { m.kind = v; touch(); rerender(); }, { id: "f-kind", hint: m.kind === "Boss" ? "Killer gets boss XP (50)." : "Killer gets monster XP (5)." }),
+          selectField("Fights as", m.combatRole, ROLES.map((r) => [r, r]), (v) => { m.combatRole = v; touch(); rerender(); }, { id: "f-role", hint: mage ? "Keeps its distance and casts Fireball." : "Runs up and hits." }))),
+      section("Combat",
+        h("div", { class: "grid" },
+          numberField("Health", m.health, (v) => { m.health = v; touch(); }, { min: "1", id: "f-health" }),
+          numberField("Attack damage", m.attackDamage, (v) => { m.attackDamage = v; touch(); }, { min: "0", id: "f-damage", inactive: mage, hint: "Per hit, before resistance. Warriors." }),
+          numberField("Seconds between hits", m.attackInterval, (v) => { m.attackInterval = v; touch(); }, { min: "0", id: "f-interval", inactive: mage, hint: "Warriors." }),
+          numberField("Reach (m)", m.attackRange, (v) => { m.attackRange = v; touch(); }, { min: "0", id: "f-range", inactive: mage, hint: "A sword swing is about 2 m. Warriors." }),
+          numberField("Seconds between fireballs", m.fireballInterval, (v) => { m.fireballInterval = v; touch(); }, { min: "0", id: "f-fireball", inactive: !mage, hint: "Mages. Fireball: 50 + 15 splash, as the skill." }),
+          numberField("Keeps away (m)", m.keepDistance, (v) => { m.keepDistance = v; touch(); }, { min: "0", id: "f-keep", inactive: !mage, hint: "Mages." }))),
+      section("Behaviour",
+        h("div", { class: "grid" },
+          numberField("Aggro range (m)", m.aggroRange, (v) => { m.aggroRange = v; touch(); }, { min: "0", id: "f-aggro", hint: "Notices enemies it can see this close." }),
+          numberField("Leash range (m)", m.leashRange, (v) => { m.leashRange = v; touch(); }, { min: "0", id: "f-leash", hint: "Gives up this far from home: retargets, or walks back and resets." }),
+          numberField("Move speed (m/s)", m.moveSpeed, (v) => { m.moveSpeed = v; touch(); }, { min: "0", id: "f-speed", hint: `A player walks ${PLAYER_WALK} m/s.` }),
+          numberField("Size", m.scale, (v) => { m.scale = v; touch(); }, { min: "0", id: "f-scale", hint: "1 = player size." }))),
+      section("Drops", lootSection(m, rerender)),
+      section("Text",
+        h("label", { class: "field wide" }, h("span", { text: "Description" }),
+          h("textarea", { id: "f-description", value: m.description, oninput: (e) => { m.description = e.target.value; touch(); } })),
+        h("label", { class: "field wide" }, h("span", { text: "Notes" }),
+          h("textarea", { id: "f-notes", value: m.notes.join("\n"), oninput: (e) => { m.notes = e.target.value.split("\n").map((x) => x.trim()).filter(Boolean); touch(); } }),
+          h("span", { class: "hint", text: "Open questions for Claude or the design. One per line." }))));
+
+    editor.replaceChildren(head, body);
+  }
+
+  function refreshHeader() {
+    if (!draft) return;
+    const title = $("editor-title"); if (title) title.textContent = draft.name || (isNew ? "New mob" : draft.id);
+    const sum = $("summary"); if (sum) sum.textContent = summary(draft);
+    const errs = validate(draft);
+    const box = $("errors");
+    if (box) { box.hidden = !errs.length; box.replaceChildren(h("strong", { text: "Fix before saving" }), h("ul", {}, errs.map((e) => h("li", { text: e })))); }
+    setStatus(dirty ? "Unsaved changes" : "");
+  }
+
+  // ---- Actions ----
+  function writeError(e) {
+    if (e && e.code === "invalid_argument") { canWrite = false; return "You can view these mobs but not change them. Ask the owner for edit access."; }
+    if (e && e.code === "quota_exceeded") return "The mob store is full. Delete unused mobs, then save again.";
+    return "Could not save (" + ((e && e.code) || "error") + "). Try again in a moment.";
+  }
+  async function save() {
+    if (!db || saving) return;
+    const errs = validate(draft);
+    if (errs.length) { refreshHeader(); setStatus("Fix the problems listed above, then save.", "bad"); return; }
+    saving = true;
+    const id = draft.id;
+    const prev = store.get(id);
+    const doc = { mob: clone(draft), meta: { updatedAt: nowIso(), deleted: false, syncedAt: prev && prev.meta ? prev.meta.syncedAt ?? null : null } };
+    try {
+      await db.doc("mobs/" + id).set(doc);
+      store.set(id, doc);
+      selectedId = id; isNew = false; dirty = false; idTouched = false;
+      renderList(); renderEditor(); renderSyncChip();
+      setStatus("Saved. It reaches the game the next time you ask Claude to sync mobs.", "ok");
+    } catch (e) {
+      setStatus(writeError(e), "bad");
+    } finally { saving = false; }
+  }
+  function discard() {
+    if (isNew) { draft = null; isNew = false; dirty = false; idTouched = false; renderList(); renderEditor(); return; }
+    dirty = false; draft = clone(store.get(selectedId).mob); renderEditor(); setStatus("Edits discarded.");
+  }
+  function duplicate() {
+    const copy = clone(draft);
+    copy.id = copy.id + "_copy"; copy.name = copy.name + " (copy)";
+    selectedId = null; isNew = true; dirty = true; idTouched = true; deleteArmed = false; draft = copy;
+    renderList(); renderEditor(); setStatus("Copy ready. Change the id and name, then create it.");
+  }
+  async function remove() {
+    if (!deleteArmed) { deleteArmed = true; renderEditor(); setTimeout(() => { if (deleteArmed) { deleteArmed = false; renderEditor(); } }, 4000); return; }
+    deleteArmed = false;
+    const entry = store.get(selectedId);
+    const doc = { mob: entry.mob, meta: { ...(entry.meta || {}), deleted: true, updatedAt: nowIso() } };
+    try {
+      await db.doc("mobs/" + selectedId).set(doc);
+      store.set(selectedId, doc); dirty = false;
+      renderList(); renderEditor(); renderSyncChip();
+      setStatus("Marked for deletion. The next sync removes it from the game.", "ok");
+    } catch (e) { setStatus(writeError(e), "bad"); }
+  }
+  async function restore() {
+    const entry = store.get(selectedId);
+    const doc = { mob: entry.mob, meta: { ...(entry.meta || {}), deleted: false, updatedAt: nowIso() } };
+    try {
+      await db.doc("mobs/" + selectedId).set(doc);
+      store.set(selectedId, doc);
+      renderList(); renderEditor(); renderSyncChip(); setStatus("Restored.", "ok");
+    } catch (e) { setStatus(writeError(e), "bad"); }
+  }
+  async function copyJson() {
+    const text = JSON.stringify(draft, null, 2);
+    try { await navigator.clipboard.writeText(text); setStatus("Mob JSON copied.", "ok"); }
+    catch { setStatus("Copy was blocked here. Ask Claude for the JSON instead.", "bad"); }
+  }
+
+  // ---- Boot ----
+  $("search").addEventListener("input", renderList);
+  $("new-mob").addEventListener("click", startNew);
+  renderFilters();
+  renderList();
+
+  function showOffline() {
+    const n = $("notice"); n.hidden = false;
+    n.textContent = "Open this page in claude.ai while signed in to load and edit mobs.";
+    $("new-mob").disabled = true; renderSyncChip(); renderEditor();
+  }
+
+  (async () => {
+    if (!window.claude || !window.claude.use) { showOffline(); return; }
+    const [dbNs, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+    db = dbNs;
+    if (!db) { showOffline(); return; }
+    if (user && typeof user.can === "function") {
+      try { const allowed = await user.can("data.write"); if (allowed === false) canWrite = false; } catch {}
+    }
+    if (!canWrite) { const n = $("notice"); n.hidden = false; n.textContent = "You can browse these mobs but not change them. Ask the owner for edit access."; $("new-mob").disabled = true; }
+    db.doc("refs/catalog").onSnapshot((snap) => {
+      const data = snap && snap.exists ? snap.data() : null;
+      if (data) refs = { weapons: data.weapons || [], armor: data.armor || [], items: data.items || [], skills: data.skills || [] };
+      if (draft && !dirty) renderEditor(); else refreshHeader();
+    }, () => {});
+    db.collection("mobs").onSnapshot((snap) => {
+      for (const ch of snap.docChanges()) {
+        if (ch.type === "removed") { store.delete(ch.doc.id); continue; }
+        const data = ch.doc.data();
+        if (data && data.mob) store.set(ch.doc.id, clone(data));
+      }
+      if (selectedId && !store.has(selectedId) && !isNew) { selectedId = null; draft = null; }
+      if (selectedId && !dirty && !isNew && store.has(selectedId)) draft = clone(store.get(selectedId).mob);
+      renderList(); renderSyncChip();
+      if (!dirty) renderEditor();
+    }, (err) => {
+      const n = $("notice"); n.hidden = false;
+      n.textContent = err.code === "revoked" ? "Access to the mob store ended. Reload to reconnect." : "Lost the live connection to the mob store. Reload the page.";
+    });
+  })();
+})();
+</script>

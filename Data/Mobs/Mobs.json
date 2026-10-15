@@ -1,0 +1,32 @@
+[
+  {
+    "id": "example_brute",
+    "name": "Example Brute",
+    "kind": "Monster",
+    "combatRole": "Warrior",
+    "health": 80,
+    "attackDamage": 12,
+    "attackInterval": 1.5,
+    "attackRange": 2,
+    "fireballInterval": 8,
+    "keepDistance": 8,
+    "aggroRange": 15,
+    "leashRange": 30,
+    "moveSpeed": 4.5,
+    "scale": 1,
+    "loot": {
+      "rolls": [0, 2],
+      "nothingWeight": 40,
+      "rarityWeights": {"Common": 60, "Uncommon": 25, "Rare": 10, "Epic": 4, "Legendary": 1, "Mystic": 0},
+      "entries": [
+        {"kind": "Gold", "id": null, "weight": 30, "count": [5, 25]},
+        {"kind": "Item", "id": "healing_potion", "weight": 8, "count": [1, 1]},
+        {"kind": "Weapon", "id": null, "weight": 5, "count": [1, 1]},
+        {"kind": "Armor", "id": null, "weight": 5, "count": [1, 1]},
+        {"kind": "SkillGem", "id": null, "weight": 2, "count": [1, 1]}
+      ]
+    },
+    "description": "Placeholder mob matching the built-in monster defaults. Edit or delete it in the Mob Forge.",
+    "notes": []
+  }
+]
