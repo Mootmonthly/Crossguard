@@ -51,7 +51,7 @@ namespace CrossguardScenarioMonsterAI
 	// A body is spawned at the character's transform when it dies.
 	constexpr float BodySearchRadius = 200.0f;
 	// ACrossguardMobSpawner's CheckDead period (seconds): a death is noticed up to this late.
-	constexpr float SpawnerCheckSeconds = 2.0f;
+	constexpr float SpawnerCheckPeriod = 2.0f;
 
 	// The game mode's Mob Table, or null after Skip (unset) / Fail (no game mode).
 	const UDataTable* RequireMobTable(FContext& C)
@@ -85,7 +85,7 @@ namespace CrossguardScenarioMonsterAI
 			return Row;
 		}
 		TArray<FName> Names = Table->GetRowNames();
-		Names.Sort(FNameLexicalLess());
+		Names.Sort([](const FName& A, const FName& B) { return A.Compare(B) < 0; });
 		for (const FName& Name : Names)
 		{
 			const FCrossguardMobRow* Row = Table->FindRow<FCrossguardMobRow>(Name, TEXT("Scenario"), false);
@@ -784,7 +784,7 @@ bool FCrossguardScenarioMonsterDeath::RunTest(const FString& Parameters)
 
 	static constexpr float SceneY = 6000.0f;
 	// skeleton_mage: 1-4 rolls, 1 in 8 is nothing (Data/Mobs/Mobs.json): 6 empty bodies are
-	// about 4 in a million.
+	// at most about 4 in a million.
 	static constexpr int32 Count = 6;
 	FScenario Scenario(*this);
 
@@ -955,7 +955,7 @@ bool FCrossguardScenarioMobDataApplied::RunTest(const FString& Parameters)
 			return;
 		}
 		TArray<FName> Names = Table->GetRowNames();
-		Names.Sort(FNameLexicalLess());
+		Names.Sort([](const FName& A, const FName& B) { return A.Compare(B) < 0; });
 		if (!C.Require(Names.Num() > 0, TEXT("the Mob Table has rows")))
 		{
 			return;
@@ -1065,7 +1065,12 @@ bool FCrossguardScenarioMobDataApplied::RunTest(const FString& Parameters)
 			}
 			if (!Bundles.IsEmpty())
 			{
-				C.Test.AddInfo(FString::Printf(TEXT("%s: bundles expanded: %s"), *Id, *FString::JoinBy(Bundles, TEXT(", "), [](const FName& Name) { return Name.ToString(); })));
+				FString BundleList;
+				for (const FName& Bundle : Bundles)
+				{
+					BundleList += (BundleList.IsEmpty() ? TEXT("") : TEXT(", ")) + Bundle.ToString();
+				}
+				C.Test.AddInfo(FString::Printf(TEXT("%s: bundles expanded: %s"), *Id, *BundleList));
 			}
 		}
 	});
@@ -1412,7 +1417,7 @@ bool FCrossguardScenarioSpawnerRespawn::RunTest(const FString& Parameters)
 		C.SetNumber(TEXT("DeathTime"), C.Now());
 	});
 
-	Scenario.WaitUntil(TEXT("a replacement appears"), RespawnSeconds + SpawnerCheckSeconds + 3.0f, [](FScenarioContext& C)
+	Scenario.WaitUntil(TEXT("a replacement appears"), RespawnSeconds + SpawnerCheckPeriod + 3.0f, [](FScenarioContext& C)
 	{
 		const AActor* Spawner = C.FindActor(TEXT("Spawner"));
 		if (Spawner == nullptr)
@@ -1435,9 +1440,9 @@ bool FCrossguardScenarioSpawnerRespawn::RunTest(const FString& Parameters)
 	{
 		const float Elapsed = static_cast<float>(C.Number(TEXT("RespawnTime")) - C.Number(TEXT("DeathTime")));
 		C.Test.AddInfo(FString::Printf(TEXT("Replacement %.2f s after the death (Respawn Seconds %.1f, checked every %.1f s)"), Elapsed, RespawnSeconds,
-			SpawnerCheckSeconds));
+			SpawnerCheckPeriod));
 		C.Test.TestTrue(TEXT("Not before Respawn Seconds"), Elapsed >= RespawnSeconds - 0.05f);
-		C.Test.TestTrue(TEXT("Within Respawn Seconds + the spawner's check period"), Elapsed <= RespawnSeconds + SpawnerCheckSeconds + 0.5f);
+		C.Test.TestTrue(TEXT("Within Respawn Seconds + the spawner's check period"), Elapsed <= RespawnSeconds + SpawnerCheckPeriod + 0.5f);
 
 		const ACrossguardMonster* First = Cast<ACrossguardMonster>(C.FindActor(TEXT("First")));
 		const ACrossguardMonster* Second = C.Get<ACrossguardMonster>(TEXT("Second"));

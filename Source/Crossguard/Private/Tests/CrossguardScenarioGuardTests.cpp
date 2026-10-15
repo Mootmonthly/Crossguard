@@ -260,7 +260,8 @@ bool FCrossguardScenarioParryTwoHanded::RunTest(const FString& Parameters)
 		}
 		C.Test.TestTrue(TEXT("The attacker is still stunned after 0.5 s (1 s stun)"), C.HasTag(Attacker, CrossguardTags::State_Stunned));
 		C.LowerGuard(Defender);
-		C.Face(Defender, 90.0f);
+		// At the dummy wherever the clank pushed the defender.
+		C.Aim(Defender, Dummy);
 		const float Before = C.Health(Dummy);
 		const float Plain = C.ExpectedDamage(Defender, Dummy, C.WeaponValue(Defender));
 		const float Riposte = FMath::Min(ExpectedWithExtraBonus(C, Defender, Dummy, C.WeaponValue(Defender),
