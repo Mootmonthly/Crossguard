@@ -1,0 +1,2172 @@
+[
+  {
+    "id": "antimagic_garb",
+    "name": "Antimagic Garb",
+    "capacityCost": 5,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "MR",
+        "op": "Percent",
+        "value": 0.15,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": null,
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "+15% MDR.",
+    "source": "StatsDoc",
+    "notes": []
+  },
+  {
+    "id": "arcane_arrows",
+    "name": "Arcane Arrows",
+    "capacityCost": 4,
+    "category": "Active",
+    "weaponTag": null,
+    "tags": [
+      "Buff"
+    ],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 25,
+    "durationSec": 8,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [
+      {
+        "type": "Magic",
+        "amount": 5,
+        "coefficient": 1.0,
+        "kind": "Additional",
+        "durationSec": null,
+        "hits": 1
+      }
+    ],
+    "healing": [],
+    "mechanics": [
+      "Applies to Bow attacks for 8 s",
+      "Reduce damage dropoff by 50%"
+    ],
+    "description": "When activated, your Bow attacks deal an additional 5 Magic Damage for 8 seconds. Dropoff reduced by 50%.",
+    "source": "SkillsDoc",
+    "notes": [
+      "The text mentions Bow attacks but has no 'Requires' line; should it require a Bow (making it Ranged-tagged)?"
+    ]
+  },
+  {
+    "id": "arcane_intellect",
+    "name": "Arcane Intellect",
+    "capacityCost": 3,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "INT",
+        "op": "Flat",
+        "value": 10,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": null,
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "+10 INT.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "armor_mastery",
+    "name": "Armor Mastery",
+    "capacityCost": 4,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": "Plate",
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "AR",
+        "op": "Percent",
+        "value": 0.1,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "other": "applies to AR from armor only"
+        },
+        "durationSec": null
+      },
+      {
+        "stat": "MoveSpeed",
+        "op": "Percent",
+        "value": 0.05,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": null,
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "Gain a 10% bonus to ADR from Armor. Gain +5% Movement Speed. Requirement: Plate Armor.",
+    "source": "SkillsDoc",
+    "notes": [
+      "Is the 10% a multiplier on the armor's own AR or +10 percentage points of total AR limited to armor sources?"
+    ]
+  },
+  {
+    "id": "axe_mastery",
+    "name": "Axe Mastery",
+    "capacityCost": 5,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "AAD",
+        "op": "Flat",
+        "value": 3,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "wielding": [
+            "Axe"
+          ]
+        },
+        "durationSec": null
+      },
+      {
+        "stat": "ADB",
+        "op": "Percent",
+        "value": 0.05,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "wielding": [
+            "Axe"
+          ]
+        },
+        "durationSec": null
+      },
+      {
+        "stat": "ActionSpeed",
+        "op": "Percent",
+        "value": 0.1,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "wielding": [
+            "Axe"
+          ]
+        },
+        "durationSec": null
+      },
+      {
+        "stat": "CDR",
+        "op": "Percent",
+        "value": 0.1,
+        "target": "Self",
+        "skillFilter": "Melee",
+        "condition": null,
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "When wielding axes, gain 3 Attack Damage, 5% Attack Bonus, 10% Action Speed. Melee Skills have -10% Cooldown.",
+    "source": "SkillsDoc",
+    "notes": [
+      "Does the Melee Skills cooldown reduction apply only while wielding axes, or always?"
+    ]
+  },
+  {
+    "id": "benediction",
+    "name": "Benediction",
+    "capacityCost": 10,
+    "category": "Active",
+    "weaponTag": null,
+    "tags": [
+      "Heal"
+    ],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 120,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [],
+    "healing": [
+      {
+        "type": "Physical",
+        "amount": null,
+        "coefficient": 1.0,
+        "full": true,
+        "canRevive": true
+      }
+    ],
+    "mechanics": [
+      "Works on dead targets"
+    ],
+    "description": "Fully recover a target's HP, even if they're dead. Cooldown: 120 seconds.",
+    "source": "SkillsDoc",
+    "notes": [
+      "No Spell tag is given; is this Physical (PHB) or Magical (MHB) healing, and a Spell or Active?"
+    ]
+  },
+  {
+    "id": "bow_mastery",
+    "name": "Bow Mastery",
+    "capacityCost": 5,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "ActionSpeed",
+        "op": "Percent",
+        "value": 0.35,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "wielding": [
+            "Bow"
+          ]
+        },
+        "durationSec": null
+      },
+      {
+        "stat": "MoveSpeed",
+        "op": "Percent",
+        "value": 0.07,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "wielding": [
+            "Bow"
+          ]
+        },
+        "durationSec": null
+      },
+      {
+        "stat": "CDR",
+        "op": "Percent",
+        "value": 0.1,
+        "target": "Self",
+        "skillFilter": "Ranged",
+        "condition": null,
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "While wielding Bows, gain 35% Action Speed and 7% Move Speed. Ranged Skills have 10% reduced Cooldown.",
+    "source": "SkillsDoc",
+    "notes": [
+      "Does the Ranged Skills cooldown reduction apply only while wielding a Bow, or always?"
+    ]
+  },
+  {
+    "id": "chop_down",
+    "name": "Chop Down",
+    "capacityCost": 5,
+    "category": "Active",
+    "weaponTag": "Melee",
+    "tags": [
+      "Debuff"
+    ],
+    "requirements": {
+      "weapons": [
+        "Axe"
+      ],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 25,
+    "durationSec": 2,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [
+      {
+        "type": "Attack",
+        "amount": 1.1,
+        "coefficient": 1.0,
+        "kind": "WeaponPercent",
+        "durationSec": null,
+        "hits": 1
+      }
+    ],
+    "healing": [],
+    "mechanics": [
+      "Applies to next axe attack",
+      "Slow target for 2 s",
+      "Ground flying targets hit"
+    ],
+    "description": "Your next axe attack deals 110% Attack Damage and slows the target for 2 seconds. If it strikes a flying enemy, Ground them. Requires: Axes. Cooldown: 25 seconds.",
+    "source": "SkillsDoc",
+    "notes": [
+      "How much does the slow reduce Movement Speed?"
+    ]
+  },
+  {
+    "id": "cleave",
+    "name": "Cleave",
+    "capacityCost": 3,
+    "category": "Art",
+    "weaponTag": "Melee",
+    "tags": [],
+    "requirements": {
+      "weapons": [
+        "AnyMelee"
+      ],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 10,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [
+      {
+        "type": "Attack",
+        "amount": 0.85,
+        "coefficient": 1.0,
+        "kind": "WeaponPercent",
+        "durationSec": null,
+        "hits": 1
+      }
+    ],
+    "healing": [],
+    "mechanics": [
+      "Swing in a horizontal arc hitting all enemies in the area"
+    ],
+    "description": "Swing your weapon in a horizontal arc, dealing 85% Attack Damage to any enemy in the area. Requires: Melee Weapon. Cooldown: 10 seconds.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "cor_leonis",
+    "name": "Cor Leonis",
+    "capacityCost": 6,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [
+      "Raid"
+    ],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "ADB",
+        "op": "Percent",
+        "value": 0.05,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "perEmptyArmorSlot": true
+        },
+        "durationSec": null
+      },
+      {
+        "stat": "MDB",
+        "op": "Percent",
+        "value": 0.05,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "perEmptyArmorSlot": true
+        },
+        "durationSec": null
+      },
+      {
+        "stat": "MoveSpeed",
+        "op": "Percent",
+        "value": 0.03,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "perEmptyArmorSlot": true
+        },
+        "durationSec": null
+      },
+      {
+        "stat": "ActionSpeed",
+        "op": "Percent",
+        "value": 0.05,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "perEmptyArmorSlot": true
+        },
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "Gain 5% Attack Bonus, 5% Magic Bonus, 3% Movement Speed, and 5% Action Speed for every empty armor slot. (high rarity/raid tier skill)",
+    "source": "StatsDoc",
+    "notes": []
+  },
+  {
+    "id": "dagger_mastery",
+    "name": "Dagger Mastery",
+    "capacityCost": 2,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "ADB",
+        "op": "Percent",
+        "value": 0.1,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "wielding": [
+            "Dagger"
+          ]
+        },
+        "durationSec": null
+      },
+      {
+        "stat": "ActionSpeed",
+        "op": "Percent",
+        "value": 0.05,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "wielding": [
+            "Dagger"
+          ]
+        },
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "+10% ADB and +5% Action Speed when using Daggers. Passive.",
+    "source": "StatsDoc",
+    "notes": []
+  },
+  {
+    "id": "divine_alacrity",
+    "name": "Divine Alacrity",
+    "capacityCost": 3,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "AGI",
+        "op": "Flat",
+        "value": 10,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": null,
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "+10 AGI.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "dragonification",
+    "name": "Dragonification",
+    "capacityCost": 13,
+    "category": "Active",
+    "weaponTag": null,
+    "tags": [
+      "Buff"
+    ],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 180,
+    "durationSec": 45,
+    "includes": [],
+    "grantsWhileActive": [
+      "flare_breath",
+      "flight"
+    ],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "MHPB",
+        "op": "Percent",
+        "value": 0.5,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "onActivation": true
+        },
+        "durationSec": 45
+      },
+      {
+        "stat": "AR",
+        "op": "Percent",
+        "value": 0.25,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "onActivation": true
+        },
+        "durationSec": 45
+      },
+      {
+        "stat": "MR",
+        "op": "Percent",
+        "value": 0.25,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "onActivation": true
+        },
+        "durationSec": 45
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [
+      "Turn into a small dragon for 45 s",
+      "Cannot use weapons or skills while active"
+    ],
+    "description": "Turn into a small dragon for 45 seconds. Gain 50% Max HP, 25% ADR, 25% MDR, the Flare Breath skill, and the Flight skill. Cannot use weapons or skills while active. Cooldown: 180 seconds.",
+    "source": "SkillsDoc",
+    "notes": [
+      "Flight is granted while active; if the player also has Flight equipped, do the two stack, share a cooldown, or does the equipped copy take priority?",
+      "The skill grants Flare Breath and Flight yet forbids using skills while active; do granted skills bypass that restriction?"
+    ]
+  },
+  {
+    "id": "elder_summoner",
+    "name": "Elder Summoner",
+    "capacityCost": 3,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "CDR",
+        "op": "Percent",
+        "value": 0.3,
+        "target": "Self",
+        "skillFilter": "Minion",
+        "condition": null,
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "Minion Spells have -30% Cooldown.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "eldritch_shield",
+    "name": "Eldritch Shield",
+    "capacityCost": 5,
+    "category": "Spell",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 25,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [],
+    "healing": [],
+    "mechanics": [
+      "Cast a barrier around yourself that absorbs 45 Attack Damage",
+      "Lose 10 HP on cast"
+    ],
+    "description": "Cast a barrier around yourself that absorbs 45 Attack Damage. Lose 10 HP. Spell. Cooldown: 25 seconds.",
+    "source": "SkillsDoc",
+    "notes": [
+      "Does the barrier have a duration, and does it absorb Magic Damage?"
+    ]
+  },
+  {
+    "id": "fireball",
+    "name": "Fireball",
+    "capacityCost": 3,
+    "category": "Active",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 15,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [
+      {
+        "type": "Magic",
+        "amount": 50,
+        "coefficient": 0.5,
+        "kind": "Impact",
+        "durationSec": null,
+        "hits": 1
+      },
+      {
+        "type": "Magic",
+        "amount": 15,
+        "coefficient": 1.0,
+        "kind": "Splash",
+        "durationSec": null,
+        "hits": 1
+      }
+    ],
+    "healing": [],
+    "mechanics": [
+      "Launch a fireball in the aimed direction"
+    ],
+    "description": "Launch a fireball in the aimed direction. Deals 50 (0.5) magic damage on impact and 15 splash magic damage from the explosion. Cooldown: 15 seconds.",
+    "source": "SkillsDoc",
+    "notes": [
+      "Fireball has no Spell tag but deals magic damage; should it be a Spell (INT cast time and CDR) instead of Active?"
+    ]
+  },
+  {
+    "id": "flare_breath",
+    "name": "Flare Breath",
+    "capacityCost": 9,
+    "category": "Active",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 45,
+    "durationSec": 3,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [
+      {
+        "type": "Magic",
+        "amount": 40,
+        "coefficient": 0.5,
+        "kind": "Impact",
+        "durationSec": null,
+        "hits": 1
+      },
+      {
+        "type": "Magic",
+        "amount": 25,
+        "coefficient": 0.5,
+        "kind": "PerSecond",
+        "durationSec": 3,
+        "hits": 1
+      }
+    ],
+    "healing": [],
+    "mechanics": [
+      "Launch a gout of flame from converged hands"
+    ],
+    "description": "Converge your hands and launch a gout of flame, dealing 40 (0.5) Magic Damage on impact and 25 Magic Damage (0.5) per second. Lasts 3 seconds. Cooldown: 45 seconds.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "flight",
+    "name": "Flight",
+    "capacityCost": 8,
+    "category": "Active",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 60,
+    "durationSec": 20,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [],
+    "healing": [],
+    "mechanics": [
+      "Fly for 20 s"
+    ],
+    "description": "Gain the ability to fly in the air for 20 seconds. Cooldown: 60 seconds.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "gouge",
+    "name": "Gouge",
+    "capacityCost": 3,
+    "category": "Active",
+    "weaponTag": "Melee",
+    "tags": [
+      "Debuff"
+    ],
+    "requirements": {
+      "weapons": [
+        "Dagger"
+      ],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 7,
+    "durationSec": 5,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "MoveSpeed",
+        "op": "Percent",
+        "value": -0.05,
+        "target": "Target",
+        "skillFilter": null,
+        "condition": {
+          "nextAttack": true
+        },
+        "durationSec": 5
+      }
+    ],
+    "damage": [
+      {
+        "type": "Attack",
+        "amount": 25,
+        "coefficient": 1.0,
+        "kind": "OverTime",
+        "durationSec": 5,
+        "hits": 1
+      }
+    ],
+    "healing": [],
+    "mechanics": [
+      "Applies to next melee attack"
+    ],
+    "description": "Your next melee attack applies a debuff, dealing 25 Attack damage over 5 seconds. Target Move Speed reduced by 5% for 5 seconds. Requires: Daggers.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "greater_heal",
+    "name": "Greater Heal",
+    "capacityCost": 5,
+    "category": "Active",
+    "weaponTag": null,
+    "tags": [
+      "Heal"
+    ],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 20,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [],
+    "healing": [
+      {
+        "type": "Physical",
+        "amount": 55,
+        "coefficient": 1.0,
+        "full": false,
+        "canRevive": false
+      }
+    ],
+    "mechanics": [],
+    "description": "Heal the target of 55 HP. Cooldown: 20 seconds.",
+    "source": "SkillsDoc",
+    "notes": [
+      "No Spell tag is given; is this Physical (PHB) or Magical (MHB) healing, and a Spell or Active?"
+    ]
+  },
+  {
+    "id": "heal",
+    "name": "Heal",
+    "capacityCost": 2,
+    "category": "Spell",
+    "weaponTag": null,
+    "tags": [
+      "Heal"
+    ],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 12,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [],
+    "healing": [
+      {
+        "type": "Magical",
+        "amount": 20,
+        "coefficient": 1.0,
+        "full": false,
+        "canRevive": false
+      }
+    ],
+    "mechanics": [],
+    "description": "Heal the target of 20 HP. Spell. Cooldown: 12 seconds.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "heroic_might",
+    "name": "Heroic Might",
+    "capacityCost": 3,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "STR",
+        "op": "Flat",
+        "value": 10,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": null,
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "+10 STR.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "hunters_leap",
+    "name": "Hunter's Leap",
+    "capacityCost": 3,
+    "category": "Active",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 15,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [],
+    "healing": [],
+    "mechanics": [
+      "Jump forward 5 m, distance multiplied by AGI"
+    ],
+    "description": "Jump forward 5 meters (AGI multiplier on distance). Cooldown: 15 seconds.",
+    "source": "SkillsDoc",
+    "notes": [
+      "What is the AGI multiplier formula for the jump distance?"
+    ]
+  },
+  {
+    "id": "hunters_tracking",
+    "name": "Hunter's Tracking",
+    "capacityCost": 2,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [],
+    "healing": [],
+    "mechanics": [
+      "See footsteps of enemy players going back 30 s",
+      "Extend hearing range by 20 m"
+    ],
+    "description": "See the footsteps of enemy players, going back 30 seconds. Hearing range extended by 20 meters.",
+    "source": "SkillsDoc",
+    "notes": [
+      "The text has no cooldown or activation; is this always on (Passive) or a toggled/activated skill?"
+    ]
+  },
+  {
+    "id": "immutable",
+    "name": "Immutable",
+    "capacityCost": 9,
+    "category": "Active",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 60,
+    "durationSec": 5,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [],
+    "healing": [],
+    "mechanics": [
+      "You are permanently immune to CC",
+      "On activation, allies within 10 m become immune to CC for 5 s"
+    ],
+    "description": "You are immune to CC. Activate the ability to make all allies in a 10 meter radius immune to CC for five seconds. Activation Cooldown: 60 seconds.",
+    "source": "StatsDoc",
+    "notes": []
+  },
+  {
+    "id": "light",
+    "name": "Light",
+    "capacityCost": 1,
+    "category": "Spell",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 30,
+    "durationSec": 120,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [],
+    "healing": [],
+    "mechanics": [
+      "Create a ball of light fixed over your head for 120 s, illuminating the area"
+    ],
+    "description": "Create a small ball of light fixed over your head, illuminating the area around you. Lasts 120 seconds. Cooldown: 30 seconds. Spell.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "mortal_strike",
+    "name": "Mortal Strike",
+    "capacityCost": 5,
+    "category": "Active",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 30,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [
+      {
+        "type": "Attack",
+        "amount": 20,
+        "coefficient": 1.0,
+        "kind": "Additional",
+        "durationSec": null,
+        "hits": 1
+      }
+    ],
+    "healing": [],
+    "mechanics": [
+      "Applies to next melee attack",
+      "Refresh cooldown if the attack kills a target"
+    ],
+    "description": "Your next melee attack has an additional 20 Attack damage. If this attack kills a target, Mortal Strike's cooldown is refreshed. Cooldown: 30 seconds.",
+    "source": "SkillsDoc",
+    "notes": [
+      "The text says 'melee attack' but lists no weapon requirement; should it require a melee weapon (making it Melee-tagged)?"
+    ]
+  },
+  {
+    "id": "multiscale",
+    "name": "Multiscale",
+    "capacityCost": 9,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "AR",
+        "op": "Percent",
+        "value": 0.15,
+        "target": "Party",
+        "skillFilter": null,
+        "condition": null,
+        "durationSec": null
+      },
+      {
+        "stat": "MR",
+        "op": "Percent",
+        "value": 0.15,
+        "target": "Party",
+        "skillFilter": null,
+        "condition": null,
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "All members in the party are granted +15% ADR and +15% MDR.",
+    "source": "StatsDoc",
+    "notes": []
+  },
+  {
+    "id": "mute",
+    "name": "Mute",
+    "capacityCost": 10,
+    "category": "Spell",
+    "weaponTag": null,
+    "tags": [
+      "Debuff"
+    ],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 180,
+    "durationSec": 10,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [
+      {
+        "type": "Magic",
+        "amount": 5,
+        "coefficient": 1.0,
+        "kind": "PerSecond",
+        "durationSec": 10,
+        "hits": 1
+      }
+    ],
+    "healing": [],
+    "mechanics": [
+      "Target an enemy",
+      "Mute target for 10 s: nullify all its skills including passives"
+    ],
+    "description": "Target an enemy. Target is Muted for 10 seconds, taking 5 Magic Damage per second, and has all skills nullified for the duration, including passive skills. Spell. Cooldown: 180 seconds.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "neckbite",
+    "name": "Neckbite",
+    "capacityCost": 3,
+    "category": "Active",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": [
+        "Beastial"
+      ]
+    },
+    "cooldownSec": null,
+    "durationSec": 2,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [
+      {
+        "type": "Magic",
+        "amount": 10,
+        "coefficient": 1.0,
+        "kind": "Additional",
+        "durationSec": null,
+        "hits": 1
+      }
+    ],
+    "healing": [],
+    "mechanics": [
+      "Applies to next attack",
+      "Silence target for 2 s"
+    ],
+    "description": "Your next attack deals an additional 10 magical damage and Silences the target for 2 seconds. Requirements: Beastial forms.",
+    "source": "SkillsDoc",
+    "notes": [
+      "Which forms count as 'Beastial' (spelled 'Beastial' in the doc), and can a player ever be in one outside the Tiger minion?",
+      "Active with no cooldown listed; what is its cooldown?"
+    ]
+  },
+  {
+    "id": "parting_the_land",
+    "name": "Parting The Land",
+    "capacityCost": 9,
+    "category": "Active",
+    "weaponTag": "Melee",
+    "tags": [],
+    "requirements": {
+      "weapons": [
+        "TwoHandedMelee"
+      ],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 60,
+    "durationSec": 15,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [],
+    "healing": [],
+    "mechanics": [
+      "Swing down at the ground, knocking up everyone in the path",
+      "Deal high damage (amount unspecified) to everyone in the path",
+      "Create Walls to either side of the area of effect for 15 s"
+    ],
+    "description": "Swing your weapon down at the ground, knocking up and dealing high damage to everyone in your path (like Breach/Rein ult). Create Walls to either side of the skill's area of effect, lasting the standard 15 seconds. Requires: Two-Handed Melee Weapons. Cooldown: 60 seconds.",
+    "source": "SkillsDoc",
+    "notes": [
+      "'High damage' has no number; what is the damage amount, type and coefficient?"
+    ]
+  },
+  {
+    "id": "purge_shot",
+    "name": "Purge Shot",
+    "capacityCost": 4,
+    "category": "Active",
+    "weaponTag": "Ranged",
+    "tags": [
+      "Debuff"
+    ],
+    "requirements": {
+      "weapons": [
+        "Bow",
+        "Crossbow"
+      ],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 35,
+    "durationSec": 3,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [],
+    "healing": [],
+    "mechanics": [
+      "Applies to next attack",
+      "Mute target for 3 s"
+    ],
+    "description": "Your next attack Mutes the enemy for 3 seconds. Requires: Bows, Crossbows. Cooldown: 35 seconds.",
+    "source": "SkillsDoc",
+    "notes": [
+      "Does this Mute nullify all skills including passives like the Mute spell, and does it deal damage?"
+    ]
+  },
+  {
+    "id": "quickshot",
+    "name": "Quickshot",
+    "capacityCost": 5,
+    "category": "Active",
+    "weaponTag": "Ranged",
+    "tags": [
+      "Buff"
+    ],
+    "requirements": {
+      "weapons": [
+        "Bow"
+      ],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 25,
+    "durationSec": 8,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "MoveSpeed",
+        "op": "Percent",
+        "value": 0.05,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "onActivation": true
+        },
+        "durationSec": 8
+      },
+      {
+        "stat": "ActionSpeed",
+        "op": "Percent",
+        "value": 0.25,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "onActivation": true
+        },
+        "durationSec": 8
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "Gain 5% Move Speed and 25% Action Speed for 8 seconds. Requires: Bows. Cooldown: 25 seconds.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "shade_blow",
+    "name": "Shade Blow",
+    "capacityCost": 8,
+    "category": "Active",
+    "weaponTag": "Melee",
+    "tags": [
+      "Debuff"
+    ],
+    "requirements": {
+      "weapons": [
+        "Sword",
+        "Axe"
+      ],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 10,
+    "durationSec": 5,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [
+      {
+        "type": "Magic",
+        "amount": 20,
+        "coefficient": 1.0,
+        "kind": "Additional",
+        "durationSec": null,
+        "hits": 1
+      }
+    ],
+    "healing": [],
+    "mechanics": [
+      "Applies to next melee attack",
+      "Prevent all healing on target for 5 s"
+    ],
+    "description": "Your next melee attack deals an additional 20 Magic Damage, preventing any healing done to the target for the next 5 seconds. Requires: Swords, Axes.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "shooting_star",
+    "name": "Shooting Star",
+    "capacityCost": 6,
+    "category": "Active",
+    "weaponTag": "Melee",
+    "tags": [],
+    "requirements": {
+      "weapons": [
+        "Sword"
+      ],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 60,
+    "durationSec": 2,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [
+      {
+        "type": "Attack",
+        "amount": 50,
+        "coefficient": 1.0,
+        "kind": "Impact",
+        "durationSec": null,
+        "hits": 1
+      }
+    ],
+    "healing": [],
+    "mechanics": [
+      "Dash forward 10 m, hitting everyone in the path",
+      "Blind enemies looking at you within 30 m for 2 s"
+    ],
+    "description": "Thrust forward with your Sword, dashing forward 10 meters and dealing 50 Attack Damage to everyone in your path. Enemies looking at you within 30 meters are Blinded/flashbanged for 2 seconds. Requires: Swords. Cooldown: 60 seconds.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "slash",
+    "name": "Slash",
+    "capacityCost": 1,
+    "category": "Active",
+    "weaponTag": "Melee",
+    "tags": [],
+    "requirements": {
+      "weapons": [
+        "Sword",
+        "Dagger"
+      ],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 4,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [
+      {
+        "type": "Attack",
+        "amount": 7,
+        "coefficient": 1.0,
+        "kind": "Additional",
+        "durationSec": null,
+        "hits": 1
+      }
+    ],
+    "healing": [],
+    "mechanics": [
+      "Applies to next melee attack"
+    ],
+    "description": "Your next Melee Attack has an additional 7 Weapon Damage. Requirements: Swords, Daggers. Cooldown: 4 seconds.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "spear_mastery",
+    "name": "Spear Mastery",
+    "capacityCost": 2,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "ADB",
+        "op": "Percent",
+        "value": 0.1,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "wielding": [
+            "Spear"
+          ]
+        },
+        "durationSec": null
+      },
+      {
+        "stat": "ActionSpeed",
+        "op": "Percent",
+        "value": 0.07,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "wielding": [
+            "Spear"
+          ]
+        },
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "Gain 10% ADB and 7% Action Speed when wielding a Spear. Passive.",
+    "source": "StatsDoc",
+    "notes": []
+  },
+  {
+    "id": "spear_of_liscor",
+    "name": "Spear of Liscor",
+    "capacityCost": 15,
+    "category": "Passive",
+    "weaponTag": "Melee",
+    "tags": [],
+    "requirements": {
+      "weapons": [
+        "Spear"
+      ],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [
+      "triple_thrust",
+      "spear_mastery",
+      "antimagic_garb"
+    ],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "AGI",
+        "op": "Flat",
+        "value": 3,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": null,
+        "durationSec": null
+      },
+      {
+        "stat": "STR",
+        "op": "Flat",
+        "value": 7,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": null,
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "+3 AGI, +7 STR. Triple Thrust, Spear Mastery, Antimagic Garb. Requirement: Spear.",
+    "source": "StatsDoc",
+    "notes": []
+  },
+  {
+    "id": "splinter_of_winter",
+    "name": "Splinter of Winter",
+    "capacityCost": 2,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [
+      "dagger_mastery"
+    ],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "MoveSpeed",
+        "op": "Percent",
+        "value": -0.1,
+        "target": "Target",
+        "skillFilter": null,
+        "condition": {
+          "wielding": [
+            "Dagger"
+          ]
+        },
+        "durationSec": 3
+      }
+    ],
+    "damage": [
+      {
+        "type": "Magic",
+        "amount": 5,
+        "coefficient": 1.0,
+        "kind": "Additional",
+        "durationSec": null,
+        "hits": 1
+      }
+    ],
+    "healing": [],
+    "mechanics": [
+      "Applies to Attacks made with a Dagger"
+    ],
+    "description": "Dagger Mastery. Your Attacks with a Dagger deal 5 Additional Magic Damage and reduce the target's Movement Speed by 10% for 3 seconds. Passive.",
+    "source": "StatsDoc",
+    "notes": []
+  },
+  {
+    "id": "stealth",
+    "name": "Stealth",
+    "capacityCost": 6,
+    "category": "Active",
+    "weaponTag": null,
+    "tags": [
+      "Buff"
+    ],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 20,
+    "durationSec": 12,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "MoveSpeed",
+        "op": "Percent",
+        "value": 0.1,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "other": "applies when exiting stealth"
+        },
+        "durationSec": 3
+      },
+      {
+        "stat": "ADB",
+        "op": "Percent",
+        "value": 0.25,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "other": "applies when exiting stealth"
+        },
+        "durationSec": 3
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [
+      "Become invisible for 12 s"
+    ],
+    "description": "Go invisible for 12 seconds. When exiting stealth, gain 10% movespeed and +25% attack bonus for 3 seconds. Cooldown: 20 seconds.",
+    "source": "SkillsDoc",
+    "notes": [
+      "Does the exit bonus trigger only on manual exit, or also when the 12 s of stealth expire?"
+    ]
+  },
+  {
+    "id": "summon_greater_demon",
+    "name": "Summon Greater Demon",
+    "capacityCost": 10,
+    "category": "Spell",
+    "weaponTag": null,
+    "tags": [
+      "Minion",
+      "Summon"
+    ],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 240,
+    "durationSec": 60,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [
+      "mortal_strike",
+      "sword_mastery",
+      "eldritch_shield",
+      "shade_blow"
+    ],
+    "statModifiers": [],
+    "damage": [],
+    "healing": [],
+    "mechanics": [
+      "Summon a large Demon for 60 s"
+    ],
+    "description": "Summon a large Demon. Skills: Mortal Strike, Sword Mastery, Eldritch Shield, Shade Blow. Summon lasts 60 seconds. Cooldown: 240 seconds. Spell: Minion.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "summon_skeletons",
+    "name": "Summon Skeletons",
+    "capacityCost": 4,
+    "category": "Spell",
+    "weaponTag": null,
+    "tags": [
+      "Minion",
+      "Summon"
+    ],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 30,
+    "durationSec": 60,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [
+      "fireball"
+    ],
+    "statModifiers": [],
+    "damage": [],
+    "healing": [],
+    "mechanics": [
+      "Summon 5 Skeleton Warriors and 1 Skeleton Mage for 60 s",
+      "Skeleton Mage casts Fireball on an 8 s cooldown",
+      "Minions target nearest enemy players first, then nearest enemy PvE",
+      "Recasting before all Minions are dead kills the remaining Minions and summons new ones"
+    ],
+    "description": "Summon 5 Skeleton Warriors and 1 Skeleton Mage. Mage has the Fireball skill on a 8 second Cooldown. Summons will prioritize nearest enemy players, and then target nearest enemy PvE. Summons last 60 seconds. If spell is cast again before all Minions are dead, remaining Minions automatically die and new Minions are summoned. Spell: Minion. Cooldown: 30 seconds.",
+    "source": "SkillsDoc",
+    "notes": [
+      "The Mage's Fireball cooldown is 8 s versus 15 s for the player; where is this per-minion override stored?"
+    ]
+  },
+  {
+    "id": "summon_tiger",
+    "name": "Summon Tiger",
+    "capacityCost": 5,
+    "category": "Active",
+    "weaponTag": null,
+    "tags": [
+      "Minion",
+      "Summon"
+    ],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [
+        "Pet Gem (Tiger)"
+      ],
+      "forms": []
+    },
+    "cooldownSec": 185,
+    "durationSec": 180,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [
+      "hunters_leap",
+      "neckbite",
+      "slash"
+    ],
+    "statModifiers": [],
+    "damage": [],
+    "healing": [],
+    "mechanics": [
+      "Summon a tiger Minion for 180 s"
+    ],
+    "description": "Summon a tiger Minion. Skills: Hunter's Leap, Neckbite, Slash. Lasts 180 seconds. Requires: Pet Gem (Tiger). Cooldown: 185 seconds.",
+    "source": "SkillsDoc",
+    "notes": [
+      "Hunter's Leap is also a player skill; is the tiger's Hunter's Leap the same skill entry or a separate minion-only version?",
+      "It has no Spell tag, so Elder Summoner's 'Minion Spells' CDR may not apply; should it?"
+    ]
+  },
+  {
+    "id": "sword_mastery",
+    "name": "Sword Mastery",
+    "capacityCost": 5,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "AAD",
+        "op": "Flat",
+        "value": 5,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "wielding": [
+            "Sword"
+          ]
+        },
+        "durationSec": null
+      },
+      {
+        "stat": "ActionSpeed",
+        "op": "Percent",
+        "value": 0.1,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "wielding": [
+            "Sword"
+          ]
+        },
+        "durationSec": null
+      },
+      {
+        "stat": "CDR",
+        "op": "Percent",
+        "value": 0.1,
+        "target": "Self",
+        "skillFilter": "Melee",
+        "condition": null,
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "When wielding a Sword, gain 5 Attack Damage and 10% Action Speed. Melee Skills have -10% Cooldown.",
+    "source": "SkillsDoc",
+    "notes": [
+      "Does the Melee Skills cooldown reduction apply only while wielding a Sword, or always?"
+    ]
+  },
+  {
+    "id": "the_mithril_knight",
+    "name": "The Mithril Knight",
+    "capacityCost": 15,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [
+      "Raid"
+    ],
+    "requirements": {
+      "weapons": [],
+      "armor": "PlateAllSlots",
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [
+      "multiscale",
+      "immutable",
+      "antimagic_garb"
+    ],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "AR",
+        "op": "Percent",
+        "value": 0.3,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": null,
+        "durationSec": null
+      },
+      {
+        "stat": "STR",
+        "op": "Flat",
+        "value": 5,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": null,
+        "durationSec": null
+      },
+      {
+        "stat": "MoveSpeed",
+        "op": "Percent",
+        "value": -0.05,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": null,
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "+30% ADR, +5 STR. -5% Movement Speed. Multiscale, Immutable, Antimagic Garb. Requires: Plate Armor in every slot.",
+    "source": "StatsDoc",
+    "notes": []
+  },
+  {
+    "id": "trauma_mastery",
+    "name": "Trauma Mastery",
+    "capacityCost": 4,
+    "category": "Passive",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": null,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "AAD",
+        "op": "Flat",
+        "value": 3,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "wielding": [
+            "Mace",
+            "Staff",
+            "Hammer"
+          ]
+        },
+        "durationSec": null
+      },
+      {
+        "stat": "ADB",
+        "op": "Percent",
+        "value": 0.15,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "wielding": [
+            "Mace",
+            "Staff",
+            "Hammer"
+          ]
+        },
+        "durationSec": null
+      },
+      {
+        "stat": "CDR",
+        "op": "Percent",
+        "value": 0.1,
+        "target": "Self",
+        "skillFilter": "Melee",
+        "condition": null,
+        "durationSec": null
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "Gain 3 Attack Damage and 15% Attack Bonus when using Maces, Staffs and Hammers. Melee Skill Cooldowns -10%.",
+    "source": "SkillsDoc",
+    "notes": [
+      "Does the Melee Skills cooldown reduction apply only while wielding Maces, Staffs or Hammers, or always?"
+    ]
+  },
+  {
+    "id": "triple_thrust",
+    "name": "Triple Thrust",
+    "capacityCost": 8,
+    "category": "Art",
+    "weaponTag": "Melee",
+    "tags": [],
+    "requirements": {
+      "weapons": [
+        "Spear"
+      ],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 12,
+    "durationSec": null,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [
+      {
+        "type": "Attack",
+        "amount": 15,
+        "coefficient": 1.0,
+        "kind": "Additional",
+        "durationSec": null,
+        "hits": 3
+      }
+    ],
+    "healing": [],
+    "mechanics": [
+      "Thrust three times",
+      "Piercing: pass through blocking shields",
+      "If the enemy would successfully block, deal 50% of total damage instead"
+    ],
+    "description": "Thrust your spear blindingly fast three times, dealing +15 Additional Attack Damage each. Piercing: Weapon passes through blocking shields. If enemy would successfully block, instead deal 50% of total damage. Requirement: Spear. Art. Cooldown: 12 seconds.",
+    "source": "StatsDoc",
+    "notes": []
+  },
+  {
+    "id": "unleash",
+    "name": "Unleash",
+    "capacityCost": 11,
+    "category": "Active",
+    "weaponTag": null,
+    "tags": [
+      "Buff"
+    ],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 90,
+    "durationSec": 15,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [
+      {
+        "stat": "AllAttributes",
+        "op": "Multiply",
+        "value": 2.0,
+        "target": "Self",
+        "skillFilter": null,
+        "condition": {
+          "onActivation": true
+        },
+        "durationSec": 15
+      }
+    ],
+    "damage": [],
+    "healing": [],
+    "mechanics": [],
+    "description": "All Attributes are doubled for 15 seconds. Cooldown: 90 seconds.",
+    "source": "SkillsDoc",
+    "notes": []
+  },
+  {
+    "id": "wall",
+    "name": "Wall",
+    "capacityCost": 1,
+    "category": "Spell",
+    "weaponTag": null,
+    "tags": [],
+    "requirements": {
+      "weapons": [],
+      "armor": null,
+      "items": [],
+      "forms": []
+    },
+    "cooldownSec": 10,
+    "durationSec": 15,
+    "includes": [],
+    "grantsWhileActive": [],
+    "minionSkills": [],
+    "statModifiers": [],
+    "damage": [],
+    "healing": [],
+    "mechanics": [
+      "Create an earthen wall for 15 s"
+    ],
+    "description": "Create an earthen wall that lasts for 15 seconds. Spell. Cooldown: 10 seconds.",
+    "source": "SkillsDoc",
+    "notes": []
+  }
+]
