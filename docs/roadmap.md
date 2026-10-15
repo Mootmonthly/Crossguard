@@ -20,7 +20,7 @@ order changes.
 | Character | First-person camera, Enhanced Input built in code, GAS stats derived from STR/AGI/INT. |
 | Combat | Weapon attacks (melee sweep, hitscan wand, projectiles), damage and healing formulas, dual wield, cooldowns with CDR cap. Bows use arrows. |
 | Equipment | Main hand / off hand, six armor slots, rolled affixes, equipment stats and tags. |
-| Skills | Loadout validation (Capacity, bundles, superseded skills), Skill Library gating, passive ability base class. **No individual skills implemented yet.** |
+| Skills | Loadout validation (Capacity, bundles, superseded skills), Skill Library gating. Passive stat bonuses play from the skill data. **No active skills implemented yet.** |
 | Progression | XP sources, level curve, raid XP banked on extraction, attribute allocation, paid respec tokens. Session only, not saved. |
 | Stash | Per-character tabs of 10 × 30, between raids only. Not saved yet. |
 | Inventory | Server-authoritative 10 × 5 grid, Backpack and Quiver, stacking by type and rarity, equip through the inventory, Skill Gems, potions and bandages (Q to ready, left click to use). |
@@ -63,7 +63,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Item | Needs | Notes |
 | --- | --- | --- |
 | Implement skills | Code | 49 skills in the data, none playable yet. Start with the ones the first raids need. |
-| Generate passive effects from data | Code | Passives are hand-made today. |
+| Passives on others and free-text mechanics | Code | Data-driven passives cover Self stat modifiers (masteries, Heroic Might, Cor Leonis, ...); party auras, on-hit slows and mechanics like Hunter's Tracking still need code. |
 | Block (shields) and parry | Code | Right-click actions already chosen by the rules; not built. |
 | Status effects | Code | Slow, Mute, Silence, crowd control, damage shields (Eldritch Shield). |
 | Throwables | Decision, Code | Sizes and stack (3) ruled; damage and behaviour not. |

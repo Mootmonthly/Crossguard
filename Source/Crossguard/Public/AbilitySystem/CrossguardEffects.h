@@ -65,6 +65,30 @@ public:
 	static void SetHealing(FGameplayEffectSpec& Spec, float TotalHealing, float Seconds);
 };
 
+// Infinite. Stat bonuses of a data-driven passive skill (UCrossguardDataPassiveAbility): one Add
+// modifier per attribute in GetStatNames, SetByCaller named after the attribute. Set every name
+// (0 for unused) before applying.
+UCLASS()
+class CROSSGUARD_API UCrossguardSkillStatsEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UCrossguardSkillStatsEffect();
+
+	static const TArray<FName>& GetStatNames();
+};
+
+// Infinite. Like UCrossguardSkillStatsEffect, but each modifier multiplies (1 for unused).
+UCLASS()
+class CROSSGUARD_API UCrossguardSkillMultiplierEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UCrossguardSkillMultiplierEffect();
+};
+
 // Infinite. Holds the stat contributions of equipped items, one Add modifier per stat with a
 // SetByCaller magnitude named after the attribute (e.g. "AttackResistance"). Set every name in
 // GetStatNames (0 for unused) before applying.

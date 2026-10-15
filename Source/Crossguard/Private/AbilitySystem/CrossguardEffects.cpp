@@ -53,6 +53,84 @@ namespace
 	}
 }
 
+namespace
+{
+	// Attributes a passive skill can modify. The SetByCaller name is the attribute's name.
+	const TArray<FGameplayAttribute>& SkillStatAttributes()
+	{
+		static const TArray<FGameplayAttribute> Attributes = {
+			UCrossguardAttributeSet::GetStrengthAttribute(),
+			UCrossguardAttributeSet::GetAgilityAttribute(),
+			UCrossguardAttributeSet::GetIntelligenceAttribute(),
+			UCrossguardAttributeSet::GetMaxHealthAttribute(),
+			UCrossguardAttributeSet::GetMaxHealthBonusAttribute(),
+			UCrossguardAttributeSet::GetAdditionalAttackDamageAttribute(),
+			UCrossguardAttributeSet::GetAttackDamageBonusAttribute(),
+			UCrossguardAttributeSet::GetAttackPenetrationAttribute(),
+			UCrossguardAttributeSet::GetAttackResistanceAttribute(),
+			UCrossguardAttributeSet::GetAdditionalMagicDamageAttribute(),
+			UCrossguardAttributeSet::GetMagicDamageBonusAttribute(),
+			UCrossguardAttributeSet::GetMagicResistanceAttribute(),
+			UCrossguardAttributeSet::GetMagicPenetrationAttribute(),
+			UCrossguardAttributeSet::GetAdditionalPhysicalHealingAttribute(),
+			UCrossguardAttributeSet::GetPhysicalHealingBonusAttribute(),
+			UCrossguardAttributeSet::GetAdditionalMagicalHealingAttribute(),
+			UCrossguardAttributeSet::GetMagicalHealingBonusAttribute(),
+			UCrossguardAttributeSet::GetMoveSpeedAttribute(),
+			UCrossguardAttributeSet::GetActionSpeedAttribute(),
+			UCrossguardAttributeSet::GetDexterityAttribute(),
+			UCrossguardAttributeSet::GetActiveCooldownReductionAttribute(),
+			UCrossguardAttributeSet::GetSpellCooldownReductionAttribute(),
+			UCrossguardAttributeSet::GetArtCooldownReductionAttribute(),
+			UCrossguardAttributeSet::GetMeleeCooldownReductionAttribute(),
+			UCrossguardAttributeSet::GetRangedCooldownReductionAttribute(),
+			UCrossguardAttributeSet::GetMinionCooldownReductionAttribute(),
+			UCrossguardAttributeSet::GetActiveCastTimeReductionAttribute(),
+			UCrossguardAttributeSet::GetSpellCastTimeReductionAttribute(),
+			UCrossguardAttributeSet::GetArtCastTimeReductionAttribute(),
+		};
+		return Attributes;
+	}
+
+	void AddSetByCallerModifiers(TArray<FGameplayModifierInfo>& Modifiers, bool bMultiply)
+	{
+		for (const FGameplayAttribute& Attribute : SkillStatAttributes())
+		{
+			FGameplayModifierInfo Modifier;
+			Modifier.Attribute = Attribute;
+			Modifier.ModifierOp = bMultiply ? EGameplayModOp::Multiplicitive : EGameplayModOp::Additive;
+			Modifier.ModifierMagnitude = SetByCallerMagnitude(FName(*Attribute.GetName()));
+			Modifiers.Add(Modifier);
+		}
+	}
+}
+
+UCrossguardSkillStatsEffect::UCrossguardSkillStatsEffect()
+{
+	DurationPolicy = EGameplayEffectDurationType::Infinite;
+	AddSetByCallerModifiers(Modifiers, false);
+}
+
+const TArray<FName>& UCrossguardSkillStatsEffect::GetStatNames()
+{
+	static const TArray<FName> Names = []
+	{
+		TArray<FName> Result;
+		for (const FGameplayAttribute& Attribute : SkillStatAttributes())
+		{
+			Result.Add(FName(*Attribute.GetName()));
+		}
+		return Result;
+	}();
+	return Names;
+}
+
+UCrossguardSkillMultiplierEffect::UCrossguardSkillMultiplierEffect()
+{
+	DurationPolicy = EGameplayEffectDurationType::Infinite;
+	AddSetByCallerModifiers(Modifiers, true);
+}
+
 UCrossguardDamageEffect::UCrossguardDamageEffect()
 {
 	DurationPolicy = EGameplayEffectDurationType::Instant;

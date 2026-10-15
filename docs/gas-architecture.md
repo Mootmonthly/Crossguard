@@ -82,6 +82,17 @@ The executions call the same formulas as the unit tests in `Tests/CrossguardRule
 
 ## Passive skills
 
+Most passives need nothing in the editor: a Passive skill with no ability class in the catalog is
+played from its data row by `UCrossguardDataPassiveAbility`. It applies the row's Self stat
+modifiers through the native `UCrossguardSkillStatsEffect` (adds) and
+`UCrossguardSkillMultiplierEffect` (multiplies), and re-applies them when the equipment changes:
+wielding and armor conditions count only while met, per-empty-armor-slot values scale with
+`EmptyArmorSlots`. CDR with no filter goes to all three categories. Not covered: modifiers on other
+characters (Party, Target), on-activation and next-attack conditions, free-text mechanics
+([Hunter's Tracking], [Multiscale]'s party part, [Splinter of Winter]'s slow).
+
+For anything else, make a hand-made passive:
+
 Subclass `UCrossguardPassiveAbility`. It activates on the server when granted and applies its
 `PassiveEffects` (Infinite effects holding the stat modifiers) until unequipped. Example: Heroic
 Might = one Infinite effect adding 10 to Strength.
@@ -255,7 +266,7 @@ and the rules unit tests.
 
 ## Not built yet
 
-- Generating the stat-modifier effects for passives from the table (currently made by hand).
+- Passive effects on other characters (party auras, on-hit slows) and free-text mechanics.
 - Restricting when the loadout can change (e.g. only between raids).
 - Saving progression; extraction points; a revive spell.
 - Shields (Eldritch Shield), CC, Mute, Silence, minions.

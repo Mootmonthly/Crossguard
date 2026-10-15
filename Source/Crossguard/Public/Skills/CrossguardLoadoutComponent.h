@@ -8,6 +8,7 @@
 
 class UCrossguardAbilitySystemComponent;
 class UCrossguardSkillCatalog;
+class UCrossguardSkillGrant;
 
 // Mirrors Crossguard::ELoadoutError.
 UENUM(BlueprintType)
@@ -53,7 +54,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardLoadoutRejected, const FC
 
 // The character's equipped skills. The server validates a requested loadout against the skill
 // catalog and the character's Skill Capacity, then grants one ability per effective skill: equipped
-// skills plus their bundle components, each once.
+// skills plus their bundle components, each once. A Passive skill with no ability class in the
+// catalog is played from its data by UCrossguardDataPassiveAbility.
 //
 // Players can only equip skills in their Skill Library (ACrossguardPlayerState).
 // Not yet checked: whether equipping is allowed at the current moment (e.g. only outside a raid).
@@ -112,4 +114,8 @@ private:
 
 	// Server only.
 	TArray<FGameplayAbilitySpecHandle> GrantedAbilities;
+
+	// Server only: tells each data-driven passive which skill it plays.
+	UPROPERTY()
+	TArray<TObjectPtr<UCrossguardSkillGrant>> SkillGrants;
 };

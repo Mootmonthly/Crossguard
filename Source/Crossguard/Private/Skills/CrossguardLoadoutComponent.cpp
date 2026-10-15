@@ -9,6 +9,7 @@
 #include "CrossguardRules/Progression.h"
 #include "Game/CrossguardPlayerState.h"
 #include "Net/UnrealNetwork.h"
+#include "Skills/CrossguardDataPassiveAbility.h"
 #include "Skills/CrossguardSkillCatalog.h"
 
 #include <algorithm>
@@ -164,6 +165,17 @@ void UCrossguardLoadoutComponent::ApplyLoadout(const TArray<FName>& Skills)
 		const TSubclassOf<UCrossguardGameplayAbility> AbilityClass = SkillCatalog->FindAbilityClass(SkillId);
 		if (AbilityClass == nullptr)
 		{
+			const FCrossguardSkillRow* Row = SkillCatalog->FindSkill(SkillId);
+			if (Row != nullptr && Row->Category == ECrossguardSkillCategory::Passive)
+			{
+				// Played from its data row.
+				UCrossguardSkillGrant* Grant = NewObject<UCrossguardSkillGrant>(this);
+				Grant->SkillId = SkillId;
+				Grant->Catalog = SkillCatalog;
+				SkillGrants.Add(Grant);
+				GrantedAbilities.Add(ASC->GiveAbility(FGameplayAbilitySpec(UCrossguardDataPassiveAbility::StaticClass(), 1, INDEX_NONE, Grant)));
+				continue;
+			}
 			UE_LOG(LogCrossguard, Verbose, TEXT("Skill %s has no ability class yet"), *SkillId.ToString());
 			continue;
 		}
@@ -183,4 +195,5 @@ void UCrossguardLoadoutComponent::ClearGrantedAbilities(UCrossguardAbilitySystem
 		ASC.ClearAbility(Handle);
 	}
 	GrantedAbilities.Reset();
+	SkillGrants.Reset();
 }
