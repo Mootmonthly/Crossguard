@@ -156,6 +156,9 @@ public:
 	CROSSGUARD_ATTRIBUTE_ACCESSORS(UCrossguardAttributeSet, IncomingHealing)
 
 protected:
+	// Adds State.Dead once. Runs on the server and, through OnRep_Health, on every client.
+	void MarkDead();
+
 	UFUNCTION()
 	void OnRep_Strength(const FGameplayAttributeData& OldValue);
 	UFUNCTION()

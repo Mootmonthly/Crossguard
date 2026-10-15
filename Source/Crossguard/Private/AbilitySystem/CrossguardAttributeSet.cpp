@@ -117,8 +117,8 @@ void UCrossguardAttributeSet::PostGameplayEffectExecute(const FGameplayEffectMod
 			SetHealth(FMath::Clamp(GetHealth() - Damage, 0.0f, GetMaxHealth()));
 			if (GetHealth() <= 0.0f)
 			{
-				// Server only; replicated so clients see the death.
-				GetOwningAbilitySystemComponent()->AddReplicatedLooseGameplayTag(CrossguardTags::State_Dead);
+				// Server. Clients add the same tag in OnRep_Health when the replicated Health reaches 0.
+				MarkDead();
 			}
 		}
 	}
@@ -155,6 +155,19 @@ void UCrossguardAttributeSet::OnRep_Intelligence(const FGameplayAttributeData& O
 void UCrossguardAttributeSet::OnRep_Health(const FGameplayAttributeData& OldValue)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UCrossguardAttributeSet, Health, OldValue);
+	if (GetHealth() <= 0.0f)
+	{
+		MarkDead();
+	}
+}
+
+void UCrossguardAttributeSet::MarkDead()
+{
+	UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
+	if (ASC != nullptr && !ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead))
+	{
+		ASC->AddLooseGameplayTag(CrossguardTags::State_Dead);
+	}
 }
 
 void UCrossguardAttributeSet::OnRep_MaxHealth(const FGameplayAttributeData& OldValue)
