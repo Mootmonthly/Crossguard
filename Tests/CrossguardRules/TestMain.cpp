@@ -11,6 +11,7 @@
 #include "CrossguardRules/Progression.h"
 #include "CrossguardRules/Stats.h"
 #include "CrossguardRules/Teams.h"
+#include "CrossguardRules/Trade.h"
 
 #include <cmath>
 #include <cstdio>
@@ -1268,6 +1269,52 @@ static void TestGuild()
 	CHECK(Loaded.RankOf("x1") == EGuildRank::Leader);
 }
 
+static void TestTrade()
+{
+	const FTradeConfig Config;
+	CHECK(CanStartTrade(Config, false, 300.0, true, false) == ETradeError::None);
+	CHECK(CanStartTrade(Config, true, 0.0, true, false) == ETradeError::SamePlayer);
+	CHECK(CanStartTrade(Config, false, 600.0, true, false) == ETradeError::TooFar);
+	CHECK(CanStartTrade(Config, false, 100.0, false, false) == ETradeError::NotAlive);
+	CHECK(CanStartTrade(Config, false, 100.0, true, true) == ETradeError::Busy);
+
+	FTradeSession Session;
+	// Accepting needs both offers locked.
+	CHECK(Session.Accept(0) == ETradeError::NotLocked);
+	CHECK(Session.SetOffer(Config, 0, {{1, 2}, 50}, 100, false) == ETradeError::None);
+	CHECK(Session.SetOffer(Config, 1, {{9}, 0}, 0, false) == ETradeError::None);
+	// Gold: not more than banked, none in raids, never negative.
+	CHECK(Session.SetOffer(Config, 0, {{1}, 150}, 100, false) == ETradeError::NotEnoughGold);
+	CHECK(Session.SetOffer(Config, 0, {{1}, 10}, 100, true) == ETradeError::NotEnoughGold);
+	CHECK(Session.SetOffer(Config, 0, {{1}, -1}, 100, false) == ETradeError::NotEnoughGold);
+	// The same stack twice, or too many stacks.
+	CHECK(Session.SetOffer(Config, 0, {{4, 4}, 0}, 0, false) == ETradeError::BadOffer);
+	FTradeOffer Big;
+	for (int Id = 1; Id <= Config.MaxOfferedStacks + 1; ++Id)
+	{
+		Big.ItemIds.push_back(Id);
+	}
+	CHECK(Session.SetOffer(Config, 0, Big, 0, false) == ETradeError::BadOffer);
+	// A refused offer changed nothing.
+	CHECK(Session.GetOffer(0).ItemIds.size() == 2 && Session.GetOffer(0).Gold == 50);
+
+	CHECK(Session.Lock(0) == ETradeError::None);
+	CHECK(Session.SetOffer(Config, 0, {{1}, 0}, 100, false) == ETradeError::Locked);
+	CHECK(Session.Lock(1) == ETradeError::None);
+	CHECK(Session.Accept(0) == ETradeError::None);
+	CHECK(!Session.IsComplete());
+	// Unlocking takes back the acceptance.
+	CHECK(Session.Unlock(1) == ETradeError::None);
+	CHECK(!Session.HasAccepted(0));
+	// Changing an offer unlocks both sides.
+	CHECK(Session.SetOffer(Config, 1, {{9, 10}, 0}, 0, false) == ETradeError::None);
+	CHECK(!Session.IsLocked(0) && !Session.IsLocked(1));
+	CHECK(Session.Lock(0) == ETradeError::None && Session.Lock(1) == ETradeError::None);
+	CHECK(Session.Accept(0) == ETradeError::None && Session.Accept(1) == ETradeError::None);
+	CHECK(Session.IsComplete());
+	CHECK(Session.GetOffer(1).ItemIds.size() == 2);
+}
+
 int main()
 {
 	TestProgression();
@@ -1289,6 +1336,7 @@ int main()
 	TestPortal();
 	TestLoot();
 	TestGuild();
+	TestTrade();
 
 	std::printf("%d checks, %d failures\n", GChecks, GFailures);
 	return GFailures == 0 ? 0 : 1;
