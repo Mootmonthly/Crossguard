@@ -18,8 +18,8 @@ Rulings in `docs/design-decisions.md` override the Drive docs.
 | `requirements` | object | yes | See below. |
 | `cooldownSec` | number or null | yes | `null` if the docs give none (passives). |
 | `durationSec` | number or null | yes | Main effect duration, `null` if none. |
-| `includes` | string[] | yes | Skill ids whose full effects this skill contains permanently (bundles). Loadout blocks equipping both. |
-| `grantsWhileActive` | string[] | yes | Skill ids usable only while this skill's effect is active (e.g. Dragonification). |
+| `includes` | string[] | yes | Skill ids whose full effects this skill contains permanently (bundles). Loadout blocks equipping both; two bundles may share a component, which applies once. |
+| `grantsWhileActive` | string[] | yes | Skill ids usable only while this skill's effect is active (e.g. Dragonification). Loadout blocks equipping both. |
 | `minionSkills` | string[] | yes | Skill ids that a summoned minion uses. Not granted to the player. |
 | `statModifiers` | Modifier[] | yes | Stat changes. May be empty. |
 | `damage` | Damage[] | yes | Damage instances. May be empty. |

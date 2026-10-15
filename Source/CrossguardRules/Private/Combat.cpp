@@ -31,13 +31,19 @@ namespace Crossguard
 		return FloorZero(Base + Flat) * FloorZero(1.0 + Bonus * Coefficient);
 	}
 
-	double CombineReductions(const std::vector<double>& Sources, double Cap)
+	double SumReductions(const std::vector<double>& Sources)
 	{
 		double Total = 0.0;
 		for (const double Source : Sources)
 		{
 			Total += Source;
 		}
+		return Total;
+	}
+
+	double CombineReductions(const std::vector<double>& Sources, double Cap)
+	{
+		const double Total = SumReductions(Sources);
 		return Total > Cap ? Cap : Total;
 	}
 

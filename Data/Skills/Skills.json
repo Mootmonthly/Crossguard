@@ -40,12 +40,14 @@
     "name": "Arcane Arrows",
     "capacityCost": 4,
     "category": "Active",
-    "weaponTag": null,
+    "weaponTag": "Ranged",
     "tags": [
       "Buff"
     ],
     "requirements": {
-      "weapons": [],
+      "weapons": [
+        "Bow"
+      ],
       "armor": null,
       "items": [],
       "forms": []
@@ -73,9 +75,7 @@
     ],
     "description": "When activated, your Bow attacks deal an additional 5 Magic Damage for 8 seconds. Dropoff reduced by 50%.",
     "source": "SkillsDoc",
-    "notes": [
-      "The text mentions Bow attacks but has no 'Requires' line; should it require a Bow (making it Ranged-tagged)?"
-    ]
+    "notes": []
   },
   {
     "id": "arcane_intellect",
@@ -134,13 +134,11 @@
     "statModifiers": [
       {
         "stat": "AR",
-        "op": "Percent",
-        "value": 0.1,
+        "op": "Multiply",
+        "value": 1.1,
         "target": "Self",
         "skillFilter": null,
-        "condition": {
-          "other": "applies to AR from armor only"
-        },
+        "condition": null,
         "durationSec": null
       },
       {
@@ -158,9 +156,7 @@
     "mechanics": [],
     "description": "Gain a 10% bonus to ADR from Armor. Gain +5% Movement Speed. Requirement: Plate Armor.",
     "source": "SkillsDoc",
-    "notes": [
-      "Is the 10% a multiplier on the armor's own AR or +10 percentage points of total AR limited to armor sources?"
-    ]
+    "notes": []
   },
   {
     "id": "axe_mastery",
@@ -226,7 +222,11 @@
         "value": 0.1,
         "target": "Self",
         "skillFilter": "Melee",
-        "condition": null,
+        "condition": {
+          "wielding": [
+            "Axe"
+          ]
+        },
         "durationSec": null
       }
     ],
@@ -235,15 +235,13 @@
     "mechanics": [],
     "description": "When wielding axes, gain 3 Attack Damage, 5% Attack Bonus, 10% Action Speed. Melee Skills have -10% Cooldown.",
     "source": "SkillsDoc",
-    "notes": [
-      "Does the Melee Skills cooldown reduction apply only while wielding axes, or always?"
-    ]
+    "notes": []
   },
   {
     "id": "benediction",
     "name": "Benediction",
     "capacityCost": 10,
-    "category": "Active",
+    "category": "Spell",
     "weaponTag": null,
     "tags": [
       "Heal"
@@ -263,7 +261,7 @@
     "damage": [],
     "healing": [
       {
-        "type": "Physical",
+        "type": "Magical",
         "amount": null,
         "coefficient": 1.0,
         "full": true,
@@ -275,9 +273,7 @@
     ],
     "description": "Fully recover a target's HP, even if they're dead. Cooldown: 120 seconds.",
     "source": "SkillsDoc",
-    "notes": [
-      "No Spell tag is given; is this Physical (PHB) or Magical (MHB) healing, and a Spell or Active?"
-    ]
+    "notes": []
   },
   {
     "id": "bow_mastery",
@@ -330,7 +326,11 @@
         "value": 0.1,
         "target": "Self",
         "skillFilter": "Ranged",
-        "condition": null,
+        "condition": {
+          "wielding": [
+            "Bow"
+          ]
+        },
         "durationSec": null
       }
     ],
@@ -339,9 +339,7 @@
     "mechanics": [],
     "description": "While wielding Bows, gain 35% Action Speed and 7% Move Speed. Ranged Skills have 10% reduced Cooldown.",
     "source": "SkillsDoc",
-    "notes": [
-      "Does the Ranged Skills cooldown reduction apply only while wielding a Bow, or always?"
-    ]
+    "notes": []
   },
   {
     "id": "chop_down",
@@ -365,7 +363,19 @@
     "includes": [],
     "grantsWhileActive": [],
     "minionSkills": [],
-    "statModifiers": [],
+    "statModifiers": [
+      {
+        "stat": "MoveSpeed",
+        "op": "Percent",
+        "value": -0.5,
+        "target": "Target",
+        "skillFilter": null,
+        "condition": {
+          "nextAttack": true
+        },
+        "durationSec": 2
+      }
+    ],
     "damage": [
       {
         "type": "Attack",
@@ -379,14 +389,11 @@
     "healing": [],
     "mechanics": [
       "Applies to next axe attack",
-      "Slow target for 2 s",
       "Ground flying targets hit"
     ],
     "description": "Your next axe attack deals 110% Attack Damage and slows the target for 2 seconds. If it strikes a flying enemy, Ground them. Requires: Axes. Cooldown: 25 seconds.",
     "source": "SkillsDoc",
-    "notes": [
-      "How much does the slow reduce Movement Speed?"
-    ]
+    "notes": []
   },
   {
     "id": "cleave",
@@ -651,14 +658,11 @@
     "healing": [],
     "mechanics": [
       "Turn into a small dragon for 45 s",
-      "Cannot use weapons or skills while active"
+      "Cannot use weapons or equipped skills while active; Flare Breath and Flight are usable"
     ],
     "description": "Turn into a small dragon for 45 seconds. Gain 50% Max HP, 25% ADR, 25% MDR, the Flare Breath skill, and the Flight skill. Cannot use weapons or skills while active. Cooldown: 180 seconds.",
     "source": "SkillsDoc",
-    "notes": [
-      "Flight is granted while active; if the player also has Flight equipped, do the two stack, share a cooldown, or does the equipped copy take priority?",
-      "The skill grants Flare Breath and Flight yet forbids using skills while active; do granted skills bypass that restriction?"
-    ]
+    "notes": []
   },
   {
     "id": "elder_summoner",
@@ -710,7 +714,7 @@
       "forms": []
     },
     "cooldownSec": 25,
-    "durationSec": null,
+    "durationSec": 12,
     "includes": [],
     "grantsWhileActive": [],
     "minionSkills": [],
@@ -718,20 +722,18 @@
     "damage": [],
     "healing": [],
     "mechanics": [
-      "Cast a barrier around yourself that absorbs 45 Attack Damage",
+      "Cast a barrier around yourself for 12 s that absorbs 45 Attack Damage (not Magic Damage)",
       "Lose 10 HP on cast"
     ],
     "description": "Cast a barrier around yourself that absorbs 45 Attack Damage. Lose 10 HP. Spell. Cooldown: 25 seconds.",
     "source": "SkillsDoc",
-    "notes": [
-      "Does the barrier have a duration, and does it absorb Magic Damage?"
-    ]
+    "notes": []
   },
   {
     "id": "fireball",
     "name": "Fireball",
     "capacityCost": 3,
-    "category": "Active",
+    "category": "Spell",
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -770,15 +772,13 @@
     ],
     "description": "Launch a fireball in the aimed direction. Deals 50 (0.5) magic damage on impact and 15 splash magic damage from the explosion. Cooldown: 15 seconds.",
     "source": "SkillsDoc",
-    "notes": [
-      "Fireball has no Spell tag but deals magic damage; should it be a Spell (INT cast time and CDR) instead of Active?"
-    ]
+    "notes": []
   },
   {
     "id": "flare_breath",
     "name": "Flare Breath",
     "capacityCost": 9,
-    "category": "Active",
+    "category": "Spell",
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -904,7 +904,7 @@
     "id": "greater_heal",
     "name": "Greater Heal",
     "capacityCost": 5,
-    "category": "Active",
+    "category": "Spell",
     "weaponTag": null,
     "tags": [
       "Heal"
@@ -924,7 +924,7 @@
     "damage": [],
     "healing": [
       {
-        "type": "Physical",
+        "type": "Magical",
         "amount": 55,
         "coefficient": 1.0,
         "full": false,
@@ -934,9 +934,7 @@
     "mechanics": [],
     "description": "Heal the target of 55 HP. Cooldown: 20 seconds.",
     "source": "SkillsDoc",
-    "notes": [
-      "No Spell tag is given; is this Physical (PHB) or Magical (MHB) healing, and a Spell or Active?"
-    ]
+    "notes": []
   },
   {
     "id": "heal",
@@ -1032,13 +1030,11 @@
     "damage": [],
     "healing": [],
     "mechanics": [
-      "Jump forward 5 m, distance multiplied by AGI"
+      "Jump forward 0.5 m per point of AGI (5 m at 10 AGI)"
     ],
     "description": "Jump forward 5 meters (AGI multiplier on distance). Cooldown: 15 seconds.",
     "source": "SkillsDoc",
-    "notes": [
-      "What is the AGI multiplier formula for the jump distance?"
-    ]
+    "notes": []
   },
   {
     "id": "hunters_tracking",
@@ -1067,9 +1063,7 @@
     ],
     "description": "See the footsteps of enemy players, going back 30 seconds. Hearing range extended by 20 meters.",
     "source": "SkillsDoc",
-    "notes": [
-      "The text has no cooldown or activation; is this always on (Passive) or a toggled/activated skill?"
-    ]
+    "notes": []
   },
   {
     "id": "immutable",
@@ -1133,10 +1127,12 @@
     "name": "Mortal Strike",
     "capacityCost": 5,
     "category": "Active",
-    "weaponTag": null,
+    "weaponTag": "Melee",
     "tags": [],
     "requirements": {
-      "weapons": [],
+      "weapons": [
+        "AnyMelee"
+      ],
       "armor": null,
       "items": [],
       "forms": []
@@ -1164,9 +1160,7 @@
     ],
     "description": "Your next melee attack has an additional 20 Attack damage. If this attack kills a target, Mortal Strike's cooldown is refreshed. Cooldown: 30 seconds.",
     "source": "SkillsDoc",
-    "notes": [
-      "The text says 'melee attack' but lists no weapon requirement; should it require a melee weapon (making it Melee-tagged)?"
-    ]
+    "notes": []
   },
   {
     "id": "multiscale",
@@ -1268,7 +1262,7 @@
         "Beastial"
       ]
     },
-    "cooldownSec": null,
+    "cooldownSec": 7,
     "durationSec": 2,
     "includes": [],
     "grantsWhileActive": [],
@@ -1292,8 +1286,7 @@
     "description": "Your next attack deals an additional 10 magical damage and Silences the target for 2 seconds. Requirements: Beastial forms.",
     "source": "SkillsDoc",
     "notes": [
-      "Which forms count as 'Beastial' (spelled 'Beastial' in the doc), and can a player ever be in one outside the Tiger minion?",
-      "Active with no cooldown listed; what is its cooldown?"
+      "Beastial transformation Arts are not defined yet; Neckbite requires one."
     ]
   },
   {
@@ -1317,18 +1310,25 @@
     "grantsWhileActive": [],
     "minionSkills": [],
     "statModifiers": [],
-    "damage": [],
+    "damage": [
+      {
+        "type": "Attack",
+        "amount": 65,
+        "coefficient": 1.0,
+        "kind": "Impact",
+        "durationSec": null,
+        "hits": 1
+      }
+    ],
     "healing": [],
     "mechanics": [
       "Swing down at the ground, knocking up everyone in the path",
-      "Deal high damage (amount unspecified) to everyone in the path",
+      "Deal damage to everyone in the path",
       "Create Walls to either side of the area of effect for 15 s"
     ],
     "description": "Swing your weapon down at the ground, knocking up and dealing high damage to everyone in your path (like Breach/Rein ult). Create Walls to either side of the skill's area of effect, lasting the standard 15 seconds. Requires: Two-Handed Melee Weapons. Cooldown: 60 seconds.",
     "source": "SkillsDoc",
-    "notes": [
-      "'High damage' has no number; what is the damage amount, type and coefficient?"
-    ]
+    "notes": []
   },
   {
     "id": "purge_shot",
@@ -1354,17 +1354,24 @@
     "grantsWhileActive": [],
     "minionSkills": [],
     "statModifiers": [],
-    "damage": [],
+    "damage": [
+      {
+        "type": "Magic",
+        "amount": 10,
+        "coefficient": 1.0,
+        "kind": "Additional",
+        "durationSec": null,
+        "hits": 1
+      }
+    ],
     "healing": [],
     "mechanics": [
       "Applies to next attack",
-      "Mute target for 3 s"
+      "Mute target for 3 s: nullify all its skills including passives"
     ],
     "description": "Your next attack Mutes the enemy for 3 seconds. Requires: Bows, Crossbows. Cooldown: 35 seconds.",
     "source": "SkillsDoc",
-    "notes": [
-      "Does this Mute nullify all skills including passives like the Mute spell, and does it deal damage?"
-    ]
+    "notes": []
   },
   {
     "id": "quickshot",
@@ -1727,7 +1734,7 @@
         "target": "Self",
         "skillFilter": null,
         "condition": {
-          "other": "applies when exiting stealth"
+          "other": "applies when stealth ends, including when the 12 s run out"
         },
         "durationSec": 3
       },
@@ -1738,7 +1745,7 @@
         "target": "Self",
         "skillFilter": null,
         "condition": {
-          "other": "applies when exiting stealth"
+          "other": "applies when stealth ends, including when the 12 s run out"
         },
         "durationSec": 3
       }
@@ -1750,9 +1757,7 @@
     ],
     "description": "Go invisible for 12 seconds. When exiting stealth, gain 10% movespeed and +25% attack bonus for 3 seconds. Cooldown: 20 seconds.",
     "source": "SkillsDoc",
-    "notes": [
-      "Does the exit bonus trigger only on manual exit, or also when the 12 s of stealth expire?"
-    ]
+    "notes": []
   },
   {
     "id": "summon_greater_demon",
@@ -1832,7 +1837,7 @@
     "id": "summon_tiger",
     "name": "Summon Tiger",
     "capacityCost": 5,
-    "category": "Active",
+    "category": "Spell",
     "weaponTag": null,
     "tags": [
       "Minion",
@@ -1864,8 +1869,7 @@
     "description": "Summon a tiger Minion. Skills: Hunter's Leap, Neckbite, Slash. Lasts 180 seconds. Requires: Pet Gem (Tiger). Cooldown: 185 seconds.",
     "source": "SkillsDoc",
     "notes": [
-      "Hunter's Leap is also a player skill; is the tiger's Hunter's Leap the same skill entry or a separate minion-only version?",
-      "It has no Spell tag, so Elder Summoner's 'Minion Spells' CDR may not apply; should it?"
+      "Hunter's Leap is also a player skill; is the tiger's Hunter's Leap the same skill entry or a separate minion-only version?"
     ]
   },
   {
@@ -1919,7 +1923,11 @@
         "value": 0.1,
         "target": "Self",
         "skillFilter": "Melee",
-        "condition": null,
+        "condition": {
+          "wielding": [
+            "Sword"
+          ]
+        },
         "durationSec": null
       }
     ],
@@ -1928,9 +1936,7 @@
     "mechanics": [],
     "description": "When wielding a Sword, gain 5 Attack Damage and 10% Action Speed. Melee Skills have -10% Cooldown.",
     "source": "SkillsDoc",
-    "notes": [
-      "Does the Melee Skills cooldown reduction apply only while wielding a Sword, or always?"
-    ]
+    "notes": []
   },
   {
     "id": "the_mithril_knight",
@@ -2047,7 +2053,13 @@
         "value": 0.1,
         "target": "Self",
         "skillFilter": "Melee",
-        "condition": null,
+        "condition": {
+          "wielding": [
+            "Mace",
+            "Staff",
+            "Hammer"
+          ]
+        },
         "durationSec": null
       }
     ],
@@ -2056,9 +2068,7 @@
     "mechanics": [],
     "description": "Gain 3 Attack Damage and 15% Attack Bonus when using Maces, Staffs and Hammers. Melee Skill Cooldowns -10%.",
     "source": "SkillsDoc",
-    "notes": [
-      "Does the Melee Skills cooldown reduction apply only while wielding Maces, Staffs or Hammers, or always?"
-    ]
+    "notes": []
   },
   {
     "id": "triple_thrust",

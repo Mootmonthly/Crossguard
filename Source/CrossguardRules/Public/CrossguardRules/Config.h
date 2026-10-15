@@ -46,9 +46,7 @@ namespace Crossguard
 		double SpellCastTimeReductionPerInt = 0.01;
 		double SpellCdrPerInt = 0.01;
 
-		// Caps on the summed reduction from all sources.
+		// Cap on the summed CDR from all sources. Cast time reduction is uncapped.
 		double CdrCap = 0.50;
-		// Not specified by design yet; mirrors CdrCap.
-		double CastTimeReductionCap = 0.50;
 	};
 }

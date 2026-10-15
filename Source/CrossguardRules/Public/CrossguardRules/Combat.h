@@ -32,8 +32,11 @@ namespace Crossguard
 	// (Base + Flat) × (1 + Bonus × Coefficient). Never negative.
 	CROSSGUARDRULES_API double CalculateHealing(double Base, double Flat, double Bonus, double Coefficient = 1.0);
 
-	// Sums every applicable reduction (additive) and caps the total. No lower bound:
-	// a negative total lengthens the cooldown or cast time.
+	// Sums every applicable reduction (additive). No lower bound: a negative total lengthens
+	// the cooldown or cast time. Use for cast time, which is uncapped.
+	CROSSGUARDRULES_API double SumReductions(const std::vector<double>& Sources);
+
+	// SumReductions, capped. Use for CDR.
 	CROSSGUARDRULES_API double CombineReductions(const std::vector<double>& Sources, double Cap);
 
 	// Base × (1 − Reduction). Never negative.

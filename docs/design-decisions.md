@@ -64,8 +64,33 @@ XP sources:
 - **Bundle skills** (Splinter of Winter, Spear of Liscor, The Mithril Knight, ...) include the
   full effects of the skills they name plus their own effects, for their own Capacity cost.
 - **The loadout blocks** equipping a bundle together with any skill it contains.
+- Two bundles that share a component (Spear of Liscor and The Mithril Knight both include
+  Antimagic Garb) **can** be equipped together. The shared component applies once.
+- Skills granted while another skill is active (Dragonification's Flare Breath and Flight)
+  are usable during it, and **cannot be equipped** alongside it.
 - Cleave is an **Art**.
-- Missing cooldowns: Gouge 7 s, Shade Blow 10 s, Arcane Arrows 25 s.
+- Fireball, Flare Breath, Greater Heal, Benediction and Summon Tiger are **Spells**.
+  Greater Heal and Benediction are Magical Healing.
+- Mastery cooldown reductions ("Melee Skills -10% Cooldown") apply **only while wielding**
+  the mastery's weapon.
+- Mortal Strike requires a melee weapon. Arcane Arrows requires a Bow.
+
+### Skill numbers filled in
+
+| Skill | Ruling |
+| --- | --- |
+| Gouge | Cooldown 7 s |
+| Shade Blow | Cooldown 10 s |
+| Arcane Arrows | Cooldown 25 s |
+| Neckbite | Cooldown 7 s. Requires a Beastial transformation Art (not designed yet). |
+| Parting The Land | 65 Attack Damage, coefficient 1.0 |
+| Chop Down | Slow: -50% Movement Speed for 2 s |
+| Hunter's Leap | 0.5 m per point of AGI (5 m at 10 AGI) |
+| Eldritch Shield | Lasts 12 s; absorbs Attack Damage only |
+| Stealth | Exit bonus triggers whenever stealth ends, including when the 12 s run out |
+| Purge Shot | +10 Magic Damage; its Mute disables passive skills too |
+| Hunter's Tracking | Always on (Passive) |
+| Armor Mastery | Multiplies AR by 1.10 (30% AR becomes 33%) |
 
 ### Skill categories
 
@@ -110,6 +135,7 @@ damage = (base + flat) × (1 + bonus × coefficient) × (1 − resistance × (1 
 - All CDR sources that apply to a skill **add together**: the attribute CDR for its category
   plus gear and skill sources (e.g. "Melee Skills -10% Cooldown", Elder Summoner's -30%).
 - Total CDR is **capped at 50%**.
+- Cast time reduction sources also add together, with **no cap**.
 
 ## Placeholders (to be replaced by real formulas)
 
@@ -123,7 +149,4 @@ All values live in one config (`FScalingConfig` in `CrossguardRules`):
 
 ## Open questions
 
-- Cast time reduction cap: not specified. Placeholder uses the same 50% cap as CDR.
-- Two bundles that share a component (Spear of Liscor and The Mithril Knight both include
-  Antimagic Garb): blocked like a bundle plus its component, pending confirmation.
 - There is no magic penetration stat.

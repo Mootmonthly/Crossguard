@@ -132,6 +132,9 @@ static void TestReductions()
 	CHECK_NEAR(CombineReductions({0.30, 0.10, 0.30}, 0.5), 0.50);
 	// Low attributes can lengthen cooldowns.
 	CHECK_NEAR(CombineReductions({-0.10}, 0.5), -0.10);
+	// Cast time reduction is uncapped.
+	CHECK_NEAR(SumReductions({0.30, 0.10, 0.30}), 0.70);
+	CHECK_NEAR(SumReductions({}), 0.0);
 
 	CHECK_NEAR(ApplyReduction(12.0, 0.25), 9.0);
 	CHECK_NEAR(ApplyReduction(12.0, -0.10), 13.2);
@@ -140,19 +143,22 @@ static void TestReductions()
 static FSkillCatalog MakeCatalog()
 {
 	FSkillCatalog Catalog;
-	CHECK(Catalog.Add({"dagger_mastery", 2, {}}));
-	CHECK(Catalog.Add({"splinter_of_winter", 2, {"dagger_mastery"}}));
-	CHECK(Catalog.Add({"antimagic_garb", 5, {}}));
-	CHECK(Catalog.Add({"spear_mastery", 2, {}}));
-	CHECK(Catalog.Add({"triple_thrust", 8, {}}));
-	CHECK(Catalog.Add({"spear_of_liscor", 15, {"triple_thrust", "spear_mastery", "antimagic_garb"}}));
-	CHECK(Catalog.Add({"multiscale", 9, {}}));
-	CHECK(Catalog.Add({"immutable", 9, {}}));
-	CHECK(Catalog.Add({"the_mithril_knight", 15, {"multiscale", "immutable", "antimagic_garb"}}));
-	CHECK(Catalog.Add({"fireball", 3, {}}));
-	CHECK(Catalog.Add({"heal", 2, {}}));
-	CHECK(!Catalog.Add({"heal", 2, {}}));
-	CHECK(!Catalog.Add({"", 1, {}}));
+	CHECK(Catalog.Add({"dagger_mastery", 2, {}, {}}));
+	CHECK(Catalog.Add({"splinter_of_winter", 2, {"dagger_mastery"}, {}}));
+	CHECK(Catalog.Add({"antimagic_garb", 5, {}, {}}));
+	CHECK(Catalog.Add({"spear_mastery", 2, {}, {}}));
+	CHECK(Catalog.Add({"triple_thrust", 8, {}, {}}));
+	CHECK(Catalog.Add({"spear_of_liscor", 15, {"triple_thrust", "spear_mastery", "antimagic_garb"}, {}}));
+	CHECK(Catalog.Add({"multiscale", 9, {}, {}}));
+	CHECK(Catalog.Add({"immutable", 9, {}, {}}));
+	CHECK(Catalog.Add({"the_mithril_knight", 15, {"multiscale", "immutable", "antimagic_garb"}, {}}));
+	CHECK(Catalog.Add({"flight", 8, {}, {}}));
+	CHECK(Catalog.Add({"flare_breath", 9, {}, {}}));
+	CHECK(Catalog.Add({"dragonification", 13, {}, {"flare_breath", "flight"}}));
+	CHECK(Catalog.Add({"fireball", 3, {}, {}}));
+	CHECK(Catalog.Add({"heal", 2, {}, {}}));
+	CHECK(!Catalog.Add({"heal", 2, {}, {}}));
+	CHECK(!Catalog.Add({"", 1, {}, {}}));
 	return Catalog;
 }
 
@@ -186,24 +192,45 @@ static void TestLoadout()
 
 	// A bundle plus its component is blocked, in either order.
 	Result = ValidateLoadout(Catalog, {"splinter_of_winter", "dagger_mastery"}, 20);
-	CHECK(Result.Error == ELoadoutError::OverlappingSkills);
+	CHECK(Result.Error == ELoadoutError::SupersededSkill);
 	CHECK(Result.SkillId == "dagger_mastery");
 	CHECK(Result.OtherSkillId == "splinter_of_winter");
-	CHECK(ValidateLoadout(Catalog, {"dagger_mastery", "splinter_of_winter"}, 20).Error == ELoadoutError::OverlappingSkills);
+	Result = ValidateLoadout(Catalog, {"dagger_mastery", "splinter_of_winter"}, 20);
+	CHECK(Result.Error == ELoadoutError::SupersededSkill);
+	CHECK(Result.SkillId == "dagger_mastery");
 
-	// Two bundles sharing Antimagic Garb are blocked (pending design confirmation).
-	CHECK(ValidateLoadout(Catalog, {"spear_of_liscor", "the_mithril_knight"}, 30).Error == ELoadoutError::OverlappingSkills);
+	// Skills granted while active are blocked too.
+	Result = ValidateLoadout(Catalog, {"flight", "dragonification"}, 30);
+	CHECK(Result.Error == ELoadoutError::SupersededSkill);
+	CHECK(Result.SkillId == "flight");
+	CHECK(Result.OtherSkillId == "dragonification");
+	CHECK(ValidateLoadout(Catalog, {"dragonification", "flare_breath"}, 30).Error == ELoadoutError::SupersededSkill);
+	// ...but they are not permanent effects.
+	CHECK(Catalog.EffectiveSkills("dragonification").size() == 1);
+	CHECK(Catalog.ProvidedSkills("dragonification").size() == 2);
 
-	// Overlap is reported before capacity.
-	CHECK(ValidateLoadout(Catalog, {"spear_of_liscor", "antimagic_garb"}, 1).Error == ELoadoutError::OverlappingSkills);
+	// Two bundles sharing Antimagic Garb are allowed; the garb applies once.
+	const std::vector<std::string> Knight{"spear_of_liscor", "the_mithril_knight"};
+	CHECK(ValidateLoadout(Catalog, Knight, 30).IsValid());
+	const std::unordered_set<std::string> Effects = ResolveLoadoutEffects(Catalog, Knight);
+	CHECK(Effects.size() == 7);
+	CHECK(Effects.count("antimagic_garb") == 1);
+	CHECK(Effects.count("immutable") == 1);
+
+	// A shared component cannot be equipped on its own next to either bundle.
+	CHECK(ValidateLoadout(Catalog, {"spear_of_liscor", "the_mithril_knight", "antimagic_garb"}, 40).Error == ELoadoutError::SupersededSkill);
+
+	// Superseded is reported before capacity.
+	CHECK(ValidateLoadout(Catalog, {"spear_of_liscor", "antimagic_garb"}, 1).Error == ELoadoutError::SupersededSkill);
 }
 
 static void TestIncludeCycle()
 {
 	FSkillCatalog Catalog;
-	Catalog.Add({"a", 1, {"b"}});
-	Catalog.Add({"b", 1, {"a"}});
+	Catalog.Add({"a", 1, {"b"}, {}});
+	Catalog.Add({"b", 1, {"a"}, {}});
 	CHECK(Catalog.EffectiveSkills("a").size() == 2);
+	CHECK(Catalog.ProvidedSkills("a").size() == 1);
 }
 
 int main()
