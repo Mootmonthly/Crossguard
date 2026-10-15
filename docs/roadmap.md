@@ -77,7 +77,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 
 | Item | Needs | Notes |
 | --- | --- | --- |
-| Monster AI | Code, Editor | Basic monsters (5 XP) and bosses (50 XP) via `KillXpSource`. |
+| Monster AI | Editor, Decision | Built in code: `ACrossguardMonster` guards its spot, aggroes within 15 m (line of sight), chases, attacks (Warrior or Mage), leashes at 30 m from home and heals on return; drops its `LootTableId`. Needs monster designs (types, stats, meshes) and placing. |
 | Loot tables | Decision, Code | What monsters, chests and bosses drop. |
 | Treasure chests | Editor | Built in code: an `ACrossguardLootContainer` with a `LootTableId` fills itself when the raid starts (it can be locked). Needs a chest Blueprint with a mesh, placed in maps. |
 | Loot tables | Decision | Built: `Data/Loot/LootTables.json` (monsters, bosses, chests) with placeholder drop rates and rarity weights. Needs real numbers. |

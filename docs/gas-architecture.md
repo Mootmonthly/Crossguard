@@ -312,6 +312,26 @@ the session and across seamless travel.
 - `UCrossguardTeamLibrary::GetTeamId` / `AreAllies` work on pawns, controllers and player states.
 - Friendly fire is always on: nothing checks teams before applying damage.
 
+## AI characters
+
+`ACrossguardAICharacter` (abstract): fixed Health (`FixedHealth`, kept through stat changes), a
+Warrior or Mage attack (`CombatRole`), a placeholder cylinder. Two kinds:
+
+- `ACrossguardMinion` + `ACrossguardMinionController`: summoned, on the summoner's team, no body,
+  no XP.
+- `ACrossguardMonster` + `ACrossguardMonsterController`: guards its start point (`AggroRange`,
+  `LeashRange`), targets players and minions it can see, never other monsters, drops a body with
+  its `LootTableId` roll, gives its killer `KillXpSource` XP.
+
+Both path on the NavMesh, or walk straight without one.
+
+## Loot
+
+`Data/Loot/LootTables.json` ([loot-data-schema.md](loot-data-schema.md)) → `DT_Loot`. The game
+mode's `Loot` holds the loot table and the item data it draws from; `RollLoot(TableId)` returns
+ready inventory items. Loot containers with a `LootTableId` (chests) fill themselves at BeginPlay;
+monsters add a roll of theirs to their body.
+
 ## Testing in the editor
 
 `BP_CrossguardCharacter` → **Crossguard | Debug**:

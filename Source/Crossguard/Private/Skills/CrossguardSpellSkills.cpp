@@ -293,14 +293,14 @@ void UCrossguardSummonSkeletonsAbility::ActivateAbility(const FGameplayAbilitySp
 		{
 			const float Yaw = -90.0f + 180.0f * Index / (SkeletonWarriors - 1);
 			const FVector Offset = Facing.RotateVector(FRotator(0.0f, Yaw, 0.0f).Vector() * SkeletonRingRadius);
-			Summon(WarriorClass, ECrossguardMinionRole::Warrior, SkeletonWarriorHealth, Center + Offset);
+			Summon(WarriorClass, ECrossguardCombatRole::Warrior, SkeletonWarriorHealth, Center + Offset);
 		}
-		Summon(MageClass, ECrossguardMinionRole::Mage, SkeletonMageHealth, Center - Facing.Vector() * SkeletonRingRadius);
+		Summon(MageClass, ECrossguardCombatRole::Mage, SkeletonMageHealth, Center - Facing.Vector() * SkeletonRingRadius);
 	}
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }
 
-void UCrossguardSummonSkeletonsAbility::Summon(TSubclassOf<ACrossguardMinion> Class, ECrossguardMinionRole Role, float Health,
+void UCrossguardSummonSkeletonsAbility::Summon(TSubclassOf<ACrossguardMinion> Class, ECrossguardCombatRole Role, float Health,
 	const FVector& Location)
 {
 	ACrossguardCharacter* Summoner = Cast<ACrossguardCharacter>(GetAvatarActorFromActorInfo());
@@ -317,8 +317,8 @@ void UCrossguardSummonSkeletonsAbility::Summon(TSubclassOf<ACrossguardMinion> Cl
 	{
 		return;
 	}
-	Minion->MinionRole = Role;
-	Minion->MinionHealth = Health;
+	Minion->CombatRole = Role;
+	Minion->FixedHealth = Health;
 	Minion->SetSummoner(Summoner);
 	Minion->FinishSpawning(Transform);
 	if (IsValid(Minion))

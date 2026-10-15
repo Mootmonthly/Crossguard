@@ -6,7 +6,7 @@
 #include "CrossguardSpellSkills.generated.h"
 
 class ACrossguardMinion;
-enum class ECrossguardMinionRole : uint8;
+enum class ECrossguardCombatRole : uint8;
 class ACrossguardSpellProjectile;
 
 // [Fireball] (Spell, 15 s): a fireball flies where you aim at 30 m/s. 50 (0.5) Magic Damage to what it
@@ -123,7 +123,7 @@ public:
 	virtual void OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
 
 private:
-	void Summon(TSubclassOf<ACrossguardMinion> Class, ECrossguardMinionRole Role, float Health, const FVector& Location);
+	void Summon(TSubclassOf<ACrossguardMinion> Class, ECrossguardCombatRole Role, float Health, const FVector& Location);
 
 	TArray<TWeakObjectPtr<ACrossguardMinion>> Minions;
 };

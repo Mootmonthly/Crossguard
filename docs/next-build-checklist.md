@@ -62,6 +62,7 @@ On `BP_CrossguardCharacter` → **Crossguard | Debug**:
 | Set the game mode's `PortalUnlockSeconds` to 0, place an `ACrossguardPointOfInterest` around you, press X | A portal appears (give `BeamMesh` a mesh to see it); 60 s later it opens; step in to extract. Walk 10 m+ away while it channels and it collapses. |
 | Press X outside a point of interest, or a second time | Refused (Output Log says why). |
 | Place a Blueprint of `CrossguardLootContainer` with Loot Table Id `chest_common`, press F (`bDebugLootTakesAll`) | It holds 1–3 rolled items (gold, potions, gear with affixes, maybe a Skill Gem) and they move to you. |
+| Place an `ACrossguardMonster` (needs a NavMesh Bounds Volume to path), walk within 15 m in its sight | It chases and hits you (12 per 1.5 s); run 30 m from where it stood and it walks back. Kill it: 5 XP and a body with a `basic_monster` roll. |
 | Set the dummy's Loot Table Id to `boss_monster`, kill it, loot the body | 3–5 extra items on top of what it carried. |
 | Place an `ACrossguardDoor` (give it a mesh), press F | It snaps open and closed. |
 | Tick the door's Lock → bLocked, press F | Nothing without a lockpick; with the `Ability.Lockpicking` tag it opens after 5 s. |
