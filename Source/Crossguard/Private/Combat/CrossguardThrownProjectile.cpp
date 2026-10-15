@@ -85,7 +85,21 @@ void ACrossguardThrownProjectile::HandleImpact(AActor* OtherActor, const FHitRes
 		return;
 	}
 
-	const FVector Center = Hit.ImpactPoint;
+	Explode(Hit.ImpactPoint);
+	Destroy();
+}
+
+void ACrossguardThrownProjectile::LifeSpanExpired()
+{
+	if (HasAuthority() && ExplosionRadius > 0.0f)
+	{
+		Explode(GetActorLocation());
+	}
+	Super::LifeSpanExpired();
+}
+
+void ACrossguardThrownProjectile::Explode(const FVector& Center)
+{
 	ApplyInRadius(GetWorld(), Center, ExplosionRadius, DamageSpec);
 	if (DotSeconds > 0.0f && DotSpec.IsValid() && DamageAreaClass != nullptr)
 	{
@@ -97,5 +111,4 @@ void ACrossguardThrownProjectile::HandleImpact(AActor* OtherActor, const FHitRes
 			Area->Initialize(DotSpec, ExplosionRadius, DotSeconds);
 		}
 	}
-	Destroy();
 }

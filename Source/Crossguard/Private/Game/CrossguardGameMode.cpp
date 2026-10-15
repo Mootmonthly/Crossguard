@@ -110,6 +110,8 @@ void ACrossguardGameMode::Logout(AController* Exiting)
 		Teams.Leave(std::string(TCHAR_TO_UTF8(*Key)));
 	}
 	Super::Logout(Exiting);
+	// Whoever was watching the leaving player needs someone else.
+	UpdateSpectators();
 }
 
 void ACrossguardGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
@@ -172,9 +174,9 @@ void ACrossguardGameMode::HandlePermanentDeath(ACrossguardCharacter* Character)
 {
 	ACrossguardPlayerState* PlayerState = Character != nullptr ? Character->GetPlayerState<ACrossguardPlayerState>() : nullptr;
 	APlayerController* Player = Character != nullptr ? Character->GetController<APlayerController>() : nullptr;
-	if (PlayerState == nullptr || Player == nullptr)
+	if (PlayerState == nullptr || Player == nullptr || !bIsRaid || !PlayerState->IsInRaid())
 	{
-		// AI: nothing to end.
+		// AI, a hub map, or a player who already extracted: no raid to end.
 		return;
 	}
 	PlayerState->EndRaid(false);
@@ -224,13 +226,18 @@ void ACrossguardGameMode::UpdateSpectators()
 		}
 		if (APawn* Target = FindSpectateTarget(Player))
 		{
+			// Also tells a remote client's camera.
 			Player->SetViewTargetWithBlend(Target, 0.5f);
-			// The owning client's camera follows only through the client call.
-			Player->ClientSetViewTarget(Target, FViewTargetTransitionParams());
 			continue;
 		}
 		// Solo, or no teammate left in the raid.
 		Spectators.RemoveAt(Index);
+		if (Player->IsLocalController() && GetNetMode() == NM_ListenServer)
+		{
+			// Sending the listen-server host to the menu would end the match for everyone; it keeps
+			// watching its body instead.
+			continue;
+		}
 		Player->ClientReturnToMainMenuWithTextReason(FText::FromString(TEXT("Your raid is over.")));
 	}
 }

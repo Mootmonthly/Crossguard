@@ -192,7 +192,9 @@ void UCrossguardEquipmentComponent::RequestSwitchWeaponSet(int32 Set)
 
 void UCrossguardEquipmentComponent::ServerSwitchWeaponSet_Implementation(int32 Set)
 {
-	if (Set < 0 || Set >= Crossguard::WeaponSetCount || Set == ActiveWeaponSet)
+	const UCrossguardAbilitySystemComponent* ASC = GetAbilitySystem();
+	if (Set < 0 || Set >= Crossguard::WeaponSetCount || Set == ActiveWeaponSet
+		|| (ASC != nullptr && ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead)))
 	{
 		return;
 	}
@@ -323,6 +325,10 @@ void UCrossguardEquipmentComponent::OnRep_Equipment()
 
 ECrossguardEquipError UCrossguardEquipmentComponent::CheckEquip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item, int32 Set) const
 {
+	if (Set >= Crossguard::WeaponSetCount)
+	{
+		return ECrossguardEquipError::NotReady;
+	}
 	if (WeaponTable == nullptr || GetAbilitySystem() == nullptr)
 	{
 		return ECrossguardEquipError::NotReady;

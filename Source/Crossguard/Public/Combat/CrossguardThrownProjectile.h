@@ -61,4 +61,9 @@ public:
 
 protected:
 	virtual void HandleImpact(AActor* OtherActor, const FHitResult& Hit) override;
+	// A bottle that hits nothing before its lifespan ends still explodes where it is.
+	virtual void LifeSpanExpired() override;
+
+private:
+	void Explode(const FVector& Center);
 };

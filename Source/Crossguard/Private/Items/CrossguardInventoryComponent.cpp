@@ -704,11 +704,20 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::UnequipWeapon(ECrossgu
 	{
 		return FailEquip(Error);
 	}
+	const TArray<FCrossguardInventoryItem> Before = Items;
+	const int32 NextIdBefore = NextItemId;
 	if (!PlaceNewItem(Item))
 	{
 		return Fail(ECrossguardInventoryError::NoRoom);
 	}
-	Equipment->Equip(Slot, FCrossguardWeaponItem(), WeaponSet);
+	// Never leave the weapon in both places.
+	const ECrossguardEquipError Unequipped = Equipment->Equip(Slot, FCrossguardWeaponItem(), WeaponSet);
+	if (Unequipped != ECrossguardEquipError::None)
+	{
+		Items = Before;
+		NextItemId = NextIdBefore;
+		return FailEquip(Unequipped);
+	}
 	return {};
 }
 
@@ -735,11 +744,19 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::UnequipArmor(ECrossgua
 	{
 		return FailEquip(Error);
 	}
+	const TArray<FCrossguardInventoryItem> Before = Items;
+	const int32 NextIdBefore = NextItemId;
 	if (!PlaceNewItem(Item))
 	{
 		return Fail(ECrossguardInventoryError::NoRoom);
 	}
-	Equipment->EquipArmor(Slot, FCrossguardArmorItem());
+	const ECrossguardEquipError Unequipped = Equipment->EquipArmor(Slot, FCrossguardArmorItem());
+	if (Unequipped != ECrossguardEquipError::None)
+	{
+		Items = Before;
+		NextItemId = NextIdBefore;
+		return FailEquip(Unequipped);
+	}
 	return {};
 }
 

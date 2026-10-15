@@ -24,6 +24,9 @@ On `BP_CrossguardCharacter`, select **InventoryComponent** and set **Item Table*
 
 ## 3. Character settings
 
+If `BP_CrossguardCharacter` has its own **Default Mapping Context** set, clear it (or add the new
+keys yourself): the built-in bindings (1–7, Q, E, F, X) are only created when it is empty.
+
 On `BP_CrossguardCharacter` → **Crossguard | Debug**:
 
 - If you set `Level` on the Blueprint for testing, tick **bUseDebugProgression**; otherwise the
