@@ -111,11 +111,29 @@ camera direction. The body mesh is hidden from its owner until first-person arms
   the rate. Melee swings sweep for pawns in front; wands trace on the `Weapon` channel; bows and
   staffs spawn `ACrossguardProjectile` (set per-weapon projectile Blueprints for speed).
 
+## Inventory
+
+`UCrossguardInventoryComponent` on the character (set its `ItemTable` to `DT_Items`, imported from
+`Data/Items/ItemTable.json` with row struct `CrossguardItemRow`):
+
+- The 10 × 5 main grid, plus the equipped Backpack and Quiver grids. Items keep a position and a
+  rotation; sizes come from the weapon, armor and item tables (Skill Gems 1 × 1).
+- Server authoritative. Clients ask by item id: `RequestMoveItem`, `RequestEquipItem`,
+  `RequestUnequipWeapon`, `RequestUnequipArmor`, `RequestUnequipContainer`, `RequestUseItem`.
+  Failures reach the owning client through `OnInventoryRejected`. Items replicate to the owner only.
+- Equipping moves an item from the grid into `UCrossguardEquipmentComponent` and the old item back
+  into the grid (rejected if it does not fit). The equipment component no longer takes items from
+  clients.
+- `AddItem` (server) tops up stacks first, then finds the first free spot; ammo tries the Quiver
+  first. Dropping a stack on the top-left square of the same item merges them.
+- Using a Skill Gem learns its skill (between raids) and consumes the gem.
+- Testing: the character's `DebugInventory` items are added at spawn.
+
 ## Armor
 
 - Import `Data/Items/ArmorTable.json` (row struct `CrossguardArmorRow`, `DT_Armor`) and set it as
   the character's `EquipmentComponent.ArmorTable`.
-- `RequestEquipArmor(Item)` puts a piece in its own slot; `RequestUnequipArmor(Slot)` empties one.
+- Players equip and unequip armor through the inventory (below).
 - The equipment effect adds armor stats and affixes, sets `EmptyArmorSlots` (0–6), and grants
   `Equipment.Armor.Plate` (any plate piece) and `Equipment.Armor.PlateAllSlots` (plate in the five
   body slots).
@@ -186,7 +204,7 @@ and the rules unit tests.
   `OnRep_PlayerState`.
 - Animations, weapon-on-weapon collision (fencing).
 - Affix pool and applying affix stats.
-- Inventory: the server currently trusts the item a client asks to equip. Once inventory exists,
-  equip by inventory slot and look the item up on the server.
+- Inventory UI, world pickups and drops, the death drop, stash and guild bank, splitting stacks,
+  using consumables, bows consuming arrows.
 - Verify in two-client PIE (`showdebug abilitysystem`) that `Equipment.Wielding.*` tags reach
   simulated proxies; they are added to the equipment effect spec's dynamic granted tags.

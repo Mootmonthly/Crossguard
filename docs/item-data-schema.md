@@ -27,6 +27,7 @@ checks it.
 | `weaponType` | enum | A `WeaponType` from `docs/skill-data-schema.md`: `Sword`, `Axe`, `Dagger`, `Shield`, `Bow`, `Wand`, `MagicStaff`, ... Skill requirements match on this. |
 | `handedness` | enum | `OneHanded` or `TwoHanded`. |
 | `range` | enum | `Melee` or `Ranged`. |
+| `gridWidth`, `gridHeight` | integer ≥ 1 | Squares the weapon takes in the inventory grid, unrotated (see [Grid size](#grid-size)). |
 | `stat` | enum | What the weapon provides: `AttackDamage` or `MagicDamage` (base damage per attack), or `AttackResistance` (shields: a fraction added to AR while equipped). |
 | `baseValue` | number > 0 | Value at Common. Damage in points; AR as a fraction (`0.08` = 8%). |
 | `perRarity` | number ≥ 0 | Added per rarity level. |
@@ -38,6 +39,49 @@ Value at a rarity = `baseValue + perRarity × level`.
 
 Attack interval = `(perSeconds / attacks) / (1 + ActionSpeed)`. ActionSpeed is the
 character's stat (0 at 10 AGI). The divisor is floored at 0.1.
+
+## Grid size
+
+Items occupy squares in the inventory grid (10 wide × 5 high for the main grid). `gridWidth` ×
+`gridHeight` is the size unrotated. Every item must fit the main grid in some orientation:
+`max(w, h) ≤ 10` and `min(w, h) ≤ 5`. The validators check this.
+
+Weapons (width × height):
+
+| Weapon | Size |
+| --- | --- |
+| Dagger | 1 × 2 |
+| One-handed sword, one-handed axe | 1 × 3 |
+| One-handed wand | 1 × 2 |
+| Shield | 2 × 2 |
+| Two-handed weapons (sword, axe, staff, bow) | 2 × 4 |
+
+Armor by slot:
+
+| Slot | Size |
+| --- | --- |
+| Head | 2 × 2 |
+| Chest | 2 × 3 |
+| Legs | 2 × 3 |
+| Hands | 2 × 2 |
+| Feet | 2 × 2 |
+| Back | 2 × 2 |
+
+## General items
+
+`Data/Items/Items.json` is a JSON array of non-gear items (ammo, consumables, throwables,
+materials), sorted by `id`. `Tools/validate_items.py` checks it; `Tools/export_item_table.py`
+writes `ItemTable.json` (row struct `CrossguardItemRow`).
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | string | `snake_case`, unique. |
+| `name` | string | Display name. |
+| `category` | enum | `Ammo`, `Consumable`, `Throwable`, `Material`. Mirrors the same-named entries of `ECrossguardItemCategory`. |
+| `gridWidth`, `gridHeight` | integer ≥ 1 | Squares one item takes in the inventory grid, unrotated; must fit the main grid (see [Grid size](#grid-size)). |
+| `maxStack` | integer ≥ 1 | Most items one inventory stack holds. |
+
+Prototype items: Arrow (1 × 3, stack 20) and Bolt (1 × 2, stack 20).
 
 ## Equipment slots
 
@@ -78,6 +122,7 @@ one set per armor type. `Tools/validate_armor.py` checks it.
 | `name` | string | Display name. |
 | `slot` | enum | `Head`, `Chest`, `Hands`, `Legs`, `Feet`, `Back`. |
 | `armorType` | enum | `Cloth`, `Leather`, `Plate`. |
+| `gridWidth`, `gridHeight` | integer ≥ 1 | Squares the piece takes in the inventory grid, unrotated (see [Grid size](#grid-size)). |
 | `stats` | object[] | Base stats while worn: `{"stat", "baseValue", "perRarity"}`. `stat` is an attribute name the equipment effect applies (`AttackResistance`, `MagicResistance`, `MoveSpeed`, ...), each at most once per piece. Fractions: `0.04` = 4%. |
 | `affixPool` | enum | `PlateArmor`, `LeatherArmor`, `ClothArmor`: the pool its affixes roll from. Must match `armorType`. |
 

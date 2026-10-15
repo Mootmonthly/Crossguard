@@ -26,6 +26,8 @@ def row(weapon):
         "WeaponType": weapon["weaponType"],
         "Handedness": weapon["handedness"],
         "Range": weapon["range"],
+        "GridWidth": weapon["gridWidth"],
+        "GridHeight": weapon["gridHeight"],
         "Stat": weapon["stat"],
         "BaseValue": weapon["baseValue"],
         "PerRarity": weapon["perRarity"],

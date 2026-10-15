@@ -24,6 +24,8 @@ def row(piece):
         "DisplayName": piece["name"],
         "Slot": piece["slot"],
         "ArmorType": piece["armorType"],
+        "GridWidth": piece["gridWidth"],
+        "GridHeight": piece["gridHeight"],
         "Stats": [
             {"Stat": s["stat"], "BaseValue": s["baseValue"], "PerRarity": s["perRarity"]}
             for s in piece["stats"]

@@ -657,6 +657,17 @@ static void TestInventoryGrid()
 	CHECK(!Backpack.FindFreeSpot({1, 1}, true, Spot));
 	CHECK(Backpack.FreeSquares() == 0);
 
+	// Stacks: arrows stack to 20 in the same squares.
+	int Target = 15;
+	int Source = 12;
+	CHECK(MergeStacks(Target, Source, 20) == 5);
+	CHECK(Target == 20 && Source == 7);
+	CHECK(MergeStacks(Target, Source, 20) == 0);
+	Target = 3;
+	CHECK(MergeStacks(Target, Source, 20) == 7);
+	CHECK(Target == 10 && Source == 0);
+	CHECK(!ContainerAccepts(EContainerKind::Quiver, EItemCategory::Throwable));
+
 	// A default grid has no squares.
 	const FInventoryGrid Empty;
 	CHECK(!Empty.FindFreeSpot({1, 1}, true, Spot));

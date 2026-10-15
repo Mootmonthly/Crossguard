@@ -27,6 +27,17 @@ namespace Crossguard
 		return Kind != EContainerKind::Quiver || Category == EItemCategory::Ammo;
 	}
 
+	int MergeStacks(int& TargetCount, int& SourceCount, int MaxStack)
+	{
+		TargetCount = TargetCount < 0 ? 0 : TargetCount;
+		SourceCount = SourceCount < 0 ? 0 : SourceCount;
+		const int Room = MaxStack - TargetCount;
+		const int Moved = Room <= 0 ? 0 : (Room < SourceCount ? Room : SourceCount);
+		TargetCount += Moved;
+		SourceCount -= Moved;
+		return Moved;
+	}
+
 	FGridSize FGridItem::Footprint() const
 	{
 		return Rotate(Size, Placement.bRotated);

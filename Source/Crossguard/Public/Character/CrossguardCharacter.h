@@ -6,6 +6,7 @@
 #include "Game/CrossguardPlayerState.h"
 #include "GameFramework/Character.h"
 #include "GenericTeamAgentInterface.h"
+#include "Items/CrossguardInventoryComponent.h"
 #include "Items/CrossguardItemTypes.h"
 
 #include "CrossguardCharacter.generated.h"
@@ -37,6 +38,7 @@ public:
 	UCrossguardAbilitySystemComponent* GetCrossguardAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UCrossguardLoadoutComponent* GetLoadoutComponent() const { return LoadoutComponent; }
 	UCrossguardEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
+	UCrossguardInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
 
 	// Left click: basic attack with the main-hand weapon.
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Combat")
@@ -77,7 +79,8 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
 	bool bUseDebugProgression = false;
 
-	// Testing only, until inventory exists: equipped on the server when the character spawns.
+	// Testing only: equipped on the server when the character spawns, without going through the
+	// inventory.
 	// Item ids are row names in the weapon / armor tables (e.g. "sword_one_handed", "plate_helm").
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
 	FCrossguardWeaponItem DebugMainHand;
@@ -92,6 +95,11 @@ public:
 	// Library first, without gems.
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
 	TArray<FName> DebugSkills;
+
+	// Testing only: added to the inventory at spawn (e.g. Category Ammo, ItemId "arrow", Count 40;
+	// Category SkillGem, ItemId "fireball").
+	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
+	TArray<FCrossguardInventoryItem> DebugInventory;
 
 	// Replace each debug item's affixes with a random roll for its rarity.
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
@@ -144,6 +152,10 @@ protected:
 	// Granted on possession.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Combat")
 	TSubclassOf<UCrossguardWeaponAttackAbility> OffHandAttackAbilityClass;
+
+	// Set its ItemTable in the character Blueprint.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Inventory")
+	TObjectPtr<UCrossguardInventoryComponent> InventoryComponent;
 
 	// Set its SkillCatalog in the character Blueprint.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Abilities")

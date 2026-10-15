@@ -131,6 +131,13 @@ Independent of category, a skill is:
 
 - Inventory is a grid; items take up space (Dark and Darker style). The raid inventory has 50
   squares (10 × 5, placeholder shape).
+- Item sizes (width × height, rotatable): dagger and wand 1 × 2; one-handed sword and axe 1 × 3;
+  shield 2 × 2; two-handed weapons and bows 2 × 4; helm, gloves, boots, cape 2 × 2; chest and legs
+  2 × 3; Skill Gems, potions and bandages 1 × 1; throwables (explosive bottles, throwing knives and
+  axes, javelins) 1 × 3.
+- Arrows are 1 × 3 and Bolts 1 × 2, each stacking up to 20 in the same squares.
+- Placeholders: Backpack and Quiver items take 2 × 2 while not equipped. Gloves, boots, cape and
+  legs sizes were not given.
 - Backpacks and Quivers are extra containers that add 5–30 squares by rarity, in steps of 5
   (Common 5 … Mystic 30). Quivers only hold Arrows and Bolts.
 - On death, all equipped gear and the raid inventory drop. No insurance for now.

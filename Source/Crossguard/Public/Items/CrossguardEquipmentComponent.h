@@ -36,13 +36,12 @@ enum class ECrossguardSecondaryAction : uint8
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCrossguardEquipmentChanged);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCrossguardEquipRejected, ECrossguardEquipmentSlot, Slot, ECrossguardEquipError, Error);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCrossguardArmorEquipRejected, ECrossguardArmorSlot, Slot, ECrossguardEquipError, Error);
 
 // Main-hand and off-hand weapons and the six armor slots (docs/item-data-schema.md). Dual
 // wielding: any one-handed weapon fits the off hand.
 //
-// The server validates every change, then re-applies one UCrossguardEquipmentEffect holding the
+// Changes are server only: players equip through UCrossguardInventoryComponent, which moves the item
+// between the inventory and the slot. The server validates every change, then re-applies one UCrossguardEquipmentEffect holding the
 // items' stats (shield AR, armor stats, affixes, empty armor slots) and the Equipment.Wielding.* and
 // Equipment.Armor.* tags that skill effects and requirements check.
 UCLASS(ClassGroup = (Crossguard), meta = (BlueprintSpawnableComponent))
@@ -67,12 +66,11 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment", meta = (RequiredAssetDataTags = "RowStructure=/Script/Crossguard.CrossguardAffixRow"))
 	TObjectPtr<UDataTable> AffixTable;
 
-	// Runs on the server; clients forward the request. Rejections reach the owning client.
-	UFUNCTION(BlueprintCallable, Category = "Equipment")
-	void RequestEquip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item);
+	// Whether Item (empty: unequip) can go in Slot with the other hand as it is.
+	ECrossguardEquipError CheckEquip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item) const;
 
-	UFUNCTION(BlueprintCallable, Category = "Equipment")
-	void RequestUnequip(ECrossguardEquipmentSlot Slot);
+	// Server. Validates, then puts Item in Slot (empty: unequips). Does not touch the inventory.
+	ECrossguardEquipError Equip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item);
 
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	const FCrossguardWeaponItem& GetItem(ECrossguardEquipmentSlot Slot) const;
@@ -91,12 +89,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	ECrossguardSecondaryAction GetSecondaryAction() const;
 
-	// Equips into the piece's own slot. Runs on the server; clients forward the request.
-	UFUNCTION(BlueprintCallable, Category = "Equipment|Armor")
-	void RequestEquipArmor(const FCrossguardArmorItem& Item);
+	// Whether Item (empty: unequip) can go in Slot.
+	ECrossguardEquipError CheckEquipArmor(ECrossguardArmorSlot Slot, const FCrossguardArmorItem& Item) const;
 
-	UFUNCTION(BlueprintCallable, Category = "Equipment|Armor")
-	void RequestUnequipArmor(ECrossguardArmorSlot Slot);
+	// Server. Validates, then puts Item in Slot (empty: unequips). Does not touch the inventory.
+	ECrossguardEquipError EquipArmor(ECrossguardArmorSlot Slot, const FCrossguardArmorItem& Item);
+
+	// The slot a piece belongs in. False if the piece is not in the table.
+	bool GetArmorSlotFor(FName ArmorId, ECrossguardArmorSlot& OutSlot) const;
 
 	UFUNCTION(BlueprintPure, Category = "Equipment|Armor")
 	const FCrossguardArmorItem& GetArmorItem(ECrossguardArmorSlot Slot) const;
@@ -111,9 +111,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Equipment|Armor")
 	int32 GetEmptyArmorSlotCount() const;
 
-	UPROPERTY(BlueprintAssignable, Category = "Equipment|Armor")
-	FCrossguardArmorEquipRejected OnArmorEquipRejected;
-
 	// Server only. Applies the equipment effect for the current (possibly empty) equipment, so
 	// stats like EmptyArmorSlots are right before the first equip. Call after the ability system
 	// is initialized.
@@ -122,30 +119,11 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Equipment")
 	FCrossguardEquipmentChanged OnEquipmentChanged;
 
-	UPROPERTY(BlueprintAssignable, Category = "Equipment")
-	FCrossguardEquipRejected OnEquipRejected;
-
 protected:
-	UFUNCTION(Server, Reliable)
-	void ServerEquip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item);
-
-	UFUNCTION(Client, Reliable)
-	void ClientEquipRejected(ECrossguardEquipmentSlot Slot, ECrossguardEquipError Error);
-
-	UFUNCTION(Server, Reliable)
-	void ServerEquipArmor(ECrossguardArmorSlot Slot, const FCrossguardArmorItem& Item);
-
-	UFUNCTION(Client, Reliable)
-	void ClientArmorEquipRejected(ECrossguardArmorSlot Slot, ECrossguardEquipError Error);
-
 	UFUNCTION()
 	void OnRep_Equipment();
 
 private:
-	// Server only. An empty Item unequips.
-	void ApplyEquip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item);
-	// Server only. An empty Item unequips Slot.
-	void ApplyArmorEquip(ECrossguardArmorSlot Slot, const FCrossguardArmorItem& Item);
 	void RefreshEquipmentEffect();
 	const FCrossguardArmorRow* FindArmor(FName ArmorId) const;
 	Crossguard::FArmorLoadout BuildArmorLoadout() const;

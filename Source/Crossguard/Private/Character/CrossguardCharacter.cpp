@@ -3,6 +3,7 @@
 #include "AbilitySystem/CrossguardAttributeSet.h"
 #include "Camera/CameraComponent.h"
 #include "Combat/CrossguardWeaponAttackAbility.h"
+#include "Crossguard.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
@@ -29,6 +30,7 @@ ACrossguardCharacter::ACrossguardCharacter()
 
 	LoadoutComponent = CreateDefaultSubobject<UCrossguardLoadoutComponent>(TEXT("LoadoutComponent"));
 	EquipmentComponent = CreateDefaultSubobject<UCrossguardEquipmentComponent>(TEXT("EquipmentComponent"));
+	InventoryComponent = CreateDefaultSubobject<UCrossguardInventoryComponent>(TEXT("InventoryComponent"));
 	WeaponAttackAbilityClass = UCrossguardWeaponAttackAbility::StaticClass();
 	OffHandAttackAbilityClass = UCrossguardOffHandAttackAbility::StaticClass();
 
@@ -208,11 +210,11 @@ void ACrossguardCharacter::ApplyDebugLoadout()
 	// Main hand first: a two-handed main hand then rejects an off-hand item, as in play.
 	if (!DebugMainHand.IsEmpty())
 	{
-		EquipmentComponent->RequestEquip(ECrossguardEquipmentSlot::MainHand, RollWeapon(DebugMainHand));
+		EquipmentComponent->Equip(ECrossguardEquipmentSlot::MainHand, RollWeapon(DebugMainHand));
 	}
 	if (!DebugOffHand.IsEmpty())
 	{
-		EquipmentComponent->RequestEquip(ECrossguardEquipmentSlot::OffHand, RollWeapon(DebugOffHand));
+		EquipmentComponent->Equip(ECrossguardEquipmentSlot::OffHand, RollWeapon(DebugOffHand));
 	}
 
 	for (FCrossguardArmorItem Piece : DebugArmor)
@@ -224,7 +226,20 @@ void ACrossguardCharacter::ApplyDebugLoadout()
 		{
 			Piece = UCrossguardItemLibrary::RollArmorItem(EquipmentComponent->AffixTable, Piece.ArmorId, *Row, Piece.Rarity, FMath::Rand());
 		}
-		EquipmentComponent->RequestEquipArmor(Piece);
+		ECrossguardArmorSlot Slot = ECrossguardArmorSlot::Head;
+		if (EquipmentComponent->GetArmorSlotFor(Piece.ArmorId, Slot))
+		{
+			EquipmentComponent->EquipArmor(Slot, Piece);
+		}
+	}
+
+	for (const FCrossguardInventoryItem& Item : DebugInventory)
+	{
+		if (const int32 Left = InventoryComponent->AddItem(Item); Left > 0)
+		{
+			UE_LOG(LogCrossguard, Warning, TEXT("Debug inventory: %d of %s did not fit or has no data"), Left,
+				*(Item.ItemId.IsNone() ? (Item.Weapon.IsEmpty() ? Item.Armor.ArmorId : Item.Weapon.WeaponId) : Item.ItemId).ToString());
+		}
 	}
 
 	if (!DebugSkills.IsEmpty())

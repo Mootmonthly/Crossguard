@@ -12,6 +12,7 @@ RANGES = {"Melee", "Ranged"}
 STATS = {"AttackDamage", "MagicDamage", "AttackResistance"}
 DELIVERIES = {"MeleeSwing", "Hitscan", "Projectile", "None"}
 MAX_RARITY_LEVEL = 5
+GRID_WIDTH, GRID_HEIGHT = 10, 5  # main inventory grid
 ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 
 
@@ -47,12 +48,18 @@ def positive(v):
     return is_num(v) and v > 0
 
 
+def grid_size(v):
+    return isinstance(v, int) and not isinstance(v, bool) and v >= 1
+
+
 WEAPON_SPEC = {
     "id": (lambda v: isinstance(v, str), "string"),
     "name": (lambda v: isinstance(v, str) and v != "", "non-empty string"),
     "weaponType": enum(WEAPON_TYPES),
     "handedness": enum(HANDEDNESS),
     "range": enum(RANGES),
+    "gridWidth": (grid_size, "integer >= 1"),
+    "gridHeight": (grid_size, "integer >= 1"),
     "stat": enum(STATS),
     "baseValue": (positive, "number > 0"),
     "perRarity": (lambda v: is_num(v) and v >= 0, "number >= 0"),
@@ -90,6 +97,10 @@ def validate(weapons):
         check_fields(w, WEAPON_SPEC, "weapon", err)
         if not isinstance(w, dict):
             continue
+
+        gw, gh = w.get("gridWidth"), w.get("gridHeight")
+        if grid_size(gw) and grid_size(gh) and (max(gw, gh) > GRID_WIDTH or min(gw, gh) > GRID_HEIGHT):
+            err(f"size {gw}x{gh} does not fit the {GRID_WIDTH}x{GRID_HEIGHT} inventory grid")
 
         speed = w.get("attackSpeed")
         if isinstance(speed, dict):

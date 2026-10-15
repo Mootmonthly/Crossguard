@@ -12,6 +12,7 @@ STATS = {"AttackResistance", "MagicResistance", "MoveSpeed", "MaxHealth", "MaxHe
          "Strength", "Agility", "Intelligence", "Dexterity", "ActionSpeed"}
 RESISTANCES = {"AttackResistance", "MagicResistance"}
 MYSTIC_LEVEL = 5
+GRID_WIDTH, GRID_HEIGHT = 10, 5  # main inventory grid
 ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 
 
@@ -47,6 +48,10 @@ def non_negative(v):
     return is_num(v) and v >= 0
 
 
+def grid_size(v):
+    return isinstance(v, int) and not isinstance(v, bool) and v >= 1
+
+
 STAT_SPEC = {
     "stat": enum(STATS),
     "baseValue": (is_num, "number"),
@@ -58,6 +63,8 @@ ARMOR_SPEC = {
     "name": (lambda v: isinstance(v, str) and v != "", "non-empty string"),
     "slot": enum(SLOTS),
     "armorType": enum(ARMOR_TYPES),
+    "gridWidth": (grid_size, "integer >= 1"),
+    "gridHeight": (grid_size, "integer >= 1"),
     "stats": (lambda v: isinstance(v, list), "list"),
     "affixPool": enum(POOLS),
 }
@@ -88,6 +95,10 @@ def validate(pieces):
         check_fields(a, ARMOR_SPEC, "armor", err)
         if not isinstance(a, dict):
             continue
+
+        gw, gh = a.get("gridWidth"), a.get("gridHeight")
+        if grid_size(gw) and grid_size(gh) and (max(gw, gh) > GRID_WIDTH or min(gw, gh) > GRID_HEIGHT):
+            err(f"size {gw}x{gh} does not fit the {GRID_WIDTH}x{GRID_HEIGHT} inventory grid")
 
         atype, slot, pool = a.get("armorType"), a.get("slot"), a.get("affixPool")
         if atype in ARMOR_TYPES and pool in POOLS and pool != atype + "Armor":

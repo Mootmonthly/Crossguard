@@ -20,7 +20,10 @@ namespace Crossguard
 		// Backpacks and Quivers.
 		Container,
 		Material,
+		// Potions, bandages.
 		Consumable,
+		// Explosive bottles, throwing knives and axes, javelins.
+		Throwable,
 		Other,
 	};
 
@@ -44,6 +47,10 @@ namespace Crossguard
 	CROSSGUARDRULES_API FGridSize ContainerSize(const FInventoryConfig& Config, EContainerKind Kind, ERarity Rarity = ERarity::Common);
 
 	CROSSGUARDRULES_API bool ContainerAccepts(EContainerKind Kind, EItemCategory Category);
+
+	// Moves as many as fit from a source stack onto a target stack of the same item, up to MaxStack.
+	// Returns the number moved. Counts below 0 are treated as 0.
+	CROSSGUARDRULES_API int MergeStacks(int& TargetCount, int& SourceCount, int MaxStack);
 
 	// Top-left square of the item's footprint. Rotated swaps width and height.
 	struct FGridPlacement

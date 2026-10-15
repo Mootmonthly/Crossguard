@@ -228,101 +228,53 @@ float UCrossguardEquipmentComponent::GetAttackInterval(ECrossguardEquipmentSlot 
 	return static_cast<float>(Crossguard::AttackInterval(Crossguard::FItemConfig(), Row->Attacks, Row->PerSeconds, ActionSpeed));
 }
 
-void UCrossguardEquipmentComponent::RequestEquip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item)
+ECrossguardEquipError UCrossguardEquipmentComponent::CheckEquipArmor(ECrossguardArmorSlot Slot, const FCrossguardArmorItem& Item) const
 {
-	if (GetOwner() != nullptr && GetOwner()->HasAuthority())
-	{
-		ApplyEquip(Slot, Item);
-	}
-	else
-	{
-		ServerEquip(Slot, Item);
-	}
-}
-
-void UCrossguardEquipmentComponent::RequestUnequip(ECrossguardEquipmentSlot Slot)
-{
-	RequestEquip(Slot, FCrossguardWeaponItem());
-}
-
-void UCrossguardEquipmentComponent::RequestEquipArmor(const FCrossguardArmorItem& Item)
-{
-	const FCrossguardArmorRow* Row = FindArmor(Item.ArmorId);
-	if (Row == nullptr)
-	{
-		OnArmorEquipRejected.Broadcast(ECrossguardArmorSlot::Head, ECrossguardEquipError::UnknownArmor);
-		return;
-	}
-	if (GetOwner() != nullptr && GetOwner()->HasAuthority())
-	{
-		ApplyArmorEquip(Row->Slot, Item);
-	}
-	else
-	{
-		ServerEquipArmor(Row->Slot, Item);
-	}
-}
-
-void UCrossguardEquipmentComponent::RequestUnequipArmor(ECrossguardArmorSlot Slot)
-{
-	if (GetOwner() != nullptr && GetOwner()->HasAuthority())
-	{
-		ApplyArmorEquip(Slot, FCrossguardArmorItem());
-	}
-	else
-	{
-		ServerEquipArmor(Slot, FCrossguardArmorItem());
-	}
-}
-
-void UCrossguardEquipmentComponent::ServerEquipArmor_Implementation(ECrossguardArmorSlot Slot, const FCrossguardArmorItem& Item)
-{
-	ApplyArmorEquip(Slot, Item);
-}
-
-void UCrossguardEquipmentComponent::ClientArmorEquipRejected_Implementation(ECrossguardArmorSlot Slot, ECrossguardEquipError Error)
-{
-	OnArmorEquipRejected.Broadcast(Slot, Error);
-}
-
-void UCrossguardEquipmentComponent::ApplyArmorEquip(ECrossguardArmorSlot Slot, const FCrossguardArmorItem& Item)
-{
-	ECrossguardEquipError Error = ECrossguardEquipError::None;
 	const FCrossguardArmorRow* Row = FindArmor(Item.ArmorId);
 	if (ArmorTable == nullptr || GetAbilitySystem() == nullptr || !Armor.IsValidIndex(static_cast<int32>(Slot)))
 	{
-		Error = ECrossguardEquipError::NotReady;
+		return ECrossguardEquipError::NotReady;
 	}
-	else if (!Item.IsEmpty() && Row == nullptr)
+	if (!Item.IsEmpty() && Row == nullptr)
 	{
-		Error = ECrossguardEquipError::UnknownArmor;
+		return ECrossguardEquipError::UnknownArmor;
 	}
-	else if (Row != nullptr && Row->Slot != Slot)
+	if (Row != nullptr && Row->Slot != Slot)
 	{
-		Error = ECrossguardEquipError::WrongArmorSlot;
+		return ECrossguardEquipError::WrongArmorSlot;
 	}
+	return ECrossguardEquipError::None;
+}
 
+ECrossguardEquipError UCrossguardEquipmentComponent::EquipArmor(ECrossguardArmorSlot Slot, const FCrossguardArmorItem& Item)
+{
+	if (GetOwner() == nullptr || !GetOwner()->HasAuthority())
+	{
+		return ECrossguardEquipError::NotReady;
+	}
+	const ECrossguardEquipError Error = CheckEquipArmor(Slot, Item);
 	if (Error != ECrossguardEquipError::None)
 	{
 		UE_LOG(LogCrossguard, Log, TEXT("Armor equip rejected for %s: slot %d, error %d"), *GetNameSafe(GetOwner()),
 			static_cast<int32>(Slot), static_cast<int32>(Error));
-		ClientArmorEquipRejected(Slot, Error);
-		return;
+		return Error;
 	}
 
 	Armor[static_cast<int32>(Slot)] = Item;
 	RefreshEquipmentEffect();
 	OnEquipmentChanged.Broadcast();
+	return ECrossguardEquipError::None;
 }
 
-void UCrossguardEquipmentComponent::ServerEquip_Implementation(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item)
+bool UCrossguardEquipmentComponent::GetArmorSlotFor(FName ArmorId, ECrossguardArmorSlot& OutSlot) const
 {
-	ApplyEquip(Slot, Item);
-}
-
-void UCrossguardEquipmentComponent::ClientEquipRejected_Implementation(ECrossguardEquipmentSlot Slot, ECrossguardEquipError Error)
-{
-	OnEquipRejected.Broadcast(Slot, Error);
+	const FCrossguardArmorRow* Row = FindArmor(ArmorId);
+	if (Row == nullptr)
+	{
+		return false;
+	}
+	OutSlot = Row->Slot;
+	return true;
 }
 
 void UCrossguardEquipmentComponent::OnRep_Equipment()
@@ -330,36 +282,39 @@ void UCrossguardEquipmentComponent::OnRep_Equipment()
 	OnEquipmentChanged.Broadcast();
 }
 
-void UCrossguardEquipmentComponent::ApplyEquip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item)
+ECrossguardEquipError UCrossguardEquipmentComponent::CheckEquip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item) const
 {
-	ECrossguardEquipError Error = ECrossguardEquipError::None;
 	if (WeaponTable == nullptr || GetAbilitySystem() == nullptr)
 	{
-		Error = ECrossguardEquipError::NotReady;
+		return ECrossguardEquipError::NotReady;
 	}
-	else if (!Item.IsEmpty() && FindWeapon(Item.WeaponId) == nullptr)
+	if (!Item.IsEmpty() && FindWeapon(Item.WeaponId) == nullptr)
 	{
-		Error = ECrossguardEquipError::UnknownWeapon;
+		return ECrossguardEquipError::UnknownWeapon;
 	}
-	else
-	{
-		const FCrossguardWeaponItem& NewMain = Slot == ECrossguardEquipmentSlot::MainHand ? Item : MainHand;
-		const FCrossguardWeaponItem& NewOff = Slot == ECrossguardEquipmentSlot::OffHand ? Item : OffHand;
-		Error = ToEquipError(Crossguard::ValidateEquipment(BuildRulesEquipment(NewMain, NewOff)));
-	}
+	const FCrossguardWeaponItem& NewMain = Slot == ECrossguardEquipmentSlot::MainHand ? Item : MainHand;
+	const FCrossguardWeaponItem& NewOff = Slot == ECrossguardEquipmentSlot::OffHand ? Item : OffHand;
+	return ToEquipError(Crossguard::ValidateEquipment(BuildRulesEquipment(NewMain, NewOff)));
+}
 
+ECrossguardEquipError UCrossguardEquipmentComponent::Equip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item)
+{
+	if (GetOwner() == nullptr || !GetOwner()->HasAuthority())
+	{
+		return ECrossguardEquipError::NotReady;
+	}
+	const ECrossguardEquipError Error = CheckEquip(Slot, Item);
 	if (Error != ECrossguardEquipError::None)
 	{
 		UE_LOG(LogCrossguard, Log, TEXT("Equip rejected for %s: slot %d, error %d"), *GetNameSafe(GetOwner()),
 			static_cast<int32>(Slot), static_cast<int32>(Error));
-		// Reaches the owning client; on a listen server host it runs locally.
-		ClientEquipRejected(Slot, Error);
-		return;
+		return Error;
 	}
 
 	(Slot == ECrossguardEquipmentSlot::MainHand ? MainHand : OffHand) = Item;
 	RefreshEquipmentEffect();
 	OnEquipmentChanged.Broadcast();
+	return ECrossguardEquipError::None;
 }
 
 void UCrossguardEquipmentComponent::InitializeEquipmentEffect()

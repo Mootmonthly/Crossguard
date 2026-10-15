@@ -1,0 +1,18 @@
+[
+	{
+		"Name": "arrow",
+		"DisplayName": "Arrow",
+		"Category": "Ammo",
+		"GridWidth": 1,
+		"GridHeight": 3,
+		"MaxStack": 20
+	},
+	{
+		"Name": "bolt",
+		"DisplayName": "Bolt",
+		"Category": "Ammo",
+		"GridWidth": 1,
+		"GridHeight": 2,
+		"MaxStack": 20
+	}
+]

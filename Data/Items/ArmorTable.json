@@ -4,6 +4,8 @@
 		"DisplayName": "Cloth Cape",
 		"Slot": "Back",
 		"ArmorType": "Cloth",
+		"GridWidth": 2,
+		"GridHeight": 2,
 		"Stats": [
 			{
 				"Stat": "MagicResistance",
@@ -18,6 +20,8 @@
 		"DisplayName": "Cloth Hood",
 		"Slot": "Head",
 		"ArmorType": "Cloth",
+		"GridWidth": 2,
+		"GridHeight": 2,
 		"Stats": [
 			{
 				"Stat": "MagicResistance",
@@ -32,6 +36,8 @@
 		"DisplayName": "Cloth Leggings",
 		"Slot": "Legs",
 		"ArmorType": "Cloth",
+		"GridWidth": 2,
+		"GridHeight": 3,
 		"Stats": [
 			{
 				"Stat": "MagicResistance",
@@ -46,6 +52,8 @@
 		"DisplayName": "Cloth Robe",
 		"Slot": "Chest",
 		"ArmorType": "Cloth",
+		"GridWidth": 2,
+		"GridHeight": 3,
 		"Stats": [
 			{
 				"Stat": "MagicResistance",
@@ -60,6 +68,8 @@
 		"DisplayName": "Cloth Shoes",
 		"Slot": "Feet",
 		"ArmorType": "Cloth",
+		"GridWidth": 2,
+		"GridHeight": 2,
 		"Stats": [
 			{
 				"Stat": "MagicResistance",
@@ -74,6 +84,8 @@
 		"DisplayName": "Cloth Wraps",
 		"Slot": "Hands",
 		"ArmorType": "Cloth",
+		"GridWidth": 2,
+		"GridHeight": 2,
 		"Stats": [
 			{
 				"Stat": "MagicResistance",
@@ -88,6 +100,8 @@
 		"DisplayName": "Leather Boots",
 		"Slot": "Feet",
 		"ArmorType": "Leather",
+		"GridWidth": 2,
+		"GridHeight": 2,
 		"Stats": [
 			{
 				"Stat": "AttackResistance",
@@ -107,6 +121,8 @@
 		"DisplayName": "Leather Cap",
 		"Slot": "Head",
 		"ArmorType": "Leather",
+		"GridWidth": 2,
+		"GridHeight": 2,
 		"Stats": [
 			{
 				"Stat": "AttackResistance",
@@ -126,6 +142,8 @@
 		"DisplayName": "Leather Gloves",
 		"Slot": "Hands",
 		"ArmorType": "Leather",
+		"GridWidth": 2,
+		"GridHeight": 2,
 		"Stats": [
 			{
 				"Stat": "AttackResistance",
@@ -145,6 +163,8 @@
 		"DisplayName": "Leather Jerkin",
 		"Slot": "Chest",
 		"ArmorType": "Leather",
+		"GridWidth": 2,
+		"GridHeight": 3,
 		"Stats": [
 			{
 				"Stat": "AttackResistance",
@@ -164,6 +184,8 @@
 		"DisplayName": "Leather Trousers",
 		"Slot": "Legs",
 		"ArmorType": "Leather",
+		"GridWidth": 2,
+		"GridHeight": 3,
 		"Stats": [
 			{
 				"Stat": "AttackResistance",
@@ -183,6 +205,8 @@
 		"DisplayName": "Plate Cuirass",
 		"Slot": "Chest",
 		"ArmorType": "Plate",
+		"GridWidth": 2,
+		"GridHeight": 3,
 		"Stats": [
 			{
 				"Stat": "AttackResistance",
@@ -202,6 +226,8 @@
 		"DisplayName": "Plate Gauntlets",
 		"Slot": "Hands",
 		"ArmorType": "Plate",
+		"GridWidth": 2,
+		"GridHeight": 2,
 		"Stats": [
 			{
 				"Stat": "AttackResistance",
@@ -221,6 +247,8 @@
 		"DisplayName": "Plate Greaves",
 		"Slot": "Legs",
 		"ArmorType": "Plate",
+		"GridWidth": 2,
+		"GridHeight": 3,
 		"Stats": [
 			{
 				"Stat": "AttackResistance",
@@ -240,6 +268,8 @@
 		"DisplayName": "Plate Helm",
 		"Slot": "Head",
 		"ArmorType": "Plate",
+		"GridWidth": 2,
+		"GridHeight": 2,
 		"Stats": [
 			{
 				"Stat": "AttackResistance",
@@ -259,6 +289,8 @@
 		"DisplayName": "Plate Sabatons",
 		"Slot": "Feet",
 		"ArmorType": "Plate",
+		"GridWidth": 2,
+		"GridHeight": 2,
 		"Stats": [
 			{
 				"Stat": "AttackResistance",

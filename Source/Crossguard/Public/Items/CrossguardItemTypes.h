@@ -83,6 +83,21 @@ enum class ECrossguardArmorType : uint8
 	Plate,
 };
 
+// Mirrors Crossguard::EItemCategory.
+UENUM(BlueprintType)
+enum class ECrossguardItemCategory : uint8
+{
+	Weapon,
+	Armor,
+	Ammo,
+	SkillGem,
+	Container,
+	Material,
+	Consumable,
+	Throwable,
+	Other,
+};
+
 // One row per weapon class. Row name = weapon id (e.g. "sword_one_handed").
 USTRUCT(BlueprintType)
 struct CROSSGUARD_API FCrossguardWeaponRow : public FTableRowBase
@@ -100,6 +115,13 @@ struct CROSSGUARD_API FCrossguardWeaponRow : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	ECrossguardWeaponRange Range = ECrossguardWeaponRange::Melee;
+
+	// Squares the item takes in the inventory grid, unrotated.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	int32 GridWidth = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	int32 GridHeight = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	ECrossguardWeaponStat Stat = ECrossguardWeaponStat::AttackDamage;
@@ -189,12 +211,44 @@ struct CROSSGUARD_API FCrossguardArmorRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Armor")
 	ECrossguardArmorType ArmorType = ECrossguardArmorType::Cloth;
 
+	// Squares the item takes in the inventory grid, unrotated.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Armor")
+	int32 GridWidth = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Armor")
+	int32 GridHeight = 1;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Armor")
 	TArray<FCrossguardArmorStat> Stats;
 
 	// PlateArmor, LeatherArmor, ClothArmor.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Armor")
 	FName AffixPool;
+};
+
+// One row per general item (ammo, consumables, throwables, materials). Row name = item id
+// (e.g. "arrow"). Generated from Data/Items/Items.json by Tools/export_item_table.py.
+USTRUCT(BlueprintType)
+struct CROSSGUARD_API FCrossguardItemRow : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	FText DisplayName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	ECrossguardItemCategory Category = ECrossguardItemCategory::Other;
+
+	// Squares the item takes in the inventory grid, unrotated.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	int32 GridWidth = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	int32 GridHeight = 1;
+
+	// Most items one inventory stack holds.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	int32 MaxStack = 1;
 };
 
 // A rolled affix on an item instance.
