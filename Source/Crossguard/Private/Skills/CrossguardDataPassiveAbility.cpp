@@ -9,10 +9,8 @@
 
 namespace
 {
-	using FAttribute = FGameplayAttribute;
-
 	// The attributes a stat modifier changes. Empty: not a stat a passive effect can hold.
-	TArray<FAttribute> AttributesFor(ECrossguardStat Stat, ECrossguardSkillFilter Filter)
+	TArray<FGameplayAttribute> AttributesFor(ECrossguardStat Stat, ECrossguardSkillFilter Filter)
 	{
 		using Set = UCrossguardAttributeSet;
 		switch (Stat)
@@ -160,7 +158,7 @@ void UCrossguardDataPassiveAbility::Refresh()
 			bApplies = false;
 			break;
 		}
-		const TArray<FAttribute> Attributes = AttributesFor(Modifier.Stat, Modifier.SkillFilter);
+		const TArray<FGameplayAttribute> Attributes = AttributesFor(Modifier.Stat, Modifier.SkillFilter);
 		if (Attributes.IsEmpty())
 		{
 			UE_LOG(LogCrossguard, Verbose, TEXT("%s: stat %d is not built from data"), *PlayedSkillId.ToString(), static_cast<int32>(Modifier.Stat));
@@ -170,7 +168,7 @@ void UCrossguardDataPassiveAbility::Refresh()
 		{
 			continue;
 		}
-		for (const FAttribute& Attribute : Attributes)
+		for (const FGameplayAttribute& Attribute : Attributes)
 		{
 			const FName Name(*Attribute.GetName());
 			if (Modifier.Op == ECrossguardModifierOp::Multiply)

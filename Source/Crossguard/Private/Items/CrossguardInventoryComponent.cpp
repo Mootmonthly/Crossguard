@@ -6,6 +6,7 @@
 #include "AbilitySystemGlobals.h"
 #include "Crossguard.h"
 #include "Engine/DataTable.h"
+#include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "Items/CrossguardLootContainer.h"
 #include "Net/UnrealNetwork.h"
@@ -1034,7 +1035,7 @@ TArray<FCrossguardInventoryItem> UCrossguardInventoryComponent::RestoreFromBody(
 	// Then worn gear, main hand before off hand so a dual-wield setup validates.
 	Loose.StableSort([](const FCrossguardInventoryItem& A, const FCrossguardInventoryItem& B)
 	{
-		return A.bWasEquipped && !B.bWasEquipped
+		return (A.bWasEquipped && !B.bWasEquipped)
 			|| (A.bWasEquipped == B.bWasEquipped && A.WornSlot == ECrossguardEquipmentSlot::MainHand && B.WornSlot != ECrossguardEquipmentSlot::MainHand);
 	});
 	for (FCrossguardInventoryItem Item : Loose)
