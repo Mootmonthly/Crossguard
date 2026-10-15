@@ -50,7 +50,7 @@ FName UCrossguardItemLibrary::GetAffixPool(const FCrossguardWeaponRow& Weapon)
 	{
 	case ECrossguardWeaponStat::AttackDamage: return FName(TEXT("AttackWeapon"));
 	case ECrossguardWeaponStat::MagicDamage: return FName(TEXT("MagicWeapon"));
-	case ECrossguardWeaponStat::AttackResistance: return NAME_None;
+	case ECrossguardWeaponStat::AttackResistance: return FName(TEXT("Shield"));
 	}
 	return NAME_None;
 }

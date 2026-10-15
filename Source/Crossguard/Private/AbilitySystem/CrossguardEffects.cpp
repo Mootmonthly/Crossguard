@@ -25,6 +25,7 @@ namespace
 			UCrossguardAttributeSet::GetStrengthAttribute(),
 			UCrossguardAttributeSet::GetAgilityAttribute(),
 			UCrossguardAttributeSet::GetIntelligenceAttribute(),
+			UCrossguardAttributeSet::GetMaxHealthAttribute(),
 			UCrossguardAttributeSet::GetMaxHealthBonusAttribute(),
 			UCrossguardAttributeSet::GetAdditionalAttackDamageAttribute(),
 			UCrossguardAttributeSet::GetAttackDamageBonusAttribute(),

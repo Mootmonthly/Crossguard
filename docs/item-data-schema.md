@@ -58,10 +58,12 @@ character's stat (0 at 10 AGI). The divisor is floored at 0.1.
 | --- | --- | --- |
 | `id` | string | `snake_case`, unique. |
 | `name` | string | Display name. |
-| `stat` | enum | The attribute it adds to, by its `UCrossguardAttributeSet` name: `AdditionalAttackDamage`, `AdditionalMagicDamage`, `ActionSpeed`, `AttackPenetration`, `MagicPenetration`, `TrueDamage`, `AttackDamageBonus`, `MagicDamageBonus`, `ActiveCooldownReduction`, `SpellCooldownReduction`, `ArtCooldownReduction`, `ActiveCastTimeReduction`, `SpellCastTimeReduction`, `ArtCastTimeReduction`, `Strength`, `Agility`, `Intelligence`, `Dexterity`. Unique across affixes. |
+| `stat` | enum | The attribute it adds to, by its `UCrossguardAttributeSet` name: `AttackResistance`, `MagicResistance`, `MaxHealth`, `MaxHealthBonus`, `AdditionalAttackDamage`, `AdditionalMagicDamage`, `ActionSpeed`, `AttackPenetration`, `MagicPenetration`, `TrueDamage`, `AttackDamageBonus`, `MagicDamageBonus`, `ActiveCooldownReduction`, `SpellCooldownReduction`, `ArtCooldownReduction`, `ActiveCastTimeReduction`, `SpellCastTimeReduction`, `ArtCastTimeReduction`, `Strength`, `Agility`, `Intelligence`, `Dexterity`. Unique across affixes. |
 | `min`, `max` | number | Roll range, inclusive. Percent stats are fractions (`0.02` = 2%). |
 | `step` | number > 0 | Values land on `min + k × step`. |
-| `pools` | string[] | Which items can roll it: `AttackWeapon` (weapons dealing AD), `MagicWeapon` (weapons dealing MD). Armor pools come later. |
+| `pools` | string[] | Which items can roll it: `AttackWeapon` (weapons dealing AD), `MagicWeapon` (weapons dealing MD), `Shield`. Armor pools come later. |
 
 Rolling: an item gets as many distinct affixes from its pool as its rarity has slots
-(`Crossguard::RollAffixes`, deterministic per seed). Shields roll none until armor pools exist.
+(`Crossguard::RollAffixes`, deterministic per seed).
+
+Flat Max HP from affixes is added after Max HP Bonus: `Max HP = derived × (1 + MHPB) + flat`.

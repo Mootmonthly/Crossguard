@@ -168,7 +168,10 @@ Weapons and armor have different affix pools. Weapon pools:
   and Art Cast Speed.
 - Ranges: percentage stats 2–5%; base attributes 1–3; AAD and AMD 1–3. True Damage 1–3 is a
   placeholder (not specified). Values roll on whole steps (1 point, 1%).
-- Pending: affix slots per rarity (placeholder 0/1/2/3/4/5); armor affix pools.
+- Shields roll: AR, MR, Max HP, Max HP Bonus, AAD, AMD, Active/Spell/Art CDR, Active/Spell/Art
+  Cast Speed, Action Speed, Dexterity. AR, MR and Max HP Bonus use the 2–5% range.
+- Pending: Max HP affix range (placeholder 5–15); affix slots per rarity (placeholder
+  0/1/2/3/4/5); armor affix pools.
 
 ## Formulas
 

@@ -132,7 +132,7 @@ struct CROSSGUARD_API FCrossguardAffixRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Affix")
 	float Step = 0.0f;
 
-	// AttackWeapon, MagicWeapon.
+	// AttackWeapon, MagicWeapon, Shield.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Affix")
 	TArray<FName> Pools;
 };
@@ -190,7 +190,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Items")
 	static float GetWeaponValue(const FCrossguardWeaponRow& Weapon, ECrossguardRarity Rarity);
 
-	// The affix pool a weapon rolls from: AttackWeapon (AD), MagicWeapon (MD), or None (shields).
+	// The affix pool a weapon rolls from: AttackWeapon (AD), MagicWeapon (MD) or Shield (AR).
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Items")
 	static FName GetAffixPool(const FCrossguardWeaponRow& Weapon);
 
