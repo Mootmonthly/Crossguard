@@ -5,6 +5,7 @@
 #include "CrossguardRules/Progression.h"
 #include "GameFramework/Pawn.h"
 #include "Items/CrossguardInventoryComponent.h"
+#include "Game/CrossguardGuildComponent.h"
 #include "Items/CrossguardStashComponent.h"
 #include "Items/CrossguardVendorComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -42,6 +43,7 @@ ACrossguardPlayerState::ACrossguardPlayerState()
 {
 	Stash = CreateDefaultSubobject<UCrossguardStashComponent>(TEXT("Stash"));
 	Vendor = CreateDefaultSubobject<UCrossguardVendorComponent>(TEXT("Vendor"));
+	Guild = CreateDefaultSubobject<UCrossguardGuildComponent>(TEXT("Guild"));
 }
 
 void ACrossguardPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

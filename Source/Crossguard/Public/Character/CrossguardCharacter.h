@@ -70,6 +70,43 @@ public:
 	UFUNCTION(Exec)
 	void TradeCancel();
 
+	// Guilds until a guild window exists (console; Output Log): GuildCreate "Name"; GuildInviteNearest;
+	// GuildAccept (your first invite); GuildLeave; GuildInfo (roster and bank with ids); GuildRank
+	// <player id> Member|Officer|Leader; GuildKick <player id>; GuildGold <amount> (negative takes);
+	// GuildDeposit <inventory item id>; GuildWithdraw <bank slot id>; GuildGive <player id> <slot id>.
+	UFUNCTION(Exec)
+	void GuildCreate(const FString& Name);
+
+	UFUNCTION(Exec)
+	void GuildInviteNearest();
+
+	UFUNCTION(Exec)
+	void GuildAccept();
+
+	UFUNCTION(Exec)
+	void GuildLeave();
+
+	UFUNCTION(Exec)
+	void GuildInfo();
+
+	UFUNCTION(Exec)
+	void GuildRank(const FString& PlayerId, const FString& NewRank);
+
+	UFUNCTION(Exec)
+	void GuildKick(const FString& PlayerId);
+
+	UFUNCTION(Exec)
+	void GuildGold(int32 Amount);
+
+	UFUNCTION(Exec)
+	void GuildDeposit(int32 InventoryItemId);
+
+	UFUNCTION(Exec)
+	void GuildWithdraw(int32 SlotId);
+
+	UFUNCTION(Exec)
+	void GuildGive(const FString& PlayerId, int32 SlotId);
+
 	// Left click: basic attack with the main-hand weapon.
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Combat")
 	bool TryWeaponAttack();

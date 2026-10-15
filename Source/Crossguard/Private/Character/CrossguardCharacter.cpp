@@ -13,6 +13,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
 #include "Game/CrossguardExtractPortal.h"
+#include "Game/CrossguardGuildComponent.h"
 #include "Game/CrossguardGameMode.h"
 #include "Game/CrossguardPlayerState.h"
 #include "Game/CrossguardPointOfInterest.h"
@@ -1018,4 +1019,137 @@ void ACrossguardCharacter::TradeOffer(const FString& ItemIds, int32 Gold)
 		Ids.Add(FCString::Atoi(*Part.TrimStartAndEnd()));
 	}
 	TradeComponent->RequestSetOffer(Ids, Gold);
+}
+
+// --- Guilds from the console (until a guild window exists) ----------------------------------------
+
+namespace
+{
+	UCrossguardGuildComponent* GuildComponentOf(const APawn& Pawn)
+	{
+		const ACrossguardPlayerState* State = Pawn.GetPlayerState<ACrossguardPlayerState>();
+		return State != nullptr ? State->GetGuild() : nullptr;
+	}
+}
+
+void ACrossguardCharacter::GuildCreate(const FString& Name)
+{
+	if (UCrossguardGuildComponent* Guild = GuildComponentOf(*this))
+	{
+		Guild->RequestCreate(Name);
+	}
+}
+
+void ACrossguardCharacter::GuildInviteNearest()
+{
+	UCrossguardGuildComponent* Guild = GuildComponentOf(*this);
+	APlayerState* Nearest = nullptr;
+	float NearestDistance = TNumericLimits<float>::Max();
+	for (TActorIterator<ACrossguardCharacter> It(GetWorld()); It; ++It)
+	{
+		const float Distance = FVector::Dist(GetActorLocation(), It->GetActorLocation());
+		if (*It != this && It->GetPlayerState() != nullptr && Distance < NearestDistance)
+		{
+			Nearest = It->GetPlayerState();
+			NearestDistance = Distance;
+		}
+	}
+	if (Guild != nullptr && Nearest != nullptr)
+	{
+		UE_LOG(LogCrossguard, Display, TEXT("Guild: inviting %s"), *Nearest->GetPlayerName());
+		Guild->RequestInvite(Nearest);
+	}
+}
+
+void ACrossguardCharacter::GuildAccept()
+{
+	UCrossguardGuildComponent* Guild = GuildComponentOf(*this);
+	if (Guild != nullptr && !Guild->Invites.IsEmpty())
+	{
+		Guild->RequestAcceptInvite(Guild->Invites[0].GuildId);
+	}
+}
+
+void ACrossguardCharacter::GuildLeave()
+{
+	if (UCrossguardGuildComponent* Guild = GuildComponentOf(*this))
+	{
+		Guild->RequestLeave();
+	}
+}
+
+void ACrossguardCharacter::GuildInfo()
+{
+	const UCrossguardGuildComponent* Guild = GuildComponentOf(*this);
+	if (Guild == nullptr)
+	{
+		return;
+	}
+	UE_LOG(LogCrossguard, Display, TEXT("Guild: %s, bank %lld gold"), Guild->IsInGuild() ? *Guild->GuildName : TEXT("none"), Guild->BankGold);
+	for (const FCrossguardGuildMemberView& Member : Guild->Members)
+	{
+		UE_LOG(LogCrossguard, Display, TEXT("  member %s (%s) %s%s"), *Member.DisplayName, *Member.PlayerId,
+			*StaticEnum<ECrossguardGuildRank>()->GetNameStringByValue(static_cast<int64>(Member.Rank)), Member.bOnline ? TEXT(", online") : TEXT(""));
+	}
+	for (const FCrossguardGuildBankItemView& Stack : Guild->BankItems)
+	{
+		const FCrossguardInventoryItem& Item = Stack.Item;
+		const FName What = Item.Category == ECrossguardItemCategory::Weapon ? Item.Weapon.WeaponId
+			: Item.Category == ECrossguardItemCategory::Armor ? Item.Armor.ArmorId : Item.ItemId;
+		UE_LOG(LogCrossguard, Display, TEXT("  bank slot %d: %s x%d"), Stack.SlotId, *What.ToString(), Item.Count);
+	}
+	for (const FCrossguardGuildInviteView& Invite : Guild->Invites)
+	{
+		UE_LOG(LogCrossguard, Display, TEXT("  invite to %s from %s"), *Invite.GuildName, *Invite.InvitedBy);
+	}
+}
+
+void ACrossguardCharacter::GuildRank(const FString& PlayerId, const FString& NewRank)
+{
+	UCrossguardGuildComponent* Guild = GuildComponentOf(*this);
+	const int64 Value = StaticEnum<ECrossguardGuildRank>()->GetValueByNameString(NewRank);
+	if (Guild != nullptr && Value != INDEX_NONE)
+	{
+		Guild->RequestSetRank(PlayerId, static_cast<ECrossguardGuildRank>(Value));
+	}
+}
+
+void ACrossguardCharacter::GuildKick(const FString& PlayerId)
+{
+	if (UCrossguardGuildComponent* Guild = GuildComponentOf(*this))
+	{
+		Guild->RequestKick(PlayerId);
+	}
+}
+
+void ACrossguardCharacter::GuildGold(int32 Amount)
+{
+	if (UCrossguardGuildComponent* Guild = GuildComponentOf(*this))
+	{
+		Guild->RequestMoveGold(Amount);
+	}
+}
+
+void ACrossguardCharacter::GuildDeposit(int32 InventoryItemId)
+{
+	if (UCrossguardGuildComponent* Guild = GuildComponentOf(*this))
+	{
+		Guild->RequestDepositItem(InventoryItemId);
+	}
+}
+
+void ACrossguardCharacter::GuildWithdraw(int32 SlotId)
+{
+	if (UCrossguardGuildComponent* Guild = GuildComponentOf(*this))
+	{
+		Guild->RequestWithdrawItem(SlotId);
+	}
+}
+
+void ACrossguardCharacter::GuildGive(const FString& PlayerId, int32 SlotId)
+{
+	if (UCrossguardGuildComponent* Guild = GuildComponentOf(*this))
+	{
+		Guild->RequestGiveItem(PlayerId, SlotId);
+	}
 }

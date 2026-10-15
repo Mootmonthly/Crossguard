@@ -108,7 +108,30 @@ Ranks: **Leader** (exactly one), **Officer**, **Member**.
 15. Gold amounts are positive whole numbers; the balance never passes `INT64_MAX`.
 16. `Restore` does not enforce `MaxMembers`, so lowering the cap never breaks a saved guild.
 
+## In the game
+
+- `UCrossguardGuildSubsystem` (game instance subsystem, server) owns the `FGuildRegistry` and the
+  game's copy of each bank stack (affixes included). It survives map travel, but lives **in memory
+  only**: guilds are lost when the server stops, until a backend saves `FGuildRegistry::All()` plus
+  the bank stacks and loads them with `Restore`.
+- Players are known by `PlayerIdOf`: their online id (a Steam id once the Steam online subsystem is
+  on), else a per-session stand-in. Guilds that should outlive a session need the real ids.
+- `UCrossguardGuildComponent` on each player state: guild name, id and rank replicate to everyone
+  (nameplates); roster, invites and bank only to the owner. Requests run on the server; refusals
+  come back as `ECrossguardGuildResult` (`OnGuildRefused`).
+- Game rulings on top of the library (assumptions):
+  - The bank is used **between raids only** (game mode `bIsRaid` off), like the stash. Membership
+    works anywhere.
+  - Gold moves between the bank and the player's banked gold; items between the bank and the
+    character's inventory (whole stacks; not the item in hand).
+  - Redistributing needs the recipient on the same server; gold lands in their banked gold, an item
+    in their inventory (refused if it does not fit). Withdrawals likewise check for room first.
+  - The last member leaving takes the bank: refused if its items would not fit in their inventory.
+- Console commands for testing: see `ACrossguardCharacter` (`GuildCreate`, `GuildInviteNearest`,
+  `GuildAccept`, `GuildInfo`, `GuildGold`, `GuildDeposit`, `GuildWithdraw`, `GuildGive`, `GuildRank`,
+  `GuildKick`, `GuildLeave`).
+
 ## Not covered
 
-Persistence and the backend, guild chat, between-raid-only restrictions on bank access, bank tabs
-beyond one, per-rank withdrawal limits, and guild names' profanity filtering.
+Persistence and the backend, guild chat, the bank log in the UI, bank tabs beyond one, per-rank
+withdrawal limits, and guild names' profanity filtering.

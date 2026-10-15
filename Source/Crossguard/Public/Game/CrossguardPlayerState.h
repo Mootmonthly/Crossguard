@@ -10,6 +10,7 @@
 #include "CrossguardPlayerState.generated.h"
 
 class UCrossguardSkillCatalog;
+class UCrossguardGuildComponent;
 class UCrossguardStashComponent;
 class UCrossguardVendorComponent;
 
@@ -187,6 +188,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Vendor")
 	UCrossguardVendorComponent* GetVendor() const { return Vendor; }
 
+	UFUNCTION(BlueprintPure, Category = "Crossguard|Guild")
+	UCrossguardGuildComponent* GetGuild() const { return Guild; }
+
 protected:
 	UFUNCTION()
 	void OnRep_TeamId();
@@ -211,6 +215,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Crossguard|Vendor")
 	TObjectPtr<UCrossguardVendorComponent> Vendor;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Guild", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCrossguardGuildComponent> Guild;
 
 	UPROPERTY(ReplicatedUsing = OnRep_TeamId)
 	int32 TeamId = -1;

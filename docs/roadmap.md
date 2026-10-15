@@ -94,7 +94,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Crafting and enchanting | Decision, Code | XP is ruled (10–60 by rarity); recipes are not. |
 | Trading | Editor | Built in code ([trading.md](trading.md)): ask, offer, lock, accept, all-or-nothing swap. Needs a trade window UI (console commands for now). |
 | Auction house | Code, Decision | Needs the backend and a currency. |
-| Guilds and guild bank | Code | Members deposit; officers withdraw, manage, redistribute. |
+| Guilds and guild bank | Code, Editor, Decision | Built in code ([guild-rules.md](guild-rules.md)): ranks, invites, kicks, bank (gold and items) with permissions and a log; rules unit tested. In server memory only: needs accounts (Steam ids) and a backend to save guilds. Needs a guild window (console commands for now). |
 | Respec store purchase | Code | Grants respec tokens after a verified purchase; price not set. |
 | Subscription | Decision, Code | About $10 per season: five respec tokens, a shared stash tab, common healing items, throwables, lockpicks. |
 | NPC vendors in the hub | Editor | Selling is built (`UCrossguardVendorComponent`); needs the NPC and a sell screen. |
