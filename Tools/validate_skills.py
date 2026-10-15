@@ -6,6 +6,8 @@ import re
 import sys
 
 CATEGORIES = {"Active", "Spell", "Art", "Passive"}
+# Skill Gem rarity (loot drop chances only). null: not assigned yet.
+RARITIES = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mystic"}
 WEAPON_TAGS = {"Melee", "Ranged"}
 TAGS = {"Minion", "Buff", "Debuff", "Summon", "Heal", "Raid"}
 MELEE = {"Sword", "Axe", "Dagger", "Spear", "Mace", "Quarterstaff", "Hammer", "Shield", "AnyMelee", "TwoHandedMelee"}
@@ -72,6 +74,7 @@ SKILL_SPEC = {
     "name": (lambda v: isinstance(v, str) and v != "", "non-empty string"),
     "capacityCost": (lambda v: is_int(v) and v >= 0, "integer >= 0"),
     "category": enum(CATEGORIES),
+    "rarity": enum(RARITIES, True),
     "weaponTag": enum(WEAPON_TAGS, True),
     "tags": (lambda v: is_strlist(v) and all(t in TAGS for t in v), "array of tags from %s" % sorted(TAGS)),
     "requirements": (lambda v: isinstance(v, dict), "object"),

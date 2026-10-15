@@ -14,6 +14,7 @@
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
 #include "Skills/CrossguardLoadoutComponent.h"
+#include "Skills/CrossguardSkillCatalog.h"
 
 namespace
 {
@@ -290,6 +291,16 @@ int32 UCrossguardInventoryComponent::AddItem(const FCrossguardInventoryItem& New
 	if (!IsServer() || !ResolveItemData(Item))
 	{
 		return Remaining;
+	}
+	// A Skill Gem's rarity is its skill's (Skills.json), whatever the drop said.
+	if (Item.Category == ECrossguardItemCategory::SkillGem)
+	{
+		const UCrossguardLoadoutComponent* Loadout = GetOwner() != nullptr ? GetOwner()->FindComponentByClass<UCrossguardLoadoutComponent>() : nullptr;
+		const FCrossguardSkillRow* SkillRow = Loadout != nullptr && Loadout->SkillCatalog != nullptr ? Loadout->SkillCatalog->FindSkill(Item.ItemId) : nullptr;
+		if (SkillRow != nullptr && SkillRow->bHasRarity)
+		{
+			Item.Rarity = SkillRow->Rarity;
+		}
 	}
 
 	// Top up existing stacks of the same item and rarity first.

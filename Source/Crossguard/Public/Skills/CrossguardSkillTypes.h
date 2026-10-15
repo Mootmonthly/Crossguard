@@ -8,6 +8,19 @@
 // Skill data types. Mirrors docs/skill-data-schema.md. Rows are generated from
 // Data/Skills/Skills.json by Tools/export_skill_table.py; do not edit the data table by hand.
 
+// Item and Skill Gem rarity. Declared here, not in CrossguardItemTypes.h (which includes this
+// header), so skill rows can use it.
+UENUM(BlueprintType)
+enum class ECrossguardRarity : uint8
+{
+	Common,
+	Uncommon,
+	Rare,
+	Epic,
+	Legendary,
+	Mystic,
+};
+
 UENUM(BlueprintType)
 enum class ECrossguardSkillCategory : uint8
 {
@@ -290,6 +303,14 @@ struct CROSSGUARD_API FCrossguardSkillRow : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
 	ECrossguardSkillCategory Category = ECrossguardSkillCategory::Active;
+
+	// The Skill Gem's rarity, for loot table drop chances only: it never changes what the skill
+	// does. bHasRarity false: not assigned yet (Rarity is then meaningless).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
+	bool bHasRarity = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
+	ECrossguardRarity Rarity = ECrossguardRarity::Common;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
 	ECrossguardWeaponTag WeaponTag = ECrossguardWeaponTag::None;

@@ -466,6 +466,9 @@ AActor* UCrossguardLikeALionAbility::FindLeapTarget() const
 	{
 		return nullptr;
 	}
+	FVector Eyes;
+	FRotator Unused;
+	Avatar->GetActorEyesViewPoint(Eyes, Unused);
 	AActor* BestPlayer = nullptr;
 	AActor* BestOther = nullptr;
 	float BestPlayerDistance = FMath::Square(LionRange);
@@ -480,6 +483,19 @@ AActor* UCrossguardLikeALionAbility::FindLeapTarget() const
 			continue;
 		}
 		const float Distance = FVector::DistSquared(Avatar->GetActorLocation(), Candidate->GetActorLocation());
+		if (Distance >= (Candidate->IsPlayerControlled() ? BestPlayerDistance : BestOtherDistance))
+		{
+			continue;
+		}
+		// Line of sight: nothing but characters between the eyes and the target.
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(CrossguardLikeALion), false, Avatar);
+		Params.AddIgnoredActor(Candidate);
+		FVector TargetEyes;
+		Candidate->GetActorEyesViewPoint(TargetEyes, Unused);
+		if (Avatar->GetWorld()->LineTraceTestByObjectType(Eyes, TargetEyes, FCollisionObjectQueryParams(FCollisionObjectQueryParams::AllStaticObjects), Params))
+		{
+			continue;
+		}
 		if (Candidate->IsPlayerControlled() && Distance < BestPlayerDistance)
 		{
 			BestPlayerDistance = Distance;

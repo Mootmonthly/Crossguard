@@ -38,7 +38,7 @@ def load_documents(export_dir):
 
 
 # Field order of Skills.json (docs/skill-data-schema.md); the forge's database returns keys sorted.
-FIELD_ORDER = ["id", "name", "capacityCost", "category", "weaponTag", "tags", "requirements", "cooldownSec", "durationSec",
+FIELD_ORDER = ["id", "name", "capacityCost", "category", "rarity", "weaponTag", "tags", "requirements", "cooldownSec", "durationSec",
                "includes", "grantsWhileActive", "minionSkills", "statModifiers", "damage", "healing", "mechanics",
                "description", "source", "notes"]
 REQUIREMENT_ORDER = ["weapons", "armor", "items", "forms"]
@@ -53,6 +53,8 @@ def ordered(obj, order):
 
 
 def normalize(skill):
+    # Documents saved before a field existed.
+    skill.setdefault("rarity", None)
     skill = ordered(skill, FIELD_ORDER)
     if isinstance(skill.get("requirements"), dict):
         skill["requirements"] = ordered(skill["requirements"], REQUIREMENT_ORDER)

@@ -4,6 +4,8 @@
 		"DisplayName": "Antimagic Garb",
 		"CapacityCost": 5,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -43,6 +45,8 @@
 		"DisplayName": "Arcane Arrows",
 		"CapacityCost": 4,
 		"Category": "Active",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "Ranged",
 		"Tags": [
 			"Buff"
@@ -83,6 +87,8 @@
 		"DisplayName": "Arcane Intellect",
 		"CapacityCost": 3,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -122,6 +128,8 @@
 		"DisplayName": "Armor Mastery",
 		"CapacityCost": 4,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -175,6 +183,8 @@
 		"DisplayName": "Axe Mastery",
 		"CapacityCost": 5,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -264,6 +274,8 @@
 		"DisplayName": "Benediction",
 		"CapacityCost": 10,
 		"Category": "Spell",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [
 			"Heal"
@@ -300,6 +312,8 @@
 		"DisplayName": "Bow Mastery",
 		"CapacityCost": 5,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -373,6 +387,8 @@
 		"DisplayName": "Chop Down",
 		"CapacityCost": 5,
 		"Category": "Active",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "Melee",
 		"Tags": [
 			"Debuff"
@@ -428,6 +444,8 @@
 		"DisplayName": "Cleave",
 		"CapacityCost": 3,
 		"Category": "Art",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "Melee",
 		"Tags": [],
 		"Requirements": {
@@ -465,6 +483,8 @@
 		"DisplayName": "Cor Leonis",
 		"CapacityCost": 6,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [
 			"Raid"
@@ -548,6 +568,8 @@
 		"DisplayName": "Dagger Mastery",
 		"CapacityCost": 2,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -605,6 +627,8 @@
 		"DisplayName": "Divine Alacrity",
 		"CapacityCost": 3,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -644,6 +668,8 @@
 		"DisplayName": "Dragonification",
 		"CapacityCost": 13,
 		"Category": "Art",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [
 			"Buff"
@@ -719,6 +745,8 @@
 		"DisplayName": "Elder Summoner",
 		"CapacityCost": 3,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -758,6 +786,8 @@
 		"DisplayName": "Eldritch Shield",
 		"CapacityCost": 5,
 		"Category": "Spell",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -785,6 +815,8 @@
 		"DisplayName": "Fireball",
 		"CapacityCost": 3,
 		"Category": "Spell",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -828,6 +860,8 @@
 		"DisplayName": "Flare Breath",
 		"CapacityCost": 9,
 		"Category": "Spell",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -871,6 +905,8 @@
 		"DisplayName": "Flight",
 		"CapacityCost": 8,
 		"Category": "Spell",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -897,6 +933,8 @@
 		"DisplayName": "Gouge",
 		"CapacityCost": 3,
 		"Category": "Active",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "Melee",
 		"Tags": [
 			"Debuff"
@@ -951,6 +989,8 @@
 		"DisplayName": "Greater Heal",
 		"CapacityCost": 5,
 		"Category": "Spell",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [
 			"Heal"
@@ -985,6 +1025,8 @@
 		"DisplayName": "Heal",
 		"CapacityCost": 2,
 		"Category": "Spell",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [
 			"Heal"
@@ -1019,6 +1061,8 @@
 		"DisplayName": "Heroic Might",
 		"CapacityCost": 3,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -1058,6 +1102,8 @@
 		"DisplayName": "Hunter's Leap",
 		"CapacityCost": 3,
 		"Category": "Art",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -1084,6 +1130,8 @@
 		"DisplayName": "Hunter's Tracking",
 		"CapacityCost": 2,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -1111,6 +1159,8 @@
 		"DisplayName": "Immutable",
 		"CapacityCost": 9,
 		"Category": "Active",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -1138,6 +1188,8 @@
 		"DisplayName": "Light",
 		"CapacityCost": 1,
 		"Category": "Spell",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -1164,6 +1216,8 @@
 		"DisplayName": "Like A Lion, He Leapt",
 		"CapacityCost": 7,
 		"Category": "Art",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "Melee",
 		"Tags": [],
 		"Requirements": {
@@ -1205,6 +1259,8 @@
 		"DisplayName": "Mortal Strike",
 		"CapacityCost": 5,
 		"Category": "Active",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "Melee",
 		"Tags": [],
 		"Requirements": {
@@ -1243,6 +1299,8 @@
 		"DisplayName": "Multiscale",
 		"CapacityCost": 9,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -1296,6 +1354,8 @@
 		"DisplayName": "Mute",
 		"CapacityCost": 10,
 		"Category": "Spell",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [
 			"Debuff"
@@ -1334,6 +1394,8 @@
 		"DisplayName": "Neckbite",
 		"CapacityCost": 3,
 		"Category": "Active",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -1372,6 +1434,8 @@
 		"DisplayName": "Parting The Land",
 		"CapacityCost": 9,
 		"Category": "Active",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "Melee",
 		"Tags": [],
 		"Requirements": {
@@ -1411,6 +1475,8 @@
 		"DisplayName": "Purge Shot",
 		"CapacityCost": 4,
 		"Category": "Active",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "Ranged",
 		"Tags": [
 			"Debuff"
@@ -1452,6 +1518,8 @@
 		"DisplayName": "Quickshot",
 		"CapacityCost": 5,
 		"Category": "Active",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "Ranged",
 		"Tags": [
 			"Buff"
@@ -1509,6 +1577,8 @@
 		"DisplayName": "Shade Blow",
 		"CapacityCost": 8,
 		"Category": "Active",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "Melee",
 		"Tags": [
 			"Debuff"
@@ -1550,6 +1620,8 @@
 		"DisplayName": "Shooting Star",
 		"CapacityCost": 6,
 		"Category": "Art",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "Melee",
 		"Tags": [],
 		"Requirements": {
@@ -1588,6 +1660,8 @@
 		"DisplayName": "Slash",
 		"CapacityCost": 1,
 		"Category": "Active",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "Melee",
 		"Tags": [],
 		"Requirements": {
@@ -1626,6 +1700,8 @@
 		"DisplayName": "Spear Mastery",
 		"CapacityCost": 2,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -1683,6 +1759,8 @@
 		"DisplayName": "Spear of Liscor",
 		"CapacityCost": 15,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "Melee",
 		"Tags": [],
 		"Requirements": {
@@ -1742,6 +1820,8 @@
 		"DisplayName": "Splinter of Winter",
 		"CapacityCost": 2,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -1796,6 +1876,8 @@
 		"DisplayName": "Stealth",
 		"CapacityCost": 6,
 		"Category": "Active",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [
 			"Buff"
@@ -1853,6 +1935,8 @@
 		"DisplayName": "Summon Greater Demon",
 		"CapacityCost": 10,
 		"Category": "Spell",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [
 			"Minion",
@@ -1887,6 +1971,8 @@
 		"DisplayName": "Summon Skeletons",
 		"CapacityCost": 4,
 		"Category": "Spell",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [
 			"Minion",
@@ -1921,6 +2007,8 @@
 		"DisplayName": "Summon Tiger",
 		"CapacityCost": 5,
 		"Category": "Spell",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [
 			"Minion",
@@ -1956,6 +2044,8 @@
 		"DisplayName": "Sword Mastery",
 		"CapacityCost": 5,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -2029,6 +2119,8 @@
 		"DisplayName": "The Mithril Knight",
 		"CapacityCost": 15,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [
 			"Raid"
@@ -2102,6 +2194,8 @@
 		"DisplayName": "Trauma Mastery",
 		"CapacityCost": 4,
 		"Category": "Passive",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -2181,6 +2275,8 @@
 		"DisplayName": "Triple Thrust",
 		"CapacityCost": 8,
 		"Category": "Art",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "Melee",
 		"Tags": [],
 		"Requirements": {
@@ -2220,6 +2316,8 @@
 		"DisplayName": "Unleash",
 		"CapacityCost": 11,
 		"Category": "Active",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [
 			"Buff"
@@ -2261,6 +2359,8 @@
 		"DisplayName": "Wall",
 		"CapacityCost": 1,
 		"Category": "Spell",
+		"bHasRarity": false,
+		"Rarity": "Common",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {

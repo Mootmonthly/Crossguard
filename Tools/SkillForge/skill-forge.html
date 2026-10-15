@@ -97,6 +97,8 @@ header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px
 .cost { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: .8rem; display: inline-flex; align-items: center; gap: 4px; }
 .cost::before { content: ""; width: 9px; height: 9px; background: currentColor; transform: rotate(45deg); border-radius: 1px; }
 .cat { font-size: .72rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+.rarity { font-size: .72rem; font-weight: 600; letter-spacing: .03em; }
+.rarity.unset { color: var(--muted); font-weight: 400; font-style: italic; }
 .cat.Active { color: var(--cat-active); } .cat.Spell { color: var(--cat-spell); } .cat.Art { color: var(--cat-art); } .cat.Passive { color: var(--cat-passive); }
 .pending-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); margin-left: auto; }
 .list-empty { padding: 20px 14px; color: var(--muted); }
@@ -204,6 +206,8 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
   const DMG_KINDS = ["Impact", "Splash", "PerSecond", "OverTime", "Additional", "WeaponPercent"];
   const HEAL_TYPES = ["Physical", "Magical"];
   const SOURCES = ["SkillsDoc", "StatsDoc", "Editor"];
+  // Skill Gem rarity: loot drop chances only, never the skill's effect. null = not assigned yet.
+  const RARITIES = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mystic"];
   const ID_RE = /^[a-z][a-z0-9]*(_[a-z0-9]+)*$/;
 
   const $ = (id) => document.getElementById(id);
@@ -272,7 +276,7 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
     return bits.join(" ");
   }
   function summary(s) {
-    const bits = [s.category, `${s.capacityCost} Capacity`];
+    const bits = [s.category, s.rarity ? `${s.rarity} gem` : "rarity not set", `${s.capacityCost} Capacity`];
     if (s.cooldownSec != null) bits.push(`${s.cooldownSec} s cooldown`);
     if (s.durationSec != null) bits.push(`lasts ${s.durationSec} s`);
     if (s.weaponTag) bits.push(s.weaponTag);
@@ -287,6 +291,7 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
     if (!s.name || !s.name.trim()) errs.push("Name is required.");
     if (!Number.isInteger(s.capacityCost) || s.capacityCost < 0) errs.push("Capacity cost must be a whole number, 0 or more.");
     if (!CATEGORIES.includes(s.category)) errs.push("Pick a category.");
+    if (s.rarity !== null && !RARITIES.includes(s.rarity)) errs.push("Rarity must be one of the listed rarities, or not set.");
     const tag = weaponTagFor(s.requirements.weapons);
     if (tag === undefined) errs.push("Required weapons mix melee and ranged (or include a casting weapon); split them into separate skills.");
     for (const field of ["cooldownSec", "durationSec"]) {
@@ -328,7 +333,7 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
 
   function blankSkill() {
     return {
-      id: "", name: "", capacityCost: 1, category: "Active", weaponTag: null, tags: [],
+      id: "", name: "", capacityCost: 1, category: "Active", rarity: null, weaponTag: null, tags: [],
       requirements: { weapons: [], armor: null, items: [], forms: [] },
       cooldownSec: 10, durationSec: null, includes: [], grantsWhileActive: [], minionSkills: [],
       statModifiers: [], damage: [], healing: [], mechanics: [], description: "", source: "Editor", notes: [],
@@ -338,13 +343,14 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
   // ---- Index ----
   function renderFilters() {
     const wrap = $("filters");
-    wrap.replaceChildren(...["All", ...CATEGORIES, "Pending"].map((c) =>
+    wrap.replaceChildren(...["All", ...CATEGORIES, "No rarity", "Pending"].map((c) =>
       h("button", { class: "filter", type: "button", "aria-pressed": String(filterCat === c), onclick: () => { filterCat = c; renderFilters(); renderList(); } }, c)));
   }
   function renderList() {
     const q = $("search").value.trim().toLowerCase();
     const items = [...store.entries()]
-      .filter(([id, e]) => filterCat === "All" || (filterCat === "Pending" ? isPending(e) : e.skill.category === filterCat))
+      .filter(([id, e]) => filterCat === "All" || (filterCat === "Pending" ? isPending(e)
+        : filterCat === "No rarity" ? !e.skill.rarity : e.skill.category === filterCat))
       .filter(([id, e]) => !q || id.includes(q) || (e.skill.name || "").toLowerCase().includes(q))
       .sort((a, b) => (a[1].skill.name || a[0]).localeCompare(b[1].skill.name || b[0]));
     const list = $("skill-list");
@@ -362,6 +368,7 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
         h("span", { class: "cost", title: "Capacity cost", text: String(s.capacityCost) }),
         h("span", { class: "meta" },
           h("span", { class: `cat ${s.category}`, text: s.category }),
+          h("span", { class: "rarity" + (s.rarity ? "" : " unset"), text: s.rarity || "no rarity" }),
           h("span", { class: "id", text: id }),
           isPending(e) ? h("span", { class: "pending-dot", title: "Pending sync" }) : null)));
     }));
@@ -542,6 +549,10 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
           selectField("Category", s.category, CATEGORIES.map((c) => [c, c]), (v) => { s.category = v; if (v === "Passive") s.cooldownSec = null; touch(); rerender(); }),
           selectField("Source", s.source, SOURCES.map((c) => [c, c === "Editor" ? "Skill Forge" : c]), (v) => { s.source = v; touch(); })),
         h("div", { class: "field wide" }, h("span", { text: "Tags" }), checkGroup(TAGS, s.tags, touch))),
+      section("Skill Gem",
+        h("div", { class: "grid" },
+          selectField("Rarity", s.rarity, [[null, "Not set"], ...RARITIES.map((r) => [r, r])], (v) => { s.rarity = v; touch(); rerender(); },
+            { hint: "How rare the gem is in loot tables. Never changes what the skill does." }))),
       section("Timing",
         h("div", { class: "grid" },
           numberField("Cooldown (s)", s.category === "Passive" ? null : s.cooldownSec, (v) => { s.cooldownSec = v; touch(); }, { min: "0", placeholder: s.category === "Passive" ? "passive: none" : "none", hint: "Before CDR. Blank: no cooldown." }),
@@ -668,7 +679,12 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
       for (const ch of snap.docChanges()) {
         if (ch.type === "removed") { store.delete(ch.doc.id); continue; }
         const data = ch.doc.data();
-        if (data && data.skill) store.set(ch.doc.id, clone(data));
+        if (data && data.skill) {
+          const entry = clone(data);
+          // Saved before rarity existed.
+          if (!("rarity" in entry.skill)) entry.skill.rarity = null;
+          store.set(ch.doc.id, entry);
+        }
       }
       if (selectedId && !store.has(selectedId) && !isNew) { selectedId = null; draft = null; }
       // Pick up other edits to the open skill unless the viewer is mid-edit.

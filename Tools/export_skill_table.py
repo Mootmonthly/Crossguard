@@ -116,6 +116,8 @@ def row(skill):
         "DisplayName": skill["name"],
         "CapacityCost": skill["capacityCost"],
         "Category": skill["category"],
+        "bHasRarity": skill["rarity"] is not None,
+        "Rarity": skill["rarity"] or "Common",
         "WeaponTag": skill["weaponTag"] or "None",
         "Tags": list(skill["tags"]),
         "Requirements": {

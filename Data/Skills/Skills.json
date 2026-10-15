@@ -4,6 +4,7 @@
     "name": "Antimagic Garb",
     "capacityCost": 5,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -40,6 +41,7 @@
     "name": "Arcane Arrows",
     "capacityCost": 4,
     "category": "Active",
+    "rarity": null,
     "weaponTag": "Ranged",
     "tags": [
       "Buff"
@@ -82,6 +84,7 @@
     "name": "Arcane Intellect",
     "capacityCost": 3,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -118,6 +121,7 @@
     "name": "Armor Mastery",
     "capacityCost": 4,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -163,6 +167,7 @@
     "name": "Axe Mastery",
     "capacityCost": 5,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -242,6 +247,7 @@
     "name": "Benediction",
     "capacityCost": 10,
     "category": "Spell",
+    "rarity": null,
     "weaponTag": null,
     "tags": [
       "Heal"
@@ -280,6 +286,7 @@
     "name": "Bow Mastery",
     "capacityCost": 5,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -346,6 +353,7 @@
     "name": "Chop Down",
     "capacityCost": 5,
     "category": "Active",
+    "rarity": null,
     "weaponTag": "Melee",
     "tags": [
       "Debuff"
@@ -400,6 +408,7 @@
     "name": "Cleave",
     "capacityCost": 3,
     "category": "Art",
+    "rarity": null,
     "weaponTag": "Melee",
     "tags": [],
     "requirements": {
@@ -439,6 +448,7 @@
     "name": "Cor Leonis",
     "capacityCost": 6,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [
       "Raid"
@@ -512,6 +522,7 @@
     "name": "Dagger Mastery",
     "capacityCost": 2,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -565,6 +576,7 @@
     "name": "Divine Alacrity",
     "capacityCost": 3,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -601,6 +613,7 @@
     "name": "Dragonification",
     "capacityCost": 13,
     "category": "Art",
+    "rarity": null,
     "weaponTag": null,
     "tags": [
       "Buff"
@@ -669,6 +682,7 @@
     "name": "Elder Summoner",
     "capacityCost": 3,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -705,6 +719,7 @@
     "name": "Eldritch Shield",
     "capacityCost": 5,
     "category": "Spell",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -734,6 +749,7 @@
     "name": "Fireball",
     "capacityCost": 3,
     "category": "Spell",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -779,6 +795,7 @@
     "name": "Flare Breath",
     "capacityCost": 9,
     "category": "Spell",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -824,6 +841,7 @@
     "name": "Flight",
     "capacityCost": 8,
     "category": "Spell",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -852,6 +870,7 @@
     "name": "Gouge",
     "capacityCost": 3,
     "category": "Active",
+    "rarity": null,
     "weaponTag": "Melee",
     "tags": [
       "Debuff"
@@ -905,6 +924,7 @@
     "name": "Greater Heal",
     "capacityCost": 5,
     "category": "Spell",
+    "rarity": null,
     "weaponTag": null,
     "tags": [
       "Heal"
@@ -941,6 +961,7 @@
     "name": "Heal",
     "capacityCost": 2,
     "category": "Spell",
+    "rarity": null,
     "weaponTag": null,
     "tags": [
       "Heal"
@@ -977,6 +998,7 @@
     "name": "Heroic Might",
     "capacityCost": 3,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -1013,6 +1035,7 @@
     "name": "Hunter's Leap",
     "capacityCost": 3,
     "category": "Art",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -1041,6 +1064,7 @@
     "name": "Hunter's Tracking",
     "capacityCost": 2,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -1070,6 +1094,7 @@
     "name": "Immutable",
     "capacityCost": 9,
     "category": "Active",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -1099,6 +1124,7 @@
     "name": "Light",
     "capacityCost": 1,
     "category": "Spell",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -1127,6 +1153,7 @@
     "name": "Like A Lion, He Leapt",
     "capacityCost": 7,
     "category": "Art",
+    "rarity": null,
     "weaponTag": "Melee",
     "tags": [],
     "requirements": {
@@ -1167,6 +1194,7 @@
     "name": "Mortal Strike",
     "capacityCost": 5,
     "category": "Active",
+    "rarity": null,
     "weaponTag": "Melee",
     "tags": [],
     "requirements": {
@@ -1207,6 +1235,7 @@
     "name": "Multiscale",
     "capacityCost": 9,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -1252,6 +1281,7 @@
     "name": "Mute",
     "capacityCost": 10,
     "category": "Spell",
+    "rarity": null,
     "weaponTag": null,
     "tags": [
       "Debuff"
@@ -1292,6 +1322,7 @@
     "name": "Neckbite",
     "capacityCost": 3,
     "category": "Active",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -1334,6 +1365,7 @@
     "name": "Parting The Land",
     "capacityCost": 9,
     "category": "Active",
+    "rarity": null,
     "weaponTag": "Melee",
     "tags": [],
     "requirements": {
@@ -1375,6 +1407,7 @@
     "name": "Purge Shot",
     "capacityCost": 4,
     "category": "Active",
+    "rarity": null,
     "weaponTag": "Ranged",
     "tags": [
       "Debuff"
@@ -1418,6 +1451,7 @@
     "name": "Quickshot",
     "capacityCost": 5,
     "category": "Active",
+    "rarity": null,
     "weaponTag": "Ranged",
     "tags": [
       "Buff"
@@ -1471,6 +1505,7 @@
     "name": "Shade Blow",
     "capacityCost": 8,
     "category": "Active",
+    "rarity": null,
     "weaponTag": "Melee",
     "tags": [
       "Debuff"
@@ -1514,6 +1549,7 @@
     "name": "Shooting Star",
     "capacityCost": 6,
     "category": "Art",
+    "rarity": null,
     "weaponTag": "Melee",
     "tags": [],
     "requirements": {
@@ -1554,6 +1590,7 @@
     "name": "Slash",
     "capacityCost": 1,
     "category": "Active",
+    "rarity": null,
     "weaponTag": "Melee",
     "tags": [],
     "requirements": {
@@ -1594,6 +1631,7 @@
     "name": "Spear Mastery",
     "capacityCost": 2,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -1647,6 +1685,7 @@
     "name": "Spear of Liscor",
     "capacityCost": 15,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": "Melee",
     "tags": [],
     "requirements": {
@@ -1698,6 +1737,7 @@
     "name": "Splinter of Winter",
     "capacityCost": 2,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -1751,6 +1791,7 @@
     "name": "Stealth",
     "capacityCost": 6,
     "category": "Active",
+    "rarity": null,
     "weaponTag": null,
     "tags": [
       "Buff"
@@ -1804,6 +1845,7 @@
     "name": "Summon Greater Demon",
     "capacityCost": 10,
     "category": "Spell",
+    "rarity": null,
     "weaponTag": null,
     "tags": [
       "Minion",
@@ -1840,6 +1882,7 @@
     "name": "Summon Skeletons",
     "capacityCost": 4,
     "category": "Spell",
+    "rarity": null,
     "weaponTag": null,
     "tags": [
       "Minion",
@@ -1878,6 +1921,7 @@
     "name": "Summon Tiger",
     "capacityCost": 5,
     "category": "Spell",
+    "rarity": null,
     "weaponTag": null,
     "tags": [
       "Minion",
@@ -1917,6 +1961,7 @@
     "name": "Sword Mastery",
     "capacityCost": 5,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -1983,6 +2028,7 @@
     "name": "The Mithril Knight",
     "capacityCost": 15,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [
       "Raid"
@@ -2043,6 +2089,7 @@
     "name": "Trauma Mastery",
     "capacityCost": 4,
     "category": "Passive",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {
@@ -2115,6 +2162,7 @@
     "name": "Triple Thrust",
     "capacityCost": 8,
     "category": "Art",
+    "rarity": null,
     "weaponTag": "Melee",
     "tags": [],
     "requirements": {
@@ -2156,6 +2204,7 @@
     "name": "Unleash",
     "capacityCost": 11,
     "category": "Active",
+    "rarity": null,
     "weaponTag": null,
     "tags": [
       "Buff"
@@ -2196,6 +2245,7 @@
     "name": "Wall",
     "capacityCost": 1,
     "category": "Spell",
+    "rarity": null,
     "weaponTag": null,
     "tags": [],
     "requirements": {

@@ -20,3 +20,7 @@ Ask Claude to "sync skills". Claude:
 4. Marks the synced documents (`meta.syncedAt`) and deletes the ones marked for deletion.
 
 After a sync, reimport `DT_Skills` in the editor.
+
+Each skill has a Skill Gem **rarity** (Common to Mystic, or not set) in the "Skill Gem" section. It
+only sets the gem's drop chance in loot tables; it never changes the skill. The "No rarity" filter
+lists the skills still to assign.

@@ -10,16 +10,7 @@
 // Item data types. Mirrors docs/item-data-schema.md. Weapon rows are generated from
 // Data/Items/Weapons.json by Tools/export_weapon_table.py; do not edit the data table by hand.
 
-UENUM(BlueprintType)
-enum class ECrossguardRarity : uint8
-{
-	Common,
-	Uncommon,
-	Rare,
-	Epic,
-	Legendary,
-	Mystic,
-};
+// ECrossguardRarity is declared in Skills/CrossguardSkillTypes.h (Skill Gems have a rarity too).
 
 UENUM(BlueprintType)
 enum class ECrossguardHandedness : uint8

@@ -13,6 +13,7 @@ Rulings in `docs/design-decisions.md` override the Drive docs.
 | `name` | string | yes | Display name exactly as in the docs. |
 | `capacityCost` | integer ≥ 0 | yes | Skill Capacity cost (number in parentheses). |
 | `category` | enum | yes | `Active`, `Spell`, `Art` or `Passive`. |
+| `rarity` | enum or null | yes | The Skill Gem's rarity: `Common`, `Uncommon`, `Rare`, `Epic`, `Legendary` or `Mystic`; `null` until assigned. Only affects loot table drop chances, never the skill itself. One rarity per gem, no affixes. |
 | `weaponTag` | enum or null | yes | `Melee`, `Ranged` or `null`. Derived from weapon requirements. |
 | `tags` | string[] | yes | Extra tags: `Minion`, `Buff`, `Debuff`, `Summon`, `Heal`, `Raid`. May be empty. |
 | `requirements` | object | yes | See below. |
