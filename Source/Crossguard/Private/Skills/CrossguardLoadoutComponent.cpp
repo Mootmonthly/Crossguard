@@ -10,6 +10,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Skills/CrossguardSkillCatalog.h"
 
+#include <algorithm>
+
 namespace
 {
 	ECrossguardLoadoutError ToLoadoutError(Crossguard::ELoadoutError Error)
@@ -25,9 +27,10 @@ namespace
 		return ECrossguardLoadoutError::NotReady;
 	}
 
+	// FName compares case-insensitively, the rules library does not; skill ids are lowercase.
 	std::string ToRulesId(FName Name)
 	{
-		return std::string(TCHAR_TO_UTF8(*Name.ToString()));
+		return std::string(TCHAR_TO_UTF8(*Name.ToString().ToLower()));
 	}
 }
 
@@ -135,7 +138,11 @@ void UCrossguardLoadoutComponent::ApplyLoadout(const TArray<FName>& Skills)
 	}
 
 	// Bundle components are granted as their own abilities; a component shared by two bundles once.
-	for (const std::string& Effective : Crossguard::ResolveLoadoutEffects(SkillCatalog->BuildRulesCatalog(), Ids))
+	// Sorted so grant order is deterministic.
+	const std::unordered_set<std::string> EffectiveSet = Crossguard::ResolveLoadoutEffects(SkillCatalog->BuildRulesCatalog(), Ids);
+	std::vector<std::string> EffectiveIds(EffectiveSet.begin(), EffectiveSet.end());
+	std::sort(EffectiveIds.begin(), EffectiveIds.end());
+	for (const std::string& Effective : EffectiveIds)
 	{
 		const FName SkillId(UTF8_TO_TCHAR(Effective.c_str()));
 		const TSubclassOf<UCrossguardGameplayAbility> AbilityClass = SkillCatalog->FindAbilityClass(SkillId);
@@ -155,7 +162,8 @@ void UCrossguardLoadoutComponent::ClearGrantedAbilities(UCrossguardAbilitySystem
 {
 	for (const FGameplayAbilitySpecHandle& Handle : GrantedAbilities)
 	{
-		// Ends the ability if active; passive abilities remove their effects in EndAbility.
+		// Cancel first so an active passive runs EndAbility and removes its effects.
+		ASC.CancelAbilityHandle(Handle);
 		ASC.ClearAbility(Handle);
 	}
 	GrantedAbilities.Reset();

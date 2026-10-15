@@ -9,15 +9,45 @@ UCrossguardPassiveAbility::UCrossguardPassiveAbility()
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerOnly;
 }
 
-void UCrossguardPassiveAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+void UCrossguardPassiveAbility::TryActivatePassive(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) const
 {
-	Super::OnAvatarSet(ActorInfo, Spec);
-
-	// Called when granted (and when the avatar changes). Activate once, on the server.
-	if (ActorInfo != nullptr && ActorInfo->IsNetAuthority() && !Spec.IsActive())
+	// Once, on the server, with an avatar. Both hooks below may call this; IsActive guards repeats.
+	if (ActorInfo != nullptr && ActorInfo->IsNetAuthority() && ActorInfo->AvatarActor.IsValid()
+		&& ActorInfo->AbilitySystemComponent.IsValid() && !Spec.IsActive())
 	{
 		ActorInfo->AbilitySystemComponent->TryActivateAbility(Spec.Handle, false);
 	}
+}
+
+void UCrossguardPassiveAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+	Super::OnGiveAbility(ActorInfo, Spec);
+	TryActivatePassive(ActorInfo, Spec);
+}
+
+void UCrossguardPassiveAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+	Super::OnAvatarSet(ActorInfo, Spec);
+	TryActivatePassive(ActorInfo, Spec);
+}
+
+void UCrossguardPassiveAbility::OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+	// Backstop if the ability is removed without ending.
+	RemoveAppliedEffects(ActorInfo);
+	Super::OnRemoveAbility(ActorInfo, Spec);
+}
+
+void UCrossguardPassiveAbility::RemoveAppliedEffects(const FGameplayAbilityActorInfo* ActorInfo)
+{
+	if (ActorInfo != nullptr && ActorInfo->AbilitySystemComponent.IsValid())
+	{
+		for (const FActiveGameplayEffectHandle& Applied : AppliedEffects)
+		{
+			ActorInfo->AbilitySystemComponent->RemoveActiveGameplayEffect(Applied);
+		}
+	}
+	AppliedEffects.Reset();
 }
 
 void UCrossguardPassiveAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -50,14 +80,6 @@ void UCrossguardPassiveAbility::ActivateAbility(const FGameplayAbilitySpecHandle
 void UCrossguardPassiveAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	if (ActorInfo != nullptr && ActorInfo->AbilitySystemComponent.IsValid())
-	{
-		for (const FActiveGameplayEffectHandle& Applied : AppliedEffects)
-		{
-			ActorInfo->AbilitySystemComponent->RemoveActiveGameplayEffect(Applied);
-		}
-	}
-	AppliedEffects.Reset();
-
+	RemoveAppliedEffects(ActorInfo);
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

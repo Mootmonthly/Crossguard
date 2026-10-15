@@ -28,8 +28,11 @@ public:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
 
-	// Placeholder until progression is loaded from the player's save.
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Progression", meta = (ClampMin = "1"))
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// Placeholder until progression is loaded from the player's save. Replicated so clients can
+	// show Skill Capacity.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category = "Crossguard|Progression", meta = (ClampMin = "1"))
 	int32 Level = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Progression")

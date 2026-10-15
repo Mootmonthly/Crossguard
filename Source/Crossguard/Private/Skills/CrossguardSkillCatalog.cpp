@@ -36,15 +36,16 @@ Crossguard::FSkillCatalog UCrossguardSkillCatalog::BuildRulesCatalog() const
 		[&Catalog](const FName& RowName, const FCrossguardSkillRow& Row)
 		{
 			Crossguard::FSkillDefinition Definition;
-			Definition.Id = TCHAR_TO_UTF8(*RowName.ToString());
+			// Lowercase: the rules library compares ids case-sensitively.
+			Definition.Id = TCHAR_TO_UTF8(*RowName.ToString().ToLower());
 			Definition.CapacityCost = Row.CapacityCost;
 			for (const FName& Included : Row.Includes)
 			{
-				Definition.Includes.emplace_back(TCHAR_TO_UTF8(*Included.ToString()));
+				Definition.Includes.emplace_back(TCHAR_TO_UTF8(*Included.ToString().ToLower()));
 			}
 			for (const FName& Granted : Row.GrantsWhileActive)
 			{
-				Definition.GrantsWhileActive.emplace_back(TCHAR_TO_UTF8(*Granted.ToString()));
+				Definition.GrantsWhileActive.emplace_back(TCHAR_TO_UTF8(*Granted.ToString().ToLower()));
 			}
 			Catalog.Add(Definition);
 		});

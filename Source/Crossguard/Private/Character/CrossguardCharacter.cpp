@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/CrossguardAttributeSet.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Net/UnrealNetwork.h"
 #include "Skills/CrossguardLoadoutComponent.h"
 
 ACrossguardCharacter::ACrossguardCharacter()
@@ -17,6 +18,13 @@ ACrossguardCharacter::ACrossguardCharacter()
 	LoadoutComponent = CreateDefaultSubobject<UCrossguardLoadoutComponent>(TEXT("LoadoutComponent"));
 
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
+}
+
+void ACrossguardCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ACrossguardCharacter, Level);
 }
 
 UAbilitySystemComponent* ACrossguardCharacter::GetAbilitySystemComponent() const
