@@ -4,6 +4,7 @@
 #include "AbilitySystem/CrossguardEffects.h"
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemGlobals.h"
+#include "Combat/CrossguardGuard.h"
 #include "Combat/CrossguardProjectile.h"
 #include "Combat/CrossguardSpellProjectile.h"
 #include "Combat/CrossguardWeaponAttackAbility.h"
@@ -14,6 +15,7 @@
 #include "CrossguardRules/Loadout.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
+#include "TimerManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Skills/CrossguardDataPassiveAbility.h"
 #include "Skills/CrossguardNativeSkills.h"
@@ -255,7 +257,8 @@ bool ACrossguardAICharacter::TryAttack(AActor* Target)
 	UCrossguardAbilitySystemComponent* ASC = GetCrossguardAbilitySystemComponent();
 	UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
 	const double Now = GetWorld()->GetTimeSeconds();
-	if (!HasAuthority() || !IsAlive() || ASC == nullptr || TargetASC == nullptr || Now < NextAttackTime)
+	if (!HasAuthority() || !IsAlive() || ASC == nullptr || TargetASC == nullptr || Now < NextAttackTime
+		|| ASC->HasMatchingGameplayTag(CrossguardTags::State_Guarding) || ASC->HasMatchingGameplayTag(CrossguardTags::State_Stunned))
 	{
 		return false;
 	}
@@ -295,15 +298,25 @@ bool ACrossguardAICharacter::TryAttack(AActor* Target)
 		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack,
 			AttackDamage * Riders.WeaponMultiplier + Riders.WeaponFlat + Riders.AttackAdd);
 		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, Riders.MagicAdd);
+		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_AttackBonus, Riders.AttackBonusAdd);
 		if (bRanged)
 		{
 			ShootArrow(Target, Spec, Riders);
 		}
 		else
 		{
-			ASC->ApplyGameplayEffectSpecToTarget(*Spec.Data, TargetASC);
-			UCrossguardWeaponAttackAbility::ApplyRiders(Riders, TargetASC);
-			UCrossguardWeaponAttackAbility::FinishMeleeHits(Riders, ASC, {Target});
+			// Through the target's guard; AI in reach may raise theirs first.
+			CrossguardGuard::NotifyMeleeAttack(this, AttackRange);
+			FCrossguardHit Hit;
+			Hit.Attacker = this;
+			Hit.ImpactPower = ImpactPower;
+			FRotator Unused;
+			GetActorEyesViewPoint(Hit.Origin, Unused);
+			if (CrossguardGuard::ApplyHit(ASC, Target, Spec, Hit) > 0.0f)
+			{
+				UCrossguardWeaponAttackAbility::ApplyRiders(Riders, TargetASC);
+				UCrossguardWeaponAttackAbility::FinishMeleeHits(Riders, ASC, {Target});
+			}
 		}
 	}
 	NextAttackTime = Now + ActionSpeedInterval(AttackInterval);
@@ -328,6 +341,7 @@ void ACrossguardAICharacter::ShootArrow(AActor* Target, const FGameplayEffectSpe
 	if (Arrow != nullptr)
 	{
 		Arrow->DamageSpec = Spec;
+		Arrow->ImpactPower = ImpactPower;
 		Arrow->OnHitSpecs = Riders.OnHitSpecs;
 		Arrow->bCancelSkillsOnHit = Riders.bCancelSkills;
 		Arrow->FinishSpawning(SpawnTransform);
@@ -359,4 +373,28 @@ float ACrossguardAICharacter::ActionSpeedInterval(float Seconds) const
 	const UCrossguardAbilitySystemComponent* ASC = GetCrossguardAbilitySystemComponent();
 	const float ActionSpeed = ASC != nullptr ? ASC->GetNumericAttribute(UCrossguardAttributeSet::GetActionSpeedAttribute()) : 0.0f;
 	return static_cast<float>(Crossguard::AttackInterval(Crossguard::FItemConfig(), 1.0, Seconds, ActionSpeed));
+}
+
+void ACrossguardAICharacter::RaiseGuard(AActor* Attacker, float Seconds)
+{
+	UCrossguardAbilitySystemComponent* ASC = GetCrossguardAbilitySystemComponent();
+	if (!HasAuthority() || !IsAlive() || ASC == nullptr || Attacker == nullptr || ASC->HasMatchingGameplayTag(CrossguardTags::State_Guarding))
+	{
+		return;
+	}
+	// Face the swing: an AI's guard faces where its body does.
+	const FVector ToAttacker = Attacker->GetActorLocation() - GetActorLocation();
+	SetActorRotation(FRotator(0.0f, ToAttacker.Rotation().Yaw, 0.0f));
+	if (GuardAbilityClass == nullptr || !ASC->TryActivateAbilityByClass(GuardAbilityClass))
+	{
+		return;
+	}
+	GetWorldTimerManager().SetTimer(GuardTimer, FTimerDelegate::CreateWeakLambda(this, [this]()
+	{
+		if (UCrossguardAbilitySystemComponent* GuardASC = GetCrossguardAbilitySystemComponent())
+		{
+			const FGameplayTagContainer GuardTag(CrossguardTags::Ability_Guard);
+			GuardASC->CancelAbilities(&GuardTag);
+		}
+	}), Seconds, false);
 }

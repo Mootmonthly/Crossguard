@@ -11,11 +11,12 @@ UCrossguardGameplayAbility::UCrossguardGameplayAbility()
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 	CooldownGameplayEffectClass = UCrossguardCooldownEffect::StaticClass();
-	// No casting while dead, Muted, Silenced, or in dragon form (Dragonification's own skills opt
+	// No casting while dead, Muted, Silenced, Stunned, or in dragon form (Dragonification's own skills opt
 	// back in).
 	ActivationBlockedTags.AddTag(CrossguardTags::State_Dead);
 	ActivationBlockedTags.AddTag(CrossguardTags::State_Muted);
 	ActivationBlockedTags.AddTag(CrossguardTags::State_Silenced);
+	ActivationBlockedTags.AddTag(CrossguardTags::State_Stunned);
 	ActivationBlockedTags.AddTag(CrossguardTags::State_Dragonified);
 }
 

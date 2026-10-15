@@ -64,12 +64,12 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 
 | Item | Needs | Notes |
 | --- | --- | --- |
-| Remaining skill parts | Code, Decision | Neckbite for players (needs Beastial forms), Pet Gem (Tiger) item, Hunter's Tracking hearing range (needs sound), Triple Thrust piercing (needs blocking), Arcane Arrows dropoff (needs arrow dropoff). |
+| Remaining skill parts | Code, Decision | Neckbite for players (needs Beastial forms), Pet Gem (Tiger) item, Hunter's Tracking hearing range (needs sound), Arcane Arrows dropoff (needs arrow dropoff). |
 | Stealth teammate indicator | Editor | Party members see a purple outline around a stealthed ally (with the visual assets). |
 | Skill visuals | Editor | Fireball, breath, shield, Blind screen effect, dragon form, skeleton meshes. |
 | Passives on others and free-text mechanics | Code | Data-driven passives cover Self stat modifiers (masteries, Heroic Might, Cor Leonis, ...); party auras, on-hit slows and mechanics like Hunter's Tracking still need code. |
-| Block (shields) and parry | Code | Right-click actions already chosen by the rules; not built. |
-| Status effects | Code | Stun, Root. (Slow, Mute, Silence, Blind and Attack Damage shields exist.) |
+| Block (shields) and parry | Editor | Built in code: hold right click; Impact Power decides; stun, riposte, AI guards. Needs animations and a guard visual. |
+| Status effects | Code | Root. (Slow, Mute, Silence, Stun, Blind and Attack Damage shields exist.) |
 | Minion meshes | Editor | Meshes for skeletons, tiger and demon (cylinders now). All three summons exist, Minion CDR applies to them, and minions and monsters use their skills. |
 | Animations, first-person arms | Editor | Melee hits are sphere sweeps until weapon collision exists. |
 | Weapon-on-weapon collision (fencing) | Code, Editor | |
@@ -128,7 +128,6 @@ Decisions that block items above. Answers go into design-decisions.md.
 | Respec price? | Store |
 | Jewelry, quarterstaffs, two-handed pavise shields, the Beastial transformation for Neckbite | Later content |
 | Tiger attack speed, Demon size? | Summon Tiger, Summon Greater Demon (currently: 1 s; 1.5×) |
-| Block and parry: how much a shield block stops, the parry window, what a parry does | Block and parry, Triple Thrust piercing |
 | Real drop rates: what each monster and chest drops, and rarity odds | Loot tables (placeholders now) |
 | More monsters: enter them in the Mob Forge (https://claude.ai/artifact/JPDt46urNPnzMsgZuD7RYW) | Monster AI |
 

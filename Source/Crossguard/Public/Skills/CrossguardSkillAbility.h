@@ -45,7 +45,7 @@ public:
 	// Applies Spec to Target unless it grants a crowd-control state Target is immune to.
 	static void ApplyOnHitSpec(const FGameplayEffectSpecHandle& Spec, UAbilitySystemComponent* Target);
 
-	// Crowd control (docs/design-decisions.md): Slow, Blind, knock-up, Silence (later Stun, Root).
+	// Crowd control (docs/design-decisions.md): Slow, Blind, knock-up, Silence, Stun (later Root).
 	// Mute is not crowd control.
 	static bool IsCrowdControl(const FGameplayTag& State);
 	// [Immutable]: State.CCImmune, or the Immutable passive while not Muted.

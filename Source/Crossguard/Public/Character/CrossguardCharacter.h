@@ -22,6 +22,7 @@ class UCrossguardEquipmentComponent;
 class UCrossguardWeaponAttackAbility;
 class UCrossguardLoadoutComponent;
 class UCrossguardTradeComponent;
+class UCrossguardGuardAbility;
 class UCrossguardTrackingComponent;
 struct FOnAttributeChangeData;
 
@@ -356,6 +357,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Combat")
 	TSubclassOf<UCrossguardWeaponAttackAbility> OffHandAttackAbilityClass;
 
+	// Block and parry (right click held). Granted on possession.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Combat")
+	TSubclassOf<UCrossguardGuardAbility> GuardAbilityClass;
+
 	// Set its ItemTable in the character Blueprint.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Inventory")
 	TObjectPtr<UCrossguardInventoryComponent> InventoryComponent;
@@ -399,6 +404,8 @@ private:
 	void OnSkillWheelClosed();
 	void OnCastSkill();
 	void OnSecondary();
+	// Right click released: the guard drops.
+	void OnSecondaryReleased();
 
 	UFUNCTION(Server, Reliable)
 	void ServerInteract();

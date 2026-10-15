@@ -13,6 +13,7 @@ UCrossguardPassiveAbility::UCrossguardPassiveAbility()
 	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Muted);
 	// Silence stops activating skills only; passives stay on.
 	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Silenced);
+	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Stunned);
 	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Dragonified);
 }
 

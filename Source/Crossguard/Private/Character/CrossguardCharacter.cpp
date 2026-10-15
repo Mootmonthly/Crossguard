@@ -5,6 +5,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Combat/CrossguardGuard.h"
 #include "Combat/CrossguardWeaponAttackAbility.h"
 #include "Crossguard.h"
 #include "CrossguardRules/Economy.h"
@@ -55,6 +56,7 @@ ACrossguardCharacter::ACrossguardCharacter()
 	TrackingComponent->SetupAttachment(GetRootComponent());
 	WeaponAttackAbilityClass = UCrossguardWeaponAttackAbility::StaticClass();
 	OffHandAttackAbilityClass = UCrossguardOffHandAttackAbility::StaticClass();
+	GuardAbilityClass = UCrossguardGuardAbility::StaticClass();
 
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
 	GetCharacterMovement()->MaxFlySpeed = BaseWalkSpeed;
@@ -169,6 +171,7 @@ void ACrossguardCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	Input->BindAction(AttackAction, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnAttack);
 	Input->BindAction(AttackAction, ETriggerEvent::Completed, this, &ACrossguardCharacter::OnAttackReleased);
 	Input->BindAction(SecondaryActionInput, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnSecondary);
+	Input->BindAction(SecondaryActionInput, ETriggerEvent::Completed, this, &ACrossguardCharacter::OnSecondaryReleased);
 	Input->BindAction(InteractAction, ETriggerEvent::Started, this, &ACrossguardCharacter::TryInteract);
 	Input->BindAction(WeaponSet1Action, ETriggerEvent::Started, this, &ACrossguardCharacter::OnWeaponSet1);
 	Input->BindAction(WeaponSet2Action, ETriggerEvent::Started, this, &ACrossguardCharacter::OnWeaponSet2);
@@ -441,6 +444,10 @@ void ACrossguardCharacter::PossessedBy(AController* NewController)
 				AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AttackClass, 1, INDEX_NONE, this));
 			}
 		}
+		if (GuardAbilityClass != nullptr)
+		{
+			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(GuardAbilityClass, 1, INDEX_NONE, this));
+		}
 		ApplyDebugLoadout();
 	}
 }
@@ -555,10 +562,22 @@ bool ACrossguardCharacter::TrySecondaryAction()
 		return OffHandAttackAbilityClass != nullptr && AbilitySystemComponent->TryActivateAbilityByClass(OffHandAttackAbilityClass);
 	case ECrossguardSecondaryAction::Block:
 	case ECrossguardSecondaryAction::Parry:
+		// Held: raised once, kept until released.
+		if (AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Guarding))
+		{
+			return true;
+		}
+		return GuardAbilityClass != nullptr && AbilitySystemComponent->TryActivateAbilityByClass(GuardAbilityClass);
 	case ECrossguardSecondaryAction::None:
 		return false;
 	}
 	return false;
+}
+
+void ACrossguardCharacter::OnSecondaryReleased()
+{
+	const FGameplayTagContainer GuardTag(CrossguardTags::Ability_Guard);
+	AbilitySystemComponent->CancelAbilities(&GuardTag);
 }
 
 bool ACrossguardCharacter::TryWeaponAttack()

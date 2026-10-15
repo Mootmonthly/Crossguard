@@ -5,6 +5,7 @@
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Combat/CrossguardGuard.h"
 #include "Combat/CrossguardProjectile.h"
 #include "Engine/World.h"
 #include "Items/CrossguardEquipmentComponent.h"
@@ -21,6 +22,8 @@ UCrossguardWeaponAttackAbility::UCrossguardWeaponAttackAbility()
 	// Basic attacks still work while Muted or Silenced.
 	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Muted);
 	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Silenced);
+	// No attacking while guarding (Stunned stays blocked).
+	ActivationBlockedTags.AddTag(CrossguardTags::State_Guarding);
 	DefaultProjectileClass = ACrossguardProjectile::StaticClass();
 }
 
@@ -118,6 +121,8 @@ void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecH
 		{
 		case ECrossguardAttackDelivery::MeleeSwing:
 		{
+			// AI in reach may raise its guard (instant swings until animations exist).
+			CrossguardGuard::NotifyMeleeAttack(ActorInfo->AvatarActor.Get(), MeleeRange + MeleeRadius);
 			const TArray<AActor*> Hit = PerformMeleeSwing(Spec);
 			for (AActor* Target : Hit)
 			{
@@ -268,6 +273,11 @@ FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCros
 		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeStatusSpec(ASC, CrossguardTags::State_Silenced, NeckbiteSilenceSeconds));
 		Riders.bSilence = true;
 	}
+	// A parry's riposte: any attack.
+	if (Ready(CrossguardTags::State_NextAttack_Riposte, true))
+	{
+		Riders.AttackBonusAdd += static_cast<float>(CrossguardGuard::Config().ParryAttackDamageBonus);
+	}
 	if (!UsedUp.IsEmpty())
 	{
 		ASC->RemoveActiveEffectsWithGrantedTags(UsedUp);
@@ -353,6 +363,7 @@ FGameplayEffectSpecHandle UCrossguardWeaponAttackAbility::MakeWeaponDamageSpec(c
 	}
 	Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, Attack);
 	Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, Magic);
+	Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_AttackBonus, Riders.AttackBonusAdd);
 	return Spec;
 }
 
@@ -363,12 +374,18 @@ bool UCrossguardWeaponAttackAbility::ApplyDamageTo(AActor* Target, const FGamepl
 	{
 		return false;
 	}
-	if (UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target))
+	if (UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target) == nullptr)
 	{
-		GetAbilitySystemComponentFromActorInfo()->ApplyGameplayEffectSpecToTarget(*Spec.Data, TargetASC);
-		return true;
+		return false;
 	}
-	return false;
+	// Through the target's guard (block and parry); a stopped hit counts as no hit (no on-hit effects).
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+	FCrossguardHit Hit;
+	Hit.Attacker = Avatar;
+	Hit.ImpactPower = CrossguardGuard::ImpactPowerOf(Avatar);
+	FRotator Unused;
+	Avatar->GetActorEyesViewPoint(Hit.Origin, Unused);
+	return CrossguardGuard::ApplyHit(GetAbilitySystemComponentFromActorInfo(), Target, Spec, Hit) > 0.0f;
 }
 
 TArray<AActor*> UCrossguardWeaponAttackAbility::PerformMeleeSwing(const FGameplayEffectSpecHandle& Spec) const
@@ -453,6 +470,7 @@ void UCrossguardWeaponAttackAbility::SpawnProjectile(const FGameplayEffectSpecHa
 	if (Projectile != nullptr)
 	{
 		Projectile->DamageSpec = Spec;
+		Projectile->ImpactPower = CrossguardGuard::ImpactPowerOf(Avatar);
 		Projectile->OnHitSpecs = Riders.OnHitSpecs;
 		Projectile->bCancelSkillsOnHit = Riders.bCancelSkills;
 		Projectile->FinishSpawning(SpawnTransform);

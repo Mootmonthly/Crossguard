@@ -7,6 +7,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Character/CrossguardAICharacter.h"
+#include "Combat/CrossguardGuard.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/World.h"
@@ -155,7 +156,12 @@ void UCrossguardShootingStarAbility::DamagePath() const
 		if (TargetASC != nullptr && !Damaged.Contains(Target))
 		{
 			Damaged.Add(Target);
-			ASC->ApplyGameplayEffectSpecToTarget(*Spec.Data, TargetASC);
+			// Through the target's guard, coming from where the dash started.
+			FCrossguardHit GuardHit;
+			GuardHit.Attacker = Character;
+			GuardHit.ImpactPower = CrossguardGuard::ImpactPowerOf(Character);
+			GuardHit.Origin = DashStart;
+			CrossguardGuard::ApplyHit(ASC, Target, Spec, GuardHit);
 		}
 	}
 }

@@ -55,6 +55,7 @@ void ACrossguardMonster::ApplyMobData()
 	bWieldsWeapon = Row->bWieldsWeapon;
 	WeaponType = Row->WeaponType;
 	bTwoHandedWeapon = Row->bTwoHandedWeapon;
+	ImpactPower = Row->ImpactPower;
 	FixedHealth = Row->Health;
 	AttackDamage = Row->AttackDamage;
 	AttackInterval = Row->AttackInterval;

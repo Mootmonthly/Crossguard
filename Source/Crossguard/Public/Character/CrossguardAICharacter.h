@@ -92,6 +92,13 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|AI", meta = (EditCondition = "bWieldsWeapon"))
 	bool bTwoHandedWeapon = false;
 
+	// Block and parry: what its attacks and its guard weigh (its weapon's; 3 for natural attacks).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|AI", meta = (ClampMin = "0"))
+	int32 ImpactPower = 3;
+
+	// Server. Raises its guard toward Attacker for Seconds (it reacts to swings: CrossguardGuard).
+	void RaiseGuard(AActor* Attacker, float Seconds);
+
 	// Skill ids (Data/Skills/Skills.json), granted on possession.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|AI")
 	TArray<FName> SkillIds;
@@ -144,6 +151,7 @@ private:
 
 	double NextAttackTime = 0.0;
 	double NextSkillCheckTime = 0.0;
+	FTimerHandle GuardTimer;
 	TWeakObjectPtr<AActor> SkillAimTarget;
 
 	TArray<FGameplayAbilitySpecHandle> GrantedSkills;

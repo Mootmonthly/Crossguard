@@ -12,6 +12,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/RootMotionSource.h"
 #include "AIController.h"
+#include "Combat/CrossguardGuard.h"
 #include "Character/CrossguardAICharacter.h"
 #include "Character/CrossguardCharacter.h"
 #include "EngineUtils.h"
@@ -93,13 +94,22 @@ namespace
 			? Ground.ImpactPoint : Point - FVector(0.0f, 0.0f, 90.0f);
 	}
 
-	void ApplyToTarget(UAbilitySystemComponent* Source, AActor* Target, const FGameplayEffectSpecHandle& Spec)
+	// Through the target's guard (block and parry), with the caster's weapon. True if any of the
+	// hit went through.
+	bool ApplyToTarget(UAbilitySystemComponent* Source, AActor* Target, const FGameplayEffectSpecHandle& Spec, bool bPiercing = false)
 	{
-		UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
-		if (Source != nullptr && TargetASC != nullptr && Spec.IsValid())
+		AActor* Caster = Source != nullptr ? Source->GetAvatarActor() : nullptr;
+		if (Caster == nullptr || UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target) == nullptr || !Spec.IsValid())
 		{
-			Source->ApplyGameplayEffectSpecToTarget(*Spec.Data, TargetASC);
+			return false;
 		}
+		FCrossguardHit Hit;
+		Hit.Attacker = Caster;
+		Hit.ImpactPower = CrossguardGuard::ImpactPowerOf(Caster);
+		Hit.bPiercing = bPiercing;
+		FRotator Unused;
+		Caster->GetActorEyesViewPoint(Hit.Origin, Unused);
+		return CrossguardGuard::ApplyHit(Source, Target, Spec, Hit) > 0.0f;
 	}
 
 	FGameplayTagContainer MeleeTags()
@@ -399,7 +409,8 @@ void UCrossguardTripleThrustAbility::Thrust()
 		if (Target != nullptr && Target != Avatar && !Hit.Contains(Target))
 		{
 			Hit.Add(Target);
-			ApplyToTarget(GetAbilitySystemComponentFromActorInfo(), Target, Spec);
+			// Piercing: through a guard that would stop it, for half.
+			ApplyToTarget(GetAbilitySystemComponentFromActorInfo(), Target, Spec, true);
 		}
 	}
 }
@@ -478,9 +489,10 @@ void UCrossguardPartingTheLandAbility::ActivateAbility(const FGameplayAbilitySpe
 				continue;
 			}
 			Hit.Add(Target);
-			ApplyToTarget(ASC, Target, Spec);
+			// A guard that stops the strike stops the knock-up too.
+			const bool bThrough = ApplyToTarget(ASC, Target, Spec);
 			// Knock-up: crowd control. Not on a body.
-			if (!IsCrowdControlImmune(TargetASC) && !TargetASC->HasMatchingGameplayTag(CrossguardTags::State_Dead))
+			if (bThrough && !IsCrowdControlImmune(TargetASC) && !TargetASC->HasMatchingGameplayTag(CrossguardTags::State_Dead))
 			{
 				ApplyStatus(ASC, TargetASC, CrossguardTags::State_KnockedUp, PartingKnockUpSeconds);
 				if (ACharacter* Character = Cast<ACharacter>(Target))

@@ -1614,6 +1614,8 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::Throw(int32 Index, con
 	}
 	Projectile->DamageSpec = MakeDamageSpec(Row.ThrowDamage + Row.ThrowDamagePerRarity * RarityLevel);
 	Projectile->ExplosionRadius = Row.ThrowRadiusMeters * 100.0f;
+	// Guards (block and parry) stop a thrown weapon by its Impact Power; never an explosion.
+	Projectile->ImpactPower = Projectile->ExplosionRadius > 0.0f ? 0 : Row.ImpactPower;
 	if (Row.ThrowDotPerSecond > 0.0f && Row.ThrowDotSeconds > 0.0f)
 	{
 		Projectile->DotSpec = MakeDamageSpec(Row.ThrowDotPerSecond);

@@ -89,7 +89,9 @@ void UCrossguardDamageExecution::Execute_Implementation(const FGameplayEffectCus
 		Crossguard::FDamageInput Input;
 		Input.Base = AttackBase;
 		Input.Flat = Capture(ExecutionParams, EvalParams, Statics.AdditionalAttackDamageDef);
-		Input.Bonus = Capture(ExecutionParams, EvalParams, Statics.AttackDamageBonusDef);
+		// Plus this hit's own bonus (a parry's riposte).
+		Input.Bonus = Capture(ExecutionParams, EvalParams, Statics.AttackDamageBonusDef)
+			+ Spec.GetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_AttackBonus, false, 0.0f);
 		Input.Coefficient = Coefficient;
 		Input.Resistance = Capture(ExecutionParams, EvalParams, Statics.AttackResistanceDef);
 		Input.Penetration = Capture(ExecutionParams, EvalParams, Statics.AttackPenetrationDef);

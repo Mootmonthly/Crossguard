@@ -17,6 +17,8 @@ struct FCrossguardAttackRiders
 	float WeaponFlat = 0.0f;
 	float AttackAdd = 0.0f;
 	float MagicAdd = 0.0f;
+	// Extra Attack Damage Bonus for this hit (a parry's riposte: +0.5).
+	float AttackBonusAdd = 0.0f;
 	// Applied to each target hit (slows, damage over time, Mute, heal block).
 	TArray<FGameplayEffectSpecHandle> OnHitSpecs;
 	// [Chop Down]: ends Flight on targets hit.
@@ -68,6 +70,9 @@ struct FCrossguardRiderAttack
 //   cooldown), [Shade Blow] +20 Magic Damage and no healing 5 s, [Gouge] 25 Attack Damage over 5 s
 //   and -5% speed, [Chop Down] (axe) 110%, -50% speed 2 s, ends Flight, [Neckbite] (AI only for
 //   now) +10 Magic Damage and a 2 s Silence (running skills stop).
+// - Any attack: a parry's riposte, +50% Attack Damage Bonus.
+// Guards: every hit goes through CrossguardGuard::ApplyHit (block and parry by Impact Power); a hit a
+// guard stops carries no on-hit effects.
 // - Bow / crossbow: [Purge Shot] +10 Magic Damage and a 3 s Mute.
 // Always on: [Arcane Arrows] +5 Magic Damage on bow attacks while active; [Splinter of Winter]
 // +5 Magic Damage and -10% speed 3 s on dagger attacks.

@@ -23,6 +23,9 @@ public:
 	// Set by the spawner before FinishSpawning. Server only.
 	FGameplayEffectSpecHandle DamageSpec;
 
+	// What it hits with, for guards (block and parry): the weapon's Impact Power. 0: no guard stops it.
+	int32 ImpactPower = 0;
+
 	// Applied to an actor it hits after DamageSpec (next-attack skills such as [Purge Shot]).
 	TArray<FGameplayEffectSpecHandle> OnHitSpecs;
 	// The hit stops the target's running skills (a Mute in OnHitSpecs).

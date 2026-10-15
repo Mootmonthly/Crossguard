@@ -18,6 +18,7 @@ namespace CrossguardTags
 
 	// SetByCaller magnitudes.
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_Damage_Attack);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_Damage_AttackBonus);
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_Damage_Magic);
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_Healing_Physical);
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(SetByCaller_Healing_Magical);
@@ -29,6 +30,8 @@ namespace CrossguardTags
 	// Mute: no skills can be cast and passive skills stop working (basic attacks still work).
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Muted);
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Silenced);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Stunned);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Guarding);
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Slowed);
 	// The screen flashes white (Shooting Star); the HUD reacts to this tag.
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Blinded);
@@ -44,6 +47,7 @@ namespace CrossguardTags
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_NextAttack_Gouge);
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_NextAttack_PurgeShot);
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_NextAttack_Neckbite);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_NextAttack_Riposte);
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_ArcaneArrows);
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_HealBlocked);
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Stealthed);
@@ -56,6 +60,7 @@ namespace CrossguardTags
 
 	// Ability tags (cancel by tag).
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Flight);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Guard);
 
 	// One cooldown tag per native skill.
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Dragonification);

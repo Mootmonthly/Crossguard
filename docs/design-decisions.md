@@ -135,7 +135,7 @@ Rulings for the first skills built in C++ (defaults proposed and accepted, plus 
 | Benediction | Target under the crosshair within 15 m is healed to full, ally or enemy. Aimed at a body still in its revive window: a full revive (unlooted gear back); if both a character and a body are in line, the nearer one. Nobody: yourself. Shade Blow's heal block stops the heal but not a revive. |
 | Quickshot, Arcane Arrows, Unleash | Self buffs. Unleash doubles STR / AGI / INT (gear and buffs included) for 15 s. Arcane Arrows' dropoff part waits until arrows have damage dropoff. |
 | Cleave | 85% of the main-hand weapon's damage to everyone in a 3 m, 120° arc in front, allies too. |
-| Triple Thrust | Three thrusts 0.15 s apart, each spear damage +15, 2.5 m reach. Piercing waits for blocking. |
+| Triple Thrust | Three thrusts 0.15 s apart, each spear damage +15, 2.5 m reach. Piercing: a hit a guard would stop deals 50% instead. |
 | Parting the Land | 8 m × 2 m strip ahead: 65 Attack Damage and a knock-up to everyone in it; a 15 s Wall along each side. |
 | Hunter's Leap | Art (Skill Forge change). 0.5 m per AGI point forward, 1.5 m high, 0.6 s. |
 | Like A Lion, He Leapt | (Skill Forge.) Leaps at the nearest enemy within 30 m: players first, then monsters and minions; stealthed enemies are skipped; needs line of sight (walls and other world geometry block it, characters do not). Lands 1.5 m short. STR ×1.2 for 6 s. No enemy in range: fails, no cooldown. |
@@ -336,7 +336,7 @@ point of interest instead of only using fixed extraction points. Ruled details:
 - **Dual wielding**: any one-handed weapon fits the off hand. Left click attacks with the main
   hand, right click with the off hand. With a shield in the off hand, right click blocks. With the
   off hand empty, right click parries if the main-hand weapon can parry: every two-handed weapon
-  except bows, and selected one-handed weapons (none chosen yet). Block and parry are not built.
+  except bows, and selected one-handed weapons (none chosen yet). See Block and parry below.
 - A two-handed weapon cannot be used with a shield (two-handed pavise shields come later).
 - Masteries match weapon type regardless of handedness (Sword Mastery covers both swords).
 - Staffs: the Two-Handed Staff is a magic weapon (`MagicStaff`) and does not count for Trauma
@@ -399,6 +399,42 @@ All values live in one config (`FScalingConfig` in `CrossguardRules`):
 - ADB, AR, Active cast time / CDR, PHB: 0% at 10 STR.
 - Movement Speed 100%, Action Speed 0%, Dexterity, Art cast time / CDR: at 10 AGI.
 - MDB, MR, MHB, Spell cast time / CDR: 0% at 10 INT.
+
+## Block and parry
+
+Right click held: **block** with a shield in the off hand, **parry** with a weapon that can parry
+and an empty off hand (`canParry`). No timing window, no cooldown: hold it as long as you like.
+While held: half movement speed, no attacks (skills still work). It faces where you look (the mouse
+moves it) and stops only Attack Damage hits that meet it: from within 50° of where it faces
+(assumption), arrows included. Magic Damage always goes through (a skill may change that later).
+
+Every weapon has an **Impact Power** (`impactPower`, Weapons.json): dagger 1, one-handed sword 3,
+shield 4, one-handed axe 4, spear 5, two-handed sword 5, two-handed axe 6, bow 3; placeholders wand
+1, two-handed staff 4, throwing knife 1, throwing axe 3, natural attacks (claws, unarmed mobs) 3.
+An explosion has none and is never stopped. When a hit meets a guard, the difference decides:
+
+| Difference | Loser |
+| --- | --- |
+| 0 | Nothing happens; the hit is stopped. |
+| 1 | Takes 25% of the winner's hit. |
+| 2 | Takes 50%, stunned 0.5 s. |
+| 3 or more | Takes 100%, stunned 1 s. |
+
+- The attacker wins: the defender takes that share of the hit (and the stun).
+- The defender wins (mirror rule): the hit is stopped; the attacker takes that share of the
+  defender's weapon damage (a shield deals none) and the stun.
+- A **parry** the defender does not lose (a tie or a win): the next attack within 3 s gets +50%
+  Attack Damage Bonus, and +10% Action Speed for 3 s.
+- Skills that deal Attack Damage (Cleave, Triple Thrust, Shooting Star, Parting the Land) are
+  checked the same way with the caster's weapon. Triple Thrust pierces: a hit the guard would stop
+  deals 50% instead. Parting the Land's knock-up only lands if its damage does.
+- A stopped hit carries no on-hit effects (slows, Mute, Silence).
+- **Stun** is crowd control (Immutable makes you immune): no moving, attacking, guarding or skills;
+  running skills and the guard stop.
+- A missed guard is its own punishment: the hit lands in full.
+- Monsters and summons guard too: when a melee attack starts against one in reach, it raises its
+  guard toward the attacker half the time, for 1 s (assumption), with its weapon's Impact Power
+  (3 unarmed).
 
 ## Trading
 

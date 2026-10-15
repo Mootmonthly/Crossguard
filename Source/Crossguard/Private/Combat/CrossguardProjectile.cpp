@@ -2,9 +2,10 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Combat/CrossguardGuard.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 #include "Skills/CrossguardSkillAbility.h"
 #include "Components/SphereComponent.h"
-#include "GameFramework/ProjectileMovementComponent.h"
 
 ACrossguardProjectile::ACrossguardProjectile()
 {
@@ -51,7 +52,18 @@ void ACrossguardProjectile::HandleImpact(AActor* OtherActor, const FHitResult& H
 	{
 		if (UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor))
 		{
-			TargetASC->ApplyGameplayEffectSpecToSelf(*DamageSpec.Data);
+			// Through the target's guard: it comes from back along the flight.
+			FCrossguardHit GuardHit;
+			GuardHit.Attacker = GetInstigator();
+			GuardHit.ImpactPower = ImpactPower;
+			GuardHit.Origin = GetActorLocation() - Movement->Velocity.GetSafeNormal() * 1000.0f;
+			const float Through = CrossguardGuard::ApplyHit(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetInstigator()), OtherActor,
+				DamageSpec, GuardHit);
+			if (Through <= 0.0f)
+			{
+				Destroy();
+				return;
+			}
 			for (const FGameplayEffectSpecHandle& OnHit : OnHitSpecs)
 			{
 				UCrossguardSkillAbility::ApplyOnHitSpec(OnHit, TargetASC);

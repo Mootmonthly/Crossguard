@@ -193,6 +193,8 @@ protected:
 	bool bWieldsWeapon = false;
 	ECrossguardWeaponType WeaponType = ECrossguardWeaponType::Sword;
 	bool bTwoHandedWeapon = false;
+	// Block and parry: natural attacks 3.
+	int32 ImpactPower = 3;
 	TArray<FName> Skills;
 };
 

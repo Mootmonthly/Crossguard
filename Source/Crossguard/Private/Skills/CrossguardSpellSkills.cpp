@@ -428,6 +428,7 @@ void UCrossguardSummonCompanionAbility::ActivateAbility(const FGameplayAbilitySp
 				Minion.bWieldsWeapon = bWieldsWeapon;
 				Minion.WeaponType = WeaponType;
 				Minion.bTwoHandedWeapon = bTwoHandedWeapon;
+				Minion.ImpactPower = ImpactPower;
 				Minion.SkillIds = Skills;
 				Minion.SkillCatalog = Catalog;
 			},
@@ -482,5 +483,7 @@ UCrossguardSummonGreaterDemonAbility::UCrossguardSummonGreaterDemonAbility()
 	bWieldsWeapon = true;
 	WeaponType = ECrossguardWeaponType::Sword;
 	bTwoHandedWeapon = true;
+	// A two-handed sword's (Data/Items/Weapons.json).
+	ImpactPower = 5;
 	Skills = {TEXT("mortal_strike"), TEXT("sword_mastery"), TEXT("eldritch_shield"), TEXT("shade_blow")};
 }

@@ -1,0 +1,274 @@
+#include "Combat/CrossguardGuard.h"
+
+#include "AbilitySystem/CrossguardEffects.h"
+#include "AbilitySystem/CrossguardGameplayTags.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
+#include "Character/CrossguardAICharacter.h"
+#include "Crossguard.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
+#include "GameFramework/Pawn.h"
+#include "Items/CrossguardEquipmentComponent.h"
+#include "Items/CrossguardItemTypes.h"
+#include "Skills/CrossguardSkillAbility.h"
+
+namespace
+{
+	// Assumption: an AI raises its guard against half of the melee attacks aimed at it, for this long.
+	constexpr float AIGuardChance = 0.5f;
+	constexpr float AIGuardSeconds = 1.0f;
+	// Long enough to outlast any guard: removed when the guard ends.
+	constexpr float GuardSlowSeconds = 3600.0f;
+
+	// What a raised guard is made of.
+	struct FGuardInfo
+	{
+		int32 ImpactPower = 0;
+		bool bShield = false;
+		// The defender's weapon damage, for the mirror rule (0 for a shield).
+		float WeaponDamage = 0.0f;
+	};
+
+	bool GetGuardInfo(const AActor* Defender, FGuardInfo& Out)
+	{
+		if (const ACrossguardAICharacter* AI = Cast<ACrossguardAICharacter>(Defender))
+		{
+			Out.ImpactPower = AI->ImpactPower;
+			Out.WeaponDamage = AI->AttackDamage;
+			return true;
+		}
+		const UCrossguardEquipmentComponent* Equipment = Defender != nullptr ? Defender->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
+		if (Equipment == nullptr)
+		{
+			return false;
+		}
+		switch (Equipment->GetSecondaryAction())
+		{
+		case ECrossguardSecondaryAction::Block:
+			if (const FCrossguardWeaponRow* Shield = Equipment->GetWeaponRow(ECrossguardEquipmentSlot::OffHand))
+			{
+				Out.ImpactPower = Shield->ImpactPower;
+				Out.bShield = true;
+				return true;
+			}
+			return false;
+		case ECrossguardSecondaryAction::Parry:
+			if (const FCrossguardWeaponRow* Weapon = Equipment->GetWeaponRow(ECrossguardEquipmentSlot::MainHand))
+			{
+				Out.ImpactPower = Weapon->ImpactPower;
+				Out.WeaponDamage = Weapon->Stat == ECrossguardWeaponStat::AttackDamage
+					? UCrossguardItemLibrary::GetWeaponValue(*Weapon, Equipment->GetItem(ECrossguardEquipmentSlot::MainHand).Rarity) : 0.0f;
+				return true;
+			}
+			return false;
+		default:
+			return false;
+		}
+	}
+
+	// Where the guard faces: a player's view (the mouse moves it); an AI's body.
+	FVector GuardFacing(const AActor* Defender)
+	{
+		if (Defender->IsA<ACrossguardAICharacter>())
+		{
+			return Defender->GetActorForwardVector();
+		}
+		const APawn* Pawn = Cast<APawn>(Defender);
+		return Pawn != nullptr ? Pawn->GetBaseAimRotation().Vector() : Defender->GetActorForwardVector();
+	}
+
+	void CancelGuard(UAbilitySystemComponent* ASC)
+	{
+		const FGameplayTagContainer GuardTag(CrossguardTags::Ability_Guard);
+		ASC->CancelAbilities(&GuardTag);
+	}
+}
+
+namespace CrossguardGuard
+{
+	const Crossguard::FGuardConfig& Config()
+	{
+		static const Crossguard::FGuardConfig GuardConfig;
+		return GuardConfig;
+	}
+
+	int32 ImpactPowerOf(const AActor* Attacker)
+	{
+		if (const ACrossguardAICharacter* AI = Cast<ACrossguardAICharacter>(Attacker))
+		{
+			return AI->ImpactPower;
+		}
+		const UCrossguardEquipmentComponent* Equipment = Attacker != nullptr ? Attacker->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
+		const FCrossguardWeaponRow* Weapon = Equipment != nullptr ? Equipment->GetWeaponRow(ECrossguardEquipmentSlot::MainHand) : nullptr;
+		return Weapon != nullptr ? Weapon->ImpactPower : Config().UnarmedImpactPower;
+	}
+
+	bool CanGuard(const AActor* Actor)
+	{
+		FGuardInfo Unused;
+		return GetGuardInfo(Actor, Unused);
+	}
+
+	void Stun(UAbilitySystemComponent* Source, UAbilitySystemComponent* Target, float Seconds)
+	{
+		if (Target == nullptr || Seconds <= 0.0f || UCrossguardSkillAbility::IsCrowdControlImmune(Target))
+		{
+			return;
+		}
+		// Rooted for the duration (Movement Speed × 0), with the state tag.
+		const TMap<FName, float> Rooted = {{TEXT("MoveSpeed"), 0.0f}};
+		UCrossguardSkillAbility::ApplyTimedStats(Source != nullptr ? Source : Target, Target, Rooted, Seconds, true, CrossguardTags::State_Stunned);
+		CancelGuard(Target);
+		UCrossguardSkillAbility::CancelActiveSkills(Target);
+	}
+
+	float ApplyHit(UAbilitySystemComponent* Source, AActor* Target, const FGameplayEffectSpecHandle& Spec, const FCrossguardHit& Hit)
+	{
+		UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
+		if (TargetASC == nullptr || !Spec.IsValid())
+		{
+			return 0.0f;
+		}
+		const auto ApplyAsIs = [Source, TargetASC, &Spec]()
+		{
+			if (Source != nullptr)
+			{
+				Source->ApplyGameplayEffectSpecToTarget(*Spec.Data, TargetASC);
+			}
+			else
+			{
+				TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
+			}
+		};
+
+		const float Attack = Spec.Data->GetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, false, 0.0f);
+		FGuardInfo Guard;
+		if (Attack <= 0.0f || Hit.ImpactPower <= 0 || !TargetASC->HasMatchingGameplayTag(CrossguardTags::State_Guarding)
+			|| !GetGuardInfo(Target, Guard))
+		{
+			ApplyAsIs();
+			return 1.0f;
+		}
+		// Only what reaches the guard's surface: from where it faces.
+		const FVector Facing = GuardFacing(Target);
+		const FVector Incoming = (Hit.Origin - Target->GetActorLocation()).GetSafeNormal();
+		if (!Crossguard::HitMeetsGuard(Config(), Facing.X, Facing.Y, Facing.Z, Incoming.X, Incoming.Y, Incoming.Z))
+		{
+			ApplyAsIs();
+			return 1.0f;
+		}
+
+		const Crossguard::FGuardOutcome Outcome = Crossguard::ResolveGuard(Config(), Hit.ImpactPower, Guard.ImpactPower, Guard.bShield, Hit.bPiercing);
+		UE_LOG(LogCrossguard, Log, TEXT("%s %s %s's hit (Impact Power %d vs %d): %.0f%% through"), *GetNameSafe(Target),
+			Guard.bShield ? TEXT("blocked") : TEXT("parried"), *GetNameSafe(Hit.Attacker), Hit.ImpactPower, Guard.ImpactPower, Outcome.DefenderDamage * 100.0);
+
+		// The defender's share; Magic Damage always goes through.
+		const float Magic = Spec.Data->GetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, false, 0.0f);
+		if (Outcome.DefenderDamage > 0.0 || Magic > 0.0f)
+		{
+			FGameplayEffectSpec Reduced(*Spec.Data);
+			Reduced.SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, Attack * static_cast<float>(Outcome.DefenderDamage));
+			if (Source != nullptr)
+			{
+				Source->ApplyGameplayEffectSpecToTarget(Reduced, TargetASC);
+			}
+			else
+			{
+				TargetASC->ApplyGameplayEffectSpecToSelf(Reduced);
+			}
+		}
+		Stun(Source, TargetASC, static_cast<float>(Outcome.DefenderStunSeconds));
+
+		// Mirror rule: the losing attacker takes the defender's weapon (a shield: nothing) and a stun.
+		UAbilitySystemComponent* AttackerASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Hit.Attacker);
+		if (AttackerASC != nullptr && Outcome.AttackerDamage > 0.0 && Guard.WeaponDamage > 0.0f)
+		{
+			const FGameplayEffectSpecHandle Back = TargetASC->MakeOutgoingSpec(UCrossguardDamageEffect::StaticClass(), 1.0f, TargetASC->MakeEffectContext());
+			if (Back.IsValid())
+			{
+				Back.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, Guard.WeaponDamage * static_cast<float>(Outcome.AttackerDamage));
+				Back.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, 0.0f);
+				TargetASC->ApplyGameplayEffectSpecToTarget(*Back.Data, AttackerASC);
+			}
+		}
+		Stun(TargetASC, AttackerASC, static_cast<float>(Outcome.AttackerStunSeconds));
+
+		// A parry the defender did not lose: the riposte.
+		if (Outcome.bParryBonus)
+		{
+			const float Seconds = static_cast<float>(Config().ParryBonusSeconds);
+			UCrossguardSkillAbility::ApplyStatus(TargetASC, TargetASC, CrossguardTags::State_NextAttack_Riposte, Seconds);
+			const TMap<FName, float> Faster = {{TEXT("ActionSpeed"), static_cast<float>(Config().ParryActionSpeed)}};
+			UCrossguardSkillAbility::ApplyTimedStats(TargetASC, TargetASC, Faster, Seconds, false);
+		}
+		return static_cast<float>(Outcome.DefenderDamage);
+	}
+
+	void NotifyMeleeAttack(AActor* Attacker, float Reach)
+	{
+		UWorld* World = Attacker != nullptr ? Attacker->GetWorld() : nullptr;
+		if (World == nullptr || !Attacker->HasAuthority())
+		{
+			return;
+		}
+		for (TActorIterator<ACrossguardAICharacter> It(World); It; ++It)
+		{
+			ACrossguardAICharacter* AI = *It;
+			if (AI != Attacker && AI->IsAlive() && FVector::Dist(AI->GetActorLocation(), Attacker->GetActorLocation()) <= Reach
+				&& FMath::FRand() < AIGuardChance)
+			{
+				AI->RaiseGuard(Attacker, AIGuardSeconds);
+			}
+		}
+	}
+}
+
+// --- Guard ability --------------------------------------------------------------------------------
+
+UCrossguardGuardAbility::UCrossguardGuardAbility()
+{
+	// Not a skill: no cooldown, and Mute / Silence do not stop it.
+	CooldownGameplayEffectClass = nullptr;
+	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Muted);
+	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Silenced);
+	ActivationOwnedTags.AddTag(CrossguardTags::State_Guarding);
+	SetAssetTags(FGameplayTagContainer(CrossguardTags::Ability_Guard));
+}
+
+bool UCrossguardGuardAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	return Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags) && ActorInfo != nullptr
+		&& CrossguardGuard::CanGuard(ActorInfo->AvatarActor.Get());
+}
+
+void UCrossguardGuardAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+{
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+	if (ActorInfo->IsNetAuthority() && ASC != nullptr)
+	{
+		// Half speed while held.
+		const TMap<FName, float> Slowed = {{TEXT("MoveSpeed"), static_cast<float>(CrossguardGuard::Config().GuardMoveSpeedMultiplier)}};
+		SlowHandle = UCrossguardSkillAbility::ApplyTimedStats(ASC, ASC, Slowed, GuardSlowSeconds, true);
+	}
+	// Held until released (or cancelled by a stun).
+}
+
+void UCrossguardGuardAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+	UAbilitySystemComponent* ASC = ActorInfo != nullptr ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
+	if (ASC != nullptr && SlowHandle.IsValid())
+	{
+		ASC->RemoveActiveGameplayEffect(SlowHandle);
+	}
+	SlowHandle.Invalidate();
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
