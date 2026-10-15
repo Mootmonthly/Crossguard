@@ -1181,3 +1181,28 @@ bool ACrossguardCharacter::CanJumpInternal_Implementation() const
 	return Super::CanJumpInternal_Implementation()
 		&& (AbilitySystemComponent == nullptr || !AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Stunned));
 }
+
+void ACrossguardCharacter::NoteMeleeSwing(int32 InImpactPower, float InWeaponDamage)
+{
+	LastSwingTime = GetWorld()->GetTimeSeconds();
+	LastSwingImpactPower = InImpactPower;
+	LastSwingWeaponDamage = InWeaponDamage;
+	LastSwingFacing = GetActorForwardVector();
+}
+
+bool ACrossguardCharacter::GetActiveSwing(double Now, double Window, int32& OutImpactPower, float& OutWeaponDamage, FVector& OutFacing) const
+{
+	if (LastSwingTime < 0.0 || Now - LastSwingTime > Window)
+	{
+		return false;
+	}
+	OutImpactPower = LastSwingImpactPower;
+	OutWeaponDamage = LastSwingWeaponDamage;
+	OutFacing = LastSwingFacing;
+	return true;
+}
+
+void ACrossguardCharacter::MulticastWeaponClank_Implementation(FVector ImpactPoint)
+{
+	OnWeaponClank(ImpactPoint);
+}

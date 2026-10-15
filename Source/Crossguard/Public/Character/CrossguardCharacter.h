@@ -43,6 +43,21 @@ public:
 
 	// No jumping while stunned.
 	virtual bool CanJumpInternal_Implementation() const override;
+
+	// Server: a melee swing starts. For a moment its blade is in the way: a swing from the front
+	// meeting it clashes (CrossguardGuard).
+	void NoteMeleeSwing(int32 InImpactPower, float InWeaponDamage);
+
+	// Server: the swing still in the way at Now (within Window seconds of its start), if any.
+	bool GetActiveSwing(double Now, double Window, int32& OutImpactPower, float& OutWeaponDamage, FVector& OutFacing) const;
+
+	// Weapons met (a block, a parry or a clash): every machine plays the clank.
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastWeaponClank(FVector ImpactPoint);
+
+	// The clank: hook the bounce-back animation and the sound here (Blueprint).
+	UFUNCTION(BlueprintImplementableEvent, Category = "Crossguard|Combat")
+	void OnWeaponClank(FVector ImpactPoint);
 	UCrossguardAbilitySystemComponent* GetCrossguardAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UCrossguardLoadoutComponent* GetLoadoutComponent() const { return LoadoutComponent; }
 	UCrossguardEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
@@ -468,4 +483,10 @@ private:
 
 	bool bMoveSpeedBound = false;
 	bool bWeaponAttackGranted = false;
+
+	// Server: the last melee swing, for clashes.
+	double LastSwingTime = -1.0;
+	int32 LastSwingImpactPower = 0;
+	float LastSwingWeaponDamage = 0.0f;
+	FVector LastSwingFacing = FVector::ForwardVector;
 };

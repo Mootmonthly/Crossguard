@@ -31,6 +31,11 @@ namespace Crossguard
 		double GuardHalfAngleDegrees = 50.0;
 		// User-approved placeholder: Impact Power of natural attacks (claws, fists).
 		int UnarmedImpactPower = 3;
+		// Ruling: two swinging weapons that meet collide too. Assumption, until swings are animated:
+		// a melee swing's blade is in the way this long after it starts.
+		double ClashWindowSeconds = 0.25;
+		// Ruling: every collision clanks and bounces both back. Assumption: the push (cm/s).
+		double BounceSpeed = 300.0;
 	};
 
 	struct FGuardOutcome

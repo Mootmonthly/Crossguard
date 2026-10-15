@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Character/CrossguardAICharacter.h"
+#include "Character/CrossguardCharacter.h"
 #include "Crossguard.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -82,6 +83,37 @@ namespace
 		return Pawn != nullptr ? Pawn->GetBaseAimRotation().Vector() : Defender->GetActorForwardVector();
 	}
 
+	// Pushes a character back along Away (and its owning client, which predicts its movement).
+	void Bounce(AActor* Actor, const FVector& Away)
+	{
+		ACrossguardCharacter* Character = Cast<ACrossguardCharacter>(Actor);
+		if (Character == nullptr)
+		{
+			return;
+		}
+		const FVector Velocity = Away.GetSafeNormal2D() * static_cast<float>(CrossguardGuard::Config().BounceSpeed);
+		Character->LaunchCharacter(Velocity, true, false);
+		if (Character->IsPlayerControlled() && !Character->IsLocallyControlled())
+		{
+			Character->ClientLaunch(Velocity);
+		}
+	}
+
+	// Weapons met: both bounce back from the point of impact, and every machine plays the clank.
+	void Clank(AActor* Defender, const FCrossguardHit& Hit)
+	{
+		const FVector Point = Hit.bRanged ? Defender->GetActorLocation() : (Defender->GetActorLocation() + Hit.Origin) * 0.5f;
+		Bounce(Defender, Defender->GetActorLocation() - Hit.Origin);
+		if (!Hit.bRanged && Hit.Attacker != nullptr)
+		{
+			Bounce(Hit.Attacker, Hit.Attacker->GetActorLocation() - Defender->GetActorLocation());
+		}
+		if (ACrossguardCharacter* Character = Cast<ACrossguardCharacter>(Defender))
+		{
+			Character->MulticastWeaponClank(Point);
+		}
+	}
+
 	void CancelGuard(UAbilitySystemComponent* ASC)
 	{
 		const FGameplayTagContainer GuardTag(CrossguardTags::Ability_Guard);
@@ -149,15 +181,27 @@ namespace CrossguardGuard
 		};
 
 		const float Attack = Spec.Data->GetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, false, 0.0f);
+		// What is in the way: a raised guard, or (melee only) the target's own swing, still moving
+		// (two swinging weapons collide too).
 		FGuardInfo Guard;
-		if (Attack <= 0.0f || Hit.ImpactPower <= 0 || !TargetASC->HasMatchingGameplayTag(CrossguardTags::State_Guarding)
-			|| !GetGuardInfo(Target, Guard))
+		FVector Facing = FVector::ZeroVector;
+		bool bClash = false;
+		const bool bGuarding = TargetASC->HasMatchingGameplayTag(CrossguardTags::State_Guarding) && GetGuardInfo(Target, Guard);
+		if (bGuarding)
+		{
+			Facing = GuardFacing(Target);
+		}
+		else if (const ACrossguardCharacter* Swinger = Cast<ACrossguardCharacter>(Target); Swinger != nullptr && !Hit.bRanged)
+		{
+			bClash = Swinger->GetActiveSwing(Target->GetWorld()->GetTimeSeconds(), Config().ClashWindowSeconds, Guard.ImpactPower,
+				Guard.WeaponDamage, Facing);
+		}
+		if (Attack <= 0.0f || Hit.ImpactPower <= 0 || (!bGuarding && !bClash))
 		{
 			ApplyAsIs();
 			return 1.0f;
 		}
-		// Only what reaches the guard's surface: from where it faces.
-		const FVector Facing = GuardFacing(Target);
+		// Only what reaches the guard's (or swinging blade's) surface: from where it faces.
 		const FVector Incoming = (Hit.Origin - Target->GetActorLocation()).GetSafeNormal();
 		if (!Crossguard::HitMeetsGuard(Config(), Facing.X, Facing.Y, Facing.Z, Incoming.X, Incoming.Y, Incoming.Z))
 		{
@@ -167,7 +211,9 @@ namespace CrossguardGuard
 
 		const Crossguard::FGuardOutcome Outcome = Crossguard::ResolveGuard(Config(), Hit.ImpactPower, Guard.ImpactPower, Guard.bShield, Hit.bPiercing);
 		UE_LOG(LogCrossguard, Log, TEXT("%s %s %s's hit (Impact Power %d vs %d): %.0f%% through"), *GetNameSafe(Target),
-			Guard.bShield ? TEXT("blocked") : TEXT("parried"), *GetNameSafe(Hit.Attacker), Hit.ImpactPower, Guard.ImpactPower, Outcome.DefenderDamage * 100.0);
+			bClash ? TEXT("clashed with") : Guard.bShield ? TEXT("blocked") : TEXT("parried"), *GetNameSafe(Hit.Attacker), Hit.ImpactPower,
+			Guard.ImpactPower, Outcome.DefenderDamage * 100.0);
+		Clank(Target, Hit);
 
 		// The defender's share; Magic Damage always goes through.
 		const float Magic = Spec.Data->GetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, false, 0.0f);
@@ -202,8 +248,8 @@ namespace CrossguardGuard
 		}
 		Stun(TargetASC, AttackerASC, static_cast<float>(Outcome.AttackerStunSeconds));
 
-		// A parry the defender did not lose: the riposte.
-		if (Outcome.bParryBonus)
+		// A parry the defender did not lose: the riposte (a clash is no parry).
+		if (Outcome.bParryBonus && !bClash)
 		{
 			const float Seconds = static_cast<float>(Config().ParryBonusSeconds);
 			UCrossguardSkillAbility::ApplyStatus(TargetASC, TargetASC, CrossguardTags::State_NextAttack_Riposte, Seconds);

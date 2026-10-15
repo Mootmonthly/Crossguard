@@ -307,6 +307,7 @@ bool ACrossguardAICharacter::TryAttack(AActor* Target)
 		{
 			// Through the target's guard; AI in reach may raise theirs first.
 			CrossguardGuard::NotifyMeleeAttack(this, AttackRange, Target);
+			NoteMeleeSwing(ImpactPower, AttackDamage);
 			FCrossguardHit Hit;
 			Hit.Attacker = this;
 			Hit.ImpactPower = ImpactPower;

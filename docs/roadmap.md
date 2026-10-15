@@ -72,7 +72,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Status effects | Code | Root. (Slow, Mute, Silence, Stun, Blind and Attack Damage shields exist.) |
 | Minion meshes | Editor | Meshes for skeletons, tiger and demon (cylinders now). All three summons exist, Minion CDR applies to them, and minions and monsters use their skills. |
 | Animations, first-person arms | Editor | Melee hits are sphere sweeps until weapon collision exists. |
-| Weapon-on-weapon collision (fencing) | Code, Editor | |
+| Weapon-on-weapon collision (fencing) | Code, Editor | Clashes are approximated (a swing's blade is in the way 0.25 s); real blade traces need swing animations. Clank animation and sound go in `OnWeaponClank`. |
 
 ## Milestone 3: World and PvE
 

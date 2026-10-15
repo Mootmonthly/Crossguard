@@ -431,6 +431,14 @@ An explosion has none and is never stopped. When a hit meets a guard, the differ
   checked the same way with the caster's weapon. Triple Thrust pierces: a hit the guard would stop
   deals 50% instead. Parting the Land's knock-up only lands if its damage does.
 - A stopped hit carries no on-hit effects (slows, Mute, Silence).
+- **Clashes**: two swinging weapons that meet collide too, with the same Impact Power check (no
+  parry bonus: nobody parried). Until swings are animated (weapon-on-weapon collision along the
+  blade), a melee basic attack's blade counts as in the way for 0.25 s after it starts
+  (assumption): a melee hit from the front in that time clashes with it. The first swing has
+  already landed by then; a real collision with animations replaces this.
+- Every Impact Power check (block, parry, clash) **clanks**: both are pushed back from the point of
+  impact (300 cm/s, assumption) and every machine fires `OnWeaponClank(ImpactPoint)` on the
+  defender's character Blueprint, where the bounce-back animation and the sound go.
 - **Stun** is crowd control (Immutable makes you immune): no moving, jumping, attacking, throwing,
   item use, guarding or skills; running skills and the guard stop. Never on a body.
 - Guarding also stops throwing; a parry's speed bonus does not stack (a new parry restarts it).

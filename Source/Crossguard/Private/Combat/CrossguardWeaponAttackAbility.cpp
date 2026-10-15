@@ -5,6 +5,7 @@
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Character/CrossguardCharacter.h"
 #include "Combat/CrossguardGuard.h"
 #include "Combat/CrossguardProjectile.h"
 #include "Engine/World.h"
@@ -121,8 +122,14 @@ void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecH
 		{
 		case ECrossguardAttackDelivery::MeleeSwing:
 		{
-			// AI in reach may raise its guard (instant swings until animations exist).
+			// AI in reach may raise its guard (instant swings until animations exist); the swing's blade is
+			// in the way for a moment (clashes).
 			CrossguardGuard::NotifyMeleeAttack(ActorInfo->AvatarActor.Get(), MeleeRange + MeleeRadius);
+			if (ACrossguardCharacter* Swinger = Cast<ACrossguardCharacter>(ActorInfo->AvatarActor.Get()))
+			{
+				Swinger->NoteMeleeSwing(CrossguardGuard::ImpactPowerOf(Swinger, Slot),
+					Weapon->Stat == ECrossguardWeaponStat::AttackDamage ? UCrossguardItemLibrary::GetWeaponValue(*Weapon, Item.Rarity) : 0.0f);
+			}
 			const TArray<AActor*> Hit = PerformMeleeSwing(Spec);
 			for (AActor* Target : Hit)
 			{
