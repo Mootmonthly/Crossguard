@@ -29,6 +29,7 @@ public:
 	ACrossguardLootContainer();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void BeginPlay() override;
 
 	// Opens it in the user's inventory, so they can take and put items.
 	virtual void Interact(ACrossguardCharacter* User) override;
@@ -61,6 +62,11 @@ public:
 	// the player left). While the character exists, its own ragdoll is the body.
 	void SetBodyMesh(USkeletalMesh* Mesh, const FTransform& RelativeTransform);
 	void ShowBodyMesh();
+
+	// A treasure chest: filled from this loot table (Data/Loot/LootTables.json) when the raid
+	// starts, through the game mode's Loot. None: starts empty (bodies).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+	FName LootTableId;
 
 	// How close a player must be to open it and move items, in cm.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot", meta = (ClampMin = "0"))

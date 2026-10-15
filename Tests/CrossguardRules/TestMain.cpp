@@ -6,6 +6,7 @@
 #include "CrossguardRules/Inventory.h"
 #include "CrossguardRules/Portal.h"
 #include "CrossguardRules/Items.h"
+#include "CrossguardRules/Loot.h"
 #include "CrossguardRules/Loadout.h"
 #include "CrossguardRules/Progression.h"
 #include "CrossguardRules/Stats.h"
@@ -779,6 +780,103 @@ static void TestPortal()
 	CHECK(Abandoned.Advance(60.0, true) == EPortalState::Collapsed);
 }
 
+static void TestLoot()
+{
+	using namespace Crossguard;
+	FSkillGemRarities Gems{{"fireball", ERarity::Common}, {"heal", ERarity::Common}, {"unleash", ERarity::Epic}, {"cor_leonis", ERarity::Mystic}};
+
+	// Same seed, same loot; drops always come from the entries.
+	FLootTable Table;
+	Table.RollsMin = 2;
+	Table.RollsMax = 4;
+	Table.NothingWeight = 1;
+	Table.RarityWeights = {50, 25, 13, 7, 4, 1};
+	Table.Entries = {{ELootKind::Weapon, "sword_one_handed", 3, 1, 1}, {ELootKind::Gold, "gold_coin", 3, 5, 20},
+		{ELootKind::SkillGem, "", 2, 1, 1}, {ELootKind::Item, "healing_potion", 2, 1, 3}};
+	const std::vector<FLootDrop> First = RollLoot(Table, Gems, 42);
+	const std::vector<FLootDrop> Again = RollLoot(Table, Gems, 42);
+	CHECK(First.size() == Again.size());
+	bool bSame = First.size() == Again.size();
+	for (size_t I = 0; bSame && I < First.size(); ++I)
+	{
+		bSame = First[I].Id == Again[I].Id && First[I].Count == Again[I].Count && First[I].Rarity == Again[I].Rarity && First[I].Seed == Again[I].Seed;
+	}
+	CHECK(bSame);
+
+	int Total = 0;
+	int GemDrops = 0;
+	bool bCountsInRange = true;
+	bool bGemRarityMatches = true;
+	bool bGoldCommon = true;
+	for (uint64_t Seed = 1; Seed <= 500; ++Seed)
+	{
+		const std::vector<FLootDrop> Drops = RollLoot(Table, Gems, Seed);
+		CHECK(Drops.size() <= 4);
+		for (const FLootDrop& Drop : Drops)
+		{
+			++Total;
+			if (Drop.Kind == ELootKind::Gold)
+			{
+				bCountsInRange &= Drop.Count >= 5 && Drop.Count <= 20;
+				bGoldCommon &= Drop.Rarity == ERarity::Common;
+			}
+			if (Drop.Kind == ELootKind::Item)
+			{
+				bCountsInRange &= Drop.Count >= 1 && Drop.Count <= 3;
+			}
+			if (Drop.Kind == ELootKind::SkillGem)
+			{
+				++GemDrops;
+				// An "any gem" drop is a real gem, at that gem's own rarity.
+				const auto Found = Gems.find(Drop.Id);
+				bGemRarityMatches &= Found != Gems.end() && Found->second == Drop.Rarity && Drop.Count == 1;
+			}
+		}
+	}
+	CHECK(Total > 500);
+	CHECK(GemDrops > 0);
+	CHECK(bCountsInRange);
+	CHECK(bGemRarityMatches);
+	CHECK(bGoldCommon);
+
+	// A wanted rarity with no gems falls back to the nearest one below; above only if none below.
+	FLootTable OnlyRare;
+	OnlyRare.RarityWeights = {0, 0, 1, 0, 0, 0};
+	OnlyRare.Entries = {{ELootKind::SkillGem, "", 1, 1, 1}};
+	const std::vector<FLootDrop> Rare = RollLoot(OnlyRare, Gems, 7);
+	CHECK(Rare.size() == 1 && Rare[0].Rarity == ERarity::Common);
+	FLootTable OnlyLegendary = OnlyRare;
+	OnlyLegendary.RarityWeights = {0, 0, 0, 0, 1, 0};
+	const std::vector<FLootDrop> Legendary = RollLoot(OnlyLegendary, Gems, 7);
+	CHECK(Legendary.size() == 1 && Legendary[0].Rarity == ERarity::Epic && Legendary[0].Id == "unleash");
+	const FSkillGemRarities OnlyMysticGem{{"cor_leonis", ERarity::Mystic}};
+	const std::vector<FLootDrop> Up = RollLoot(OnlyRare, OnlyMysticGem, 7);
+	CHECK(Up.size() == 1 && Up[0].Rarity == ERarity::Mystic);
+
+	// A named gem drops at its skill's rarity; no gems at all: no "any gem" drop.
+	FLootTable Named;
+	Named.Entries = {{ELootKind::SkillGem, "cor_leonis", 1, 1, 1}};
+	const std::vector<FLootDrop> Mystic = RollLoot(Named, Gems, 3);
+	CHECK(Mystic.size() == 1 && Mystic[0].Rarity == ERarity::Mystic);
+	CHECK(RollLoot(OnlyRare, {}, 3).empty());
+
+	// Only "nothing", or no rolls: empty.
+	FLootTable Nothing;
+	Nothing.NothingWeight = 1;
+	Nothing.Entries = {{ELootKind::Gold, "gold_coin", 0, 1, 1}};
+	CHECK(RollLoot(Nothing, Gems, 9).empty());
+	FLootTable NoRolls = Table;
+	NoRolls.RollsMin = 0;
+	NoRolls.RollsMax = 0;
+	CHECK(RollLoot(NoRolls, Gems, 9).empty());
+
+	// Rarity weights steer weapon rarity.
+	FLootTable AllEpic;
+	AllEpic.RarityWeights = {0, 0, 0, 1, 0, 0};
+	AllEpic.Entries = {{ELootKind::Weapon, "bow", 1, 1, 1}};
+	CHECK(RollLoot(AllEpic, Gems, 11).at(0).Rarity == ERarity::Epic);
+}
+
 int main()
 {
 	TestProgression();
@@ -798,6 +896,7 @@ int main()
 	TestSkillLibrary();
 	TestEconomy();
 	TestPortal();
+	TestLoot();
 
 	std::printf("%d checks, %d failures\n", GChecks, GFailures);
 	return GFailures == 0 ? 0 : 1;

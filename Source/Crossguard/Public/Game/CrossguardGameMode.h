@@ -4,6 +4,7 @@
 #include "CrossguardRules/Teams.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/GameModeBase.h"
+#include "Items/CrossguardLoot.h"
 
 #include "CrossguardGameMode.generated.h"
 
@@ -64,6 +65,15 @@ public:
 	// changing attributes). Turn off for a hub / test map where those should work.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard")
 	bool bIsRaid = true;
+
+	// Loot tables and the item data they draw from. Set every table here (the same assets the
+	// character uses) for chests and monster drops to work.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Loot")
+	FCrossguardLootSources Loot;
+
+	// Server. Rolls a loot table with a fresh random seed. Empty if the table or data is missing.
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Loot")
+	TArray<FCrossguardInventoryItem> RollLoot(FName TableId) const;
 
 	static const TCHAR* PartyOption;
 

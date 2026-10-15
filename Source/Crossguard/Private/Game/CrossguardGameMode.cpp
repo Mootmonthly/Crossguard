@@ -126,6 +126,12 @@ void ACrossguardGameMode::HandleStartingNewPlayer_Implementation(APlayerControll
 	}
 }
 
+TArray<FCrossguardInventoryItem> ACrossguardGameMode::RollLoot(FName TableId) const
+{
+	const int64 Seed = (static_cast<int64>(FMath::Rand()) << 31) ^ static_cast<int64>(FMath::Rand()) ^ static_cast<int64>(FPlatformTime::Cycles64());
+	return UCrossguardLootLibrary::RollLoot(Loot, TableId, Seed);
+}
+
 void ACrossguardGameMode::HandleKill(AActor* Victim, AActor* Killer)
 {
 	// A minion's kills are its summoner's.

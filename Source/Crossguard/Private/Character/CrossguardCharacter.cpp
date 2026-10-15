@@ -787,6 +787,14 @@ void ACrossguardCharacter::HandleDeath()
 	}
 	StopLockpicking();
 	TArray<FCrossguardInventoryItem> Dropped = InventoryComponent->TakeEverything();
+	// Monsters also drop from their loot table.
+	if (!IsPlayerControlled() && !LootTableId.IsNone())
+	{
+		if (const ACrossguardGameMode* GameMode = GetWorld()->GetAuthGameMode<ACrossguardGameMode>())
+		{
+			Dropped.Append(GameMode->RollLoot(LootTableId));
+		}
+	}
 	// Died again with items still left on the previous body (they did not fit at the revive): one
 	// body holds everything.
 	if (Body != nullptr)

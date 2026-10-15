@@ -4,6 +4,8 @@
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
+#include "Engine/World.h"
+#include "Game/CrossguardGameMode.h"
 #include "Interaction/CrossguardLockComponent.h"
 #include "Net/UnrealNetwork.h"
 
@@ -61,6 +63,18 @@ bool ACrossguardLootContainer::FindPlacement(FCrossguardInventoryItem& Item, FIn
 	Item.Position = FIntPoint(Spot.X, Spot.Y);
 	Item.bRotated = Spot.bRotated;
 	return true;
+}
+
+void ACrossguardLootContainer::BeginPlay()
+{
+	Super::BeginPlay();
+	if (HasAuthority() && !LootTableId.IsNone())
+	{
+		if (const ACrossguardGameMode* GameMode = GetWorld()->GetAuthGameMode<ACrossguardGameMode>())
+		{
+			InitializeContents(GameMode->RollLoot(LootTableId));
+		}
+	}
 }
 
 void ACrossguardLootContainer::InitializeContents(const TArray<FCrossguardInventoryItem>& NewItems)

@@ -79,7 +79,8 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | --- | --- | --- |
 | Monster AI | Code, Editor | Basic monsters (5 XP) and bosses (50 XP) via `KillXpSource`. |
 | Loot tables | Decision, Code | What monsters, chests and bosses drop. |
-| Treasure chests | Code, Editor | Reuse `ACrossguardLootContainer` (it can be locked). Filling them needs loot tables. |
+| Treasure chests | Editor | Built in code: an `ACrossguardLootContainer` with a `LootTableId` fills itself when the raid starts (it can be locked). Needs a chest Blueprint with a mesh, placed in maps. |
+| Loot tables | Decision | Built: `Data/Loot/LootTables.json` (monsters, bosses, chests) with placeholder drop rates and rarity weights. Needs real numbers. |
 | Lockpicking skill | Editor | Lockpicking and the lockpick item are built; the skill comes from the Skill Forge (grant `Ability.Lockpicking`). |
 | Doors in maps | Editor | `ACrossguardDoor` needs a mesh and placing; it snaps open until it is animated. |
 | Gathering nodes | Code, Editor | Herbs and ore, 10 XP per node; materials stack size not ruled. |

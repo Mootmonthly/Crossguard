@@ -6,6 +6,7 @@ Data/Items/WeaponTable.json -> FCrossguardWeaponRow (CrossguardItemTypes.h)
 Data/Items/AffixTable.json -> FCrossguardAffixRow (CrossguardItemTypes.h)
 Data/Items/ArmorTable.json -> FCrossguardArmorRow (CrossguardItemTypes.h)
 Data/Items/ItemTable.json -> FCrossguardItemRow (CrossguardItemTypes.h)
+Data/Loot/LootTable.json -> FCrossguardLootTableRow (CrossguardLoot.h)
 
 Every JSON field must be a UPROPERTY of the matching struct, every struct field must be present,
 and every enum value must be an entry of the C++ enum. Catches drift between the exporter and the
@@ -21,13 +22,14 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 PUBLIC = REPO / "Source" / "Crossguard" / "Public"
-HEADERS = [PUBLIC / "Skills" / "CrossguardSkillTypes.h", PUBLIC / "Items" / "CrossguardItemTypes.h"]
+HEADERS = [PUBLIC / "Skills" / "CrossguardSkillTypes.h", PUBLIC / "Items" / "CrossguardItemTypes.h", PUBLIC / "Items" / "CrossguardLoot.h"]
 TABLES = [
     (REPO / "Data" / "Skills" / "SkillTable.json", "FCrossguardSkillRow"),
     (REPO / "Data" / "Items" / "WeaponTable.json", "FCrossguardWeaponRow"),
     (REPO / "Data" / "Items" / "AffixTable.json", "FCrossguardAffixRow"),
     (REPO / "Data" / "Items" / "ArmorTable.json", "FCrossguardArmorRow"),
     (REPO / "Data" / "Items" / "ItemTable.json", "FCrossguardItemRow"),
+    (REPO / "Data" / "Loot" / "LootTable.json", "FCrossguardLootTableRow"),
 ]
 
 

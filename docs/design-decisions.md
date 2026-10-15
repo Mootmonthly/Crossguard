@@ -87,7 +87,9 @@ Code and data must follow it.
   either hand. Exception: in dragon form, Flare Breath and Flight are cast without one. Casting
   weapons do not make a skill Melee or Ranged for CDR.
 - **Skill Gems have a rarity** (Common to Mystic), one per gem, no affixes. It only sets loot drop
-  chances and never changes the skill. Set per skill in the Skill Forge.
+  chances and never changes the skill. Set per skill in the Skill Forge. A loot table's "any Skill
+  Gem" rolls a rarity, then a skill of that rarity; with none at that rarity it falls back to a
+  lower one first, so a missing rarity never makes a drop rarer.
 - Fireball, Flare Breath, Greater Heal, Benediction and Summon Tiger are **Spells**.
   Greater Heal and Benediction are Magical Healing.
 - Mastery cooldown reductions ("Melee Skills -10% Cooldown") apply **only while wielding**

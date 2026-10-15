@@ -124,6 +124,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Progression")
 	ECrossguardXpSource KillXpSource = ECrossguardXpSource::BasicMonster;
 
+	// Not player-controlled (monsters): rolled into its body on death, on top of what it carried.
+	// A row of Data/Loot/LootTables.json (e.g. "basic_monster"). None: only what it carried.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Progression")
+	FName LootTableId;
+
 	// False for summoned minions: killing them gives no XP.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Progression")
 	bool bGrantsKillXp = true;

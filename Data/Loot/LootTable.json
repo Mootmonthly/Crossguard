@@ -1,0 +1,276 @@
+[
+	{
+		"Name": "basic_monster",
+		"RollsMin": 0,
+		"RollsMax": 2,
+		"NothingWeight": 40,
+		"RarityWeights": [
+			60,
+			25,
+			10,
+			4,
+			1,
+			0
+		],
+		"Entries": [
+			{
+				"Kind": "Gold",
+				"Id": "None",
+				"Weight": 30,
+				"CountMin": 5,
+				"CountMax": 25
+			},
+			{
+				"Kind": "Item",
+				"Id": "healing_potion",
+				"Weight": 8,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Item",
+				"Id": "bandage",
+				"Weight": 8,
+				"CountMin": 1,
+				"CountMax": 2
+			},
+			{
+				"Kind": "Item",
+				"Id": "arrow",
+				"Weight": 6,
+				"CountMin": 5,
+				"CountMax": 15
+			},
+			{
+				"Kind": "Weapon",
+				"Id": "None",
+				"Weight": 5,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Armor",
+				"Id": "None",
+				"Weight": 5,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "SkillGem",
+				"Id": "None",
+				"Weight": 2,
+				"CountMin": 1,
+				"CountMax": 1
+			}
+		]
+	},
+	{
+		"Name": "boss_monster",
+		"RollsMin": 3,
+		"RollsMax": 5,
+		"NothingWeight": 0,
+		"RarityWeights": [
+			20,
+			30,
+			25,
+			15,
+			8,
+			2
+		],
+		"Entries": [
+			{
+				"Kind": "Gold",
+				"Id": "None",
+				"Weight": 20,
+				"CountMin": 50,
+				"CountMax": 200
+			},
+			{
+				"Kind": "Weapon",
+				"Id": "None",
+				"Weight": 20,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Armor",
+				"Id": "None",
+				"Weight": 20,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "SkillGem",
+				"Id": "None",
+				"Weight": 15,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Item",
+				"Id": "ruby",
+				"Weight": 5,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Item",
+				"Id": "emerald",
+				"Weight": 5,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Item",
+				"Id": "sapphire",
+				"Weight": 5,
+				"CountMin": 1,
+				"CountMax": 1
+			}
+		]
+	},
+	{
+		"Name": "chest_common",
+		"RollsMin": 1,
+		"RollsMax": 3,
+		"NothingWeight": 10,
+		"RarityWeights": [
+			55,
+			28,
+			12,
+			4,
+			1,
+			0
+		],
+		"Entries": [
+			{
+				"Kind": "Gold",
+				"Id": "None",
+				"Weight": 30,
+				"CountMin": 10,
+				"CountMax": 50
+			},
+			{
+				"Kind": "Item",
+				"Id": "healing_potion",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 2
+			},
+			{
+				"Kind": "Item",
+				"Id": "bandage",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 3
+			},
+			{
+				"Kind": "Item",
+				"Id": "lockpick",
+				"Weight": 6,
+				"CountMin": 1,
+				"CountMax": 2
+			},
+			{
+				"Kind": "Item",
+				"Id": "throwing_knife",
+				"Weight": 5,
+				"CountMin": 1,
+				"CountMax": 3
+			},
+			{
+				"Kind": "Weapon",
+				"Id": "None",
+				"Weight": 8,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Armor",
+				"Id": "None",
+				"Weight": 8,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "SkillGem",
+				"Id": "None",
+				"Weight": 4,
+				"CountMin": 1,
+				"CountMax": 1
+			}
+		]
+	},
+	{
+		"Name": "chest_rich",
+		"RollsMin": 3,
+		"RollsMax": 6,
+		"NothingWeight": 0,
+		"RarityWeights": [
+			25,
+			30,
+			22,
+			14,
+			7,
+			2
+		],
+		"Entries": [
+			{
+				"Kind": "Gold",
+				"Id": "None",
+				"Weight": 20,
+				"CountMin": 50,
+				"CountMax": 150
+			},
+			{
+				"Kind": "Weapon",
+				"Id": "None",
+				"Weight": 15,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Armor",
+				"Id": "None",
+				"Weight": 15,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "SkillGem",
+				"Id": "None",
+				"Weight": 12,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Item",
+				"Id": "ruby",
+				"Weight": 6,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Item",
+				"Id": "emerald",
+				"Weight": 6,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Item",
+				"Id": "sapphire",
+				"Weight": 6,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Item",
+				"Id": "explosive_bottle",
+				"Weight": 5,
+				"CountMin": 1,
+				"CountMax": 2
+			}
+		]
+	}
+]
