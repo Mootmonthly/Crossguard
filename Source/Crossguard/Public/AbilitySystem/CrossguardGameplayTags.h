@@ -25,6 +25,33 @@ namespace CrossguardTags
 
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Dead);
 
+	// Status effects.
+	// Mute: no skills can be cast and passive skills stop working (basic attacks still work).
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Muted);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Slowed);
+	// The screen flashes white (Shooting Star); the HUD reacts to this tag.
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Blinded);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Flying);
+	// Dragonification: weapons and equipped skills are blocked; Flare Breath and Flight work.
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Dragonified);
+	// Chop Down: the next axe attack is empowered.
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_ChopDownReady);
+
+	// Ability tags (cancel by tag).
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Flight);
+
+	// One cooldown tag per native skill.
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Dragonification);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_FlareBreath);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Flight);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Fireball);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_ChopDown);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_SummonSkeletons);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_EldritchShield);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_ShootingStar);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Heal);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Mute);
+
 	// Picks locks without a lockpick item. Grant it from the lockpicking skill's passive effect.
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Lockpicking);
 

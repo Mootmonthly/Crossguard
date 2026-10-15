@@ -23,6 +23,9 @@ struct FCrossguardWeaponItem;
 // Weapons with an AmmoId (bows: "arrow") use up one per attack from the inventory, Quiver first,
 // and cannot attack without it. Characters without an inventory (AI) shoot freely.
 //
+// [Chop Down]: while State.ChopDownReady is on the attacker, the next melee axe attack deals 110%,
+// slows each target hit by 50% for 2 s and ends their Flight. It is used up hit or miss.
+//
 // Hit detection runs on the server. Placeholder until animations and weapon collision exist.
 UCLASS()
 class CROSSGUARD_API UCrossguardWeaponAttackAbility : public UCrossguardGameplayAbility
@@ -64,11 +67,14 @@ public:
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
 private:
-	FGameplayEffectSpecHandle MakeWeaponDamageSpec(const FCrossguardWeaponRow& Weapon, const FCrossguardWeaponItem& Item) const;
-	void PerformMeleeSwing(const FGameplayEffectSpecHandle& Spec) const;
+	// Multiplier scales the weapon's base value ([Chop Down]).
+	FGameplayEffectSpecHandle MakeWeaponDamageSpec(const FCrossguardWeaponRow& Weapon, const FCrossguardWeaponItem& Item, float Multiplier = 1.0f) const;
+	// Returns the actors damaged.
+	TArray<AActor*> PerformMeleeSwing(const FGameplayEffectSpecHandle& Spec) const;
 	void PerformHitscan(const FGameplayEffectSpecHandle& Spec) const;
 	void SpawnProjectile(const FGameplayEffectSpecHandle& Spec, FName WeaponId) const;
-	void ApplyDamageTo(AActor* Target, const FGameplayEffectSpecHandle& Spec) const;
+	// False if Target has no ability system (or is the attacker).
+	bool ApplyDamageTo(AActor* Target, const FGameplayEffectSpecHandle& Spec) const;
 
 	UFUNCTION()
 	void OnAttackRecovered();

@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/CrossguardGameplayAbility.h"
 #include "Engine/DataTable.h"
+#include "Skills/CrossguardNativeSkills.h"
 
 #if WITH_EDITOR
 #include "Misc/DataValidation.h"
@@ -21,7 +22,11 @@ const FCrossguardSkillRow* UCrossguardSkillCatalog::FindSkill(FName SkillId) con
 TSubclassOf<UCrossguardGameplayAbility> UCrossguardSkillCatalog::FindAbilityClass(FName SkillId) const
 {
 	const TSubclassOf<UCrossguardGameplayAbility>* Found = AbilityClasses.Find(SkillId);
-	return Found != nullptr ? *Found : nullptr;
+	if (Found != nullptr && *Found != nullptr)
+	{
+		return *Found;
+	}
+	return CrossguardNativeSkills::Find(SkillId);
 }
 
 Crossguard::FSkillCatalog UCrossguardSkillCatalog::BuildRulesCatalog() const
@@ -63,11 +68,25 @@ EDataValidationResult UCrossguardSkillCatalog::IsDataValid(FDataValidationContex
 		return EDataValidationResult::Invalid;
 	}
 
+	// Editor entries first, then native skills the editor does not override.
+	TArray<TPair<FName, TSubclassOf<UCrossguardGameplayAbility>>> Entries;
 	for (const TPair<FName, TSubclassOf<UCrossguardGameplayAbility>>& Pair : AbilityClasses)
+	{
+		Entries.Add(Pair);
+	}
+	for (const TPair<FName, TSubclassOf<UCrossguardGameplayAbility>>& Pair : CrossguardNativeSkills::All())
+	{
+		if (!AbilityClasses.Contains(Pair.Key))
+		{
+			Entries.Add(Pair);
+		}
+	}
+
+	for (const TPair<FName, TSubclassOf<UCrossguardGameplayAbility>>& Pair : Entries)
 	{
 		if (FindSkill(Pair.Key) == nullptr)
 		{
-			Context.AddError(FText::Format(LOCTEXT("UnknownSkill", "AbilityClasses has '{0}', which is not a row in SkillTable."),
+			Context.AddError(FText::Format(LOCTEXT("UnknownSkill", "'{0}' has an ability class but is not a row in SkillTable."),
 				FText::FromName(Pair.Key)));
 			Result = EDataValidationResult::Invalid;
 			continue;
@@ -90,6 +109,13 @@ EDataValidationResult UCrossguardSkillCatalog::IsDataValid(FDataValidationContex
 		{
 			Context.AddError(FText::Format(LOCTEXT("CategoryMismatch", "{0}'s SkillCategory does not match the '{1}' row."),
 				FText::FromString(Pair.Value->GetName()), FText::FromName(Pair.Key)));
+			Result = EDataValidationResult::Invalid;
+		}
+		if (!FMath::IsNearlyEqual(Ability->BaseCooldownSeconds, Row->CooldownSec))
+		{
+			Context.AddError(FText::Format(LOCTEXT("CooldownMismatch", "{0} has a {1} s cooldown but the '{2}' row says {3} s."),
+				FText::FromString(Pair.Value->GetName()), FText::AsNumber(Ability->BaseCooldownSeconds), FText::FromName(Pair.Key),
+				FText::AsNumber(Row->CooldownSec)));
 			Result = EDataValidationResult::Invalid;
 		}
 	}

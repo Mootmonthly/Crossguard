@@ -125,6 +125,30 @@ const TArray<FName>& UCrossguardSkillStatsEffect::GetStatNames()
 	return Names;
 }
 
+UCrossguardStatusEffect::UCrossguardStatusEffect()
+{
+	DurationPolicy = EGameplayEffectDurationType::HasDuration;
+	DurationMagnitude = SetByCallerMagnitude(CrossguardSetByCaller::Duration);
+}
+
+UCrossguardTimedStatsEffect::UCrossguardTimedStatsEffect()
+{
+	DurationPolicy = EGameplayEffectDurationType::HasDuration;
+	DurationMagnitude = SetByCallerMagnitude(CrossguardSetByCaller::Duration);
+	AddSetByCallerModifiers(Modifiers, false);
+}
+
+UCrossguardMuteEffect::UCrossguardMuteEffect()
+{
+	DurationPolicy = EGameplayEffectDurationType::HasDuration;
+	DurationMagnitude = SetByCallerMagnitude(CrossguardSetByCaller::Duration);
+	Period = FScalableFloat(1.0f);
+	bExecutePeriodicEffectOnApplication = false;
+	FGameplayEffectExecutionDefinition Execution;
+	Execution.CalculationClass = UCrossguardDamageExecution::StaticClass();
+	Executions.Add(Execution);
+}
+
 UCrossguardSkillMultiplierEffect::UCrossguardSkillMultiplierEffect()
 {
 	DurationPolicy = EGameplayEffectDurationType::Infinite;

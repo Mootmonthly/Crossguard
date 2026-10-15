@@ -17,6 +17,7 @@ namespace
 		DECLARE_ATTRIBUTE_CAPTUREDEF(MagicResistance);
 		DECLARE_ATTRIBUTE_CAPTUREDEF(MagicPenetration);
 		DECLARE_ATTRIBUTE_CAPTUREDEF(TrueDamage);
+		DECLARE_ATTRIBUTE_CAPTUREDEF(AttackShield);
 
 		FDamageStatics()
 		{
@@ -30,6 +31,7 @@ namespace
 			DEFINE_ATTRIBUTE_CAPTUREDEF(UCrossguardAttributeSet, MagicResistance, Target, false);
 			DEFINE_ATTRIBUTE_CAPTUREDEF(UCrossguardAttributeSet, MagicPenetration, Source, false);
 			DEFINE_ATTRIBUTE_CAPTUREDEF(UCrossguardAttributeSet, TrueDamage, Source, false);
+			DEFINE_ATTRIBUTE_CAPTUREDEF(UCrossguardAttributeSet, AttackShield, Target, false);
 		}
 	};
 
@@ -58,6 +60,7 @@ UCrossguardDamageExecution::UCrossguardDamageExecution()
 	RelevantAttributesToCapture.Add(Statics.AdditionalMagicDamageDef);
 	RelevantAttributesToCapture.Add(Statics.MagicDamageBonusDef);
 	RelevantAttributesToCapture.Add(Statics.MagicResistanceDef);
+	RelevantAttributesToCapture.Add(Statics.AttackShieldDef);
 	RelevantAttributesToCapture.Add(Statics.MagicPenetrationDef);
 	RelevantAttributesToCapture.Add(Statics.TrueDamageDef);
 }
@@ -80,6 +83,7 @@ void UCrossguardDamageExecution::Execute_Implementation(const FGameplayEffectCus
 	const float TrueDamage = Capture(ExecutionParams, EvalParams, Statics.TrueDamageDef);
 
 	double Total = 0.0;
+	double AttackTotal = 0.0;
 	if (AttackBase > 0.0f)
 	{
 		Crossguard::FDamageInput Input;
@@ -90,7 +94,8 @@ void UCrossguardDamageExecution::Execute_Implementation(const FGameplayEffectCus
 		Input.Resistance = Capture(ExecutionParams, EvalParams, Statics.AttackResistanceDef);
 		Input.Penetration = Capture(ExecutionParams, EvalParams, Statics.AttackPenetrationDef);
 		Input.TrueDamage = TrueDamage;
-		Total += Crossguard::CalculateDamage(Input);
+		AttackTotal = Crossguard::CalculateDamage(Input);
+		Total += AttackTotal;
 	}
 	if (MagicBase > 0.0f)
 	{
@@ -103,6 +108,16 @@ void UCrossguardDamageExecution::Execute_Implementation(const FGameplayEffectCus
 		Input.Penetration = Capture(ExecutionParams, EvalParams, Statics.MagicPenetrationDef);
 		Input.TrueDamage = AttackBase > 0.0f ? 0.0f : TrueDamage;
 		Total += Crossguard::CalculateDamage(Input);
+	}
+
+	// A barrier ([Eldritch Shield]) absorbs Attack Damage first and is used up by it.
+	const float Shield = Capture(ExecutionParams, EvalParams, Statics.AttackShieldDef);
+	const double Absorbed = FMath::Min(AttackTotal, static_cast<double>(FMath::Max(Shield, 0.0f)));
+	if (Absorbed > 0.0)
+	{
+		Total -= Absorbed;
+		OutExecutionOutput.AddOutputModifier(FGameplayModifierEvaluatedData(
+			UCrossguardAttributeSet::GetAttackShieldAttribute(), EGameplayModOp::Additive, static_cast<float>(-Absorbed)));
 	}
 
 	if (Total > 0.0)

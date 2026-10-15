@@ -1,5 +1,6 @@
 #include "AbilitySystem/CrossguardPassiveAbility.h"
 
+#include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
 
@@ -7,6 +8,10 @@ UCrossguardPassiveAbility::UCrossguardPassiveAbility()
 {
 	SkillCategory = ECrossguardSkillCategory::Passive;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerOnly;
+	// Passives activate once when granted; Mute switches their bonuses off instead of blocking that.
+	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Dead);
+	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Muted);
+	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Dragonified);
 }
 
 void UCrossguardPassiveAbility::TryActivatePassive(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) const

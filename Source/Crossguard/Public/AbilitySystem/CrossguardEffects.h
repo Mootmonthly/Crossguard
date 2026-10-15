@@ -65,6 +65,40 @@ public:
 	static void SetHealing(FGameplayEffectSpec& Spec, float TotalHealing, float Seconds);
 };
 
+// Lasts SetByCaller "Duration" seconds and does nothing by itself: the caller adds the state tag
+// (State.Blinded, State.ChopDownReady, ...) to the spec's DynamicGrantedTags.
+UCLASS()
+class CROSSGUARD_API UCrossguardStatusEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UCrossguardStatusEffect();
+};
+
+// Like UCrossguardSkillStatsEffect (an Add per attribute, SetByCaller named after it; set every name
+// in UCrossguardSkillStatsEffect::GetStatNames), but lasts SetByCaller "Duration" seconds. Slows,
+// Dragonification's bonuses.
+UCLASS()
+class CROSSGUARD_API UCrossguardTimedStatsEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UCrossguardTimedStatsEffect();
+};
+
+// Mute: lasts SetByCaller "Duration" seconds and runs the damage execution once per second (set
+// SetByCaller.Damage.Magic to the damage per second). Add State.Muted to DynamicGrantedTags.
+UCLASS()
+class CROSSGUARD_API UCrossguardMuteEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UCrossguardMuteEffect();
+};
+
 // Infinite. Stat bonuses of a data-driven passive skill (UCrossguardDataPassiveAbility): one Add
 // modifier per attribute in GetStatNames, SetByCaller named after the attribute. Set every name
 // (0 for unused) before applying.

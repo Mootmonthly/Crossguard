@@ -34,6 +34,8 @@ public:
 //   category; with no filter, to all three categories. Cast time likewise, without Melee / Ranged /
 //   Minion.
 //
+// While Muted the bonuses are off.
+//
 // Not covered (logged once): modifiers that target others (Party, Target, AlliesInRadius),
 // on-activation or next-attack conditions, free-text conditions, and the base-amount stats (AD,
 // MD, PH, MH). Those skills still need a hand-made ability.
@@ -53,6 +55,9 @@ private:
 	void Refresh();
 
 	void RemoveStatEffects();
+	void OnMutedChanged(const FGameplayTag Tag, int32 Count);
+
+	FDelegateHandle MutedHandle;
 
 	FName PlayedSkillId;
 	TArray<FActiveGameplayEffectHandle> StatEffects;

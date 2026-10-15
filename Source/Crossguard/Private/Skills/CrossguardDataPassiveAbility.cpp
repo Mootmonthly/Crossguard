@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/CrossguardAttributeSet.h"
 #include "AbilitySystem/CrossguardEffects.h"
+#include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "Crossguard.h"
 #include "Items/CrossguardEquipmentComponent.h"
@@ -91,6 +92,11 @@ void UCrossguardDataPassiveAbility::ActivateAbility(const FGameplayAbilitySpecHa
 	{
 		Equipment->OnEquipmentChanged.AddUniqueDynamic(this, &UCrossguardDataPassiveAbility::Refresh);
 	}
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		MutedHandle = ASC->RegisterGameplayTagEvent(CrossguardTags::State_Muted, EGameplayTagEventType::NewOrRemoved)
+			.AddUObject(this, &UCrossguardDataPassiveAbility::OnMutedChanged);
+	}
 	Refresh();
 }
 
@@ -101,6 +107,10 @@ void UCrossguardDataPassiveAbility::EndAbility(const FGameplayAbilitySpecHandle 
 	if (UCrossguardEquipmentComponent* Equipment = Avatar != nullptr ? Avatar->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr)
 	{
 		Equipment->OnEquipmentChanged.RemoveDynamic(this, &UCrossguardDataPassiveAbility::Refresh);
+	}
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo())
+	{
+		ASC->RegisterGameplayTagEvent(CrossguardTags::State_Muted, EGameplayTagEventType::NewOrRemoved).Remove(MutedHandle);
 	}
 	RemoveStatEffects();
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
@@ -127,7 +137,8 @@ void UCrossguardDataPassiveAbility::Refresh()
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
 	const AActor* Avatar = GetAvatarActorFromActorInfo();
 	const UCrossguardEquipmentComponent* Equipment = Avatar != nullptr ? Avatar->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
-	if (Row == nullptr || ASC == nullptr || !IsActive())
+	// Muted: bonuses off until it ends.
+	if (Row == nullptr || ASC == nullptr || !IsActive() || ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted))
 	{
 		return;
 	}
@@ -208,4 +219,9 @@ void UCrossguardDataPassiveAbility::Refresh()
 	Apply(UCrossguardSkillStatsEffect::StaticClass(), Added, 0.0f, 0.0f);
 	// Multipliers were summed as (m - 1); the effect takes the multiplier itself.
 	Apply(UCrossguardSkillMultiplierEffect::StaticClass(), Multiplied, 1.0f, 1.0f);
+}
+
+void UCrossguardDataPassiveAbility::OnMutedChanged(const FGameplayTag Tag, int32 Count)
+{
+	Refresh();
 }

@@ -145,6 +145,12 @@ public:
 	FGameplayAttributeData EmptyArmorSlots;
 	CROSSGUARD_ATTRIBUTE_ACCESSORS(UCrossguardAttributeSet, EmptyArmorSlots)
 
+	// Attack Damage a barrier still absorbs ([Eldritch Shield]). The skill sets it; the damage
+	// execution uses it up before Health. Magic Damage passes through.
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes|Combat", ReplicatedUsing = OnRep_AttackShield)
+	FGameplayAttributeData AttackShield;
+	CROSSGUARD_ATTRIBUTE_ACCESSORS(UCrossguardAttributeSet, AttackShield)
+
 	// Meta attributes: server-only inputs from the damage and healing executions, applied to
 	// Health in PostGameplayEffectExecute. Not replicated.
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes|Meta")
@@ -197,6 +203,8 @@ protected:
 	void OnRep_TrueDamage(const FGameplayAttributeData& OldValue);
 	UFUNCTION()
 	void OnRep_EmptyArmorSlots(const FGameplayAttributeData& OldValue);
+	UFUNCTION()
+	void OnRep_AttackShield(const FGameplayAttributeData& OldValue);
 	UFUNCTION()
 	void OnRep_AdditionalPhysicalHealing(const FGameplayAttributeData& OldValue);
 	UFUNCTION()

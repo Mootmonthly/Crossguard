@@ -18,6 +18,23 @@ namespace CrossguardTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Coefficient, "SetByCaller.Coefficient", "Fraction of ADB/MDB/PHB/MHB that applies. Defaults to 1.");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Dead, "State.Dead", "Health reached 0.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Muted, "State.Muted", "Cannot cast skills; passive skills are off.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Slowed, "State.Slowed", "Movement speed reduced.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Blinded, "State.Blinded", "Screen flashed white.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Flying, "State.Flying", "Flying (Flight).");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Dragonified, "State.Dragonified", "In dragon form: weapons and equipped skills blocked.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_ChopDownReady, "State.ChopDownReady", "Next axe attack is empowered by Chop Down.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Flight, "Ability.Flight", "The Flight ability.");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Dragonification, "Cooldown.Skill.Dragonification");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_FlareBreath, "Cooldown.Skill.FlareBreath");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Flight, "Cooldown.Skill.Flight");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Fireball, "Cooldown.Skill.Fireball");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_ChopDown, "Cooldown.Skill.ChopDown");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_SummonSkeletons, "Cooldown.Skill.SummonSkeletons");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_EldritchShield, "Cooldown.Skill.EldritchShield");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_ShootingStar, "Cooldown.Skill.ShootingStar");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Heal, "Cooldown.Skill.Heal");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Mute, "Cooldown.Skill.Mute");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Lockpicking, "Ability.Lockpicking", "Picks locks without a lockpick item (the lockpicking skill).");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Sword, "Equipment.Wielding.Sword", "Holding a Sword.");

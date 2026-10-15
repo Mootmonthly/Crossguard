@@ -37,6 +37,8 @@ void UCrossguardAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, MagicPenetration, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, TrueDamage, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, EmptyArmorSlots, COND_OwnerOnly, REPNOTIFY_Always);
+	// Everyone sees a barrier (for its visual).
+	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, AttackShield, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, AdditionalPhysicalHealing, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, PhysicalHealingBonus, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, AdditionalMagicalHealing, COND_OwnerOnly, REPNOTIFY_Always);
@@ -265,6 +267,11 @@ void UCrossguardAttributeSet::OnRep_MagicPenetration(const FGameplayAttributeDat
 void UCrossguardAttributeSet::OnRep_TrueDamage(const FGameplayAttributeData& OldValue)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UCrossguardAttributeSet, TrueDamage, OldValue);
+}
+
+void UCrossguardAttributeSet::OnRep_AttackShield(const FGameplayAttributeData& OldValue)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UCrossguardAttributeSet, AttackShield, OldValue);
 }
 
 void UCrossguardAttributeSet::OnRep_EmptyArmorSlots(const FGameplayAttributeData& OldValue)

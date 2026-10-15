@@ -9,6 +9,7 @@
 #include "Engine/World.h"
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Items/CrossguardInventoryComponent.h"
+#include "Skills/CrossguardSkillAbility.h"
 
 // "Weapon" trace channel, defined in Config/DefaultEngine.ini. Blocked by default.
 #define CROSSGUARD_TRACE_WEAPON ECC_GameTraceChannel1
@@ -17,6 +18,8 @@ UCrossguardWeaponAttackAbility::UCrossguardWeaponAttackAbility()
 {
 	// Not a skill: no cooldown effect, no CDR. The attack interval is the rate limit.
 	CooldownGameplayEffectClass = nullptr;
+	// Basic attacks still work while Muted.
+	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Muted);
 	DefaultProjectileClass = ACrossguardProjectile::StaticClass();
 }
 
@@ -33,6 +36,11 @@ namespace
 		const AActor* Avatar = ActorInfo != nullptr ? ActorInfo->AvatarActor.Get() : nullptr;
 		return Avatar != nullptr ? Avatar->FindComponentByClass<UCrossguardInventoryComponent>() : nullptr;
 	}
+
+	// [Chop Down]: 110% damage, 50% slow for 2 s and Grounded flying targets.
+	constexpr float ChopDownDamageMultiplier = 1.1f;
+	constexpr float ChopDownSlow = 0.5f;
+	constexpr float ChopDownSlowSeconds = 2.0f;
 
 	// Weapons without ammo always have it. Characters without an inventory (AI) shoot freely.
 	bool HasAmmo(const FCrossguardWeaponRow& Weapon, const FGameplayAbilityActorInfo* ActorInfo)
@@ -80,13 +88,39 @@ void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecH
 			return;
 		}
 
+		// [Chop Down] readies the next melee axe attack, which uses it up whether or not it hits.
+		UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+		const bool bChopDown = ASC != nullptr && Weapon->WeaponType == ECrossguardWeaponType::Axe
+			&& Weapon->Delivery == ECrossguardAttackDelivery::MeleeSwing && ASC->HasMatchingGameplayTag(CrossguardTags::State_ChopDownReady);
+
 		const FCrossguardWeaponItem& Item = Equipment->GetItem(Slot);
-		const FGameplayEffectSpecHandle Spec = MakeWeaponDamageSpec(*Weapon, Item);
+		const FGameplayEffectSpecHandle Spec = MakeWeaponDamageSpec(*Weapon, Item, bChopDown ? ChopDownDamageMultiplier : 1.0f);
 		switch (Weapon->Delivery)
 		{
 		case ECrossguardAttackDelivery::MeleeSwing:
-			PerformMeleeSwing(Spec);
+		{
+			const TArray<AActor*> Hit = PerformMeleeSwing(Spec);
+			if (bChopDown)
+			{
+				ASC->RemoveActiveEffectsWithGrantedTags(FGameplayTagContainer(CrossguardTags::State_ChopDownReady));
+				for (AActor* Target : Hit)
+				{
+					UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
+					if (TargetASC == nullptr)
+					{
+						continue;
+					}
+					UCrossguardSkillAbility::ApplySlow(ASC, TargetASC, ChopDownSlow, ChopDownSlowSeconds);
+					// Grounded: Flight ends and they fall.
+					if (TargetASC->HasMatchingGameplayTag(CrossguardTags::State_Flying))
+					{
+						const FGameplayTagContainer FlightTag(CrossguardTags::Ability_Flight);
+						TargetASC->CancelAbilities(&FlightTag);
+					}
+				}
+			}
 			break;
+		}
 		case ECrossguardAttackDelivery::Hitscan:
 			PerformHitscan(Spec);
 			break;
@@ -118,14 +152,15 @@ void UCrossguardWeaponAttackAbility::OnAttackRecovered()
 	EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), true, false);
 }
 
-FGameplayEffectSpecHandle UCrossguardWeaponAttackAbility::MakeWeaponDamageSpec(const FCrossguardWeaponRow& Weapon, const FCrossguardWeaponItem& Item) const
+FGameplayEffectSpecHandle UCrossguardWeaponAttackAbility::MakeWeaponDamageSpec(const FCrossguardWeaponRow& Weapon, const FCrossguardWeaponItem& Item,
+	float Multiplier) const
 {
 	FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(UCrossguardDamageEffect::StaticClass(), GetAbilityLevel());
 	if (!Spec.IsValid())
 	{
 		return Spec;
 	}
-	const float Value = UCrossguardItemLibrary::GetWeaponValue(Weapon, Item.Rarity);
+	const float Value = UCrossguardItemLibrary::GetWeaponValue(Weapon, Item.Rarity) * Multiplier;
 	switch (Weapon.Stat)
 	{
 	case ECrossguardWeaponStat::AttackDamage:
@@ -140,26 +175,29 @@ FGameplayEffectSpecHandle UCrossguardWeaponAttackAbility::MakeWeaponDamageSpec(c
 	return Spec;
 }
 
-void UCrossguardWeaponAttackAbility::ApplyDamageTo(AActor* Target, const FGameplayEffectSpecHandle& Spec) const
+bool UCrossguardWeaponAttackAbility::ApplyDamageTo(AActor* Target, const FGameplayEffectSpecHandle& Spec) const
 {
 	// Friendly fire is always on: allies are hit too.
 	if (Target == nullptr || Target == GetAvatarActorFromActorInfo() || !Spec.IsValid())
 	{
-		return;
+		return false;
 	}
 	if (UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target))
 	{
 		GetAbilitySystemComponentFromActorInfo()->ApplyGameplayEffectSpecToTarget(*Spec.Data, TargetASC);
+		return true;
 	}
+	return false;
 }
 
-void UCrossguardWeaponAttackAbility::PerformMeleeSwing(const FGameplayEffectSpecHandle& Spec) const
+TArray<AActor*> UCrossguardWeaponAttackAbility::PerformMeleeSwing(const FGameplayEffectSpecHandle& Spec) const
 {
+	TArray<AActor*> Damaged;
 	AActor* Avatar = GetAvatarActorFromActorInfo();
 	UWorld* World = Avatar != nullptr ? Avatar->GetWorld() : nullptr;
 	if (World == nullptr)
 	{
-		return;
+		return Damaged;
 	}
 
 	// Start one radius ahead so the sphere does not reach behind the character.
@@ -174,16 +212,20 @@ void UCrossguardWeaponAttackAbility::PerformMeleeSwing(const FGameplayEffectSpec
 	World->SweepMultiByObjectType(Hits, Start, End, FQuat::Identity, FCollisionObjectQueryParams(ECC_Pawn),
 		FCollisionShape::MakeSphere(MeleeRadius), Params);
 
-	TSet<AActor*> Damaged;
+	TSet<AActor*> Seen;
 	for (const FHitResult& Hit : Hits)
 	{
 		AActor* Target = Hit.GetActor();
-		if (Target != nullptr && !Damaged.Contains(Target))
+		if (Target != nullptr && !Seen.Contains(Target))
 		{
-			Damaged.Add(Target);
-			ApplyDamageTo(Target, Spec);
+			Seen.Add(Target);
+			if (ApplyDamageTo(Target, Spec))
+			{
+				Damaged.Add(Target);
+			}
 		}
 	}
+	return Damaged;
 }
 
 void UCrossguardWeaponAttackAbility::PerformHitscan(const FGameplayEffectSpecHandle& Spec) const
