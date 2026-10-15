@@ -70,7 +70,8 @@ void ACrossguardLootContainer::BeginPlay()
 	Super::BeginPlay();
 	if (HasAuthority() && !LootTableId.IsNone())
 	{
-		if (const ACrossguardGameMode* GameMode = GetWorld()->GetAuthGameMode<ACrossguardGameMode>())
+		// Chests hold loot in raids only (not in the hub).
+		if (ACrossguardGameMode* GameMode = GetWorld()->GetAuthGameMode<ACrossguardGameMode>(); GameMode != nullptr && GameMode->bIsRaid)
 		{
 			InitializeContents(GameMode->RollLoot(LootTableId));
 		}

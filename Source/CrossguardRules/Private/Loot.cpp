@@ -135,6 +135,10 @@ namespace Crossguard
 			}
 			case ELootKind::Weapon:
 			case ELootKind::Armor:
+				// Each piece rolls its own affixes, so gear drops one at a time.
+				Drop.Count = 1;
+				Drop.Rarity = static_cast<ERarity>(std::max(PickWeighted(Rng, Table.RarityWeights.data(), Table.RarityWeights.size()), 0));
+				break;
 			case ELootKind::Item:
 				Drop.Rarity = static_cast<ERarity>(std::max(PickWeighted(Rng, Table.RarityWeights.data(), Table.RarityWeights.size()), 0));
 				break;

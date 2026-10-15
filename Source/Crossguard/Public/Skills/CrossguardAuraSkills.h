@@ -31,6 +31,7 @@ private:
 	TMap<TWeakObjectPtr<UAbilitySystemComponent>, FActiveGameplayEffectHandle> Applied;
 	FDelegateHandle MutedHandle;
 	FDelegateHandle DeadHandle;
+	FDelegateHandle PlateHandle;
 };
 
 // [Hunter's Tracking] (Passive): see enemy players' footsteps from the last 30 s

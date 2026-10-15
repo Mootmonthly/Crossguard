@@ -796,7 +796,7 @@ void ACrossguardCharacter::HandleDeath()
 	// Monsters also drop from their loot table.
 	if (!IsPlayerControlled() && !LootTableId.IsNone())
 	{
-		if (const ACrossguardGameMode* GameMode = GetWorld()->GetAuthGameMode<ACrossguardGameMode>())
+		if (ACrossguardGameMode* GameMode = GetWorld()->GetAuthGameMode<ACrossguardGameMode>())
 		{
 			Dropped.Append(GameMode->RollLoot(LootTableId));
 		}
@@ -830,7 +830,7 @@ void ACrossguardCharacter::HandleDeath()
 
 bool ACrossguardCharacter::Revive(float HealthFraction)
 {
-	if (!HasAuthority() || bPermanentlyDead || !AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Dead))
+	if (!HasAuthority() || bPermanentlyDead || !CanBeRevived() || !AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Dead))
 	{
 		return false;
 	}

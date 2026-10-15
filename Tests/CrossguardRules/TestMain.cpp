@@ -875,6 +875,10 @@ static void TestLoot()
 	AllEpic.RarityWeights = {0, 0, 0, 1, 0, 0};
 	AllEpic.Entries = {{ELootKind::Weapon, "bow", 1, 1, 1}};
 	CHECK(RollLoot(AllEpic, Gems, 11).at(0).Rarity == ERarity::Epic);
+	// Gear always drops one piece per drop.
+	FLootTable ManySwords;
+	ManySwords.Entries = {{ELootKind::Weapon, "sword_one_handed", 1, 3, 3}};
+	CHECK(RollLoot(ManySwords, Gems, 5).at(0).Count == 1);
 }
 
 int main()

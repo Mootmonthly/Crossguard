@@ -35,6 +35,8 @@ void UCrossguardMultiscaleAbility::ActivateAbility(const FGameplayAbilitySpecHan
 			.AddWeakLambda(this, Refresh);
 		DeadHandle = ActorInfo->AbilitySystemComponent->RegisterGameplayTagEvent(CrossguardTags::State_Dead, EGameplayTagEventType::NewOrRemoved)
 			.AddWeakLambda(this, Refresh);
+		PlateHandle = ActorInfo->AbilitySystemComponent->RegisterGameplayTagEvent(CrossguardTags::Equipment_Armor_Plate, EGameplayTagEventType::NewOrRemoved)
+			.AddWeakLambda(this, Refresh);
 		RefreshAura();
 		GetWorld()->GetTimerManager().SetTimer(RefreshTimer, FTimerDelegate::CreateUObject(this, &UCrossguardMultiscaleAbility::RefreshAura),
 			MultiscaleRefreshSeconds, true);
@@ -134,9 +136,11 @@ void UCrossguardMultiscaleAbility::EndAbility(const FGameplayAbilitySpecHandle H
 	{
 		ASC->RegisterGameplayTagEvent(CrossguardTags::State_Muted, EGameplayTagEventType::NewOrRemoved).Remove(MutedHandle);
 		ASC->RegisterGameplayTagEvent(CrossguardTags::State_Dead, EGameplayTagEventType::NewOrRemoved).Remove(DeadHandle);
+		ASC->RegisterGameplayTagEvent(CrossguardTags::Equipment_Armor_Plate, EGameplayTagEventType::NewOrRemoved).Remove(PlateHandle);
 	}
 	MutedHandle.Reset();
 	DeadHandle.Reset();
+	PlateHandle.Reset();
 	RemoveAll();
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

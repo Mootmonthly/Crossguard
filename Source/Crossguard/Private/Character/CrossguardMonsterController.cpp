@@ -11,9 +11,9 @@
 
 namespace
 {
-	constexpr float RethinkSeconds = 0.5f;
+	constexpr float MonsterRethinkSeconds = 0.5f;
 	// Close enough to home to stop walking back.
-	constexpr float HomeAcceptance = 150.0f;
+	constexpr float MonsterHomeAcceptance = 150.0f;
 }
 
 ACrossguardMonsterController::ACrossguardMonsterController()
@@ -104,7 +104,7 @@ void ACrossguardMonsterController::Tick(float DeltaSeconds)
 	RethinkCountdown -= DeltaSeconds;
 	if (RethinkCountdown <= 0.0f)
 	{
-		RethinkCountdown = RethinkSeconds;
+		RethinkCountdown = MonsterRethinkSeconds;
 		const float FromHome = FVector::Dist(Monster->GetActorLocation(), Home);
 		const bool bTargetValid = IsValidTarget(*Monster, Target.Get());
 		if (bReturningHome || FromHome > Monster->LeashRange || !bTargetValid)
@@ -119,7 +119,7 @@ void ACrossguardMonsterController::Tick(float DeltaSeconds)
 			else if (FromHome > Monster->LeashRange || bReturningHome)
 			{
 				Target.Reset();
-				bReturningHome = FromHome > HomeAcceptance;
+				bReturningHome = FromHome > MonsterHomeAcceptance;
 				// Home with nobody around: a full reset.
 				if (!bReturningHome)
 				{
@@ -134,16 +134,16 @@ void ACrossguardMonsterController::Tick(float DeltaSeconds)
 
 		if (bReturningHome)
 		{
-			MoveToGoal(nullptr, Home, HomeAcceptance * 0.5f);
+			MoveToGoal(nullptr, Home, MonsterHomeAcceptance * 0.5f);
 		}
 		else if (AActor* Enemy = Target.Get())
 		{
 			const bool bMage = Monster->CombatRole == ECrossguardCombatRole::Mage;
 			MoveToGoal(Enemy, FVector::ZeroVector, bMage ? Monster->KeepDistance : Monster->AttackRange * 0.5f);
 		}
-		else if (FromHome > HomeAcceptance)
+		else if (FromHome > MonsterHomeAcceptance)
 		{
-			MoveToGoal(nullptr, Home, HomeAcceptance * 0.5f);
+			MoveToGoal(nullptr, Home, MonsterHomeAcceptance * 0.5f);
 		}
 		else
 		{

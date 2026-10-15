@@ -8,7 +8,8 @@
 // A PvE monster, run by ACrossguardMonsterController: it guards the spot it starts at, attacks the
 // nearest player or minion it can see within AggroRange, and gives up the chase beyond LeashRange
 // from home (walks back, healed). Its body holds what it carried plus a roll of LootTableId; its
-// killer gets KillXpSource XP. Monsters never fight each other. Placeholder look and numbers.
+// killer gets KillXpSource XP. Monsters never target each other (a Mage monster's fireball splash can
+// still hurt one). Death is final: no revive. Placeholder look and numbers.
 UCLASS()
 class CROSSGUARD_API ACrossguardMonster : public ACrossguardAICharacter
 {

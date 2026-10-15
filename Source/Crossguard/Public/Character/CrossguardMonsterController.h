@@ -33,7 +33,7 @@ private:
 	// home (no point chasing someone the leash would pull it back from).
 	AActor* FindTarget(const ACrossguardMonster& Monster) const;
 	bool IsValidTarget(const ACrossguardMonster& Monster, const AActor* Candidate) const;
-	void MoveToGoal(AActor* GoalActor, const FVector& GoalLocation, float Acceptance);
+	void MoveToGoal(AActor* InGoalActor, const FVector& InGoalLocation, float Acceptance);
 
 	TWeakObjectPtr<AActor> Target;
 	bool bReturningHome = false;

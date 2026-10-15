@@ -73,7 +73,7 @@ public:
 
 	// Server. Rolls a loot table with a fresh random seed. Empty if the table or data is missing.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Loot")
-	TArray<FCrossguardInventoryItem> RollLoot(FName TableId) const;
+	TArray<FCrossguardInventoryItem> RollLoot(FName TableId);
 
 	static const TCHAR* PartyOption;
 

@@ -66,6 +66,8 @@ public:
 	void RestoreFullHealth();
 
 	virtual void PossessedBy(AController* NewController) override;
+	// Monsters and minions stay dead (a revive would duplicate a monster's loot).
+	virtual bool CanBeRevived() const override { return false; }
 
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Crossguard|AI")

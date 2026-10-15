@@ -126,7 +126,7 @@ void ACrossguardGameMode::HandleStartingNewPlayer_Implementation(APlayerControll
 	}
 }
 
-TArray<FCrossguardInventoryItem> ACrossguardGameMode::RollLoot(FName TableId) const
+TArray<FCrossguardInventoryItem> ACrossguardGameMode::RollLoot(FName TableId)
 {
 	const int64 Seed = (static_cast<int64>(FMath::Rand()) << 31) ^ static_cast<int64>(FMath::Rand()) ^ static_cast<int64>(FPlatformTime::Cycles64());
 	return UCrossguardLootLibrary::RollLoot(Loot, TableId, Seed);

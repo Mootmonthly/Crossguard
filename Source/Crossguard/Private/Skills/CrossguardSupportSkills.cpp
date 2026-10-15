@@ -75,7 +75,7 @@ ACrossguardCharacter* UCrossguardBenedictionAbility::FindAimedBody(float Range) 
 	for (TActorIterator<ACrossguardCharacter> It(World); It; ++It)
 	{
 		ACrossguardCharacter* Candidate = *It;
-		if (Candidate == Avatar || !IsDead(Candidate) || Candidate->IsPermanentlyDead())
+		if (Candidate == Avatar || !IsDead(Candidate) || Candidate->IsPermanentlyDead() || !Candidate->CanBeRevived())
 		{
 			continue;
 		}

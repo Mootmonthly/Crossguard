@@ -943,11 +943,11 @@ bool UCrossguardInventoryComponent::OpenLootContainer(ACrossguardLootContainer* 
 
 void UCrossguardInventoryComponent::SetOpenContainer(ACrossguardLootContainer* Container)
 {
-	if (OpenContainer != nullptr)
+	if (IsValid(OpenContainer))
 	{
 		OpenContainer->OnContentsChanged.RemoveDynamic(this, &UCrossguardInventoryComponent::OnOpenContainerContentsChanged);
 	}
-	OpenContainer = Container;
+	OpenContainer = IsValid(Container) ? Container : nullptr;
 	if (OpenContainer != nullptr)
 	{
 		OpenContainer->OnContentsChanged.AddUniqueDynamic(this, &UCrossguardInventoryComponent::OnOpenContainerContentsChanged);
@@ -957,6 +957,12 @@ void UCrossguardInventoryComponent::SetOpenContainer(ACrossguardLootContainer* C
 
 void UCrossguardInventoryComponent::OnOpenContainerContentsChanged()
 {
+	// Walked away (or it is gone): closed, so its contents stop reaching this player.
+	if (OpenContainer != nullptr && (!IsValid(OpenContainer) || !CanReach(OpenContainer)))
+	{
+		SetOpenContainer(nullptr);
+		return;
+	}
 	// Only the looter sees what is inside (replicated to the owner only).
 	OpenContainerItems = OpenContainer != nullptr ? OpenContainer->GetItems() : TArray<FCrossguardInventoryItem>();
 	OnOpenContainerChanged.Broadcast();

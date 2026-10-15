@@ -86,6 +86,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Death")
 	bool Revive(float HealthFraction = 0.5f);
 
+	// False for AI characters (monsters, minions): their death is final.
+	virtual bool CanBeRevived() const { return true; }
+
 	// The revive window ran out: dead for the rest of the raid.
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Death")
 	bool IsPermanentlyDead() const { return bPermanentlyDead; }
