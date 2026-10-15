@@ -31,7 +31,7 @@ order changes.
 
 ## Milestone 0: Verify what is written
 
-Several systems were written without an editor build. Do this before building more on top.
+Several systems were written without an editor build. Do this before building more on top. Step by step: [next-build-checklist.md](next-build-checklist.md).
 
 | Item | Needs | Notes |
 | --- | --- | --- |
