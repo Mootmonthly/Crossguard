@@ -156,6 +156,27 @@ public:
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 };
 
+// [Like A Lion, He Leapt] (Art, 12 s, melee): leap at the nearest enemy within 30 m (players first,
+// then monsters and minions; not stealthed), landing 1.5 m short, and +20% Strength for 6 s. With
+// no enemy in range it fails and no cooldown starts.
+UCLASS()
+class CROSSGUARD_API UCrossguardLikeALionAbility : public UCrossguardSkillAbility
+{
+	GENERATED_BODY()
+
+public:
+	UCrossguardLikeALionAbility();
+
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+private:
+	AActor* FindLeapTarget() const;
+
+	UFUNCTION()
+	void OnLeapFinished();
+};
+
 // [Hunter's Leap] (Active, 15 s): leap forward 0.5 m per point of Agility (5 m at 10 AGI).
 UCLASS()
 class CROSSGUARD_API UCrossguardHuntersLeapAbility : public UCrossguardSkillAbility

@@ -92,7 +92,7 @@ private:
 	TSet<TWeakObjectPtr<AActor>> Caught;
 };
 
-// [Flight] (Active, 60 s): fly for 20 s. Space rises, Left Ctrl descends; you fall when it ends.
+// [Flight] (Spell, 60 s): fly for 20 s. Space rises, Left Ctrl descends; you fall when it ends.
 // [Chop Down] ends it early (Grounded). Usable in dragon form.
 UCLASS()
 class CROSSGUARD_API UCrossguardFlightAbility : public UCrossguardSkillAbility

@@ -84,6 +84,7 @@ namespace CrossguardTags
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Wall);
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Stealth);
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Immutable);
+	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_LikeALion);
 
 	// Picks locks without a lockpick item. Grant it from the lockpicking skill's passive effect.
 	CROSSGUARD_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Lockpicking);

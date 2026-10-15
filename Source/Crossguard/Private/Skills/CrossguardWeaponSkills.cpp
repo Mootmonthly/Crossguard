@@ -12,6 +12,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/RootMotionSource.h"
 #include "Character/CrossguardCharacter.h"
+#include "EngineUtils.h"
+#include "Game/CrossguardTeamLibrary.h"
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Items/CrossguardItemTypes.h"
 #include "Skills/CrossguardWall.h"
@@ -42,6 +44,11 @@ namespace
 	constexpr float LeapCmPerAgility = 50.0f;
 	constexpr float LeapHeight = 150.0f;
 	constexpr float LeapSeconds = 0.6f;
+	constexpr float LionRange = 3000.0f;
+	constexpr float LionStopShort = 150.0f;
+	constexpr float LionHeight = 200.0f;
+	constexpr float LionStrength = 1.2f;
+	constexpr float LionBuffSeconds = 6.0f;
 
 	// The main-hand weapon's damage as a spec from Ability: Fraction of its value, plus AttackBonus.
 	FGameplayEffectSpecHandle MakeMainHandSpec(const UCrossguardSkillAbility& Ability, const AActor* Avatar, float Fraction, float AttackBonus)
@@ -437,6 +444,92 @@ void UCrossguardPartingTheLandAbility::ActivateAbility(const FGameplayAbilitySpe
 		}
 	}
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+}
+
+// --- Like A Lion, He Leapt -----------------------------------------------------------------------
+
+UCrossguardLikeALionAbility::UCrossguardLikeALionAbility()
+{
+	SkillId = TEXT("like_a_lion_he_leapt");
+	SkillCategory = ECrossguardSkillCategory::Art;
+	BaseCooldownSeconds = 12.0f;
+	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_LikeALion);
+	RequiredWeapons.Add(ECrossguardWeaponType::AnyMelee);
+	SetAssetTags(MeleeTags());
+}
+
+AActor* UCrossguardLikeALionAbility::FindLeapTarget() const
+{
+	AActor* Avatar = GetAvatarActorFromActorInfo();
+	if (Avatar == nullptr)
+	{
+		return nullptr;
+	}
+	AActor* BestPlayer = nullptr;
+	AActor* BestOther = nullptr;
+	float BestPlayerDistance = FMath::Square(LionRange);
+	float BestOtherDistance = BestPlayerDistance;
+	for (TActorIterator<ACrossguardCharacter> It(Avatar->GetWorld()); It; ++It)
+	{
+		ACrossguardCharacter* Candidate = *It;
+		const UAbilitySystemComponent* ASC = Candidate->GetAbilitySystemComponent();
+		if (Candidate == Avatar || ASC == nullptr || UCrossguardTeamLibrary::AreAllies(Avatar, Candidate)
+			|| ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead) || ASC->HasMatchingGameplayTag(CrossguardTags::State_Stealthed))
+		{
+			continue;
+		}
+		const float Distance = FVector::DistSquared(Avatar->GetActorLocation(), Candidate->GetActorLocation());
+		if (Candidate->IsPlayerControlled() && Distance < BestPlayerDistance)
+		{
+			BestPlayerDistance = Distance;
+			BestPlayer = Candidate;
+		}
+		else if (!Candidate->IsPlayerControlled() && Distance < BestOtherDistance)
+		{
+			BestOtherDistance = Distance;
+			BestOther = Candidate;
+		}
+	}
+	return BestPlayer != nullptr ? BestPlayer : BestOther;
+}
+
+void UCrossguardLikeALionAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+{
+	const ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
+	// Server and owning client pick the same target from replicated positions; a rare disagreement
+	// is corrected by the server's movement.
+	const AActor* Target = FindLeapTarget();
+	if (Character == nullptr || Target == nullptr)
+	{
+		// Nobody to leap at: no cooldown.
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	if (!CommitOrCancel(Handle, ActorInfo, ActivationInfo))
+	{
+		return;
+	}
+	if (ActorInfo->IsNetAuthority())
+	{
+		UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+		const TMap<FName, float> Stronger = {{TEXT("Strength"), LionStrength}};
+		ApplyTimedStats(ASC, ASC, Stronger, LionBuffSeconds, true);
+	}
+
+	const FVector ToTarget = Target->GetActorLocation() - Character->GetActorLocation();
+	const float Distance = FMath::Max(ToTarget.Size2D() - LionStopShort, 0.0f);
+	const FRotator Facing(0.0f, ToTarget.Rotation().Yaw, 0.0f);
+	UAbilityTask_ApplyRootMotionJumpForce* Leap = UAbilityTask_ApplyRootMotionJumpForce::ApplyRootMotionJumpForce(this, TEXT("LikeALion"),
+		Facing, Distance, LionHeight, 0.4f + Distance / 2500.0f, 0.1f, true, ERootMotionFinishVelocityMode::ClampVelocity, FVector::ZeroVector,
+		Character->GetCharacterMovement()->MaxWalkSpeed, nullptr, nullptr);
+	Leap->OnFinish.AddDynamic(this, &UCrossguardLikeALionAbility::OnLeapFinished);
+	Leap->ReadyForActivation();
+}
+
+void UCrossguardLikeALionAbility::OnLeapFinished()
+{
+	EndOnTimer();
 }
 
 // --- Hunter's Leap --------------------------------------------------------------------------------

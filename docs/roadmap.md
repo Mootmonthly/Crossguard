@@ -20,7 +20,7 @@ order changes.
 | Character | First-person camera, Enhanced Input built in code, GAS stats derived from STR/AGI/INT. |
 | Combat | Weapon attacks (melee sweep, hitscan wand, projectiles), damage and healing formulas, dual wield, cooldowns with CDR cap. Bows use arrows. |
 | Equipment | Main hand / off hand, six armor slots, rolled affixes, equipment stats and tags. |
-| Skills | Loadout validation (Capacity, bundles, superseded skills), Skill Library gating. Passive stat bonuses play from the skill data. 46 of 49 skills playable: 31 in C++ (including the next-attack system, Stealth, walls, CC immunity, party auras, tracking) and the stat passives from data. |
+| Skills | Loadout validation (Capacity, bundles, superseded skills), Skill Library gating. Passive stat bonuses play from the skill data. 47 of 50 skills playable: 32 in C++ (including the next-attack system, Stealth, walls, CC immunity, party auras, tracking) and the stat passives from data. |
 | Progression | XP sources, level curve, raid XP banked on extraction, attribute allocation, paid respec tokens. Session only, not saved. |
 | Stash | Per-character tabs of 10 × 30, between raids only. Not saved yet. |
 | Inventory | Server-authoritative 10 × 5 grid, Backpack and Quiver, stacking by type and rarity, equip through the inventory, Skill Gems, hotbar keys 3–7 for potions, bandages and throwables, two weapon sets on 1 and 2. |

@@ -870,7 +870,7 @@
 		"Name": "flight",
 		"DisplayName": "Flight",
 		"CapacityCost": 8,
-		"Category": "Active",
+		"Category": "Spell",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {
@@ -1158,6 +1158,47 @@
 			"Create a ball of light fixed over your head for 120 s, illuminating the area"
 		],
 		"Description": "Create a small ball of light fixed over your head, illuminating the area around you. Lasts 120 seconds. Cooldown: 30 seconds. Spell."
+	},
+	{
+		"Name": "like_a_lion_he_leapt",
+		"DisplayName": "Like A Lion, He Leapt",
+		"CapacityCost": 7,
+		"Category": "Art",
+		"WeaponTag": "Melee",
+		"Tags": [],
+		"Requirements": {
+			"Weapons": [
+				"AnyMelee"
+			],
+			"Armor": "None",
+			"Items": [],
+			"Forms": []
+		},
+		"CooldownSec": 12,
+		"DurationSec": 0,
+		"Includes": [],
+		"GrantsWhileActive": [],
+		"MinionSkills": [],
+		"StatModifiers": [
+			{
+				"Stat": "Strength",
+				"Op": "Percent",
+				"Value": 0.2,
+				"Target": "Self",
+				"SkillFilter": "None",
+				"Condition": {
+					"Type": "OnActivation",
+					"Weapons": [],
+					"Armor": "None",
+					"Description": ""
+				},
+				"DurationSec": 6
+			}
+		],
+		"Damage": [],
+		"Healing": [],
+		"Mechanics": [],
+		"Description": "The player jumps into the air and leaps forward towards the nearest enemy (prioritizes players) within 30 meters. Gains a 20% modifier to STR for 6 seconds."
 	},
 	{
 		"Name": "mortal_strike",

@@ -67,6 +67,7 @@ namespace CrossguardTags
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Wall, "Cooldown.Skill.Wall");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Stealth, "Cooldown.Skill.Stealth");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Immutable, "Cooldown.Skill.Immutable");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_LikeALion, "Cooldown.Skill.LikeALion");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Lockpicking, "Ability.Lockpicking", "Picks locks without a lockpick item (the lockpicking skill).");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Sword, "Equipment.Wielding.Sword", "Holding a Sword.");

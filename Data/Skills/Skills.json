@@ -820,32 +820,32 @@
     "notes": []
   },
   {
-    "id": "flight",
-    "name": "Flight",
     "capacityCost": 8,
-    "category": "Active",
-    "weaponTag": null,
-    "tags": [],
-    "requirements": {
-      "weapons": [],
-      "armor": null,
-      "items": [],
-      "forms": []
-    },
+    "category": "Spell",
     "cooldownSec": 60,
-    "durationSec": 20,
-    "includes": [],
-    "grantsWhileActive": [],
-    "minionSkills": [],
-    "statModifiers": [],
     "damage": [],
+    "description": "Gain the ability to fly in the air for 20 seconds. Cooldown: 60 seconds.",
+    "durationSec": 20,
+    "grantsWhileActive": [],
     "healing": [],
+    "id": "flight",
+    "includes": [],
     "mechanics": [
       "Fly for 20 s"
     ],
-    "description": "Gain the ability to fly in the air for 20 seconds. Cooldown: 60 seconds.",
+    "minionSkills": [],
+    "name": "Flight",
+    "notes": [],
+    "requirements": {
+      "armor": null,
+      "forms": [],
+      "items": [],
+      "weapons": []
+    },
     "source": "SkillsDoc",
-    "notes": []
+    "statModifiers": [],
+    "tags": [],
+    "weaponTag": null
   },
   {
     "id": "gouge",
@@ -1121,6 +1121,46 @@
     "description": "Create a small ball of light fixed over your head, illuminating the area around you. Lasts 120 seconds. Cooldown: 30 seconds. Spell.",
     "source": "SkillsDoc",
     "notes": []
+  },
+  {
+    "capacityCost": 7,
+    "category": "Art",
+    "cooldownSec": 12,
+    "damage": [],
+    "description": "The player jumps into the air and leaps forward towards the nearest enemy (prioritizes players) within 30 meters. Gains a 20% modifier to STR for 6 seconds.",
+    "durationSec": null,
+    "grantsWhileActive": [],
+    "healing": [],
+    "id": "like_a_lion_he_leapt",
+    "includes": [],
+    "mechanics": [],
+    "minionSkills": [],
+    "name": "Like A Lion, He Leapt",
+    "notes": [],
+    "requirements": {
+      "armor": null,
+      "forms": [],
+      "items": [],
+      "weapons": [
+        "AnyMelee"
+      ]
+    },
+    "source": "Editor",
+    "statModifiers": [
+      {
+        "condition": {
+          "onActivation": true
+        },
+        "durationSec": 6,
+        "op": "Percent",
+        "skillFilter": null,
+        "stat": "STR",
+        "target": "Self",
+        "value": 0.2
+      }
+    ],
+    "tags": [],
+    "weaponTag": "Melee"
   },
   {
     "id": "mortal_strike",

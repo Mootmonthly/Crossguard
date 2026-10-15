@@ -39,6 +39,7 @@ namespace CrossguardNativeSkills
 			Register(UCrossguardTripleThrustAbility::StaticClass());
 			Register(UCrossguardPartingTheLandAbility::StaticClass());
 			Register(UCrossguardHuntersLeapAbility::StaticClass());
+			Register(UCrossguardLikeALionAbility::StaticClass());
 			Register(UCrossguardGreaterHealAbility::StaticClass());
 			Register(UCrossguardBenedictionAbility::StaticClass());
 			Register(UCrossguardUnleashAbility::StaticClass());

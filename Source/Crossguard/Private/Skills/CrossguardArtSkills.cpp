@@ -372,7 +372,7 @@ void UCrossguardFlareBreathAbility::EndAbility(const FGameplayAbilitySpecHandle 
 UCrossguardFlightAbility::UCrossguardFlightAbility()
 {
 	SkillId = TEXT("flight");
-	SkillCategory = ECrossguardSkillCategory::Active;
+	SkillCategory = ECrossguardSkillCategory::Spell;
 	BaseCooldownSeconds = 60.0f;
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_Flight);
 	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Dragonified);
