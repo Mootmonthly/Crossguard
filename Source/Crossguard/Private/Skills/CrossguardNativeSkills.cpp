@@ -1,6 +1,7 @@
 #include "Skills/CrossguardNativeSkills.h"
 
 #include "AbilitySystem/CrossguardGameplayAbility.h"
+#include "Skills/CrossguardArtSkills.h"
 #include "Skills/CrossguardSpellSkills.h"
 
 namespace CrossguardNativeSkills
@@ -19,6 +20,10 @@ namespace CrossguardNativeSkills
 			Register(UCrossguardMuteAbility::StaticClass());
 			Register(UCrossguardEldritchShieldAbility::StaticClass());
 			Register(UCrossguardChopDownAbility::StaticClass());
+			Register(UCrossguardShootingStarAbility::StaticClass());
+			Register(UCrossguardDragonificationAbility::StaticClass());
+			Register(UCrossguardFlareBreathAbility::StaticClass());
+			Register(UCrossguardFlightAbility::StaticClass());
 			return Map;
 		}();
 		return Registry;

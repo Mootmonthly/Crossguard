@@ -31,6 +31,7 @@
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
 #include "Skills/CrossguardLoadoutComponent.h"
+#include "Skills/CrossguardSkillAbility.h"
 
 ACrossguardCharacter::ACrossguardCharacter()
 {
@@ -49,6 +50,9 @@ ACrossguardCharacter::ACrossguardCharacter()
 	OffHandAttackAbilityClass = UCrossguardOffHandAttackAbility::StaticClass();
 
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
+	GetCharacterMovement()->MaxFlySpeed = BaseWalkSpeed;
+	// Stop when the keys are let go while flying ([Flight]), as on the ground.
+	GetCharacterMovement()->BrakingDecelerationFlying = GetCharacterMovement()->BrakingDecelerationWalking;
 
 	// First person: the body turns with the view.
 	bUseControllerRotationYaw = true;
@@ -92,6 +96,7 @@ void ACrossguardCharacter::EnsureDefaultInput()
 	MakeAction(SkillWheelAction, TEXT("IA_SkillWheel"), EInputActionValueType::Boolean);
 	MakeAction(CastSkillAction, TEXT("IA_CastSkill"), EInputActionValueType::Boolean);
 	MakeAction(SummonPortalAction, TEXT("IA_SummonPortal"), EInputActionValueType::Boolean);
+	MakeAction(FlyDownAction, TEXT("IA_FlyDown"), EInputActionValueType::Boolean);
 
 	if (DefaultMappingContext != nullptr)
 	{
@@ -116,6 +121,7 @@ void ACrossguardCharacter::EnsureDefaultInput()
 	Context->MapKey(LookAction, EKeys::Mouse2D).Modifiers.Add(InvertY);
 
 	Context->MapKey(JumpAction, EKeys::SpaceBar);
+	Context->MapKey(FlyDownAction, EKeys::LeftControl);
 	Context->MapKey(AttackAction, EKeys::LeftMouseButton);
 	Context->MapKey(SecondaryActionInput, EKeys::RightMouseButton);
 	Context->MapKey(InteractAction, EKeys::F);
@@ -146,6 +152,8 @@ void ACrossguardCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	Input->BindAction(LookAction, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnLook);
 	Input->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
 	Input->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+	Input->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnFlyUp);
+	Input->BindAction(FlyDownAction, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnFlyDown);
 	// Triggered fires every frame while held: holding the button keeps attacking at the weapon's rate.
 	Input->BindAction(AttackAction, ETriggerEvent::Started, this, &ACrossguardCharacter::OnAttackPressed);
 	Input->BindAction(AttackAction, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnAttack);
@@ -217,6 +225,22 @@ void ACrossguardCharacter::OnAttackReleased()
 	{
 		bUsingItem = false;
 		InventoryComponent->RequestStopUse();
+	}
+}
+
+void ACrossguardCharacter::OnFlyUp()
+{
+	if (GetCharacterMovement()->IsFlying())
+	{
+		AddMovementInput(FVector::UpVector, 1.0f);
+	}
+}
+
+void ACrossguardCharacter::OnFlyDown()
+{
+	if (GetCharacterMovement()->IsFlying())
+	{
+		AddMovementInput(FVector::UpVector, -1.0f);
 	}
 }
 
@@ -470,6 +494,7 @@ void ACrossguardCharacter::ApplyMoveSpeed(float MoveSpeed)
 {
 	// Server and owning client both set it so client-side movement prediction agrees.
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed * FMath::Max(MoveSpeed, 0.0f);
+	GetCharacterMovement()->MaxFlySpeed = GetCharacterMovement()->MaxWalkSpeed;
 }
 
 void ACrossguardCharacter::TryInteract()
@@ -607,6 +632,20 @@ void ACrossguardCharacter::HandleDeath()
 	// Teammates have this long to revive; then the character is dead for the raid.
 	GetWorldTimerManager().SetTimer(ReviveWindowTimer, this, &ACrossguardCharacter::OnReviveWindowExpired,
 		static_cast<float>(Crossguard::FDeathConfig().ReviveWindowSeconds), false);
+	// Skills in progress stop: Flight ends (the body falls), dragon form ends, channels stop.
+	// Collected first: ending Dragonification removes the skills it granted.
+	TArray<FGameplayAbilitySpecHandle> ActiveSkills;
+	for (const FGameplayAbilitySpec& Spec : AbilitySystemComponent->GetActivatableAbilities())
+	{
+		if (Spec.IsActive() && Spec.Ability != nullptr && Spec.Ability->IsA<UCrossguardSkillAbility>())
+		{
+			ActiveSkills.Add(Spec.Handle);
+		}
+	}
+	for (const FGameplayAbilitySpecHandle& Handle : ActiveSkills)
+	{
+		AbilitySystemComponent->CancelAbilityHandle(Handle);
+	}
 	// Hands drop whatever they held; a revived character draws a weapon set again with 1 / 2.
 	InventoryComponent->ReleaseHeldItem();
 	EquipmentComponent->HolsterWeapons();

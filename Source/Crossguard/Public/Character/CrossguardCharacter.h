@@ -219,6 +219,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
 	TObjectPtr<UInputAction> CastSkillAction;
 
+	// Left Ctrl: descend while flying ([Flight]). Space rises.
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> FlyDownAction;
+
 	// X: summon an extract portal (placeholder key).
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
 	TObjectPtr<UInputAction> SummonPortalAction;
@@ -269,6 +273,9 @@ private:
 	void EnsureDefaultInput();
 	void OnMove(const FInputActionValue& Value);
 	void OnLook(const FInputActionValue& Value);
+	// Held Space / Left Ctrl while flying.
+	void OnFlyUp();
+	void OnFlyDown();
 	void OnAttack();
 	// Left click pressed / released: uses a readied consumable instead of attacking.
 	void OnAttackPressed();

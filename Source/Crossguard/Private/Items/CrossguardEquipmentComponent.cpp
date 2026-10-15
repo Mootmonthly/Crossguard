@@ -199,7 +199,9 @@ void UCrossguardEquipmentComponent::RequestSwitchWeaponSet(int32 Set)
 void UCrossguardEquipmentComponent::ServerSwitchWeaponSet_Implementation(int32 Set)
 {
 	const UCrossguardAbilitySystemComponent* ASC = GetAbilitySystem();
-	if (Set < 0 || Set >= Crossguard::WeaponSetCount || ASC == nullptr || ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead))
+	// No weapons while dead or in dragon form.
+	if (Set < 0 || Set >= Crossguard::WeaponSetCount || ASC == nullptr || ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead)
+		|| ASC->HasMatchingGameplayTag(CrossguardTags::State_Dragonified))
 	{
 		return;
 	}
