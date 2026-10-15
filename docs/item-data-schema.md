@@ -71,16 +71,21 @@ Armor by slot:
 ## General items
 
 `Data/Items/Items.json` is a JSON array of non-gear items (ammo, consumables, throwables,
-materials), sorted by `id`. `Tools/validate_items.py` checks it; `Tools/export_item_table.py`
-writes `ItemTable.json` (row struct `CrossguardItemRow`).
+materials, currency, trinkets), sorted by `id`. `Tools/validate_items.py` checks it;
+`Tools/export_item_table.py` writes `ItemTable.json` (row struct `CrossguardItemRow`).
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `id` | string | `snake_case`, unique. |
 | `name` | string | Display name. |
-| `category` | enum | `Ammo`, `Consumable`, `Throwable`, `Material`. Mirrors the same-named entries of `ECrossguardItemCategory`. |
+| `category` | enum | `Ammo`, `Consumable`, `Throwable`, `Material`, `Currency` (gold coins), `Trinket` (valuables sold to vendors, e.g. gemstones). Mirrors the same-named entries of `ECrossguardItemCategory`. |
 | `gridWidth`, `gridHeight` | integer ≥ 1 | Squares one item takes in the inventory grid, unrotated; must fit the main grid (see [Grid size](#grid-size)). |
-| `maxStack` | integer ≥ 1 | Most items one inventory stack holds. Set by category: Ammo 20, Throwable 3, Consumable 5. |
+| `maxStack` | integer ≥ 1 | Most items one inventory stack holds. Set by category: Ammo 20, Throwable 3, Consumable 5, Currency 100. Material and Trinket are not ruled yet (any integer ≥ 1). |
+| `sellValue` | integer ≥ 0 | Gold a vendor pays at Common. 0: vendors do not buy it. Trinkets must have `sellValue` > 0. |
+| `sellPerRarity` | integer ≥ 0 | Extra gold per rarity level (Common 0 ... Mystic 5). |
+
+Sell value at a rarity = `sellValue + sellPerRarity × level`. The exporter writes `SellValue` and
+`SellPerRarity` for every row.
 
 Consumables also have these fields; other categories must not have them. The exporter writes
 `HealAmount`, `HealPerRarity`, `HealDuration` and `UseTime` for every row (0 for non-consumables).
@@ -96,7 +101,9 @@ HP restored at a rarity = `healAmount + healPerRarity × level`.
 
 Prototype items: Arrow (1 × 3, stack 20), Bolt (1 × 2, stack 20), Bandage (1 × 1, stack 5, heals
 10 over 2 s, 2 s use time) and Healing Potion (1 × 1, stack 5, heals 15 + 5 per rarity level over
-10 s, instant).
+10 s, instant). Arrow, Bolt, Bandage and Healing Potion are not sold to vendors (`sellValue` 0).
+Gold Coin (Currency, 1 × 1, stack 100, `sellValue` 0). Emerald, Ruby and Sapphire (Trinkets,
+1 × 1, stack 1) sell for 50 at Common, +50 per rarity level, up to 300 at Mystic.
 
 ## Equipment slots
 

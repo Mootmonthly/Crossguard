@@ -26,6 +26,8 @@ def row(item):
         "GridWidth": item["gridWidth"],
         "GridHeight": item["gridHeight"],
         "MaxStack": item["maxStack"],
+        "SellValue": item["sellValue"],
+        "SellPerRarity": item["sellPerRarity"],
         "HealAmount": item.get("healAmount", 0),
         "HealPerRarity": item.get("healPerRarity", 0),
         "HealDuration": item.get("healDuration", 0),

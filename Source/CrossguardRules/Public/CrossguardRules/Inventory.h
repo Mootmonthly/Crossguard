@@ -24,6 +24,10 @@ namespace Crossguard
 		Consumable,
 		// Explosive bottles, throwing knives and axes, javelins.
 		Throwable,
+		// Gold coins. Extracting with them moves them into the character's gold balance.
+		Currency,
+		// Valuables sold to vendors (gemstones).
+		Trinket,
 		Other,
 	};
 

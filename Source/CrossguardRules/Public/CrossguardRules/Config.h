@@ -37,6 +37,14 @@ namespace Crossguard
 		int Extract = 35;
 	};
 
+	struct FEconomyConfig
+	{
+		// Seconds to pick a lock at 0% Dexterity (10 AGI). Lockpicking cannot fail.
+		double LockpickSeconds = 5.0;
+		// Floor on (1 + Dexterity) so very low AGI cannot make a lock take forever.
+		double MinDexterityFactor = 0.1;
+	};
+
 	struct FInventoryConfig
 	{
 		// Raid inventory: 50 squares. Shape is a placeholder.

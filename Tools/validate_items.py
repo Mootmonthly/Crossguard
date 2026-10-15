@@ -5,10 +5,10 @@ import os
 import re
 import sys
 
-CATEGORIES = {"Ammo", "Consumable", "Throwable", "Material"}
+CATEGORIES = {"Ammo", "Consumable", "Throwable", "Material", "Currency", "Trinket"}
 GRID_WIDTH, GRID_HEIGHT = 10, 5  # main inventory grid
-# Stack size is set per category (docs/design-decisions.md). Materials are not ruled yet.
-STACK_BY_CATEGORY = {"Ammo": 20, "Throwable": 3, "Consumable": 5}
+# Stack size is set per category (docs/design-decisions.md). Materials and trinkets are not ruled yet.
+STACK_BY_CATEGORY = {"Ammo": 20, "Throwable": 3, "Consumable": 5, "Currency": 100}
 ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 
 
@@ -44,6 +44,10 @@ def grid_size(v):
     return isinstance(v, int) and not isinstance(v, bool) and v >= 1
 
 
+def non_negative_int(v):
+    return isinstance(v, int) and not isinstance(v, bool) and v >= 0
+
+
 ITEM_SPEC = {
     "id": (lambda v: isinstance(v, str), "string"),
     "name": (lambda v: isinstance(v, str) and v != "", "non-empty string"),
@@ -51,6 +55,8 @@ ITEM_SPEC = {
     "gridWidth": (grid_size, "integer >= 1"),
     "gridHeight": (grid_size, "integer >= 1"),
     "maxStack": (grid_size, "integer >= 1"),
+    "sellValue": (non_negative_int, "integer >= 0"),
+    "sellPerRarity": (non_negative_int, "integer >= 0"),
 }
 
 
@@ -101,6 +107,9 @@ def validate(items):
         expected = STACK_BY_CATEGORY.get(it.get("category"))
         if expected is not None and it.get("maxStack") != expected:
             err(f"maxStack must be {expected} for {it.get('category')}")
+
+        if it.get("category") == "Trinket" and non_negative_int(it.get("sellValue")) and it["sellValue"] == 0:
+            err("sellValue must be > 0 for Trinket")
 
     if ids != sorted(ids):
         for a, b in zip(ids, ids[1:]):

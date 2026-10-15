@@ -1,6 +1,7 @@
 // Unit tests for CrossguardRules. Minimal harness: no exceptions, no dependencies.
 
 #include "CrossguardRules/Combat.h"
+#include "CrossguardRules/Economy.h"
 #include "CrossguardRules/Experience.h"
 #include "CrossguardRules/Inventory.h"
 #include "CrossguardRules/Items.h"
@@ -706,6 +707,23 @@ static void TestSkillLibrary()
 	CHECK(ValidateLoadout(Catalog, {"fireball", "heal"}, 20).IsValid());
 }
 
+static void TestEconomy()
+{
+	// Gemstones: 50 gold at Common, +50 per rarity level, 300 at Mystic.
+	CHECK(SellPrice(50, 50, ERarity::Common) == 50);
+	CHECK(SellPrice(50, 50, ERarity::Rare) == 150);
+	CHECK(SellPrice(50, 50, ERarity::Mystic) == 300);
+	CHECK(SellPrice(0, 50, ERarity::Mystic) == 0);
+	CHECK(SellPrice(10, -5, ERarity::Epic) == 10);
+
+	const FEconomyConfig Config;
+	CHECK_NEAR(LockpickSeconds(Config, 0.0), 5.0);
+	CHECK_NEAR(LockpickSeconds(Config, 0.25), 4.0);
+	CHECK_NEAR(LockpickSeconds(Config, -0.2), 6.25);
+	// Floor: never slower than LockpickSeconds / 0.1.
+	CHECK_NEAR(LockpickSeconds(Config, -5.0), 50.0);
+}
+
 int main()
 {
 	TestProgression();
@@ -723,6 +741,7 @@ int main()
 	TestExperience();
 	TestInventoryGrid();
 	TestSkillLibrary();
+	TestEconomy();
 
 	std::printf("%d checks, %d failures\n", GChecks, GFailures);
 	return GFailures == 0 ? 0 : 1;

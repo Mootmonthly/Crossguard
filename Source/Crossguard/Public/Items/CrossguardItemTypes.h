@@ -95,6 +95,8 @@ enum class ECrossguardItemCategory : uint8
 	Material,
 	Consumable,
 	Throwable,
+	Currency, // gold coins
+	Trinket,  // valuables sold to vendors, e.g. gemstones
 	Other,
 };
 
@@ -230,7 +232,7 @@ struct CROSSGUARD_API FCrossguardArmorRow : public FTableRowBase
 	FName AffixPool;
 };
 
-// One row per general item (ammo, consumables, throwables, materials). Row name = item id
+// One row per general item (ammo, consumables, throwables, materials, currency, trinkets). Row name = item id
 // (e.g. "arrow"). Generated from Data/Items/Items.json by Tools/export_item_table.py.
 USTRUCT(BlueprintType)
 struct CROSSGUARD_API FCrossguardItemRow : public FTableRowBase
@@ -253,6 +255,14 @@ struct CROSSGUARD_API FCrossguardItemRow : public FTableRowBase
 	// Most items one inventory stack holds.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
 	int32 MaxStack = 1;
+
+	// Gold a vendor pays at Common. 0: vendors do not buy it.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	int32 SellValue = 0;
+
+	// Extra gold per rarity level.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	int32 SellPerRarity = 0;
 
 	// Consumables only: HP restored at Common.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")

@@ -27,7 +27,8 @@ namespace
 	bool IsTableItem(ECrossguardItemCategory Category)
 	{
 		return Category == ECrossguardItemCategory::Ammo || Category == ECrossguardItemCategory::Consumable
-			|| Category == ECrossguardItemCategory::Throwable || Category == ECrossguardItemCategory::Material;
+			|| Category == ECrossguardItemCategory::Throwable || Category == ECrossguardItemCategory::Material
+			|| Category == ECrossguardItemCategory::Currency || Category == ECrossguardItemCategory::Trinket;
 	}
 
 	FCrossguardInventoryResult Fail(ECrossguardInventoryError Error)
@@ -60,6 +61,8 @@ static_assert(static_cast<int>(ECrossguardItemCategory::Container) == static_cas
 static_assert(static_cast<int>(ECrossguardItemCategory::Material) == static_cast<int>(Crossguard::EItemCategory::Material), "Item category enums out of sync");
 static_assert(static_cast<int>(ECrossguardItemCategory::Consumable) == static_cast<int>(Crossguard::EItemCategory::Consumable), "Item category enums out of sync");
 static_assert(static_cast<int>(ECrossguardItemCategory::Throwable) == static_cast<int>(Crossguard::EItemCategory::Throwable), "Item category enums out of sync");
+static_assert(static_cast<int>(ECrossguardItemCategory::Currency) == static_cast<int>(Crossguard::EItemCategory::Currency), "Item category enums out of sync");
+static_assert(static_cast<int>(ECrossguardItemCategory::Trinket) == static_cast<int>(Crossguard::EItemCategory::Trinket), "Item category enums out of sync");
 static_assert(static_cast<int>(ECrossguardItemCategory::Other) == static_cast<int>(Crossguard::EItemCategory::Other), "Item category enums out of sync");
 static_assert(static_cast<int>(ECrossguardInventoryContainer::Main) == static_cast<int>(Crossguard::EContainerKind::Main), "Container enums out of sync");
 static_assert(static_cast<int>(ECrossguardInventoryContainer::Backpack) == static_cast<int>(Crossguard::EContainerKind::Backpack), "Container enums out of sync");
@@ -177,6 +180,8 @@ bool UCrossguardInventoryComponent::GetGridSize(const FCrossguardInventoryItem& 
 	case ECrossguardItemCategory::Consumable:
 	case ECrossguardItemCategory::Throwable:
 	case ECrossguardItemCategory::Material:
+	case ECrossguardItemCategory::Currency:
+	case ECrossguardItemCategory::Trinket:
 	case ECrossguardItemCategory::Other:
 		break;
 	}

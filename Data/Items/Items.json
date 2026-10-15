@@ -5,7 +5,9 @@
     "category": "Ammo",
     "gridWidth": 1,
     "gridHeight": 3,
-    "maxStack": 20
+    "maxStack": 20,
+    "sellValue": 0,
+    "sellPerRarity": 0
   },
   {
     "id": "bandage",
@@ -14,6 +16,8 @@
     "gridWidth": 1,
     "gridHeight": 1,
     "maxStack": 5,
+    "sellValue": 0,
+    "sellPerRarity": 0,
     "healAmount": 10,
     "healPerRarity": 0,
     "healDuration": 2,
@@ -25,7 +29,29 @@
     "category": "Ammo",
     "gridWidth": 1,
     "gridHeight": 2,
-    "maxStack": 20
+    "maxStack": 20,
+    "sellValue": 0,
+    "sellPerRarity": 0
+  },
+  {
+    "id": "emerald",
+    "name": "Emerald",
+    "category": "Trinket",
+    "gridWidth": 1,
+    "gridHeight": 1,
+    "maxStack": 1,
+    "sellValue": 50,
+    "sellPerRarity": 50
+  },
+  {
+    "id": "gold_coin",
+    "name": "Gold Coin",
+    "category": "Currency",
+    "gridWidth": 1,
+    "gridHeight": 1,
+    "maxStack": 100,
+    "sellValue": 0,
+    "sellPerRarity": 0
   },
   {
     "id": "healing_potion",
@@ -34,9 +60,31 @@
     "gridWidth": 1,
     "gridHeight": 1,
     "maxStack": 5,
+    "sellValue": 0,
+    "sellPerRarity": 0,
     "healAmount": 15,
     "healPerRarity": 5,
     "healDuration": 10,
     "useTime": 0
+  },
+  {
+    "id": "ruby",
+    "name": "Ruby",
+    "category": "Trinket",
+    "gridWidth": 1,
+    "gridHeight": 1,
+    "maxStack": 1,
+    "sellValue": 50,
+    "sellPerRarity": 50
+  },
+  {
+    "id": "sapphire",
+    "name": "Sapphire",
+    "category": "Trinket",
+    "gridWidth": 1,
+    "gridHeight": 1,
+    "maxStack": 1,
+    "sellValue": 50,
+    "sellPerRarity": 50
   }
 ]
