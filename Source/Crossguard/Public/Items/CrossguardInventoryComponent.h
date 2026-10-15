@@ -338,6 +338,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Inventory|Loot")
 	ACrossguardLootContainer* GetOpenContainer() const { return OpenContainer; }
 
+	// What is in the open container. Use this on clients: containers do not replicate their
+	// contents to everyone, only to whoever has them open, through this.
+	UFUNCTION(BlueprintPure, Category = "Inventory|Loot")
+	const TArray<FCrossguardInventoryItem>& GetOpenContainerItems() const { return OpenContainerItems; }
+
 	// Server. Opens a container if the owner is alive and in range. False otherwise.
 	bool OpenLootContainer(ACrossguardLootContainer* Container);
 
@@ -484,6 +489,14 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_OpenContainer)
 	TObjectPtr<ACrossguardLootContainer> OpenContainer;
+
+	UPROPERTY(ReplicatedUsing = OnRep_OpenContainer)
+	TArray<FCrossguardInventoryItem> OpenContainerItems;
+
+	// Server.
+	void SetOpenContainer(ACrossguardLootContainer* Container);
+	UFUNCTION()
+	void OnOpenContainerContentsChanged();
 
 	UPROPERTY(ReplicatedUsing = OnRep_Inventory)
 	int32 ReadiedItemId = 0;

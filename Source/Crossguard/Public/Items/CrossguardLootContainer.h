@@ -18,8 +18,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCrossguardLootContentsChanged);
 // chest can be locked (its Lock component), so it must be lockpicked first.
 //
 // Server authoritative. Players take and put items through their own
-// UCrossguardInventoryComponent, which checks they are alive and within InteractRange. Contents
-// replicate to everyone.
+// UCrossguardInventoryComponent, which checks they are alive and within InteractRange. Contents stay
+// on the server; the looter's inventory component mirrors them to that player only.
 UCLASS()
 class CROSSGUARD_API ACrossguardLootContainer : public AActor, public ICrossguardInteractable
 {
@@ -39,6 +39,7 @@ public:
 	void InitializeContents(const TArray<FCrossguardInventoryItem>& NewItems);
 
 	UFUNCTION(BlueprintPure, Category = "Loot")
+	// Server. Clients read UCrossguardInventoryComponent::GetOpenContainerItems.
 	const TArray<FCrossguardInventoryItem>& GetItems() const { return Items; }
 
 	UFUNCTION(BlueprintPure, Category = "Loot")
@@ -94,7 +95,8 @@ private:
 	// Places Item in the first free spot of a grid of Size. Does not add it.
 	bool FindPlacement(FCrossguardInventoryItem& Item, FIntPoint Size) const;
 
-	UPROPERTY(ReplicatedUsing = OnRep_Contents)
+	// Server only (see the class comment).
+	UPROPERTY()
 	TArray<FCrossguardInventoryItem> Items;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Contents)

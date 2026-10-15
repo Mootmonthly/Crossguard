@@ -107,7 +107,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Matchmaking with parties | Code | Must pass `?Party=<key>` in the travel URL. |
 | Backend and accounts | Decision, Code | Persistence, purchases, auction house. |
 | Platform store | Decision, Code | Steam or other; purchases verified server-side. |
-| Anti-cheat review | Code | e.g. body contents replicate to everyone today. |
+| Anti-cheat review | Code | Container contents now reach only the looter; review the rest (inventories are owner-only already). |
 
 ## Open questions
 

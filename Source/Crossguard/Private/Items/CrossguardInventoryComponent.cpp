@@ -89,6 +89,7 @@ void UCrossguardInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeP
 	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, EquippedBackpack, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, EquippedQuiver, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, OpenContainer, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, OpenContainerItems, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, ReadiedItemId, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, Hotbar, COND_OwnerOnly);
 }
@@ -936,17 +937,36 @@ bool UCrossguardInventoryComponent::OpenLootContainer(ACrossguardLootContainer* 
 	{
 		return false;
 	}
-	OpenContainer = Container;
-	OnOpenContainerChanged.Broadcast();
+	SetOpenContainer(Container);
 	return true;
+}
+
+void UCrossguardInventoryComponent::SetOpenContainer(ACrossguardLootContainer* Container)
+{
+	if (OpenContainer != nullptr)
+	{
+		OpenContainer->OnContentsChanged.RemoveDynamic(this, &UCrossguardInventoryComponent::OnOpenContainerContentsChanged);
+	}
+	OpenContainer = Container;
+	if (OpenContainer != nullptr)
+	{
+		OpenContainer->OnContentsChanged.AddUniqueDynamic(this, &UCrossguardInventoryComponent::OnOpenContainerContentsChanged);
+	}
+	OnOpenContainerContentsChanged();
+}
+
+void UCrossguardInventoryComponent::OnOpenContainerContentsChanged()
+{
+	// Only the looter sees what is inside (replicated to the owner only).
+	OpenContainerItems = OpenContainer != nullptr ? OpenContainer->GetItems() : TArray<FCrossguardInventoryItem>();
+	OnOpenContainerChanged.Broadcast();
 }
 
 void UCrossguardInventoryComponent::RequestCloseContainer()
 {
 	if (IsServer())
 	{
-		OpenContainer = nullptr;
-		OnOpenContainerChanged.Broadcast();
+		SetOpenContainer(nullptr);
 	}
 	else
 	{
@@ -1115,7 +1135,7 @@ TArray<FCrossguardInventoryItem> UCrossguardInventoryComponent::TakeEverything()
 		Taken.Add(Item);
 	}
 	Items.Reset();
-	OpenContainer = nullptr;
+	SetOpenContainer(nullptr);
 	OnInventoryChanged.Broadcast();
 	return Taken;
 }

@@ -32,7 +32,8 @@ void ACrossguardLootContainer::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ACrossguardLootContainer, Items);
+	// Items: not replicated. Whoever has the container open gets them through
+	// UCrossguardInventoryComponent::GetOpenContainerItems (anti-cheat: nobody else sees them).
 	DOREPLIFETIME(ACrossguardLootContainer, GridSize);
 	DOREPLIFETIME(ACrossguardLootContainer, BodyMesh);
 	DOREPLIFETIME(ACrossguardLootContainer, BodyMeshTransform);
