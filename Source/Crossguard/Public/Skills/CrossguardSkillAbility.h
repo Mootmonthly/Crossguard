@@ -23,11 +23,37 @@ public:
 	// Magical healing spec from the caster.
 	FGameplayEffectSpecHandle MakeHealingSpec(float Healing, float Coefficient = 1.0f) const;
 
-	// Applies a timed state tag (State.Blinded, State.ChopDownReady, ...) to Target.
+	// Applies a timed state tag (State.Blinded, State.ChopDownReady, ...) to Target. Crowd control
+	// is skipped on a target immune to it.
 	static void ApplyStatus(UAbilitySystemComponent* Source, UAbilitySystemComponent* Target, FGameplayTag State, float Seconds);
 
-	// Slows Target by Fraction (0.5 = -50% Movement Speed) for Seconds, with State.Slowed.
+	// Slows Target by Fraction (0.5 = -50% Movement Speed) for Seconds, with State.Slowed. Crowd
+	// control: skipped on a target immune to it.
 	static void ApplySlow(UAbilitySystemComponent* Source, UAbilitySystemComponent* Target, float Fraction, float Seconds);
+
+	// Specs for on-hit effects carried by attacks and projectiles; apply with ApplyOnHitSpec.
+	static FGameplayEffectSpecHandle MakeStatusSpec(UAbilitySystemComponent* Source, FGameplayTag State, float Seconds);
+	static FGameplayEffectSpecHandle MakeSlowSpec(UAbilitySystemComponent* Source, float Fraction, float Seconds);
+	// Damage every second for Seconds (Attack and/or Magic per second).
+	static FGameplayEffectSpecHandle MakeDamageOverTimeSpec(UAbilitySystemComponent* Source, float AttackPerSecond, float MagicPerSecond,
+		float Seconds);
+	// State.Muted for Seconds, with DamagePerSecond Magic Damage (0 for none). Also call
+	// CancelActiveSkills on the target.
+	static FGameplayEffectSpecHandle MakeMuteSpec(UAbilitySystemComponent* Source, float Seconds, float DamagePerSecond);
+
+	// Applies Spec to Target unless it grants a crowd-control state Target is immune to.
+	static void ApplyOnHitSpec(const FGameplayEffectSpecHandle& Spec, UAbilitySystemComponent* Target);
+
+	// Crowd control (docs/design-decisions.md): Slow, Blind, knock-up (later Silence, Stun, Root).
+	// Mute is not crowd control.
+	static bool IsCrowdControl(const FGameplayTag& State);
+	// [Immutable]: State.CCImmune, or the Immutable passive while not Muted.
+	static bool IsCrowdControlImmune(const UAbilitySystemComponent* Target);
+
+	// Timed stat change on Target: additive (Values are added) or multiplicative (Values multiply;
+	// unnamed stats stay 1). Optional state tag for the duration.
+	static FActiveGameplayEffectHandle ApplyTimedStats(UAbilitySystemComponent* Source, UAbilitySystemComponent* Target,
+		const TMap<FName, float>& Values, float Seconds, bool bMultiply, FGameplayTag State = FGameplayTag());
 
 	// Server. Cancels every skill ability running on ASC (death, Mute). Passives and basic attacks
 	// are left alone.

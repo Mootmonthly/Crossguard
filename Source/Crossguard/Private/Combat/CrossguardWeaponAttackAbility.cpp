@@ -41,6 +41,25 @@ namespace
 	constexpr float ChopDownDamageMultiplier = 1.1f;
 	constexpr float ChopDownSlow = 0.5f;
 	constexpr float ChopDownSlowSeconds = 2.0f;
+	// Other next-attack skills, Splinter of Winter and Arcane Arrows (Data/Skills/Skills.json).
+	constexpr float SlashWeaponDamage = 7.0f;
+	constexpr float MortalStrikeAttackDamage = 20.0f;
+	constexpr float ShadeBlowMagicDamage = 20.0f;
+	constexpr float ShadeBlowHealBlockSeconds = 5.0f;
+	constexpr float GougeDamagePerSecond = 5.0f;
+	constexpr float GougeSeconds = 5.0f;
+	constexpr float GougeSlow = 0.05f;
+	constexpr float PurgeShotMagicDamage = 10.0f;
+	constexpr float PurgeShotMuteSeconds = 3.0f;
+	constexpr float SplinterMagicDamage = 5.0f;
+	constexpr float SplinterSlow = 0.1f;
+	constexpr float SplinterSlowSeconds = 3.0f;
+	constexpr float ArcaneArrowsMagicDamage = 5.0f;
+
+	bool IsRangedWeapon(ECrossguardWeaponType Type)
+	{
+		return Type == ECrossguardWeaponType::Bow || Type == ECrossguardWeaponType::Crossbow;
+	}
 
 	// Weapons without ammo always have it. Characters without an inventory (AI) shoot freely.
 	bool HasAmmo(const FCrossguardWeaponRow& Weapon, const FGameplayAbilityActorInfo* ActorInfo)
@@ -88,44 +107,37 @@ void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecH
 			return;
 		}
 
-		// [Chop Down] readies the next melee axe attack, which uses it up whether or not it hits.
 		UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
-		const bool bChopDown = ASC != nullptr && Weapon->WeaponType == ECrossguardWeaponType::Axe
-			&& Weapon->Delivery == ECrossguardAttackDelivery::MeleeSwing && ASC->HasMatchingGameplayTag(CrossguardTags::State_ChopDownReady);
-
+		const FCrossguardAttackRiders Riders = GatherRiders(*Weapon, ASC);
 		const FCrossguardWeaponItem& Item = Equipment->GetItem(Slot);
-		const FGameplayEffectSpecHandle Spec = MakeWeaponDamageSpec(*Weapon, Item, bChopDown ? ChopDownDamageMultiplier : 1.0f);
+		const FGameplayEffectSpecHandle Spec = MakeWeaponDamageSpec(*Weapon, Item, Riders);
 		switch (Weapon->Delivery)
 		{
 		case ECrossguardAttackDelivery::MeleeSwing:
 		{
 			const TArray<AActor*> Hit = PerformMeleeSwing(Spec);
-			if (bChopDown)
+			bool bKilled = false;
+			for (AActor* Target : Hit)
 			{
-				ASC->RemoveActiveEffectsWithGrantedTags(FGameplayTagContainer(CrossguardTags::State_ChopDownReady));
-				for (AActor* Target : Hit)
-				{
-					UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
-					if (TargetASC == nullptr)
-					{
-						continue;
-					}
-					UCrossguardSkillAbility::ApplySlow(ASC, TargetASC, ChopDownSlow, ChopDownSlowSeconds);
-					// Grounded: Flight ends and they fall.
-					if (TargetASC->HasMatchingGameplayTag(CrossguardTags::State_Flying))
-					{
-						const FGameplayTagContainer FlightTag(CrossguardTags::Ability_Flight);
-						TargetASC->CancelAbilities(&FlightTag);
-					}
-				}
+				UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
+				ApplyRiders(Riders, TargetASC);
+				bKilled |= TargetASC != nullptr && TargetASC->HasMatchingGameplayTag(CrossguardTags::State_Dead);
+			}
+			// [Mortal Strike]: a kill gives the skill back.
+			if (Riders.bMortalStrike && bKilled && ASC != nullptr)
+			{
+				ASC->RemoveActiveEffectsWithGrantedTags(FGameplayTagContainer(CrossguardTags::Cooldown_Skill_MortalStrike));
 			}
 			break;
 		}
 		case ECrossguardAttackDelivery::Hitscan:
-			PerformHitscan(Spec);
+			if (AActor* Target = PerformHitscan(Spec))
+			{
+				ApplyRiders(Riders, UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target));
+			}
 			break;
 		case ECrossguardAttackDelivery::Projectile:
-			SpawnProjectile(Spec, Item.WeaponId);
+			SpawnProjectile(Spec, Item.WeaponId, Riders);
 			break;
 		case ECrossguardAttackDelivery::None:
 			break;
@@ -152,26 +164,124 @@ void UCrossguardWeaponAttackAbility::OnAttackRecovered()
 	EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), true, false);
 }
 
+FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCrossguardWeaponRow& Weapon, UAbilitySystemComponent* ASC) const
+{
+	FCrossguardAttackRiders Riders;
+	if (ASC == nullptr)
+	{
+		return Riders;
+	}
+	const bool bMelee = Weapon.Delivery == ECrossguardAttackDelivery::MeleeSwing;
+	const bool bRanged = IsRangedWeapon(Weapon.WeaponType);
+	FGameplayTagContainer UsedUp;
+	// A readied next-attack skill is used up by the next qualifying attack, hit or miss.
+	const auto Ready = [ASC, &UsedUp](const FGameplayTag& Tag, bool bQualifies)
+	{
+		if (bQualifies && ASC->HasMatchingGameplayTag(Tag))
+		{
+			UsedUp.AddTag(Tag);
+			return true;
+		}
+		return false;
+	};
+
+	if (Ready(CrossguardTags::State_ChopDownReady, bMelee && Weapon.WeaponType == ECrossguardWeaponType::Axe))
+	{
+		Riders.WeaponMultiplier *= ChopDownDamageMultiplier;
+		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeSlowSpec(ASC, ChopDownSlow, ChopDownSlowSeconds));
+		Riders.bGroundFlying = true;
+	}
+	if (Ready(CrossguardTags::State_NextAttack_Slash, bMelee))
+	{
+		Riders.WeaponFlat += SlashWeaponDamage;
+	}
+	if (Ready(CrossguardTags::State_NextAttack_MortalStrike, bMelee))
+	{
+		Riders.AttackAdd += MortalStrikeAttackDamage;
+		Riders.bMortalStrike = true;
+	}
+	if (Ready(CrossguardTags::State_NextAttack_ShadeBlow, bMelee))
+	{
+		Riders.MagicAdd += ShadeBlowMagicDamage;
+		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeStatusSpec(ASC, CrossguardTags::State_HealBlocked, ShadeBlowHealBlockSeconds));
+	}
+	if (Ready(CrossguardTags::State_NextAttack_Gouge, bMelee))
+	{
+		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeDamageOverTimeSpec(ASC, GougeDamagePerSecond, 0.0f, GougeSeconds));
+		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeSlowSpec(ASC, GougeSlow, GougeSeconds));
+	}
+	if (Ready(CrossguardTags::State_NextAttack_PurgeShot, bRanged))
+	{
+		Riders.MagicAdd += PurgeShotMagicDamage;
+		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeMuteSpec(ASC, PurgeShotMuteSeconds, 0.0f));
+		Riders.bCancelSkills = true;
+	}
+	if (!UsedUp.IsEmpty())
+	{
+		ASC->RemoveActiveEffectsWithGrantedTags(UsedUp);
+	}
+
+	// Always-on: [Arcane Arrows] while active, [Splinter of Winter] while equipped and not Muted.
+	if (Weapon.WeaponType == ECrossguardWeaponType::Bow && ASC->HasMatchingGameplayTag(CrossguardTags::State_ArcaneArrows))
+	{
+		Riders.MagicAdd += ArcaneArrowsMagicDamage;
+	}
+	if (Weapon.WeaponType == ECrossguardWeaponType::Dagger && ASC->HasMatchingGameplayTag(CrossguardTags::Passive_SplinterOfWinter)
+		&& !ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted))
+	{
+		Riders.MagicAdd += SplinterMagicDamage;
+		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeSlowSpec(ASC, SplinterSlow, SplinterSlowSeconds));
+	}
+	return Riders;
+}
+
+void UCrossguardWeaponAttackAbility::ApplyRiders(const FCrossguardAttackRiders& Riders, UAbilitySystemComponent* TargetASC) const
+{
+	if (TargetASC == nullptr)
+	{
+		return;
+	}
+	for (const FGameplayEffectSpecHandle& OnHit : Riders.OnHitSpecs)
+	{
+		UCrossguardSkillAbility::ApplyOnHitSpec(OnHit, TargetASC);
+	}
+	if (Riders.bCancelSkills)
+	{
+		UCrossguardSkillAbility::CancelActiveSkills(TargetASC);
+	}
+	// Grounded ([Chop Down]): Flight ends and they fall. Crowd control.
+	if (Riders.bGroundFlying && TargetASC->HasMatchingGameplayTag(CrossguardTags::State_Flying)
+		&& !UCrossguardSkillAbility::IsCrowdControlImmune(TargetASC))
+	{
+		const FGameplayTagContainer FlightTag(CrossguardTags::Ability_Flight);
+		TargetASC->CancelAbilities(&FlightTag);
+	}
+}
+
 FGameplayEffectSpecHandle UCrossguardWeaponAttackAbility::MakeWeaponDamageSpec(const FCrossguardWeaponRow& Weapon, const FCrossguardWeaponItem& Item,
-	float Multiplier) const
+	const FCrossguardAttackRiders& Riders) const
 {
 	FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(UCrossguardDamageEffect::StaticClass(), GetAbilityLevel());
 	if (!Spec.IsValid())
 	{
 		return Spec;
 	}
-	const float Value = UCrossguardItemLibrary::GetWeaponValue(Weapon, Item.Rarity) * Multiplier;
+	const float Value = UCrossguardItemLibrary::GetWeaponValue(Weapon, Item.Rarity) * Riders.WeaponMultiplier + Riders.WeaponFlat;
+	float Attack = Riders.AttackAdd;
+	float Magic = Riders.MagicAdd;
 	switch (Weapon.Stat)
 	{
 	case ECrossguardWeaponStat::AttackDamage:
-		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, Value);
+		Attack += Value;
 		break;
 	case ECrossguardWeaponStat::MagicDamage:
-		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, Value);
+		Magic += Value;
 		break;
 	case ECrossguardWeaponStat::AttackResistance:
 		break;
 	}
+	Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, Attack);
+	Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, Magic);
 	return Spec;
 }
 
@@ -228,13 +338,13 @@ TArray<AActor*> UCrossguardWeaponAttackAbility::PerformMeleeSwing(const FGamepla
 	return Damaged;
 }
 
-void UCrossguardWeaponAttackAbility::PerformHitscan(const FGameplayEffectSpecHandle& Spec) const
+AActor* UCrossguardWeaponAttackAbility::PerformHitscan(const FGameplayEffectSpecHandle& Spec) const
 {
 	AActor* Avatar = GetAvatarActorFromActorInfo();
 	UWorld* World = Avatar != nullptr ? Avatar->GetWorld() : nullptr;
 	if (World == nullptr)
 	{
-		return;
+		return nullptr;
 	}
 
 	FVector EyeLocation;
@@ -244,13 +354,14 @@ void UCrossguardWeaponAttackAbility::PerformHitscan(const FGameplayEffectSpecHan
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(CrossguardHitscan), false, Avatar);
 
 	FHitResult Hit;
-	if (World->LineTraceSingleByChannel(Hit, EyeLocation, End, CROSSGUARD_TRACE_WEAPON, Params))
+	if (World->LineTraceSingleByChannel(Hit, EyeLocation, End, CROSSGUARD_TRACE_WEAPON, Params) && ApplyDamageTo(Hit.GetActor(), Spec))
 	{
-		ApplyDamageTo(Hit.GetActor(), Spec);
+		return Hit.GetActor();
 	}
+	return nullptr;
 }
 
-void UCrossguardWeaponAttackAbility::SpawnProjectile(const FGameplayEffectSpecHandle& Spec, FName WeaponId) const
+void UCrossguardWeaponAttackAbility::SpawnProjectile(const FGameplayEffectSpecHandle& Spec, FName WeaponId, const FCrossguardAttackRiders& Riders) const
 {
 	AActor* Avatar = GetAvatarActorFromActorInfo();
 	UWorld* World = Avatar != nullptr ? Avatar->GetWorld() : nullptr;
@@ -271,6 +382,8 @@ void UCrossguardWeaponAttackAbility::SpawnProjectile(const FGameplayEffectSpecHa
 	if (Projectile != nullptr)
 	{
 		Projectile->DamageSpec = Spec;
+		Projectile->OnHitSpecs = Riders.OnHitSpecs;
+		Projectile->bCancelSkillsOnHit = Riders.bCancelSkills;
 		Projectile->FinishSpawning(SpawnTransform);
 	}
 }

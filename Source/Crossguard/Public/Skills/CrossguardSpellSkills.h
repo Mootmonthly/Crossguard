@@ -44,6 +44,10 @@ public:
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+protected:
+	// Magical Healing ([Greater Heal] subclasses with 55).
+	float HealAmount = 20.0f;
 };
 
 // [Mute] (Spell, 180 s): the character under your crosshair within 20 m is Muted for 10 s: no skills,

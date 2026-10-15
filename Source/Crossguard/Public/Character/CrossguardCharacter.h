@@ -325,6 +325,12 @@ private:
 	// Copies level and allocation from the player state. Returns true if either changed.
 	bool PullProgression();
 	void OnMoveSpeedChanged(const FOnAttributeChangeData& Data);
+
+	// [Stealth]: hidden on this machine while State.Stealthed, unless the local player is on its
+	// side. Each machine decides for itself; visibility is not replicated.
+	void OnStealthChanged(const FGameplayTag Tag, int32 Count);
+	void UpdateStealthVisibility();
+	bool bStealthBound = false;
 	void ApplyMoveSpeed(float MoveSpeed);
 
 	UPROPERTY(Replicated)

@@ -149,6 +149,13 @@ UCrossguardMuteEffect::UCrossguardMuteEffect()
 	Executions.Add(Execution);
 }
 
+UCrossguardTimedMultiplierEffect::UCrossguardTimedMultiplierEffect()
+{
+	DurationPolicy = EGameplayEffectDurationType::HasDuration;
+	DurationMagnitude = SetByCallerMagnitude(CrossguardSetByCaller::Duration);
+	AddSetByCallerModifiers(Modifiers, true);
+}
+
 UCrossguardSkillMultiplierEffect::UCrossguardSkillMultiplierEffect()
 {
 	DurationPolicy = EGameplayEffectDurationType::Infinite;

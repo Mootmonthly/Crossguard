@@ -563,6 +563,35 @@ void ACrossguardCharacter::InitializeAbilitySystem()
 			.AddUObject(this, &ACrossguardCharacter::OnMoveSpeedChanged);
 	}
 	ApplyMoveSpeed(AbilitySystemComponent->GetNumericAttribute(UCrossguardAttributeSet::GetMoveSpeedAttribute()));
+
+	if (!bStealthBound)
+	{
+		bStealthBound = true;
+		AbilitySystemComponent->RegisterGameplayTagEvent(CrossguardTags::State_Stealthed, EGameplayTagEventType::NewOrRemoved)
+			.AddUObject(this, &ACrossguardCharacter::OnStealthChanged);
+	}
+	UpdateStealthVisibility();
+}
+
+void ACrossguardCharacter::OnStealthChanged(const FGameplayTag Tag, int32 Count)
+{
+	UpdateStealthVisibility();
+}
+
+void ACrossguardCharacter::UpdateStealthVisibility()
+{
+	bool bHidden = false;
+	if (AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Stealthed) && !IsLocallyControlled())
+	{
+		// The local viewer: its pawn, or its player state while spectating. No local player
+		// (dedicated server): nothing to draw anyway.
+		const APlayerController* Viewer = GetWorld()->GetFirstPlayerController();
+		const AActor* ViewerSide = Viewer == nullptr ? nullptr
+			: Viewer->GetPawn() != nullptr ? static_cast<const AActor*>(Viewer->GetPawn()) : static_cast<const AActor*>(Viewer->PlayerState.Get());
+		bHidden = ViewerSide != nullptr && !UCrossguardTeamLibrary::AreAllies(ViewerSide, this);
+	}
+	// Everything attached to the capsule (body, weapons) follows.
+	GetCapsuleComponent()->SetVisibility(!bHidden, true);
 }
 
 void ACrossguardCharacter::OnMoveSpeedChanged(const FOnAttributeChangeData& Data)

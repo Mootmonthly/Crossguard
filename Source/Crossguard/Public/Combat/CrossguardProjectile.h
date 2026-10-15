@@ -23,6 +23,11 @@ public:
 	// Set by the spawner before FinishSpawning. Server only.
 	FGameplayEffectSpecHandle DamageSpec;
 
+	// Applied to an actor it hits after DamageSpec (next-attack skills such as [Purge Shot]).
+	TArray<FGameplayEffectSpecHandle> OnHitSpecs;
+	// The hit stops the target's running skills (a Mute in OnHitSpecs).
+	bool bCancelSkillsOnHit = false;
+
 protected:
 	virtual void BeginPlay() override;
 

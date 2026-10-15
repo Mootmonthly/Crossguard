@@ -44,7 +44,9 @@ AActor* ACrossguardMinionController::FindTarget(const ACrossguardMinion& Minion)
 	for (TActorIterator<ACrossguardCharacter> It(Minion.GetWorld()); It; ++It)
 	{
 		ACrossguardCharacter* Candidate = *It;
-		if (Candidate == &Minion || Candidate == Summoner || !IsAliveTarget(Candidate))
+		// Stealthed enemies are invisible to minions too.
+		if (Candidate == &Minion || Candidate == Summoner || !IsAliveTarget(Candidate)
+			|| Candidate->GetAbilitySystemComponent()->HasMatchingGameplayTag(CrossguardTags::State_Stealthed))
 		{
 			continue;
 		}

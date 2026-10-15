@@ -29,40 +29,135 @@ FGameplayEffectSpecHandle UCrossguardSkillAbility::MakeHealingSpec(float Healing
 	return Spec;
 }
 
-void UCrossguardSkillAbility::ApplyStatus(UAbilitySystemComponent* Source, UAbilitySystemComponent* Target, FGameplayTag State, float Seconds)
+FGameplayEffectSpecHandle UCrossguardSkillAbility::MakeStatusSpec(UAbilitySystemComponent* Source, FGameplayTag State, float Seconds)
 {
-	if (Source == nullptr || Target == nullptr || Seconds <= 0.0f)
+	if (Source == nullptr || Seconds <= 0.0f)
 	{
-		return;
+		return FGameplayEffectSpecHandle();
 	}
-	const FGameplayEffectSpecHandle Spec = Source->MakeOutgoingSpec(UCrossguardStatusEffect::StaticClass(), 1.0f, Source->MakeEffectContext());
+	FGameplayEffectSpecHandle Spec = Source->MakeOutgoingSpec(UCrossguardStatusEffect::StaticClass(), 1.0f, Source->MakeEffectContext());
 	if (Spec.IsValid())
 	{
 		Spec.Data->SetSetByCallerMagnitude(CrossguardSetByCaller::Duration, Seconds);
 		Spec.Data->DynamicGrantedTags.AddTag(State);
-		Target->ApplyGameplayEffectSpecToSelf(*Spec.Data);
 	}
+	return Spec;
+}
+
+FGameplayEffectSpecHandle UCrossguardSkillAbility::MakeSlowSpec(UAbilitySystemComponent* Source, float Fraction, float Seconds)
+{
+	if (Source == nullptr || Seconds <= 0.0f)
+	{
+		return FGameplayEffectSpecHandle();
+	}
+	FGameplayEffectSpecHandle Spec = Source->MakeOutgoingSpec(UCrossguardTimedStatsEffect::StaticClass(), 1.0f, Source->MakeEffectContext());
+	if (Spec.IsValid())
+	{
+		for (const FName& Name : UCrossguardSkillStatsEffect::GetStatNames())
+		{
+			Spec.Data->SetSetByCallerMagnitude(Name, 0.0f);
+		}
+		Spec.Data->SetSetByCallerMagnitude(FName(TEXT("MoveSpeed")), -Fraction);
+		Spec.Data->SetSetByCallerMagnitude(CrossguardSetByCaller::Duration, Seconds);
+		Spec.Data->DynamicGrantedTags.AddTag(CrossguardTags::State_Slowed);
+	}
+	return Spec;
+}
+
+FGameplayEffectSpecHandle UCrossguardSkillAbility::MakeDamageOverTimeSpec(UAbilitySystemComponent* Source, float AttackPerSecond,
+	float MagicPerSecond, float Seconds)
+{
+	if (Source == nullptr || Seconds <= 0.0f)
+	{
+		return FGameplayEffectSpecHandle();
+	}
+	FGameplayEffectSpecHandle Spec = Source->MakeOutgoingSpec(UCrossguardMuteEffect::StaticClass(), 1.0f, Source->MakeEffectContext());
+	if (Spec.IsValid())
+	{
+		Spec.Data->SetSetByCallerMagnitude(CrossguardSetByCaller::Duration, Seconds);
+		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, AttackPerSecond);
+		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, MagicPerSecond);
+		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Coefficient, 1.0f);
+	}
+	return Spec;
+}
+
+FGameplayEffectSpecHandle UCrossguardSkillAbility::MakeMuteSpec(UAbilitySystemComponent* Source, float Seconds, float DamagePerSecond)
+{
+	FGameplayEffectSpecHandle Spec = MakeDamageOverTimeSpec(Source, 0.0f, DamagePerSecond, Seconds);
+	if (Spec.IsValid())
+	{
+		Spec.Data->DynamicGrantedTags.AddTag(CrossguardTags::State_Muted);
+	}
+	return Spec;
+}
+
+bool UCrossguardSkillAbility::IsCrowdControl(const FGameplayTag& State)
+{
+	return State == CrossguardTags::State_Slowed || State == CrossguardTags::State_Blinded || State == CrossguardTags::State_KnockedUp;
+}
+
+bool UCrossguardSkillAbility::IsCrowdControlImmune(const UAbilitySystemComponent* Target)
+{
+	return Target != nullptr
+		&& (Target->HasMatchingGameplayTag(CrossguardTags::State_CCImmune)
+			|| (Target->HasMatchingGameplayTag(CrossguardTags::Passive_Immutable) && !Target->HasMatchingGameplayTag(CrossguardTags::State_Muted)));
+}
+
+void UCrossguardSkillAbility::ApplyOnHitSpec(const FGameplayEffectSpecHandle& Spec, UAbilitySystemComponent* Target)
+{
+	if (!Spec.IsValid() || Target == nullptr)
+	{
+		return;
+	}
+	if (IsCrowdControlImmune(Target))
+	{
+		for (const FGameplayTag& Granted : Spec.Data->DynamicGrantedTags)
+		{
+			if (IsCrowdControl(Granted))
+			{
+				return;
+			}
+		}
+	}
+	Target->ApplyGameplayEffectSpecToSelf(*Spec.Data);
+}
+
+void UCrossguardSkillAbility::ApplyStatus(UAbilitySystemComponent* Source, UAbilitySystemComponent* Target, FGameplayTag State, float Seconds)
+{
+	ApplyOnHitSpec(MakeStatusSpec(Source, State, Seconds), Target);
 }
 
 void UCrossguardSkillAbility::ApplySlow(UAbilitySystemComponent* Source, UAbilitySystemComponent* Target, float Fraction, float Seconds)
 {
+	ApplyOnHitSpec(MakeSlowSpec(Source, Fraction, Seconds), Target);
+}
+
+FActiveGameplayEffectHandle UCrossguardSkillAbility::ApplyTimedStats(UAbilitySystemComponent* Source, UAbilitySystemComponent* Target,
+	const TMap<FName, float>& Values, float Seconds, bool bMultiply, FGameplayTag State)
+{
 	if (Source == nullptr || Target == nullptr || Seconds <= 0.0f)
 	{
-		return;
+		return FActiveGameplayEffectHandle();
 	}
-	const FGameplayEffectSpecHandle Spec = Source->MakeOutgoingSpec(UCrossguardTimedStatsEffect::StaticClass(), 1.0f, Source->MakeEffectContext());
+	const TSubclassOf<UGameplayEffect> EffectClass = bMultiply ? TSubclassOf<UGameplayEffect>(UCrossguardTimedMultiplierEffect::StaticClass())
+		: TSubclassOf<UGameplayEffect>(UCrossguardTimedStatsEffect::StaticClass());
+	const FGameplayEffectSpecHandle Spec = Source->MakeOutgoingSpec(EffectClass, 1.0f, Source->MakeEffectContext());
 	if (!Spec.IsValid())
 	{
-		return;
+		return FActiveGameplayEffectHandle();
 	}
 	for (const FName& Name : UCrossguardSkillStatsEffect::GetStatNames())
 	{
-		Spec.Data->SetSetByCallerMagnitude(Name, 0.0f);
+		const float* Value = Values.Find(Name);
+		Spec.Data->SetSetByCallerMagnitude(Name, Value != nullptr ? *Value : (bMultiply ? 1.0f : 0.0f));
 	}
-	Spec.Data->SetSetByCallerMagnitude(FName(TEXT("MoveSpeed")), -Fraction);
 	Spec.Data->SetSetByCallerMagnitude(CrossguardSetByCaller::Duration, Seconds);
-	Spec.Data->DynamicGrantedTags.AddTag(CrossguardTags::State_Slowed);
-	Target->ApplyGameplayEffectSpecToSelf(*Spec.Data);
+	if (State.IsValid())
+	{
+		Spec.Data->DynamicGrantedTags.AddTag(State);
+	}
+	return Target->ApplyGameplayEffectSpecToSelf(*Spec.Data);
 }
 
 void UCrossguardSkillAbility::CancelActiveSkills(UAbilitySystemComponent* ASC)

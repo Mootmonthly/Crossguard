@@ -146,10 +146,11 @@ void UCrossguardAttributeSet::PostGameplayEffectExecute(const FGameplayEffectMod
 	{
 		const float Healing = GetIncomingHealing();
 		SetIncomingHealing(0.0f);
-		// Healing never revives: only Revive does.
+		// Healing never revives: only Revive does. [Shade Blow] blocks all healing.
 		const UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
 		const bool bDead = ASC != nullptr && ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead);
-		if (Healing > 0.0f && !bDead)
+		const bool bBlocked = ASC != nullptr && ASC->HasMatchingGameplayTag(CrossguardTags::State_HealBlocked);
+		if (Healing > 0.0f && !bDead && !bBlocked)
 		{
 			SetHealth(FMath::Clamp(GetHealth() + Healing, 0.0f, GetMaxHealth()));
 			UE_LOG(LogCrossguard, Log, TEXT("%s healed %.1f by %s (%.1f / %.1f HP)"), *GetNameSafe(GetOwningActor()), Healing,

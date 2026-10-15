@@ -2,6 +2,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Skills/CrossguardSkillAbility.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 
@@ -51,6 +52,14 @@ void ACrossguardProjectile::HandleImpact(AActor* OtherActor, const FHitResult& H
 		if (UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor))
 		{
 			TargetASC->ApplyGameplayEffectSpecToSelf(*DamageSpec.Data);
+			for (const FGameplayEffectSpecHandle& OnHit : OnHitSpecs)
+			{
+				UCrossguardSkillAbility::ApplyOnHitSpec(OnHit, TargetASC);
+			}
+			if (bCancelSkillsOnHit)
+			{
+				UCrossguardSkillAbility::CancelActiveSkills(TargetASC);
+			}
 		}
 	}
 	Destroy();

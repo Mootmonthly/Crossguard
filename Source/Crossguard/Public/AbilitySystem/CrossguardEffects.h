@@ -88,8 +88,9 @@ public:
 	UCrossguardTimedStatsEffect();
 };
 
-// Mute: lasts SetByCaller "Duration" seconds and runs the damage execution once per second (set
-// SetByCaller.Damage.Magic to the damage per second). Add State.Muted to DynamicGrantedTags.
+// Damage over time: lasts SetByCaller "Duration" seconds and runs the damage execution once per
+// second (set SetByCaller.Damage.Attack / .Magic to the damage per second). Mute adds State.Muted
+// to DynamicGrantedTags; Gouge uses it plain.
 UCLASS()
 class CROSSGUARD_API UCrossguardMuteEffect : public UGameplayEffect
 {
@@ -111,6 +112,16 @@ public:
 	UCrossguardSkillStatsEffect();
 
 	static const TArray<FName>& GetStatNames();
+};
+
+// Like UCrossguardTimedStatsEffect, but each modifier multiplies (1 for unused). [Unleash].
+UCLASS()
+class CROSSGUARD_API UCrossguardTimedMultiplierEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UCrossguardTimedMultiplierEffect();
 };
 
 // Infinite. Like UCrossguardSkillStatsEffect, but each modifier multiplies (1 for unused).

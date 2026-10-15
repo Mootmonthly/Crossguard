@@ -7,6 +7,25 @@
 #include "CrossguardWeaponAttackAbility.generated.h"
 
 class ACrossguardProjectile;
+class UAbilitySystemComponent;
+
+// What readied skills and always-on effects add to one attack (GatherRiders).
+struct FCrossguardAttackRiders
+{
+	// Weapon base value × WeaponMultiplier + WeaponFlat, then AttackAdd / MagicAdd on top.
+	float WeaponMultiplier = 1.0f;
+	float WeaponFlat = 0.0f;
+	float AttackAdd = 0.0f;
+	float MagicAdd = 0.0f;
+	// Applied to each target hit (slows, damage over time, Mute, heal block).
+	TArray<FGameplayEffectSpecHandle> OnHitSpecs;
+	// [Chop Down]: ends Flight on targets hit.
+	bool bGroundFlying = false;
+	// [Purge Shot]: the Mute also stops running skills.
+	bool bCancelSkills = false;
+	// [Mortal Strike]: a kill removes its cooldown.
+	bool bMortalStrike = false;
+};
 struct FCrossguardWeaponRow;
 struct FCrossguardWeaponItem;
 
@@ -23,8 +42,14 @@ struct FCrossguardWeaponItem;
 // Weapons with an AmmoId (bows: "arrow") use up one per attack from the inventory, Quiver first,
 // and cannot attack without it. Characters without an inventory (AI) shoot freely.
 //
-// [Chop Down]: while State.ChopDownReady is on the attacker, the next melee axe attack deals 110%,
-// slows each target hit by 50% for 2 s and ends their Flight. It is used up hit or miss.
+// Next-attack skills: while their State.NextAttack.* tag (State.ChopDownReady) is on the attacker,
+// the next qualifying attack carries them and uses them up, hit or miss. Several stack.
+// - Melee: [Slash] +7 weapon damage, [Mortal Strike] +20 Attack Damage (a kill refreshes its
+//   cooldown), [Shade Blow] +20 Magic Damage and no healing 5 s, [Gouge] 25 Attack Damage over 5 s
+//   and -5% speed, [Chop Down] (axe) 110%, -50% speed 2 s, ends Flight.
+// - Bow / crossbow: [Purge Shot] +10 Magic Damage and a 3 s Mute.
+// Always on: [Arcane Arrows] +5 Magic Damage on bow attacks while active; [Splinter of Winter]
+// +5 Magic Damage and -10% speed 3 s on dagger attacks.
 //
 // Hit detection runs on the server. Placeholder until animations and weapon collision exist.
 UCLASS()
@@ -67,12 +92,17 @@ public:
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
 private:
-	// Multiplier scales the weapon's base value ([Chop Down]).
-	FGameplayEffectSpecHandle MakeWeaponDamageSpec(const FCrossguardWeaponRow& Weapon, const FCrossguardWeaponItem& Item, float Multiplier = 1.0f) const;
+	// Server. Collects (and uses up) what applies to this attack.
+	FCrossguardAttackRiders GatherRiders(const FCrossguardWeaponRow& Weapon, UAbilitySystemComponent* ASC) const;
+	// Server. On-hit parts of Riders for one target hit.
+	void ApplyRiders(const FCrossguardAttackRiders& Riders, UAbilitySystemComponent* TargetASC) const;
+	FGameplayEffectSpecHandle MakeWeaponDamageSpec(const FCrossguardWeaponRow& Weapon, const FCrossguardWeaponItem& Item,
+		const FCrossguardAttackRiders& Riders) const;
 	// Returns the actors damaged.
 	TArray<AActor*> PerformMeleeSwing(const FGameplayEffectSpecHandle& Spec) const;
-	void PerformHitscan(const FGameplayEffectSpecHandle& Spec) const;
-	void SpawnProjectile(const FGameplayEffectSpecHandle& Spec, FName WeaponId) const;
+	// Returns the actor damaged, if any.
+	AActor* PerformHitscan(const FGameplayEffectSpecHandle& Spec) const;
+	void SpawnProjectile(const FGameplayEffectSpecHandle& Spec, FName WeaponId, const FCrossguardAttackRiders& Riders) const;
 	// False if Target has no ability system (or is the attacker).
 	bool ApplyDamageTo(AActor* Target, const FGameplayEffectSpecHandle& Spec) const;
 

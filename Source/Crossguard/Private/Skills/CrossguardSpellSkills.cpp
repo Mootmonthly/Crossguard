@@ -118,7 +118,7 @@ void UCrossguardHealAbility::ActivateAbility(const FGameplayAbilitySpecHandle Ha
 		AActor* Target = FindAimedTarget(HealRange);
 		UAbilitySystemComponent* TargetASC = Target != nullptr ? UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target)
 			: ActorInfo->AbilitySystemComponent.Get();
-		const FGameplayEffectSpecHandle Spec = MakeHealingSpec(20.0f);
+		const FGameplayEffectSpecHandle Spec = MakeHealingSpec(HealAmount);
 		if (TargetASC != nullptr && Spec.IsValid())
 		{
 			TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
@@ -154,14 +154,9 @@ void UCrossguardMuteAbility::ActivateAbility(const FGameplayAbilitySpecHandle Ha
 	}
 	if (ActorInfo->IsNetAuthority())
 	{
-		const FGameplayEffectSpecHandle Spec = MakeOutgoingGameplayEffectSpec(UCrossguardMuteEffect::StaticClass(), GetAbilityLevel());
+		const FGameplayEffectSpecHandle Spec = MakeMuteSpec(ActorInfo->AbilitySystemComponent.Get(), MuteSeconds, MuteDamagePerSecond);
 		if (Spec.IsValid())
 		{
-			Spec.Data->SetSetByCallerMagnitude(CrossguardSetByCaller::Duration, MuteSeconds);
-			Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, MuteDamagePerSecond);
-			Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, 0.0f);
-			Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Coefficient, 1.0f);
-			Spec.Data->DynamicGrantedTags.AddTag(CrossguardTags::State_Muted);
 			TargetASC->ApplyGameplayEffectSpecToSelf(*Spec.Data);
 			// Skills already running stop too (Flight, Dragonification, a shield, a breath).
 			CancelActiveSkills(TargetASC);

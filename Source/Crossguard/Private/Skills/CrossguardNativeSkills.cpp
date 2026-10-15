@@ -3,6 +3,8 @@
 #include "AbilitySystem/CrossguardGameplayAbility.h"
 #include "Skills/CrossguardArtSkills.h"
 #include "Skills/CrossguardSpellSkills.h"
+#include "Skills/CrossguardSupportSkills.h"
+#include "Skills/CrossguardWeaponSkills.h"
 
 namespace CrossguardNativeSkills
 {
@@ -25,6 +27,25 @@ namespace CrossguardNativeSkills
 			Register(UCrossguardDragonificationAbility::StaticClass());
 			Register(UCrossguardFlareBreathAbility::StaticClass());
 			Register(UCrossguardFlightAbility::StaticClass());
+			Register(UCrossguardSlashAbility::StaticClass());
+			Register(UCrossguardMortalStrikeAbility::StaticClass());
+			Register(UCrossguardShadeBlowAbility::StaticClass());
+			Register(UCrossguardGougeAbility::StaticClass());
+			Register(UCrossguardPurgeShotAbility::StaticClass());
+			Register(UCrossguardQuickshotAbility::StaticClass());
+			Register(UCrossguardArcaneArrowsAbility::StaticClass());
+			Register(UCrossguardCleaveAbility::StaticClass());
+			Register(UCrossguardTripleThrustAbility::StaticClass());
+			Register(UCrossguardPartingTheLandAbility::StaticClass());
+			Register(UCrossguardHuntersLeapAbility::StaticClass());
+			Register(UCrossguardGreaterHealAbility::StaticClass());
+			Register(UCrossguardBenedictionAbility::StaticClass());
+			Register(UCrossguardUnleashAbility::StaticClass());
+			Register(UCrossguardLightAbility::StaticClass());
+			Register(UCrossguardWallAbility::StaticClass());
+			Register(UCrossguardStealthAbility::StaticClass());
+			Register(UCrossguardImmutableAbility::StaticClass());
+			Register(UCrossguardSplinterOfWinterAbility::StaticClass());
 			return Map;
 		}();
 		return Registry;
