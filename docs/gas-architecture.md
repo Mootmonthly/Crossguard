@@ -234,7 +234,7 @@ and the rules unit tests.
 - Client-side ability system init for pawns without a PlayerState (AI). Players are covered by
   `OnRep_PlayerState`.
 - Animations, weapon-on-weapon collision (fencing).
-- Inventory and loot UI, a hotbar, single-item drops and pickups in the world, stash and guild
+- Inventory, loot and stash UI, a hotbar, single-item drops and pickups in the world, the guild
   bank, shared stash tabs, splitting stacks, treasure chests (reuse `ACrossguardLootContainer`).
 
 The order these get built in is in [roadmap.md](roadmap.md).
