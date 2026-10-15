@@ -85,6 +85,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Death")
 	bool IsPermanentlyDead() const { return bPermanentlyDead; }
 
+	// Launches on the owning client too, so its movement prediction does not undo a server-side
+	// launch (knock-ups). Call LaunchCharacter on the server as well.
+	UFUNCTION(Client, Reliable)
+	void ClientLaunch(FVector Velocity);
+
 	// Ragdolls the character when dead, stands it back up when revived. Runs on every machine
 	// (called by the attribute set when State.Dead is added or removed).
 	void SetDeadVisuals(bool bDead);
@@ -331,6 +336,7 @@ private:
 	void OnStealthChanged(const FGameplayTag Tag, int32 Count);
 	void UpdateStealthVisibility();
 	bool bStealthBound = false;
+	FTimerHandle StealthVisibilityTimer;
 	void ApplyMoveSpeed(float MoveSpeed);
 
 	UPROPERTY(Replicated)

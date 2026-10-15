@@ -576,11 +576,25 @@ void ACrossguardCharacter::InitializeAbilitySystem()
 void ACrossguardCharacter::OnStealthChanged(const FGameplayTag Tag, int32 Count)
 {
 	UpdateStealthVisibility();
+	// While stealthed, re-check twice a second: the local viewer's pawn or team may change.
+	if (Count > 0)
+	{
+		GetWorldTimerManager().SetTimer(StealthVisibilityTimer, this, &ACrossguardCharacter::UpdateStealthVisibility, 0.5f, true);
+	}
+	else
+	{
+		GetWorldTimerManager().ClearTimer(StealthVisibilityTimer);
+	}
+}
+
+void ACrossguardCharacter::ClientLaunch_Implementation(FVector Velocity)
+{
+	LaunchCharacter(Velocity, false, true);
 }
 
 void ACrossguardCharacter::UpdateStealthVisibility()
 {
-	bool bHidden = false;
+	bool bHideFromViewer = false;
 	if (AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Stealthed) && !IsLocallyControlled())
 	{
 		// The local viewer: its pawn, or its player state while spectating. No local player
@@ -588,10 +602,10 @@ void ACrossguardCharacter::UpdateStealthVisibility()
 		const APlayerController* Viewer = GetWorld()->GetFirstPlayerController();
 		const AActor* ViewerSide = Viewer == nullptr ? nullptr
 			: Viewer->GetPawn() != nullptr ? static_cast<const AActor*>(Viewer->GetPawn()) : static_cast<const AActor*>(Viewer->PlayerState.Get());
-		bHidden = ViewerSide != nullptr && !UCrossguardTeamLibrary::AreAllies(ViewerSide, this);
+		bHideFromViewer = ViewerSide != nullptr && !UCrossguardTeamLibrary::AreAllies(ViewerSide, this);
 	}
 	// Everything attached to the capsule (body, weapons) follows.
-	GetCapsuleComponent()->SetVisibility(!bHidden, true);
+	GetCapsuleComponent()->SetVisibility(!bHideFromViewer, true);
 }
 
 void ACrossguardCharacter::OnMoveSpeedChanged(const FOnAttributeChangeData& Data)

@@ -36,6 +36,8 @@ namespace CrossguardTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_KnockedUp, "State.KnockedUp", "Knocked into the air (Parting the Land).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Passive_Immutable, "Passive.Immutable", "Permanently immune to crowd control while Immutable is equipped and not Muted.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Passive_SplinterOfWinter, "Passive.SplinterOfWinter", "Dagger attacks deal +5 Magic Damage and slow 10% for 3 s.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Passive_HuntersTracking, "Passive.HuntersTracking", "Sees enemy players' footsteps from the last 30 s (Hunter's Tracking). On the owner's client too.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Multiscale, "State.Multiscale", "Has the Multiscale party aura (one at a time).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Flight, "Ability.Flight", "The Flight ability.");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Dragonification, "Cooldown.Skill.Dragonification");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_FlareBreath, "Cooldown.Skill.FlareBreath");

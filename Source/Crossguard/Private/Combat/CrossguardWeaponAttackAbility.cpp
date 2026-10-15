@@ -172,6 +172,22 @@ FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCros
 		return Riders;
 	}
 	const bool bMelee = Weapon.Delivery == ECrossguardAttackDelivery::MeleeSwing;
+	// Each skill's own weapon requirement (Data/Skills/Skills.json) decides which attack uses it.
+	const auto MeleeWith = [&Weapon, bMelee](std::initializer_list<ECrossguardWeaponType> Types)
+	{
+		if (!bMelee)
+		{
+			return false;
+		}
+		for (const ECrossguardWeaponType Type : Types)
+		{
+			if (Weapon.WeaponType == Type)
+			{
+				return true;
+			}
+		}
+		return false;
+	};
 	const bool bRanged = IsRangedWeapon(Weapon.WeaponType);
 	FGameplayTagContainer UsedUp;
 	// A readied next-attack skill is used up by the next qualifying attack, hit or miss.
@@ -185,13 +201,13 @@ FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCros
 		return false;
 	};
 
-	if (Ready(CrossguardTags::State_ChopDownReady, bMelee && Weapon.WeaponType == ECrossguardWeaponType::Axe))
+	if (Ready(CrossguardTags::State_ChopDownReady, MeleeWith({ECrossguardWeaponType::Axe})))
 	{
 		Riders.WeaponMultiplier *= ChopDownDamageMultiplier;
 		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeSlowSpec(ASC, ChopDownSlow, ChopDownSlowSeconds));
 		Riders.bGroundFlying = true;
 	}
-	if (Ready(CrossguardTags::State_NextAttack_Slash, bMelee))
+	if (Ready(CrossguardTags::State_NextAttack_Slash, MeleeWith({ECrossguardWeaponType::Sword, ECrossguardWeaponType::Dagger})))
 	{
 		Riders.WeaponFlat += SlashWeaponDamage;
 	}
@@ -200,12 +216,12 @@ FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCros
 		Riders.AttackAdd += MortalStrikeAttackDamage;
 		Riders.bMortalStrike = true;
 	}
-	if (Ready(CrossguardTags::State_NextAttack_ShadeBlow, bMelee))
+	if (Ready(CrossguardTags::State_NextAttack_ShadeBlow, MeleeWith({ECrossguardWeaponType::Sword, ECrossguardWeaponType::Axe})))
 	{
 		Riders.MagicAdd += ShadeBlowMagicDamage;
 		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeStatusSpec(ASC, CrossguardTags::State_HealBlocked, ShadeBlowHealBlockSeconds));
 	}
-	if (Ready(CrossguardTags::State_NextAttack_Gouge, bMelee))
+	if (Ready(CrossguardTags::State_NextAttack_Gouge, MeleeWith({ECrossguardWeaponType::Dagger})))
 	{
 		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeDamageOverTimeSpec(ASC, GougeDamagePerSecond, 0.0f, GougeSeconds));
 		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeSlowSpec(ASC, GougeSlow, GougeSeconds));

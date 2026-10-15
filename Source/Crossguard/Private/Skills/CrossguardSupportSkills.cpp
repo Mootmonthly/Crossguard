@@ -99,13 +99,25 @@ void UCrossguardBenedictionAbility::ActivateAbility(const FGameplayAbilitySpecHa
 	}
 	if (ActorInfo->IsNetAuthority())
 	{
+		// The nearer of a living character under the crosshair and a body near it.
 		AActor* Living = FindAimedTarget(BenedictionRange);
-		ACrossguardCharacter* Body = Living == nullptr ? FindAimedBody(BenedictionRange) : nullptr;
-		if (Body != nullptr)
+		ACrossguardCharacter* Body = FindAimedBody(BenedictionRange);
+		const FVector From = ActorInfo->AvatarActor->GetActorLocation();
+		if (Living != nullptr && Body != nullptr)
 		{
-			Body->Revive(1.0f);
+			const bool bBodyNearer = FVector::DistSquared(From, Body->GetMesh()->GetComponentLocation())
+				< FVector::DistSquared(From, Living->GetActorLocation());
+			if (bBodyNearer)
+			{
+				Living = nullptr;
+			}
+			else
+			{
+				Body = nullptr;
+			}
 		}
-		else
+		const bool bRevived = Body != nullptr && Body->Revive(1.0f);
+		if (!bRevived)
 		{
 			// Full HP: heal by Max HP, no healing bonus.
 			UAbilitySystemComponent* TargetASC = Living != nullptr ? UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Living)
@@ -215,9 +227,10 @@ void UCrossguardWallAbility::ActivateAbility(const FGameplayAbilitySpecHandle Ha
 		const FVector Center = Avatar->GetActorLocation() + Facing.Vector() * WallDistance;
 		// On the ground under that point; the wall runs across your view.
 		FCollisionQueryParams Params(SCENE_QUERY_STAT(CrossguardWall), false, Avatar);
+		// World geometry only, from 2 m above (slopes).
 		FHitResult Ground;
-		const FVector Feet = World->LineTraceSingleByChannel(Ground, Center, Center - FVector(0.0f, 0.0f, 500.0f), ECC_WorldStatic, Params)
-			? Ground.ImpactPoint : Center - FVector(0.0f, 0.0f, 90.0f);
+		const FVector Feet = World->LineTraceSingleByObjectType(Ground, Center + FVector(0.0f, 0.0f, 200.0f), Center - FVector(0.0f, 0.0f, 500.0f),
+			FCollisionObjectQueryParams(ECC_WorldStatic), Params) ? Ground.ImpactPoint : Center - FVector(0.0f, 0.0f, 90.0f);
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = Avatar;
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -278,7 +291,12 @@ void UCrossguardStealthAbility::OnOtherAbilityActivated(UGameplayAbility* Abilit
 
 void UCrossguardStealthAbility::OnHealthChanged(const FOnAttributeChangeData& Data)
 {
-	if (Data.NewValue < Data.OldValue)
+	if (Data.NewValue <= 0.0f && IsActive())
+	{
+		// A killing blow: ends as cancelled (no exit bonus), before HandleDeath cancels it too.
+		EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), true, true);
+	}
+	else if (Data.NewValue < Data.OldValue)
 	{
 		BreakStealth();
 	}
@@ -296,14 +314,21 @@ void UCrossguardStealthAbility::EndAbility(const FGameplayAbilitySpecHandle Hand
 	const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
 	UAbilitySystemComponent* ASC = ActorInfo != nullptr ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
-	if (ASC != nullptr && ActorInfo->IsNetAuthority() && StealthHandle.IsValid())
+	if (ASC != nullptr && ActorInfo->IsNetAuthority())
 	{
 		ASC->AbilityActivatedCallbacks.Remove(ActivatedHandle);
 		ASC->GetGameplayAttributeValueChangeDelegate(UCrossguardAttributeSet::GetHealthAttribute()).Remove(HealthHandle);
+		ActivatedHandle.Reset();
+		HealthHandle.Reset();
+	}
+	if (ASC != nullptr && ActorInfo->IsNetAuthority() && StealthHandle.IsValid())
+	{
 		ASC->RemoveActiveGameplayEffect(StealthHandle);
 		StealthHandle.Invalidate();
-		// The exit bonus, unless death or a Mute ended it.
-		if (!bWasCancelled)
+		// The exit bonus, unless death or a Mute ended it. A killing or muting hit breaks stealth
+		// before the death or Mute lands, so check the state as well as how it ended.
+		const bool bDeadOrMuted = ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead) || ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted);
+		if (!bWasCancelled && !bDeadOrMuted)
 		{
 			const TMap<FName, float> Bonus = {{TEXT("MoveSpeed"), StealthExitMoveSpeed}, {TEXT("AttackDamageBonus"), StealthExitAttackBonus}};
 			ApplyTimedStats(ASC, ASC, Bonus, StealthExitSeconds, false);

@@ -44,7 +44,8 @@ struct FCrossguardWeaponItem;
 //
 // Next-attack skills: while their State.NextAttack.* tag (State.ChopDownReady) is on the attacker,
 // the next qualifying attack carries them and uses them up, hit or miss. Several stack.
-// - Melee: [Slash] +7 weapon damage, [Mortal Strike] +20 Attack Damage (a kill refreshes its
+// - Melee, with the skill's own weapon (Slash: sword or dagger; Shade Blow: sword or axe; Gouge:
+//   dagger; Chop Down: axe; Mortal Strike: any): [Slash] +7 weapon damage, [Mortal Strike] +20 Attack Damage (a kill refreshes its
 //   cooldown), [Shade Blow] +20 Magic Damage and no healing 5 s, [Gouge] 25 Attack Damage over 5 s
 //   and -5% speed, [Chop Down] (axe) 110%, -50% speed 2 s, ends Flight.
 // - Bow / crossbow: [Purge Shot] +10 Magic Damage and a 3 s Mute.

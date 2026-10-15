@@ -13,10 +13,12 @@ namespace
 {
 	constexpr float RethinkSeconds = 0.5f;
 
+	// Alive and visible: stealthed characters cannot be targeted.
 	bool IsAliveTarget(const AActor* Actor)
 	{
 		const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Actor);
-		return ASC != nullptr && !Actor->IsActorBeingDestroyed() && !ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead);
+		return ASC != nullptr && !Actor->IsActorBeingDestroyed() && !ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead)
+			&& !ASC->HasMatchingGameplayTag(CrossguardTags::State_Stealthed);
 	}
 }
 
@@ -44,9 +46,7 @@ AActor* ACrossguardMinionController::FindTarget(const ACrossguardMinion& Minion)
 	for (TActorIterator<ACrossguardCharacter> It(Minion.GetWorld()); It; ++It)
 	{
 		ACrossguardCharacter* Candidate = *It;
-		// Stealthed enemies are invisible to minions too.
-		if (Candidate == &Minion || Candidate == Summoner || !IsAliveTarget(Candidate)
-			|| Candidate->GetAbilitySystemComponent()->HasMatchingGameplayTag(CrossguardTags::State_Stealthed))
+		if (Candidate == &Minion || Candidate == Summoner || !IsAliveTarget(Candidate))
 		{
 			continue;
 		}

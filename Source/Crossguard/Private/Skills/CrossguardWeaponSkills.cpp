@@ -11,6 +11,7 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/RootMotionSource.h"
+#include "Character/CrossguardCharacter.h"
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Items/CrossguardItemTypes.h"
 #include "Skills/CrossguardWall.h"
@@ -37,14 +38,14 @@ namespace
 	constexpr float PartingKnockUpSeconds = 1.0f;
 	constexpr float PartingWallHeight = 300.0f;
 	constexpr float PartingWallThickness = 50.0f;
+	constexpr float PartingWallGap = 60.0f;
 	constexpr float LeapCmPerAgility = 50.0f;
 	constexpr float LeapHeight = 150.0f;
 	constexpr float LeapSeconds = 0.6f;
 
 	// The main-hand weapon's damage as a spec from Ability: Fraction of its value, plus AttackBonus.
-	FGameplayEffectSpecHandle MakeMainHandSpec(const UCrossguardSkillAbility& Ability, float Fraction, float AttackBonus)
+	FGameplayEffectSpecHandle MakeMainHandSpec(const UCrossguardSkillAbility& Ability, const AActor* Avatar, float Fraction, float AttackBonus)
 	{
-		const AActor* Avatar = Ability.GetAvatarActorFromActorInfo();
 		const UCrossguardEquipmentComponent* Equipment = Avatar != nullptr ? Avatar->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
 		const FCrossguardWeaponRow* Weapon = Equipment != nullptr ? Equipment->GetWeaponRow(ECrossguardEquipmentSlot::MainHand) : nullptr;
 		if (Weapon == nullptr)
@@ -52,8 +53,25 @@ namespace
 			return Ability.MakeDamageSpec(AttackBonus, 0.0f);
 		}
 		const float Value = UCrossguardItemLibrary::GetWeaponValue(*Weapon, Equipment->GetItem(ECrossguardEquipmentSlot::MainHand).Rarity) * Fraction;
-		return Weapon->Stat == ECrossguardWeaponStat::MagicDamage ? Ability.MakeDamageSpec(AttackBonus, Value)
-			: Ability.MakeDamageSpec(Value + AttackBonus, 0.0f);
+		switch (Weapon->Stat)
+		{
+		case ECrossguardWeaponStat::AttackDamage:
+			return Ability.MakeDamageSpec(Value + AttackBonus, 0.0f);
+		case ECrossguardWeaponStat::MagicDamage:
+			return Ability.MakeDamageSpec(AttackBonus, Value);
+		case ECrossguardWeaponStat::AttackResistance:
+			break;
+		}
+		return Ability.MakeDamageSpec(AttackBonus, 0.0f);
+	}
+
+	// The ground under Point: world geometry only, from 2 m above (slopes), else 90 cm down.
+	FVector GroundUnder(const UWorld& World, const FVector& Point, const FCollisionQueryParams& Params)
+	{
+		FHitResult Ground;
+		const FVector Start = Point + FVector(0.0f, 0.0f, 200.0f);
+		return World.LineTraceSingleByObjectType(Ground, Start, Point - FVector(0.0f, 0.0f, 500.0f), FCollisionObjectQueryParams(ECC_WorldStatic), Params)
+			? Ground.ImpactPoint : Point - FVector(0.0f, 0.0f, 90.0f);
 	}
 
 	void ApplyToTarget(UAbilitySystemComponent* Source, AActor* Target, const FGameplayEffectSpecHandle& Spec)
@@ -219,7 +237,7 @@ void UCrossguardCleaveAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 	UWorld* World = Avatar != nullptr ? Avatar->GetWorld() : nullptr;
 	if (ActorInfo->IsNetAuthority() && World != nullptr)
 	{
-		const FGameplayEffectSpecHandle Spec = MakeMainHandSpec(*this, CleaveWeaponFraction, 0.0f);
+		const FGameplayEffectSpecHandle Spec = MakeMainHandSpec(*this, Avatar, CleaveWeaponFraction, 0.0f);
 		FVector Forward = Avatar->GetActorForwardVector();
 		Forward.Z = 0.0f;
 		Forward = Forward.GetSafeNormal();
@@ -303,7 +321,7 @@ void UCrossguardTripleThrustAbility::Thrust()
 	TArray<FHitResult> Hits;
 	World->SweepMultiByObjectType(Hits, Start, Start + Direction * TripleThrustReach, FQuat::Identity, FCollisionObjectQueryParams(ECC_Pawn),
 		FCollisionShape::MakeSphere(TripleThrustRadius), Params);
-	const FGameplayEffectSpecHandle Spec = MakeMainHandSpec(*this, 1.0f, TripleThrustBonus);
+	const FGameplayEffectSpecHandle Spec = MakeMainHandSpec(*this, Avatar, 1.0f, TripleThrustBonus);
 	TSet<AActor*> Hit;
 	for (const FHitResult& Result : Hits)
 	{
@@ -394,6 +412,11 @@ void UCrossguardPartingTheLandAbility::ActivateAbility(const FGameplayAbilitySpe
 				{
 					Character->LaunchCharacter(FVector(0.0f, 0.0f, PartingKnockUpSpeed), false, true);
 				}
+				// A player's own client predicts its movement: launch there too.
+				if (ACrossguardCharacter* Player = Cast<ACrossguardCharacter>(Target); Player != nullptr && Player->IsPlayerControlled())
+				{
+					Player->ClientLaunch(FVector(0.0f, 0.0f, PartingKnockUpSpeed));
+				}
 			}
 		}
 
@@ -403,10 +426,10 @@ void UCrossguardPartingTheLandAbility::ActivateAbility(const FGameplayAbilitySpe
 		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		for (const float Side : {-1.0f, 1.0f})
 		{
-			const FVector Center = Origin + Forward * (PartingLength * 0.5f) + Right * Side * (PartingHalfWidth + PartingWallThickness * 0.5f);
-			FHitResult Ground;
-			const FVector Feet = World->LineTraceSingleByChannel(Ground, Center, Center - FVector(0.0f, 0.0f, 500.0f), ECC_WorldStatic, Params)
-				? Ground.ImpactPoint : Center - FVector(0.0f, 0.0f, 90.0f);
+			// Clear of the strip by a capsule's width, so nobody hit ends up inside a wall.
+			const FVector Center = Origin + Forward * (PartingLength * 0.5f)
+				+ Right * Side * (PartingHalfWidth + PartingWallGap + PartingWallThickness * 0.5f);
+			const FVector Feet = GroundUnder(*World, Center, Params);
 			if (ACrossguardWall* Wall = World->SpawnActor<ACrossguardWall>(ACrossguardWall::StaticClass(), Feet, Facing, SpawnParams))
 			{
 				Wall->SetWallSize(FVector(PartingLength, PartingWallThickness, PartingWallHeight));

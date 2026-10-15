@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/CrossguardGameplayAbility.h"
 #include "Skills/CrossguardArtSkills.h"
+#include "Skills/CrossguardAuraSkills.h"
 #include "Skills/CrossguardSpellSkills.h"
 #include "Skills/CrossguardSupportSkills.h"
 #include "Skills/CrossguardWeaponSkills.h"
@@ -46,6 +47,8 @@ namespace CrossguardNativeSkills
 			Register(UCrossguardStealthAbility::StaticClass());
 			Register(UCrossguardImmutableAbility::StaticClass());
 			Register(UCrossguardSplinterOfWinterAbility::StaticClass());
+			Register(UCrossguardMultiscaleAbility::StaticClass());
+			Register(UCrossguardHuntersTrackingAbility::StaticClass());
 			return Map;
 		}();
 		return Registry;

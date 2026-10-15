@@ -124,6 +124,17 @@ public:
 	UCrossguardTimedMultiplierEffect();
 };
 
+// Infinite and empty: carries the tags the caller adds to DynamicGrantedTags to every machine
+// (passive markers the owning client needs, such as Passive.HuntersTracking).
+UCLASS()
+class CROSSGUARD_API UCrossguardMarkerEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UCrossguardMarkerEffect();
+};
+
 // Infinite. Like UCrossguardSkillStatsEffect, but each modifier multiplies (1 for unused).
 UCLASS()
 class CROSSGUARD_API UCrossguardSkillMultiplierEffect : public UGameplayEffect

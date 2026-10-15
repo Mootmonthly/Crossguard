@@ -156,6 +156,11 @@ UCrossguardTimedMultiplierEffect::UCrossguardTimedMultiplierEffect()
 	AddSetByCallerModifiers(Modifiers, true);
 }
 
+UCrossguardMarkerEffect::UCrossguardMarkerEffect()
+{
+	DurationPolicy = EGameplayEffectDurationType::Infinite;
+}
+
 UCrossguardSkillMultiplierEffect::UCrossguardSkillMultiplierEffect()
 {
 	DurationPolicy = EGameplayEffectDurationType::Infinite;
