@@ -668,6 +668,13 @@ static void TestInventoryGrid()
 	CHECK(Target == 10 && Source == 0);
 	CHECK(!ContainerAccepts(EContainerKind::Quiver, EItemCategory::Throwable));
 
+	// Stash tabs: 3000 gold each, at most 3 bought.
+	CHECK(CanBuyStashTab(Config, 0, 3000, false) == EStashTabPurchaseError::None);
+	CHECK(CanBuyStashTab(Config, 0, 2999, false) == EStashTabPurchaseError::NotEnoughGold);
+	CHECK(CanBuyStashTab(Config, 2, 99999, false) == EStashTabPurchaseError::None);
+	CHECK(CanBuyStashTab(Config, 3, 99999, false) == EStashTabPurchaseError::AtCap);
+	CHECK(CanBuyStashTab(Config, 0, 99999, true) == EStashTabPurchaseError::InRaid);
+
 	// A default grid has no squares.
 	const FInventoryGrid Empty;
 	CHECK(!Empty.FindFreeSpot({1, 1}, true, Spot));

@@ -38,6 +38,23 @@ namespace Crossguard
 		return Moved;
 	}
 
+	EStashTabPurchaseError CanBuyStashTab(const FInventoryConfig& Config, int PurchasedTabs, int Gold, bool bInRaid)
+	{
+		if (bInRaid)
+		{
+			return EStashTabPurchaseError::InRaid;
+		}
+		if (PurchasedTabs >= Config.MaxPurchasedStashTabs)
+		{
+			return EStashTabPurchaseError::AtCap;
+		}
+		if (Gold < Config.StashTabPrice)
+		{
+			return EStashTabPurchaseError::NotEnoughGold;
+		}
+		return EStashTabPurchaseError::None;
+	}
+
 	FGridSize FGridItem::Footprint() const
 	{
 		return Rotate(Size, Placement.bRotated);

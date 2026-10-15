@@ -46,7 +46,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | --- | --- | --- |
 | Extraction points | Code, Editor | A volume that ends the raid for a player (`EndRaid(true)`, +35 XP). Placement in levels is editor work. |
 | Raid end on failure | Code, Decision | When does a raid end for a dead player: when they leave, after a timer, when the match ends? |
-| Stash | Editor | Built in code: per character, 10 × 30 tabs, Skill Gems learnable from it. Needs the stash UI in the hub. Buying tabs waits on the currency. |
+| Stash | Editor | Built in code: per character, 10 × 30 tabs (up to 3 more at 3000 gold), Skill Gems learnable from it. Needs the stash UI in the hub. Buying tabs waits on gold. |
 | Shared stash tabs | Code, Decision | Subscription benefit: tabs shared by all of an account's characters. Needs accounts and the backend. |
 | Hub / lobby map | Editor | Where players manage stash, Skill Library, attributes, loadout; game mode with `bIsRaid` off. |
 | Inventory and loot UI | Editor | Grid widgets for inventory, Backpack, Quiver, equipment, bodies. The C++ API is ready. |
@@ -75,7 +75,8 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | --- | --- | --- |
 | Monster AI | Code, Editor | Basic monsters (5 XP) and bosses (50 XP) via `KillXpSource`. |
 | Loot tables | Decision, Code | What monsters, chests and bosses drop. |
-| Treasure chests | Code, Editor | Reuse `ACrossguardLootContainer`. |
+| Treasure chests | Code, Editor | Reuse `ACrossguardLootContainer`. Gold among the loot. |
+| Lockpicking | Decision, Code | The best chests and doors need a lockpick item or a lockpicking skill. |
 | Gathering nodes | Code, Editor | Herbs and ore, 10 XP per node; materials stack size not ruled. |
 | Raid maps | Editor | PCG plugin is enabled. |
 | Quests | Decision, Code | 10–100 XP each. |
@@ -89,8 +90,9 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Auction house | Code, Decision | Needs the backend and a currency. |
 | Guilds and guild bank | Code | Members deposit; officers withdraw, manage, redistribute. |
 | Respec store purchase | Code | Grants respec tokens after a verified purchase; price not set. |
-| Subscription | Decision, Code | Shared stash tabs; other benefits not set. |
-| In-game currency | Decision, Code | Buys stash tabs; the auction house needs it too. |
+| Subscription | Decision, Code | About $10 per season: five respec tokens, a shared stash tab, common healing items, throwables, lockpicks. |
+| Gold | Decision, Code | The currency: from selling to vendors and from loot. Buys stash tabs; the auction house needs it too. |
+| NPC vendors | Code, Editor | Buy gear and trinkets for gold. |
 | Cosmetics | Decision, Editor | |
 
 ## Milestone 5: Online
@@ -109,8 +111,11 @@ Decisions that block items above. Answers go into design-decisions.md.
 
 | Question | Blocks |
 | --- | --- |
-| Stash tab price, and the in-game currency itself | Buying stash tabs |
-| Subscription price and other benefits | Shared stash tabs |
+| Is gold an item carried in the inventory (lost on death, stashable) or a balance on the character? | Gold, buying stash tabs |
+| Vendor prices: what gear and trinkets sell for | NPC vendors |
+| Trinkets: which exist, sizes, stack sizes | NPC vendors, loot tables |
+| How lockpicking works (time, failure, which skill), and the lockpick item | Lockpicking |
+| Final subscription price | Subscription |
 | When does the raid end for a player who died and was not revived? | Raid end |
 | Hotbar: how many slots, which keys? | Hotbar |
 | Can the loadout change during a raid? | Loadout timing |

@@ -49,13 +49,15 @@ FIntPoint UCrossguardStashComponent::GetTabSize() const
 	return FIntPoint(Config.StashTabWidth, Config.StashTabHeight);
 }
 
-void UCrossguardStashComponent::GrantStashTab()
+bool UCrossguardStashComponent::GrantStashTab()
 {
-	if (IsServer())
+	if (!IsServer() || GetPurchasedTabCount() >= Crossguard::FInventoryConfig().MaxPurchasedStashTabs)
 	{
-		Tabs.AddDefaulted();
-		OnStashChanged.Broadcast();
+		return false;
 	}
+	Tabs.AddDefaulted();
+	OnStashChanged.Broadcast();
+	return true;
 }
 
 void UCrossguardStashComponent::CopyFrom(const UCrossguardStashComponent& Other)

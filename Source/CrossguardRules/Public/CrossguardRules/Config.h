@@ -48,6 +48,9 @@ namespace Crossguard
 		int StashTabWidth = 10;
 		int StashTabHeight = 30;
 		int StartingStashTabs = 1;
+		// Extra tabs cost StashTabPrice gold each, at most MaxPurchasedStashTabs per character.
+		int StashTabPrice = 3000;
+		int MaxPurchasedStashTabs = 3;
 	};
 
 	struct FScalingConfig

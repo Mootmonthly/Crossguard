@@ -16,8 +16,8 @@ struct CROSSGUARD_API FCrossguardStashTab
 	TArray<FCrossguardInventoryItem> Items;
 };
 
-// A character's stash: between-raid storage in tabs of 10 x 30 squares. Starts with one tab; more
-// are bought with in-game currency (GrantStashTab, once a purchase exists). Lives on the player
+// A character's stash: between-raid storage in tabs of 10 x 30 squares. Starts with one tab; up to
+// three more are bought for 3000 gold each (GrantStashTab). Lives on the player
 // state, so it survives death and travel. Not saved yet.
 //
 // Server authoritative, between raids only. Items move between the stash and the character's
@@ -45,9 +45,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Stash")
 	FIntPoint GetTabSize() const;
 
-	// Server. Adds an empty tab (after the purchase is paid for).
+	// Tabs bought so far (at most 3 per character).
+	UFUNCTION(BlueprintPure, Category = "Stash")
+	int32 GetPurchasedTabCount() const { return FMath::Max(0, Tabs.Num() - Crossguard::FInventoryConfig().StartingStashTabs); }
+
+	// Server. Adds an empty tab once 3000 gold is paid. False at the cap of 3 bought tabs. Paying
+	// is the caller's job until gold exists.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Stash")
-	void GrantStashTab();
+	bool GrantStashTab();
 
 	// Server. Seamless travel: copies the tabs from the previous player state's stash.
 	void CopyFrom(const UCrossguardStashComponent& Other);

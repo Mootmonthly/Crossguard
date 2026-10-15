@@ -159,11 +159,19 @@ Independent of category, a skill is:
   in the library cannot be learned again (the gem is kept). Gems can also be sold on the auction
   house, deposited in a guild bank, or traded.
 - The loadout can only equip skills in the Skill Library.
-- Stash: between-raid storage, per character. One tab is 10 × 30 squares. More tabs are bought with
-  in-game currency (price not set). A planned subscription adds shared stash tabs that every
-  character on the account can use.
+- Stash: between-raid storage, per character. One tab is 10 × 30 squares. Up to 3 more tabs per
+  character, 3000 gold each.
+- Gold is the in-game currency. It comes from selling gear and trinkets found in raids to NPC
+  vendors, and from loot on monster corpses and in chests.
+- Lockpicking: the best chests and doors need it, through a skill or a lockpick item.
 - Guild banks: a shared stash per guild; every member deposits, only officers withdraw, manage or
   redistribute.
+
+## Subscription
+
+- Planned price: about $10 per season (not final).
+- Each season: five respec tokens, a shared stash tab (usable by all of the account's characters),
+  several stacks of common healing items, some throwables and lockpicks.
 
 ## Camera
 

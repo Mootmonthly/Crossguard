@@ -52,6 +52,18 @@ namespace Crossguard
 	// Returns the number moved. Counts below 0 are treated as 0.
 	CROSSGUARDRULES_API int MergeStacks(int& TargetCount, int& SourceCount, int MaxStack);
 
+	enum class EStashTabPurchaseError
+	{
+		None,
+		// Bought between raids only.
+		InRaid,
+		// MaxPurchasedStashTabs reached.
+		AtCap,
+		NotEnoughGold,
+	};
+
+	CROSSGUARDRULES_API EStashTabPurchaseError CanBuyStashTab(const FInventoryConfig& Config, int PurchasedTabs, int Gold, bool bInRaid);
+
 	// Top-left square of the item's footprint. Rotated swaps width and height.
 	struct FGridPlacement
 	{
