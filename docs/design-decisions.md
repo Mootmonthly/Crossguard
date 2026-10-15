@@ -139,8 +139,7 @@ Independent of category, a skill is:
   up to 3, consumables (potions, bandages) up to 5.
 - Stacks only combine items of the same type **and** rarity: a Common health potion does not stack
   with a Rare one.
-- Placeholders: Backpack and Quiver items take 2 × 2 while not equipped. Gloves, boots, cape and
-  legs sizes were not given.
+- Placeholder: Backpack and Quiver items take 2 × 2 while not equipped.
 - Backpacks and Quivers are extra containers that add 5–30 squares by rarity, in steps of 5
   (Common 5 … Mystic 30). Quivers only hold Arrows and Bolts.
 - On death, all equipped gear and the raid inventory drop. No insurance for now.
