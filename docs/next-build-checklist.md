@@ -1,5 +1,8 @@
 # Next Build Checklist
 
+Rows marked automated (**auto**) in [editor-tests.md](editor-tests.md#checklist-coverage) run via
+`Tools\run_editor_tests.bat`; do those manually only if a test fails or is skipped.
+
 Everything written since the last editor build, in the order to set up and test it. Tick items off
 as you go; anything that fails, paste the error or describe what happened.
 

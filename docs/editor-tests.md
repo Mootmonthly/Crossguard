@@ -140,8 +140,9 @@ The same Blueprint and data set-up as the checklist (sections 2 and 3):
   `EquipmentComponent` → Weapon Table `DT_Weapons` (Armor `DT_Armor`, Affix `DT_Affixes`);
   `InventoryComponent` → Item Table `DT_Items`; `LoadoutComponent` → Skill Catalog
   `DA_SkillCatalog` (without it skills are granted from the native C++ classes and a note says so).
-- `Crossguard.Scenario.Monsters.MobSpawner`: the game mode's **Mob Table** `DT_Mobs` (skipped with a
-  warning while unset) with a `skeleton_soldier` row.
+- `Crossguard.Scenario.Monsters.MobSpawner` and the monster data tests: the game mode's **Mob Table**
+  `DT_Mobs` (skipped with a warning while unset) with a `skeleton_soldier` row. Loot tests: the game
+  mode's Loot Tables `DT_Loot`. Skill Gem and passive tests: `DA_SkillCatalog`. Armor: `DT_Armor`.
 
 Scenario characters ignore the character Blueprint's **Crossguard | Debug** loadout (Debug items,
 skills, inventory, revive delay, loot-takes-all, debug HUD are cleared on them), so the tests do not
@@ -150,22 +151,247 @@ damage is computed from the characters' actual stats, so they work at any level.
 
 ### The scenarios
 
+92 tests in 10 files. Grouped by file; the name is the full test name.
+
+**`CrossguardScenarioRaidTests.cpp`**
+
 | Test | Checks |
 | --- | --- |
 | `Crossguard.Scenario.Raid.KillDummyLeavesBody` | A player with `sword_one_handed` hits a dummy 1.5 m away: the first hit takes exactly the damage formula's amount (weapon 30 at Common, the player's ADB / AAD, the dummy's AR); it keeps attacking (at the weapon's interval) until the dummy dies: 0 Health, `State.Dead`, a loot container (its body) where it fell, and the player's raid XP +5 (`GetRaidXp`). |
-| `Crossguard.Scenario.Skills.Fireball` | A player with `wand_one_handed` and `fireball` in the loadout casts at a dummy 6 m away: Fireball goes on cooldown (`Cooldown.Skill.Fireball`); 1 s later the dummy has lost exactly the formula's damage for 50 Magic Damage at coefficient 0.5 (at least 50 before Magic Resistance); the caster, outside the 2 m splash, is unhurt. |
+
+**`CrossguardScenarioRaidWorldTests.cpp`**
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Raid.ThrowingKnife` | Key 3 readies 3 knives (sword put away, counts as dagger); each left click throws one for the item's throw damage; after the last the hands are empty and left click does nothing until key 1 draws the sword. |
+| `Crossguard.Scenario.Raid.ExplosiveBottle` | The bottle's blast hits the target and a bystander in the radius once, not a dummy outside it; the damage area pulses 5 times on the target and on the thrower standing in it, then is gone. |
+| `Crossguard.Scenario.Raid.WeaponSetSwitch` | Dagger equipped into set 2 with `RequestEquipItem`; switching 1 → 2 → 1 takes the draw time, nothing attacks while drawing, then each set's weapon hits. |
+| `Crossguard.Scenario.Raid.BowRunsOutOfArrows` | 45 arrows land as 20 + 20 + 5; 45 shots use one each; then the drawn bow does not fire. |
+| `Crossguard.Scenario.Raid.PotionAndBandage` | Potion used at once, heals about half by 5 s and all by 10.5 s; a bandage held for the channel heals in full; one released early heals only up to the release. |
+| `Crossguard.Scenario.Raid.LootBody` | A dummy with a sword and 2 bandages dies; its body holds them, its hands are empty; F (loot-takes-all) moves everything to the player. |
+| `Crossguard.Scenario.Raid.DeathAndRevive` | A player dies with `DebugReviveDelay` 5: capsule stops colliding, gear on a body, still dead 0.5 s before; revives at half Health with sword, helm (and its resistance) and potions back, body gone, "revived" logged, can draw and attack. |
+| `Crossguard.Scenario.Raid.LootedBeforeRevive` | A looter takes the sword and ruby off the victim's body; after the revive the victim has only the potions, the looter keeps the rest. |
+| `Crossguard.Scenario.Raid.ExtractionZone` | 5 s in the zone (still in the raid at 4.5 s): extracted, raid XP + reward banked, 250 gold banked, log lines. |
+| `Crossguard.Scenario.Raid.ExtractPortal` | `PortalUnlockSeconds` 0, two players in a point of interest press X: both portals channel; the one whose owner walks out of keep-alive range collapses; the other opens after the channel time and extracts its owner. |
+| `Crossguard.Scenario.Raid.PortalRefusals` | X refused too early (when `PortalUnlockSeconds` > 0), outside a point of interest, and a second time; reasons in the log; one portal at most. |
+| `Crossguard.Scenario.Raid.ChestCommonLoot` | Three `chest_common` chests each hold one valid roll; F empties the first non-empty one into the player. Skipped without `DT_Loot`. |
+| `Crossguard.Scenario.Raid.BossLootOnDummy` | A dummy with Loot Table Id `boss_monster` dies: body holds what it carried plus one `boss_monster` roll (at least the row's minimum); F takes all. Skipped without `DT_Loot`. |
+| `Crossguard.Scenario.Raid.DoorOpenClose` | F snaps a closed door open, F again closes it. |
+| `Crossguard.Scenario.Raid.LockedDoor` | Locked: F does nothing without a lockpick ("no lockpick" logged); with `Ability.Lockpicking` it opens after the lockpicking time; a lockpick item works too and is used up only when the lock opens. |
+| `Crossguard.Scenario.Raid.DropAndPickUp` | G drops the readied potion stack as an `ACrossguardWorldItem` about 1.5 m ahead on the floor; F picks all 3 back up and the box goes. |
+
+**`CrossguardScenarioSkillTests.cpp`**
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Skills.Fireball` | A player with `wand_one_handed` and `fireball` casts at a dummy 6 m away: Fireball goes on cooldown (`Cooldown.Skill.Fireball`); 1 s later the dummy has lost exactly the formula's damage for 50 Magic Damage at coefficient 0.5 (at least 50 before Magic Resistance); the caster, outside the 2 m splash, is unhurt. |
+
+**`CrossguardScenarioSupportSkillTests.cpp`**
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Skills.Heal` | Heals the dummy under the crosshair (formula, "healed" logged), cooldown; at nothing it heals the caster. |
+| `Crossguard.Scenario.Skills.Mute` | At nothing: fails, no cooldown. On the target: `State.Muted`, skills fail, basic attack lands; 5 per second; lasts 10 s (9–10 ticks); skills work after. |
+| `Crossguard.Scenario.Skills.EldritchShield` | Cast costs 10 HP, `AttackShield` 45; a sword hit within 45 is absorbed entirely; the rest lasts 12 s. |
+| `Crossguard.Scenario.Skills.ChopDown` | Readied axe hit deals 110%, `State.Slowed` with Movement Speed −50% for 2 s; on a flier it ends Flight. |
+| `Crossguard.Scenario.Skills.ShootingStar` | Blinds the watcher (2 s), dash about 10 m through them, 50 Attack Damage to them, caster not blinded. |
+| `Crossguard.Scenario.Skills.Dragonification` | Max HP +50% (Health keeps its %), AR / MR +0.25, Flare Breath and Flight granted, no weapons / basic attack / other skills / 1–2 drawing; Flight works; all back after 45 s. |
+| `Crossguard.Scenario.Skills.Flight` | `State.Flying`, flying movement; upward input rises; hovers without input; ends after 20 s and the flier lands. |
+| `Crossguard.Scenario.Skills.Wall` | One wall 3 m ahead, on the floor, across the view; gone after 15 s. |
+| `Crossguard.Scenario.Skills.Light` | One orb attached 1.2 m over the caster for 120 s; a recast replaces it. |
+| `Crossguard.Scenario.Skills.Stealth` | `State.Stealthed`; the hider's capsule is hidden from the PIE player; attacking ends it with +10% Movement Speed and +25% ADB for 3 s; otherwise it lasts 12 s. |
+| `Crossguard.Scenario.Skills.Immutable` | A Chop Down hit still deals 110% but does not slow. |
+| `Crossguard.Scenario.Skills.Unleash` | STR / AGI / INT double, Max HP follows; back after 15 s. |
+| `Crossguard.Scenario.Skills.Benediction` | Aimed at a dead player's body: alive at full HP with the sword back in hand ("revive" logged); at nothing: caster to full, the other player not healed. |
+| `Crossguard.Scenario.Skills.Multiscale` | Equipped: the knight and a same-Party member get AR / MR +0.15 and `State.Multiscale`, an outsider nothing; unequipped: gone from all. |
+| `Crossguard.Scenario.Skills.HuntersTracking` | Passive on; footprints appear behind a walking enemy, are still there at 25 s, fade about 30 s after the last step. |
+| `Crossguard.Scenario.Skills.SummonSkeletons` | 5 Warriors (40 HP) and 1 Mage (30 HP), 60 s life; they damage the dummy; a recast replaces them; gone after 60 s. |
+| `Crossguard.Scenario.Skills.SummonTiger` | Refused without `pet_gem_tiger` (no cooldown); with it: one tiger, 100 HP, 20 AD, Hunter's Leap / Neckbite / Slash, gem kept; it hits the dummy (log); gone after 180 s. |
+| `Crossguard.Scenario.Skills.SummonGreaterDemon` | One demon, 220 HP, 1.5x, two-handed sword, 40 AD, Mortal Strike / Eldritch Shield / Shade Blow, gone after 60 s. |
+| `Crossguard.Scenario.Skills.NeckbiteSilence` | The tiger's Neckbite silences a flying victim: Flight stops, Heal fails, basic attack works; about 2 s. |
+| `Crossguard.Scenario.Skills.Silence` | `State.Silenced` 2 s: Heal refused (no cooldown), basic attack works; Heal works after. |
+
+**`CrossguardScenarioWeaponSkillTests.cpp`**
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Skills.NextAttackStack` | Slash, Mortal Strike, Shade Blow readied (tags on, cooldowns); one sword hit carries all three (+7, +20 Attack, +20 Magic), uses them up, heal-blocks the dummy; the next hit is plain. |
+| `Crossguard.Scenario.Skills.MortalStrikeKillRefresh` | Killing with Mortal Strike clears its cooldown; it can be readied again at once. |
+| `Crossguard.Scenario.Skills.Gouge` | Dagger hit: −5% move speed and 5 per second for 5 s (25 in all), then nothing. |
+| `Crossguard.Scenario.Skills.ShadeBlowHealBlock` | After a Shade Blow hit, a Heal on the dummy does nothing (no "healed" line); 5.5 s later it heals 20. |
+| `Crossguard.Scenario.Skills.PurgeShot` | Bow +10 Magic, target Muted 3 s (Slash refused, basic attack works), Slash after. |
+| `Crossguard.Scenario.Skills.Cleave` | 85% of the sword to the dummy ahead and one 45° off, nothing behind; compared with a plain hit. |
+| `Crossguard.Scenario.Skills.PartingTheLand` | 65 to the dummy, `State.KnockedUp` (30+ cm up), two walls for 15 s. |
+| `Crossguard.Scenario.Skills.HuntersLeap` | Lands straight ahead about 0.5 m per AGI point, on the floor. |
+| `Crossguard.Scenario.Skills.LikeALion` | No enemy in 30 m: fails, no cooldown. With a dummy 10 m ahead: leaps to 1.5 m short, STR x1.2 for 6 s. Not a checklist row. |
+| `Crossguard.Scenario.Skills.SpearAttackRate` | Common spear 33 per thrust, second thrust exactly one interval (1.2 s at 0 Action Speed) later. |
+| `Crossguard.Scenario.Skills.TripleThrust` | Three thrusts of spear +15. |
+| `Crossguard.Scenario.Skills.Quickshot` | +0.25 Action Speed, +0.05 Move Speed, shorter bow interval; back after 8 s. Not a checklist row. |
+| `Crossguard.Scenario.Skills.ArcaneArrows` | Bow +5 Magic while `State.ArcaneArrows` (not used up by a shot); plain after 8 s. Not a checklist row. |
+| `Crossguard.Scenario.Skills.HeroicMight` | Strength +10; Muted: off; back after the Mute. Skipped without `DA_SkillCatalog`. |
+| `Crossguard.Scenario.Skills.SwordMastery` | +5 AAD, +10% Action Speed, melee CDR only while a sword is held, not with a dagger. Skipped without `DA_SkillCatalog`. |
+| `Crossguard.Scenario.Skills.RiposteRider` | A readied riposte (`State.NextAttack.Riposte`) gives the next hit +50% ADB, once. |
+
+**`CrossguardScenarioCombatTests.cpp`**
+
+| Test | Checks |
+| --- | --- |
 | `Crossguard.Scenario.Combat.ShieldBlock` | A (`sword_one_handed` + `shield_one_handed`) raises the guard facing B (`dagger_one_handed`); B stabs: A loses nothing, the log says "blocked" and "0% through", B has `State.Stunned` (still at 0.5 s, gone at 1.5 s), A still guards. A turns its back; B stabs again: A takes the full dagger hit (formula, A's AR includes the shield's 0.08), no new "blocked" line. Releasing the guard removes `State.Guarding`. |
+
+**`CrossguardScenarioGuardTests.cpp`**
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Combat.ParryTwoHanded` | Two-handed sword parries a dagger: defender unhurt, attacker takes the defender's full weapon damage and a 1 s stun, "parried … 0% through"; riposte ready (+50% ADB on the next hit, +Action Speed for 3 s). |
+| `Crossguard.Scenario.Combat.ImpactDifferences` | Six parry duels, one per Impact Power line (attacker by 1 / 2, defender by 1 / 2 / 3, tie): damage each way, log share, stuns and their length, guard kept, riposte only when the defender did not lose. |
+| `Crossguard.Scenario.Combat.ArrowBlockedNoStun` | A Ranged monster's arrow on a raised shield: blocked, 0% through, nobody hurt, archer never stunned. |
+| `Crossguard.Scenario.Combat.SwingClash` | Swings within 0.25 s clash (tie stops both, lighter swinger takes the heavy weapon's damage and a stun, no riposte); the clank pushes the pair apart; an answer 0.4 s late lands in full. |
+| `Crossguard.Scenario.Combat.AIGuardsAgainstSwings` | 20 dagger swings at a harmless built-in monster: it raises its guard, some swings are parried and some land. |
+| `Crossguard.Scenario.Combat.AIIgnoresAllySwings` | A party member's minion never guards against its ally's 12 swings; every one lands (friendly fire). |
+| `Crossguard.Scenario.Combat.StunBlocksActions` | Stunned (by a parry, or directly): no attack, skill, jump, movement or guard, a raised guard drops; all work again after. |
+
+**`CrossguardScenarioMonsterTests.cpp`**
+
+| Test | Checks |
+| --- | --- |
 | `Crossguard.Scenario.Monsters.MobSpawner` | A `CrossguardMobSpawner` with `skeleton_soldier` (weight 1), Count 3–3, Radius 6 m, placed 40 m out during a raid: 3 monsters owned by it, each with Mob Id `skeleton_soldier`, Max Health and Health = the mob's Health in `DT_Mobs` (120), a controller, within the radius, above the floor. |
 
-Checklist rows covered (tick them when the scenario passes; the rest of each row, such as the
-ragdoll's look, still needs eyes):
+**`CrossguardScenarioMonsterAITests.cpp`** (no NavMesh: monsters steer straight at their goal)
 
-| Checklist row (section 4) | Scenario test | Not covered |
-| --- | --- | --- |
-| Kill the dummy → body, 5 XP | `Crossguard.Scenario.Raid.KillDummyLeavesBody` | The ragdoll itself. |
-| `fireball` at the dummy → 50+ damage on hit | `Crossguard.Scenario.Skills.Fireball` | Standing within 2 m of the blast hurts you for 15. |
-| Block: shield + sword vs dagger → "blocked … 0% through", 1 s stun; turn away → full damage | `Crossguard.Scenario.Combat.ShieldBlock` | Two real clients (the test uses two server-side players in one standalone PIE). |
-| CrossguardMobSpawner with skeletons → they appear around it | `Crossguard.Scenario.Monsters.MobSpawner` | Archers keeping away, respawn, NavMesh pathing. |
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Monsters.AggroSightAndAttack` | A built-in monster ignores a player beyond aggro range and one behind a wall; once it sees them it closes in and hits for its Attack Damage (formula) once per Attack Interval, from within Attack Range. |
+| `Crossguard.Scenario.Monsters.LeashReturnsHome` | 6 m leash: pulled beyond it with nobody in reach, it walks home, healed to full, and ignores a player beyond the leash. |
+| `Crossguard.Scenario.Monsters.LeashRetargets` | Pulled beyond the leash while another player is in range within it: turns on that player, not healed. |
+| `Crossguard.Scenario.Monsters.ReactsToDamageFromAnyRange` | A player 25 m away is ignored until they hurt it; then it turns, closes in and hits. |
+| `Crossguard.Scenario.Monsters.MonsterTeam` | Two monsters and one's minion never fight each other; all three go for a player; nothing hurt among them. |
+| `Crossguard.Scenario.Monsters.DeathBodyLootXp` | Six monsters of one mob killed: each dead, not revivable, leaves a body; at least one body holds loot; Basic Monster XP per kill. |
+| `Crossguard.Scenario.Monsters.BossKillXpAndLoot` | A boss (`mithril_dragon` if present) killed: Boss Monster XP, a body, the dragon's body holds loot. |
+| `Crossguard.Scenario.Monsters.MobDataApplied` | Each mob in the Mob Table (up to 6, all 5 today): role, weapon, Impact Power, damage, intervals, ranges, loot table, kill XP, Health, walk speed, scale, feet on the floor, skills with bundles expanded. |
+| `Crossguard.Scenario.Monsters.RangedKeepsDistanceAndShoots` | `skeleton_archer` walks in to its Keep Distance (never closer) and hits the player with arrows more than once. |
+| `Crossguard.Scenario.Monsters.MageKeepsDistanceAndCasts` | A Mage mob keeps its distance and a fireball hits the player. |
+| `Crossguard.Scenario.Monsters.SkeletonMageUsesSkills` | `skeleton_mage` casts Fireball at the player; no Heal while healthy; below 60% it heals itself ("healed" logged). |
+| `Crossguard.Scenario.Monsters.SpawnerRespawn` | Respawn Seconds 4: a replacement of the same mob at full Health no sooner than 4 s, within 4 s + the 2 s check; the first body stays. |
+
+The monster data tests (all but the first five above) and `MobSpawner` skip with a warning while the
+game mode's Mob Table is unset.
+
+**`CrossguardScenarioSocialTests.cpp`** (trading, guilds, hub; through the components' server requests, the path the console commands and UI use)
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Social.TradeSwap` | Ask, accept, offer, both lock, both accept: potions and Rare ruby swap; "Completed" logged; no accept before both lock. |
+| `Crossguard.Scenario.Social.TradeChangingAnOfferUnlocksBoth` | A locked offer cannot change; unlocking takes back acceptances; changing an offer unlocks both; the new offer swaps. |
+| `Crossguard.Scenario.Social.TradeOfferedStackUsedMidTrade` | Using an offered potion unlocks both; the offer follows the stack; 2 potions swap. |
+| `Crossguard.Scenario.Social.TradeEndsTooFar` | Open at 4 m, ends TooFar at 6 m, nothing moved. |
+| `Crossguard.Scenario.Social.TradeBankedGoldBetweenRaidsOnly` | Banked gold refused in a raid; between raids more than banked is refused, 200 of 500 swaps. |
+| `Crossguard.Scenario.Social.TradeNoRoomChangesNothing` | Receiver's inventory full: ends NoRoom, nothing changes. |
+| `Crossguard.Scenario.Social.TradeEndsWhenPartnerDies` | Partner dies: ends PartnerGone, items kept; a dead player cannot be asked. |
+| `Crossguard.Scenario.Social.GuildCreateInviteAccept` | Create "Night Watch"; name taken (any case) and bad names refused; invite, accept as Member, both rosters; a Member cannot invite. |
+| `Crossguard.Scenario.Social.GuildBankRankPermissions` | Member deposits gold and potions; Member withdraw refused NotPermitted; made Officer, withdraws. |
+| `Crossguard.Scenario.Social.GuildBankBetweenRaidsAndDisband` | Membership works in raids, the bank does not; leader cannot leave while others are in; last member leaving disbands and takes the bank. |
+| `Crossguard.Scenario.Social.GuildGoldGuards` | Withdrawals, gifts and a last-member take that would overflow int32 gold are refused, nothing changes. |
+| `Crossguard.Scenario.Social.ConcurrentLootNeverDuplicates` | Two players open one body and take every stack in the same frame: totals across body and both inventories unchanged. |
+| `Crossguard.Scenario.Hub.SkillGemLearnsSkill` | Between raids a `heroic_might` gem joins the Skill Library and is used up; in a raid refused, gem stays. Skipped without `DA_SkillCatalog`. |
+| `Crossguard.Scenario.Hub.StashStoreAndRetrieve` | Store anywhere and retrieve 3 potions; refused in a raid. |
+| `Crossguard.Scenario.Hub.VendorSellsRareRuby` | Rare ruby sells for its price (150) into banked gold; a potion is refused. |
+| `Crossguard.Scenario.Hub.BuyStashTabs` | No gold: refused; with gold, three tabs; the fourth refused AtCap, no gold taken. |
+| `Crossguard.Scenario.Hub.LoweringAttributeNeedsRespecToken` | Lowering Strength refused without a token (nothing changes), done with one (token used). |
+
+### Checklist coverage
+
+Against [next-build-checklist.md](next-build-checklist.md). **auto**: the tests check the row's
+expected result; tick it when they pass. **part**: some of it is checked, do the rest by hand.
+**manual**: no test. "Looks" (ragdoll, meshes, arcs, effects) always needs eyes; the tests use
+server-side players in one standalone PIE, not real clients.
+
+| Section / row | Status | Tests | By hand |
+| --- | --- | --- | --- |
+| 1 Pull and build | manual | (`run_editor_tests.bat` builds) | Pull, project files. |
+| 2 Data tables imported | auto | `Crossguard.Data.EditorAssets` | — |
+| 2 Tables set on Blueprints / game mode | manual | (scenarios skip or fail when unset) | Editor property set-up. |
+| 3 Character settings | manual | — | Input mapping context, Debug loadout (scenarios ignore it). |
+| 4 Knife hits 15; bottle 10 in 3 m + 3/s for 5 s | auto | `Raid.ThrowingKnife`, `Raid.ExplosiveBottle` | The arc. |
+| 4 Weapon sets 1 / 2 | auto | `Raid.WeaponSetSwitch` | — |
+| 4 Next knife; empty hands after the last | auto | `Raid.ThrowingKnife` | — |
+| 4 Bow 45 shots, runs out | auto | `Raid.BowRunsOutOfArrows` | — |
+| 4 Potion 15 over 10 s; bandage 10 over 2 s held | auto | `Raid.PotionAndBandage` | — |
+| 4 Kill the dummy: body, 5 XP | auto | `Raid.KillDummyLeavesBody` | The ragdoll. |
+| 4 Loot a geared dummy's body | auto | `Raid.LootBody` | — |
+| 4 Die and revive with gear | auto | `Raid.DeathAndRevive` | The ragdoll. |
+| 4 Looted before revive | auto | `Raid.LootedBeforeRevive` | — |
+| 4 Extraction zone 5 s, XP and 250 gold banked | auto | `Raid.ExtractionZone` | — |
+| 4 Portal: 60 s, extract; walk away collapses | auto | `Raid.ExtractPortal` | `BeamMesh` look. |
+| 4 X refused outside / twice | auto | `Raid.PortalRefusals` | — |
+| 4 `chest_common` chest | auto | `Raid.ChestCommonLoot` | — |
+| 4 Monster: aggro 15 m, 12 per 1.5 s, 30 m leash, shot from 40 m, kill XP and body | part | `Monsters.AggroSightAndAttack`, `LeashReturnsHome`, `LeashRetargets`, `ReactsToDamageFromAnyRange`, `DeathBodyLootXp` | NavMesh pathing; the 30 m leash (tests use 6 m) and 40 m (tests 25 m). |
+| 4 `boss_monster` dummy: 3–5 extra items | auto | `Raid.BossLootOnDummy` | — |
+| 4 Door snaps open / closed | auto | `Raid.DoorOpenClose` | The mesh moving. |
+| 4 Locked door, lockpicking 5 s | auto | `Raid.LockedDoor` | — |
+| 4 `fireball` 50+; 15 to you within 2 m | part | `Skills.Fireball` | The self-splash within 2 m. |
+| 4 `heal` dummy, then self | auto | `Skills.Heal` | — |
+| 4 `mute` | auto | `Skills.Mute` | — |
+| 4 `eldritch_shield` | auto | `Skills.EldritchShield` | — |
+| 4 `chop_down`, flier falls | auto | `Skills.ChopDown` | — |
+| 4 `shooting_star` | auto | `Skills.ShootingStar` | — |
+| 4 `dragonification` | auto | `Skills.Dragonification` | Q selector UI. |
+| 4 `flight` Space / Left Ctrl | part | `Skills.Flight` | Descending (Left Ctrl), the key bindings. |
+| 4 Next-attack stack; Mortal Strike kill refresh | auto | `Skills.NextAttackStack`, `Skills.MortalStrikeKillRefresh` | States display. |
+| 4 `gouge` | auto | `Skills.Gouge` | — |
+| 4 `shade_blow` heal block | auto | `Skills.ShadeBlowHealBlock` | — |
+| 4 `purge_shot` | auto | `Skills.PurgeShot` | — |
+| 4 `cleave` 85% | auto | `Skills.Cleave` | — |
+| 4 `parting_the_land` | auto | `Skills.PartingTheLand` | The pop-up and walls' look. |
+| 4 `hunters_leap` | auto | `Skills.HuntersLeap` | — |
+| 4 `wall`, `light` | auto | `Skills.Wall`, `Skills.Light` | The light itself. |
+| 4 `stealth` vanish on the other screen | part | `Skills.Stealth` | Vanishing on a real second client (replication). |
+| 4 `immutable` | auto | `Skills.Immutable` | — |
+| 4 `unleash` | auto | `Skills.Unleash` | — |
+| 4 `benediction` on a body | auto | `Skills.Benediction` | — |
+| 4 `multiscale` with a party member | auto | `Skills.Multiscale` | — |
+| 4 `hunters_tracking` grey marks | part | `Skills.HuntersTracking` | The marks on a real client's screen. |
+| 4 Drop with G, pick up with F | auto | `Raid.DropAndPickUp` | The box's look. |
+| 4 `summon_skeletons` | part | `Skills.SummonSkeletons` | Following you; NavMesh pathing. |
+| 4 `summon_tiger` leap, riders, hits for 20 | part | `Skills.SummonTiger` | Leap, the +7 / +10 Magic riders (only "it hits" is checked). |
+| 4 `summon_greater_demon` | part | `Skills.SummonGreaterDemon` | Raising Eldritch Shield, its 40 hits with riders in a fight. |
+| 4 Neckbite silences 2 s, stops a channel | auto | `Skills.NeckbiteSilence`, `Skills.Silence` | — |
+| 4 Mob spawner: soldiers and archers, 3–5, archers keep away, body, respawn | part | `Monsters.MobSpawner`, `SpawnerRespawn`, `RangedKeepsDistanceAndShoots` | Weighted mix and 3–5 count (tests use one mob, fixed count); NavMesh. |
+| 4 `mithril_dragon` spawner: scale 6 on the floor, summons fight you | part | `Monsters.MobDataApplied`, `MonsterTeam` | The dragon casting its summons (team rule is tested with a generic minion). |
+| 4 Block | auto | `Combat.ShieldBlock` | Two real clients. |
+| 4 Parry | auto | `Combat.ParryTwoHanded`, `ImpactDifferences` (`axe_two_handed` vs `sword_one_handed`), `Skills.RiposteRider` | Two real clients. |
+| 4 Monsters guard ~half, stun and sword damage back | part | `Combat.AIGuardsAgainstSwings` | The ~50% rate and `skeleton_soldier`'s mirror damage / 1 s stun (built-in monster, damage 0). |
+| 4 Trading | auto | `Social.Trade*` (7) | Console commands, two real clients. |
+| 4 Guilds | auto | `Social.Guild*` (4) | Console commands, two real clients. |
+| 4 `summon_tiger` needs `pet_gem_tiger` | auto | `Skills.SummonTiger` | — |
+| 4 Spear 33 per 1.2 s; `triple_thrust` | auto | `Skills.SpearAttackRate`, `Skills.TripleThrust` | — |
+| 4 Passives: `heroic_might`, masteries | auto | `Skills.HeroicMight`, `Skills.SwordMastery` | — |
+| 5 Skill Gem | auto | `Hub.SkillGemLearnsSkill` | — |
+| 5 Stash | auto | `Hub.StashStoreAndRetrieve` | — |
+| 5 Vendor ruby +150 | auto | `Hub.VendorSellsRareRuby` | — |
+| 5 Stash tabs | auto | `Hub.BuyStashTabs` | — |
+| 5 Respec token | auto | `Hub.LoweringAttributeNeedsRespecToken` | — |
+| 6 Both see bodies ragdoll | manual | — | Two real clients, replication, visuals. |
+| 6 `showdebug` shows the other's `Equipment.Wielding.*` | manual | — | Replication to a client, debug HUD. |
+| 6 Concurrent loot never duplicates | part | `Social.ConcurrentLootNeverDuplicates` | Two real clients' RPC timing (the test is server-side, one frame). |
+
+Totals: 66 rows: 49 auto, 12 part, 5 manual. Not checklist rows: `Combat.ArrowBlockedNoStun`,
+`SwingClash`, `AIIgnoresAllySwings`, `StunBlocksActions`, `Skills.LikeALion`, `Quickshot`,
+`ArcaneArrows`, the extra trade and guild cases.
+
+### Known limits
+
+- Written without an engine to build against: compiled and run on no real build yet. Until a first
+  green run, a failure may be the test, not the game (see the framework section below).
+- One standalone PIE, server side: players are server-spawned controllers with no input, HUD or
+  client. Nothing about replication, client prediction, keys or UI is tested.
+- Clanks: there is no native event to bind to, so the clank (`MulticastWeaponClank` →
+  `OnWeaponClank` Blueprint event) is counted from the Impact Power log line before it; the
+  Blueprint event, sound and effect are not checked.
+- AI guard chance (50%) is checked loosely: over 20 swings, at least one parried and one landed.
+- No NavMesh in the test map: monsters steer straight; pathing round obstacles is untested.
+- Visuals and audio (ragdolls, meshes, arcs, effects, sounds, animations) are never checked.
+- Data-dependent tests skip (pass with a warning) when `DT_Mobs`, `DT_Loot`, `DA_SkillCatalog` or
+  `DT_Armor` are not set: a skip is not a pass for the checklist row.
 
 ### How a scenario runs
 
@@ -185,7 +411,7 @@ ragdoll's look, still needs eyes):
 ## Writing a scenario
 
 Add a test to the `CrossguardScenario<Area>Tests.cpp` file of its area (`Raid`, `Skills`, `Combat`,
-`Monsters`) or a new one in `Source/Crossguard/Private/Tests/`, wrapped in
+`Monsters`, `Social`; see the file list above) or a new one in `Source/Crossguard/Private/Tests/`, wrapped in
 `#if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR`. One scenario per test, named
 `Crossguard.Scenario.<Area>.<Name>`, with `CROSSGUARD_SCENARIO_FLAGS`:
 
