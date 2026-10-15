@@ -25,6 +25,8 @@ order changes.
 | Stash | Per-character tabs of 10 × 30, between raids only. Not saved yet. |
 | Inventory | Server-authoritative 10 × 5 grid, Backpack and Quiver, stacking by type and rarity, equip through the inventory, Skill Gems, potions and bandages (Q to ready, left click to use). |
 | Death | Ragdoll, lootable body for every death, E to loot, revive returns what was not looted. |
+| Economy | Gold coins carried in raids, banked on extraction; banked gold; selling gemstones to vendors; buying stash tabs. |
+| World | Extraction zones, doors, locks and lockpicking (5 s scaled by Dexterity). |
 | Teams | Parties up to 8 via `?Party=`, friendly fire always on. |
 
 ## Milestone 0: Verify what is written
@@ -33,9 +35,9 @@ Several systems were written without an editor build. Do this before building mo
 
 | Item | Needs | Notes |
 | --- | --- | --- |
-| Build and fix compile errors | Editor | Progression, inventory, bodies, revive, ammo, consumables and the stash are uncompiled. |
+| Build and fix compile errors | Editor | Progression, inventory, bodies, revive, ammo, consumables, stash, gold, vendors, lockpicking, doors and extraction are uncompiled. |
 | Import new tables | Editor | `DT_Items` (row `CrossguardItemRow`); reimport `DT_Weapons`, `DT_Armor`. Set `InventoryComponent.ItemTable`. |
-| Playtest each system | Editor | Debug options on the character: `DebugInventory`, `bDebugLootTakesAll`, `DebugReviveDelay`, `bUseDebugProgression`. |
+| Playtest each system | Editor | Debug options on the character: `DebugInventory`, `bDebugLootTakesAll`, `DebugReviveDelay`, `bUseDebugProgression`; turn off the game mode's `bIsRaid` to test the stash and vendors. |
 | Two-client PIE check | Editor | `Equipment.Wielding.*` tags reach other clients; bodies ragdoll on every client. |
 
 ## Milestone 1: One complete raid
@@ -46,7 +48,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | --- | --- | --- |
 | Extraction points | Editor | Built in code (`ACrossguardExtractionZone`, 5 s placeholder). Needs placing in maps; the trip to the hub needs the hub and saving. |
 | Raid end on failure | Code, Decision | When does a raid end for a dead player: when they leave, after a timer, when the match ends? |
-| Stash | Editor | Built in code: per character, 10 × 30 tabs (up to 3 more at 3000 gold), Skill Gems learnable from it. Needs the stash UI in the hub. Buying tabs waits on gold. |
+| Stash | Editor | Built in code: per character, 10 × 30 tabs (up to 3 more at 3000 gold), Skill Gems learnable from it. Needs the stash UI in the hub. |
 | Shared stash tabs | Code, Decision | Subscription benefit: tabs shared by all of an account's characters. Needs accounts and the backend. |
 | Hub / lobby map | Editor | Where players manage stash, Skill Library, attributes, loadout; game mode with `bIsRaid` off. |
 | Inventory and loot UI | Editor | Grid widgets for inventory, Backpack, Quiver, equipment, bodies. The C++ API is ready. |
@@ -75,8 +77,9 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | --- | --- | --- |
 | Monster AI | Code, Editor | Basic monsters (5 XP) and bosses (50 XP) via `KillXpSource`. |
 | Loot tables | Decision, Code | What monsters, chests and bosses drop. |
-| Treasure chests | Code, Editor | Reuse `ACrossguardLootContainer`. Gold among the loot. |
-| Lockpicking | Decision, Code | The best chests and doors need a lockpick item or a lockpicking skill. |
+| Treasure chests | Code, Editor | Reuse `ACrossguardLootContainer` (it can be locked). Filling them needs loot tables. |
+| Lockpick item and skill | Decision, Editor | Lockpicking is built. The lockpick item needs a size and stack; the skill comes from the Skill Forge (grant `Ability.Lockpicking`). |
+| Doors in maps | Editor | `ACrossguardDoor` needs a mesh and placing; it snaps open until it is animated. |
 | Gathering nodes | Code, Editor | Herbs and ore, 10 XP per node; materials stack size not ruled. |
 | Raid maps | Editor | PCG plugin is enabled. |
 | Quests | Decision, Code | 10–100 XP each. |
@@ -91,8 +94,8 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Guilds and guild bank | Code | Members deposit; officers withdraw, manage, redistribute. |
 | Respec store purchase | Code | Grants respec tokens after a verified purchase; price not set. |
 | Subscription | Decision, Code | About $10 per season: five respec tokens, a shared stash tab, common healing items, throwables, lockpicks. |
-| Gold | Decision, Code | The currency: from selling to vendors and from loot. Buys stash tabs; the auction house needs it too. |
-| NPC vendors | Code, Editor | Buy gear and trinkets for gold. |
+| Gear sell prices | Decision, Code | Vendors buy gemstones today; weapons and armor need a price formula (5–500 gold by rarity and size). |
+| NPC vendors in the hub | Editor | Selling is built (`UCrossguardVendorComponent`); needs the NPC and a sell screen. |
 | Cosmetics | Decision, Editor | |
 
 ## Milestone 5: Online
@@ -111,10 +114,10 @@ Decisions that block items above. Answers go into design-decisions.md.
 
 | Question | Blocks |
 | --- | --- |
-| Is gold an item carried in the inventory (lost on death, stashable) or a balance on the character? | Gold, buying stash tabs |
-| Vendor prices: what gear and trinkets sell for | NPC vendors |
-| Trinkets: which exist, sizes, stack sizes | NPC vendors, loot tables |
-| How lockpicking works (time, failure, which skill), and the lockpick item | Lockpicking |
+| Gear sell price formula (5–500 gold by rarity and size) | Gear sell prices |
+| Do gemstones stack? | Gemstones (currently: no) |
+| Lockpick item: size, stack, is it used up per lock? Exact Dexterity effect? | Lockpick item (currently: used up; 5 s ÷ (1 + Dexterity)) |
+| Extraction time | Extraction (currently: 5 s) |
 | Final subscription price | Subscription |
 | When does the raid end for a player who died and was not revived? | Raid end |
 | Hotbar: how many slots, which keys? | Hotbar |
