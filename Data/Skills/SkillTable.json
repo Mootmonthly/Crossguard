@@ -1057,7 +1057,7 @@
 		"Name": "hunters_leap",
 		"DisplayName": "Hunter's Leap",
 		"CapacityCost": 3,
-		"Category": "Active",
+		"Category": "Art",
 		"WeaponTag": "None",
 		"Tags": [],
 		"Requirements": {

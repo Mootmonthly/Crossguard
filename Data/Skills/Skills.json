@@ -1009,32 +1009,32 @@
     "notes": []
   },
   {
-    "id": "hunters_leap",
-    "name": "Hunter's Leap",
     "capacityCost": 3,
-    "category": "Active",
-    "weaponTag": null,
-    "tags": [],
-    "requirements": {
-      "weapons": [],
-      "armor": null,
-      "items": [],
-      "forms": []
-    },
+    "category": "Art",
     "cooldownSec": 15,
-    "durationSec": null,
-    "includes": [],
-    "grantsWhileActive": [],
-    "minionSkills": [],
-    "statModifiers": [],
     "damage": [],
+    "description": "Jump forward 5 meters (AGI multiplier on distance). Cooldown: 15 seconds.",
+    "durationSec": null,
+    "grantsWhileActive": [],
     "healing": [],
+    "id": "hunters_leap",
+    "includes": [],
     "mechanics": [
       "Jump forward 0.5 m per point of AGI (5 m at 10 AGI)"
     ],
-    "description": "Jump forward 5 meters (AGI multiplier on distance). Cooldown: 15 seconds.",
+    "minionSkills": [],
+    "name": "Hunter's Leap",
+    "notes": [],
+    "requirements": {
+      "armor": null,
+      "forms": [],
+      "items": [],
+      "weapons": []
+    },
     "source": "SkillsDoc",
-    "notes": []
+    "statModifiers": [],
+    "tags": [],
+    "weaponTag": null
   },
   {
     "id": "hunters_tracking",

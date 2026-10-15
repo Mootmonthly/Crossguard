@@ -130,7 +130,7 @@ Rulings for the first skills built in C++ (defaults proposed and accepted, plus 
 | Cleave | 85% of the main-hand weapon's damage to everyone in a 3 m, 120° arc in front, allies too. |
 | Triple Thrust | Three thrusts 0.15 s apart, each spear damage +15, 2.5 m reach. Piercing waits for blocking. |
 | Parting the Land | 8 m × 2 m strip ahead: 65 Attack Damage and a knock-up to everyone in it; a 15 s Wall along each side. |
-| Hunter's Leap | 0.5 m per AGI point forward, 1.5 m high, 0.6 s. |
+| Hunter's Leap | Art (Skill Forge change). 0.5 m per AGI point forward, 1.5 m high, 0.6 s. |
 | Like A Lion, He Leapt | (Skill Forge.) Leaps at the nearest enemy within 30 m: players first, then monsters and minions; stealthed enemies are skipped; no line of sight needed. Lands 1.5 m short. STR ×1.2 for 6 s. No enemy in range: fails, no cooldown. |
 | Light | A light over your head for 120 s; recasting replaces it. |
 | Wall | 4 m wide, 3 m tall, 0.5 m thick, 3 m in front, across your view. Indestructible, 15 s. |

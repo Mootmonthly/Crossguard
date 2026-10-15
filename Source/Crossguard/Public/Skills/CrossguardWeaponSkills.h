@@ -177,7 +177,7 @@ private:
 	void OnLeapFinished();
 };
 
-// [Hunter's Leap] (Active, 15 s): leap forward 0.5 m per point of Agility (5 m at 10 AGI).
+// [Hunter's Leap] (Art, 15 s): leap forward 0.5 m per point of Agility (5 m at 10 AGI).
 UCLASS()
 class CROSSGUARD_API UCrossguardHuntersLeapAbility : public UCrossguardSkillAbility
 {

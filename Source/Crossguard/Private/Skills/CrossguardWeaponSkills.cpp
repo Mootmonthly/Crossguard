@@ -537,7 +537,7 @@ void UCrossguardLikeALionAbility::OnLeapFinished()
 UCrossguardHuntersLeapAbility::UCrossguardHuntersLeapAbility()
 {
 	SkillId = TEXT("hunters_leap");
-	SkillCategory = ECrossguardSkillCategory::Active;
+	SkillCategory = ECrossguardSkillCategory::Art;
 	BaseCooldownSeconds = 15.0f;
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_HuntersLeap);
 }
