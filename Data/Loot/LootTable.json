@@ -323,5 +323,188 @@
 				"CountMax": 1
 			}
 		]
+	},
+	{
+		"Name": "mob_mithril_dragon",
+		"RollsMin": 0,
+		"RollsMax": 2,
+		"NothingWeight": 40,
+		"RarityWeights": [
+			0,
+			0,
+			10,
+			50,
+			20,
+			5
+		],
+		"Entries": [
+			{
+				"Kind": "Gold",
+				"Id": "None",
+				"Weight": 30,
+				"CountMin": 100,
+				"CountMax": 500
+			},
+			{
+				"Kind": "Weapon",
+				"Id": "sword_two_handed",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "SkillGem",
+				"Id": "the_mithril_knight",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Weapon",
+				"Id": "dagger_one_handed",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 1
+			}
+		]
+	},
+	{
+		"Name": "mob_skeleton_archer",
+		"RollsMin": 1,
+		"RollsMax": 3,
+		"NothingWeight": 40,
+		"RarityWeights": [
+			60,
+			25,
+			10,
+			4,
+			0,
+			0
+		],
+		"Entries": [
+			{
+				"Kind": "Gold",
+				"Id": "None",
+				"Weight": 30,
+				"CountMin": 5,
+				"CountMax": 30
+			},
+			{
+				"Kind": "Weapon",
+				"Id": "bow",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "SkillGem",
+				"Id": "bow_mastery",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Item",
+				"Id": "arrow",
+				"Weight": 50,
+				"CountMin": 5,
+				"CountMax": 20
+			}
+		]
+	},
+	{
+		"Name": "mob_skeleton_mage",
+		"RollsMin": 1,
+		"RollsMax": 4,
+		"NothingWeight": 40,
+		"RarityWeights": [
+			60,
+			25,
+			10,
+			4,
+			1,
+			0
+		],
+		"Entries": [
+			{
+				"Kind": "Gold",
+				"Id": "None",
+				"Weight": 30,
+				"CountMin": 5,
+				"CountMax": 25
+			},
+			{
+				"Kind": "SkillGem",
+				"Id": "fireball",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "SkillGem",
+				"Id": "eldritch_shield",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Item",
+				"Id": "healing_potion",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 1
+			}
+		]
+	},
+	{
+		"Name": "mob_skeleton_soldier",
+		"RollsMin": 1,
+		"RollsMax": 3,
+		"NothingWeight": 40,
+		"RarityWeights": [
+			60,
+			25,
+			10,
+			4,
+			0,
+			0
+		],
+		"Entries": [
+			{
+				"Kind": "Gold",
+				"Id": "None",
+				"Weight": 30,
+				"CountMin": 5,
+				"CountMax": 25
+			},
+			{
+				"Kind": "Weapon",
+				"Id": "sword_one_handed",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Armor",
+				"Id": "leather_boots",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "SkillGem",
+				"Id": "sword_mastery",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "SkillGem",
+				"Id": "armor_mastery",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 1
+			}
+		]
 	}
 ]

@@ -16,18 +16,372 @@
     "scale": 1,
     "skills": [],
     "loot": {
-      "rolls": [0, 2],
+      "rolls": [
+        0,
+        2
+      ],
       "nothingWeight": 40,
-      "rarityWeights": {"Common": 60, "Uncommon": 25, "Rare": 10, "Epic": 4, "Legendary": 1, "Mystic": 0},
+      "rarityWeights": {
+        "Common": 60,
+        "Uncommon": 25,
+        "Rare": 10,
+        "Epic": 4,
+        "Legendary": 1,
+        "Mystic": 0
+      },
       "entries": [
-        {"kind": "Gold", "id": null, "weight": 30, "count": [5, 25]},
-        {"kind": "Item", "id": "healing_potion", "weight": 8, "count": [1, 1]},
-        {"kind": "Weapon", "id": null, "weight": 5, "count": [1, 1]},
-        {"kind": "Armor", "id": null, "weight": 5, "count": [1, 1]},
-        {"kind": "SkillGem", "id": null, "weight": 2, "count": [1, 1]}
+        {
+          "kind": "Gold",
+          "id": null,
+          "weight": 30,
+          "count": [
+            5,
+            25
+          ]
+        },
+        {
+          "kind": "Item",
+          "id": "healing_potion",
+          "weight": 8,
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "kind": "Weapon",
+          "id": null,
+          "weight": 5,
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "kind": "Armor",
+          "id": null,
+          "weight": 5,
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "kind": "SkillGem",
+          "id": null,
+          "weight": 2,
+          "count": [
+            1,
+            1
+          ]
+        }
       ]
     },
     "description": "Placeholder mob matching the built-in monster defaults. Edit or delete it in the Mob Forge.",
+    "notes": []
+  },
+  {
+    "id": "mithril_dragon",
+    "name": "mithril dragon",
+    "kind": "Boss",
+    "combatRole": "Mage",
+    "health": 1500,
+    "attackDamage": 12,
+    "attackInterval": 1.5,
+    "attackRange": 2,
+    "fireballInterval": 3,
+    "keepDistance": 8,
+    "aggroRange": 50,
+    "leashRange": 200,
+    "moveSpeed": 4.5,
+    "scale": 6,
+    "skills": [
+      "heroic_might",
+      "divine_alacrity",
+      "antimagic_garb"
+    ],
+    "loot": {
+      "rolls": [
+        0,
+        2
+      ],
+      "nothingWeight": 40,
+      "rarityWeights": {
+        "Common": 0,
+        "Uncommon": 0,
+        "Rare": 10,
+        "Epic": 50,
+        "Legendary": 20,
+        "Mystic": 5
+      },
+      "entries": [
+        {
+          "kind": "Gold",
+          "id": null,
+          "weight": 30,
+          "count": [
+            100,
+            500
+          ]
+        },
+        {
+          "kind": "Weapon",
+          "id": "sword_two_handed",
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "kind": "SkillGem",
+          "id": "the_mithril_knight",
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "kind": "Weapon",
+          "id": "dagger_one_handed",
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    "description": "",
+    "notes": []
+  },
+  {
+    "id": "skeleton_archer",
+    "name": "skeleton archer",
+    "kind": "Monster",
+    "combatRole": "Ranged",
+    "health": 80,
+    "attackDamage": 12,
+    "attackInterval": 1.5,
+    "attackRange": 20,
+    "fireballInterval": 8,
+    "keepDistance": 8,
+    "aggroRange": 15,
+    "leashRange": 30,
+    "moveSpeed": 4.5,
+    "scale": 1,
+    "skills": [],
+    "loot": {
+      "rolls": [
+        1,
+        3
+      ],
+      "nothingWeight": 40,
+      "rarityWeights": {
+        "Common": 60,
+        "Uncommon": 25,
+        "Rare": 10,
+        "Epic": 4,
+        "Legendary": 0,
+        "Mystic": 0
+      },
+      "entries": [
+        {
+          "kind": "Gold",
+          "id": null,
+          "weight": 30,
+          "count": [
+            5,
+            30
+          ]
+        },
+        {
+          "kind": "Weapon",
+          "id": "bow",
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "kind": "SkillGem",
+          "id": "bow_mastery",
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "kind": "Item",
+          "id": "arrow",
+          "weight": 50,
+          "count": [
+            5,
+            20
+          ]
+        }
+      ]
+    },
+    "description": "",
+    "notes": []
+  },
+  {
+    "id": "skeleton_mage",
+    "name": "skeleton mage",
+    "kind": "Monster",
+    "combatRole": "Mage",
+    "health": 80,
+    "attackDamage": 12,
+    "attackInterval": 1.5,
+    "attackRange": 2,
+    "fireballInterval": 8,
+    "keepDistance": 8,
+    "aggroRange": 15,
+    "leashRange": 30,
+    "moveSpeed": 4.5,
+    "scale": 1,
+    "skills": [],
+    "loot": {
+      "rolls": [
+        1,
+        4
+      ],
+      "nothingWeight": 40,
+      "rarityWeights": {
+        "Common": 60,
+        "Uncommon": 25,
+        "Rare": 10,
+        "Epic": 4,
+        "Legendary": 1,
+        "Mystic": 0
+      },
+      "entries": [
+        {
+          "kind": "Gold",
+          "id": null,
+          "weight": 30,
+          "count": [
+            5,
+            25
+          ]
+        },
+        {
+          "kind": "SkillGem",
+          "id": "fireball",
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "kind": "SkillGem",
+          "id": "eldritch_shield",
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "kind": "Item",
+          "id": "healing_potion",
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    "description": "",
+    "notes": []
+  },
+  {
+    "id": "skeleton_soldier",
+    "name": "skeleton soldier",
+    "kind": "Monster",
+    "combatRole": "Warrior",
+    "health": 80,
+    "attackDamage": 25,
+    "attackInterval": 1.5,
+    "attackRange": 2,
+    "fireballInterval": 8,
+    "keepDistance": 8,
+    "aggroRange": 15,
+    "leashRange": 30,
+    "moveSpeed": 4.5,
+    "scale": 1,
+    "skills": [
+      "sword_mastery",
+      "antimagic_garb"
+    ],
+    "loot": {
+      "rolls": [
+        1,
+        3
+      ],
+      "nothingWeight": 40,
+      "rarityWeights": {
+        "Common": 60,
+        "Uncommon": 25,
+        "Rare": 10,
+        "Epic": 4,
+        "Legendary": 0,
+        "Mystic": 0
+      },
+      "entries": [
+        {
+          "kind": "Gold",
+          "id": null,
+          "weight": 30,
+          "count": [
+            5,
+            25
+          ]
+        },
+        {
+          "kind": "Weapon",
+          "id": "sword_one_handed",
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "kind": "Armor",
+          "id": "leather_boots",
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "kind": "SkillGem",
+          "id": "sword_mastery",
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "kind": "SkillGem",
+          "id": "armor_mastery",
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    "description": "",
     "notes": []
   }
 ]
