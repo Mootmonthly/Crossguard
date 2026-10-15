@@ -7,7 +7,7 @@ python3 Tools/validate_skills.py
 python3 Tools/export_skill_table.py --check
 python3 Tools/validate_weapons.py
 python3 Tools/export_weapon_table.py --check
-python3 Tools/check_skill_types.py
+python3 Tools/check_table_types.py
 
 cmake -S Tests/CrossguardRules -B build/rules-tests >/dev/null
 cmake --build build/rules-tests

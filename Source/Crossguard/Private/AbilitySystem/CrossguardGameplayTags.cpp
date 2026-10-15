@@ -11,7 +11,6 @@ namespace CrossguardTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Skill_Weapon_Ranged, "Skill.Weapon.Ranged", "Requires a ranged weapon.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Skill_Minion, "Skill.Minion", "Summons minions.");
 
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Cooldown, "SetByCaller.Cooldown", "Cooldown duration in seconds, after CDR.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Damage_Attack, "SetByCaller.Damage.Attack", "Base Attack Damage (weapon AD or skill amount).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Damage_Magic, "SetByCaller.Damage.Magic", "Base Magic Damage.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Healing_Physical, "SetByCaller.Healing.Physical", "Base Physical Healing.");
@@ -19,4 +18,20 @@ namespace CrossguardTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(SetByCaller_Coefficient, "SetByCaller.Coefficient", "Fraction of ADB/MDB/PHB/MHB that applies. Defaults to 1.");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Dead, "State.Dead", "Health reached 0.");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Sword, "Equipment.Wielding.Sword", "Holding a Sword weapon.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Axe, "Equipment.Wielding.Axe", "Holding an Axe.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Dagger, "Equipment.Wielding.Dagger", "Holding a Dagger weapon.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Spear, "Equipment.Wielding.Spear", "Holding a Spear weapon.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Mace, "Equipment.Wielding.Mace", "Holding a Mace weapon.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Staff, "Equipment.Wielding.Staff", "Holding a Staff weapon.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Hammer, "Equipment.Wielding.Hammer", "Holding a Hammer weapon.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Shield, "Equipment.Wielding.Shield", "Holding a Shield weapon.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Bow, "Equipment.Wielding.Bow", "Holding a Bow weapon.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Crossbow, "Equipment.Wielding.Crossbow", "Holding a Crossbow weapon.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Sling, "Equipment.Wielding.Sling", "Holding a Sling weapon.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Throwing, "Equipment.Wielding.Throwing", "Holding a Throwing weapon.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_Wand, "Equipment.Wielding.Wand", "Holding a Wand weapon.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_AnyMelee, "Equipment.Wielding.AnyMelee", "Holding any melee weapon (shields count).");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Equipment_Wielding_TwoHandedMelee, "Equipment.Wielding.TwoHandedMelee", "Holding a two-handed melee weapon in the main hand.");
 }

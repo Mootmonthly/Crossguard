@@ -34,21 +34,20 @@ Every skill is a subclass (C++ or Blueprint) of `UCrossguardGameplayAbility`. Se
 - Asset tags: `Skill.Weapon.Melee`, `Skill.Weapon.Ranged` and/or `Skill.Minion` when they apply.
 - `BaseCooldownSeconds`, `BaseCastTimeSeconds`.
 - `CooldownTags`: one unique tag per skill, e.g. `Cooldown.Skill.Fireball`.
-- `CooldownGameplayEffectClass`: the shared cooldown effect (below).
+- `RequiredWeapons`: any one must be equipped to activate (e.g. Cleave: `AnyMelee`).
 
-### Shared cooldown effect
+### Cooldowns
 
-Create one Blueprint effect, `GE_Cooldown`:
-
-- Duration Policy: Has Duration.
-- Duration Magnitude: Set by Caller, tag `SetByCaller.Cooldown`.
-
-The ability fills the duration with its cooldown after CDR, and adds its `CooldownTags`.
+Every ability uses the native `UCrossguardCooldownEffect` by default (no asset needed). The ability
+fills its duration with the cooldown after CDR and adds its `CooldownTags`.
 CDR = category CDR + matching Melee/Ranged/Minion CDR, summed and capped at 50%.
 
 Cast time: call `GetReducedCastTime()` for wait tasks and cast bars. Uncapped.
 
 ### Damage and healing effects
+
+Native effects `UCrossguardDamageEffect` and `UCrossguardHealingEffect` wrap the executions; use
+them directly or make Blueprint effects with the executions.
 
 - Damage: an Instant effect with the execution `UCrossguardDamageExecution`. Set
   `SetByCaller.Damage.Attack` and/or `SetByCaller.Damage.Magic` to the base damage, and
@@ -87,6 +86,21 @@ Subclass `UCrossguardPassiveAbility`. It activates on the server when granted an
 `PassiveEffects` (Infinite effects holding the stat modifiers) until unequipped. Example: Heroic
 Might = one Infinite effect adding 10 to Strength.
 
+## Weapons and equipment
+
+- Import `Data/Items/WeaponTable.json` as a Data Table with row struct `CrossguardWeaponRow`
+  (`DT_Weapons`) and set it as the character's `EquipmentComponent.WeaponTable`.
+- `UCrossguardEquipmentComponent` holds the main-hand and off-hand `FCrossguardWeaponItem`
+  (weapon id, rarity, affixes). The server validates changes with `Crossguard::ValidateEquipment`.
+- It applies one native `UCrossguardEquipmentEffect`: shield AR, plus `Equipment.Wielding.<Type>`
+  tags (and `AnyMelee`, `TwoHandedMelee`). Mastery effects use these as tag requirements, e.g.
+  Sword Mastery's Infinite effect requires `Equipment.Wielding.Sword`, so its bonuses and its
+  Melee CDR only apply while a sword is held.
+- `ACrossguardCharacter::TryWeaponAttack()` activates `UCrossguardWeaponAttackAbility`: damage is
+  the weapon's AD/MD at its rarity; the attack interval (weapon speed ÷ (1 + Action Speed)) limits
+  the rate. Melee swings sweep for pawns in front; wands trace on the `Weapon` channel; bows and
+  staffs spawn `ACrossguardProjectile` (set per-weapon projectile Blueprints for speed).
+
 ## Checks
 
 `Tools/run_checks.sh` runs the skill data validator, the table export check, the C++ struct check
@@ -99,4 +113,6 @@ and the rules unit tests.
 - Shields (Eldritch Shield), CC, Mute, Silence, minions.
 - Client-side ability system init for pawns without a PlayerState (AI). Players are covered by
   `OnRep_PlayerState`.
-- Weapons and AD. Abilities pass weapon AD as the `SetByCaller.Damage.Attack` base for now.
+- Animations, weapon-on-weapon collision (fencing), input bindings.
+- Teams: attacks currently damage any actor with an ability system (no friendly-fire check).
+- Affix pool and applying affix stats.

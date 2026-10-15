@@ -113,6 +113,30 @@ Independent of category, a skill is:
 
 "Melee Skills -10% Cooldown" style effects apply to skills with the matching weapon tag.
 
+## Items and weapons
+
+- Rarities: Common, Uncommon, Rare, Epic, Legendary, Mystic (levels 0–5). Rarity raises a
+  weapon's AD/MD (or a shield's AR) and its affix slots.
+- Prototype weapons are classes, not individual weapons: `Data/Items/Weapons.json`.
+
+| Weapon | Value at Common | Per rarity level | Attack speed |
+| --- | --- | --- | --- |
+| One-Handed Sword | 30 AD | +2 | 1 per second |
+| One-Handed Dagger | 17 AD | +1 | 3 per second |
+| One-Handed Axe | 27 AD | +2 | 1.2 per second |
+| One-Handed Shield | 8% AR | +2% | does not attack; melee weapon |
+| Two-Handed Sword | 37 AD | +3 | once every 1.4 s |
+| Two-Handed Axe | 35 AD | +3 | once every 1.2 s |
+| Bow | 30 AD | +2 | 1 per second; projectile |
+| One-Handed Wand | 15 MD | +2 | 1.2 per second; hitscan |
+| Two-Handed Staff | 30 MD | +3 | once every 1.3 s; slower projectile |
+
+- Action Speed divides the attack interval: interval ÷ (1 + Action Speed).
+- Pending confirmation (current placeholders): affix slots 0/1/2/3/4/5 by rarity; off hand
+  takes only a shield (no dual wielding); a two-handed weapon blocks the off hand; masteries
+  match weapon type regardless of handedness (Sword Mastery works with both swords); the
+  Two-Handed Staff is a ranged magic weapon, not a melee weapon.
+
 ## Formulas
 
 ### Damage

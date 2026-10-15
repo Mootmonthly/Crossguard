@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Check Data/Skills/SkillTable.json against the C++ row structs in CrossguardSkillTypes.h.
+"""Check the generated data tables against their C++ row structs.
+
+Data/Skills/SkillTable.json -> FCrossguardSkillRow (CrossguardSkillTypes.h)
+Data/Items/WeaponTable.json -> FCrossguardWeaponRow (CrossguardItemTypes.h)
 
 Every JSON field must be a UPROPERTY of the matching struct, every struct field must be present,
 and every enum value must be an entry of the C++ enum. Catches drift between the exporter and the
 header without needing Unreal.
 
-Usage: python3 Tools/check_skill_types.py
+Usage: python3 Tools/check_table_types.py
 """
 
 import json
@@ -14,9 +17,12 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-HEADER = REPO / "Source" / "Crossguard" / "Public" / "Skills" / "CrossguardSkillTypes.h"
-TABLE = REPO / "Data" / "Skills" / "SkillTable.json"
-ROW_STRUCT = "FCrossguardSkillRow"
+PUBLIC = REPO / "Source" / "Crossguard" / "Public"
+HEADERS = [PUBLIC / "Skills" / "CrossguardSkillTypes.h", PUBLIC / "Items" / "CrossguardItemTypes.h"]
+TABLES = [
+    (REPO / "Data" / "Skills" / "SkillTable.json", "FCrossguardSkillRow"),
+    (REPO / "Data" / "Items" / "WeaponTable.json", "FCrossguardWeaponRow"),
+]
 
 
 def parse_header(text):
@@ -31,10 +37,10 @@ def parse_header(text):
     return enums, structs
 
 
-def check(obj, struct, path, enums, structs, errors):
+def check(obj, struct, path, enums, structs, errors, is_row=False):
     fields = structs[struct]
     for key, value in obj.items():
-        if struct == ROW_STRUCT and key == "Name":
+        if is_row and key == "Name":
             continue
         if key not in fields:
             errors.append(f"{path}.{key}: not a field of {struct}")
@@ -52,20 +58,29 @@ def check(obj, struct, path, enums, structs, errors):
 
 
 def main():
-    enums, structs = parse_header(HEADER.read_text(encoding="utf-8"))
-    if ROW_STRUCT not in structs:
-        print(f"ERROR: {ROW_STRUCT} not found in {HEADER.name}")
-        return 1
-    rows = json.loads(TABLE.read_text(encoding="utf-8"))
-    errors = []
-    for row in rows:
-        check(row, ROW_STRUCT, row.get("Name", "?"), enums, structs, errors)
-    for error in errors:
-        print(f"ERROR: {error}")
-    if errors:
-        return 1
-    print(f"OK: {len(rows)} rows match {ROW_STRUCT} ({len(structs)} structs, {len(enums)} enums)")
-    return 0
+    enums, structs = {}, {}
+    for header in HEADERS:
+        header_enums, header_structs = parse_header(header.read_text(encoding="utf-8"))
+        enums.update(header_enums)
+        structs.update(header_structs)
+
+    failed = False
+    for table, row_struct in TABLES:
+        if row_struct not in structs:
+            print(f"ERROR: {row_struct} not found in the headers")
+            failed = True
+            continue
+        rows = json.loads(table.read_text(encoding="utf-8"))
+        errors = []
+        for row in rows:
+            check(row, row_struct, row.get("Name", "?"), enums, structs, errors, is_row=True)
+        for error in errors:
+            print(f"ERROR: {table.name}: {error}")
+        if errors:
+            failed = True
+        else:
+            print(f"OK: {table.name}: {len(rows)} rows match {row_struct}")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

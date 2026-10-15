@@ -8,6 +8,8 @@
 #include "CrossguardCharacter.generated.h"
 
 class UCrossguardAttributeSet;
+class UCrossguardEquipmentComponent;
+class UCrossguardWeaponAttackAbility;
 class UCrossguardLoadoutComponent;
 struct FOnAttributeChangeData;
 
@@ -24,6 +26,11 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UCrossguardAbilitySystemComponent* GetCrossguardAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UCrossguardLoadoutComponent* GetLoadoutComponent() const { return LoadoutComponent; }
+	UCrossguardEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
+
+	// Basic attack with the main-hand weapon. Bind to the attack input.
+	UFUNCTION(BlueprintCallable, Category = "Crossguard|Combat")
+	bool TryWeaponAttack();
 
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
@@ -49,6 +56,14 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UCrossguardAttributeSet> AttributeSet;
 
+	// Set its WeaponTable in the character Blueprint.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Equipment")
+	TObjectPtr<UCrossguardEquipmentComponent> EquipmentComponent;
+
+	// Granted on possession.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Combat")
+	TSubclassOf<UCrossguardWeaponAttackAbility> WeaponAttackAbilityClass;
+
 	// Set its SkillCatalog in the character Blueprint.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Abilities")
 	TObjectPtr<UCrossguardLoadoutComponent> LoadoutComponent;
@@ -59,4 +74,5 @@ private:
 	void ApplyMoveSpeed(float MoveSpeed);
 
 	bool bMoveSpeedBound = false;
+	bool bWeaponAttackGranted = false;
 };

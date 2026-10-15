@@ -8,9 +8,9 @@
 
 // Base class for every Crossguard skill.
 //
-// Cooldowns: set CooldownGameplayEffectClass to a Duration effect whose duration is
-// SetByCaller "SetByCaller.Cooldown". This class fills that value with BaseCooldownSeconds after
-// CDR and grants the CooldownTags below, so one cooldown effect serves every skill.
+// Cooldowns use UCrossguardCooldownEffect by default: this class fills its duration with
+// BaseCooldownSeconds after CDR and grants the CooldownTags below, so one effect serves every skill.
+// Weapon requirements: activation fails unless the owner's equipment satisfies RequiredWeapons.
 UCLASS(Abstract)
 class CROSSGUARD_API UCrossguardGameplayAbility : public UGameplayAbility
 {
@@ -34,6 +34,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Cooldown")
 	FGameplayTagContainer CooldownTags;
 
+	// Any one of these must be equipped (e.g. Cleave: AnyMelee; Shade Blow: Sword, Axe). Empty: none.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard")
+	TArray<ECrossguardWeaponType> RequiredWeapons;
+
 	// Before cast time reduction. 0 means instant.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Cast", meta = (ClampMin = "0"))
 	float BaseCastTimeSeconds = 0.0f;
@@ -46,6 +50,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Crossguard")
 	float GetReducedCastTime() const;
 
+	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr,
+		FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 	virtual const FGameplayTagContainer* GetCooldownTags() const override;
 	virtual void ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo) const override;

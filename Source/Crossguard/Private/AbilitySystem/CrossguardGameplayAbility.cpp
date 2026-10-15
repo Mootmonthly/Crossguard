@@ -1,12 +1,31 @@
 #include "AbilitySystem/CrossguardGameplayAbility.h"
 
+#include "AbilitySystem/CrossguardEffects.h"
 #include "AbilitySystem/CrossguardGameplayTags.h"
+#include "Items/CrossguardEquipmentComponent.h"
 #include "CrossguardRules/Combat.h"
 
 UCrossguardGameplayAbility::UCrossguardGameplayAbility()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+	CooldownGameplayEffectClass = UCrossguardCooldownEffect::StaticClass();
+}
+
+bool UCrossguardGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
+	{
+		return false;
+	}
+	if (RequiredWeapons.IsEmpty())
+	{
+		return true;
+	}
+	const AActor* Avatar = ActorInfo != nullptr ? ActorInfo->AvatarActor.Get() : nullptr;
+	const UCrossguardEquipmentComponent* Equipment = Avatar != nullptr ? Avatar->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
+	return Equipment != nullptr && Equipment->SatisfiesWeaponRequirement(RequiredWeapons);
 }
 
 const UCrossguardAbilitySystemComponent* UCrossguardGameplayAbility::GetCrossguardAbilitySystemComponent() const
@@ -76,6 +95,6 @@ void UCrossguardGameplayAbility::ApplyCooldown(const FGameplayAbilitySpecHandle 
 	const UCrossguardAbilitySystemComponent* ASC = ActorInfo != nullptr
 		? Cast<UCrossguardAbilitySystemComponent>(ActorInfo->AbilitySystemComponent.Get())
 		: nullptr;
-	SpecHandle.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Cooldown, ReducedCooldownFor(ASC));
+	SpecHandle.Data->SetSetByCallerMagnitude(CrossguardSetByCaller::Cooldown, ReducedCooldownFor(ASC));
 	ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
 }

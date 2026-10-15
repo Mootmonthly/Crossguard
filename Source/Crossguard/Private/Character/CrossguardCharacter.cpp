@@ -1,7 +1,9 @@
 #include "Character/CrossguardCharacter.h"
 
 #include "AbilitySystem/CrossguardAttributeSet.h"
+#include "Combat/CrossguardWeaponAttackAbility.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Items/CrossguardEquipmentComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Skills/CrossguardLoadoutComponent.h"
 
@@ -16,6 +18,8 @@ ACrossguardCharacter::ACrossguardCharacter()
 	AttributeSet = CreateDefaultSubobject<UCrossguardAttributeSet>(TEXT("AttributeSet"));
 
 	LoadoutComponent = CreateDefaultSubobject<UCrossguardLoadoutComponent>(TEXT("LoadoutComponent"));
+	EquipmentComponent = CreateDefaultSubobject<UCrossguardEquipmentComponent>(TEXT("EquipmentComponent"));
+	WeaponAttackAbilityClass = UCrossguardWeaponAttackAbility::StaticClass();
 
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
 }
@@ -39,6 +43,17 @@ void ACrossguardCharacter::PossessedBy(AController* NewController)
 	// Server.
 	InitializeAbilitySystem();
 	AbilitySystemComponent->InitializeAttributes(Level, AttributeAllocation);
+
+	if (WeaponAttackAbilityClass != nullptr && !bWeaponAttackGranted)
+	{
+		bWeaponAttackGranted = true;
+		AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(WeaponAttackAbilityClass, 1, INDEX_NONE, this));
+	}
+}
+
+bool ACrossguardCharacter::TryWeaponAttack()
+{
+	return WeaponAttackAbilityClass != nullptr && AbilitySystemComponent->TryActivateAbilityByClass(WeaponAttackAbilityClass);
 }
 
 void ACrossguardCharacter::OnRep_PlayerState()
