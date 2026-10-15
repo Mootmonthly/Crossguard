@@ -133,6 +133,20 @@ camera direction. The body mesh is hidden from its owner until first-person arms
 - `UCrossguardTeamLibrary::GetTeamId` / `AreAllies` work on pawns, controllers and player states.
 - Friendly fire is always on: nothing checks teams before applying damage.
 
+## Testing in the editor
+
+`BP_CrossguardCharacter` → **Crossguard | Debug**:
+
+- `DebugMainHand`, `DebugOffHand`: weapon id (e.g. `sword_one_handed`) and rarity.
+- `DebugArmor`: armor pieces (e.g. `plate_helm`).
+- `DebugSkills`: skill ids; needs the loadout's `SkillCatalog` set.
+- `bRollDebugAffixes`: roll random affixes for each item's rarity.
+
+They are equipped on the server at spawn. Every hit logs `<target> took <n> damage from <source>
+(<hp> / <max> HP)` to the Output Log (category `LogCrossguard`). For a target dummy, place a
+`BP_CrossguardCharacter` in the level with **Auto Possess AI** = **Placed in World**.
+`showdebug abilitysystem` in the console shows attributes and tags.
+
 ## Checks
 
 `Tools/run_checks.sh` runs the skill data validator, the table export check, the C++ struct check

@@ -1,6 +1,7 @@
 #include "AbilitySystem/CrossguardAttributeSet.h"
 
 #include "AbilitySystem/CrossguardGameplayTags.h"
+#include "Crossguard.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
 
@@ -115,6 +116,8 @@ void UCrossguardAttributeSet::PostGameplayEffectExecute(const FGameplayEffectMod
 		if (Damage > 0.0f)
 		{
 			SetHealth(FMath::Clamp(GetHealth() - Damage, 0.0f, GetMaxHealth()));
+			UE_LOG(LogCrossguard, Log, TEXT("%s took %.1f damage from %s (%.1f / %.1f HP)"), *GetNameSafe(GetOwningActor()), Damage,
+				*GetNameSafe(Data.EffectSpec.GetContext().GetOriginalInstigator()), GetHealth(), GetMaxHealth());
 			if (GetHealth() <= 0.0f)
 			{
 				// Server. Clients add the same tag in OnRep_Health when the replicated Health reaches 0.

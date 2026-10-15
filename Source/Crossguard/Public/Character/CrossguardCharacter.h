@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "GenericTeamAgentInterface.h"
+#include "Items/CrossguardItemTypes.h"
 
 #include "CrossguardCharacter.generated.h"
 
@@ -62,6 +63,25 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Progression")
 	FCrossguardAttributeAllocation AttributeAllocation;
 
+	// Testing only, until inventory exists: equipped on the server when the character spawns.
+	// Item ids are row names in the weapon / armor tables (e.g. "sword_one_handed", "plate_helm").
+	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
+	FCrossguardWeaponItem DebugMainHand;
+
+	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
+	FCrossguardWeaponItem DebugOffHand;
+
+	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
+	TArray<FCrossguardArmorItem> DebugArmor;
+
+	// Skill ids to equip (subject to Skill Capacity at Level).
+	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
+	TArray<FName> DebugSkills;
+
+	// Replace each debug item's affixes with a random roll for its rarity.
+	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
+	bool bRollDebugAffixes = false;
+
 protected:
 	// First-person camera at eye height, turned by the mouse. The character faces where it looks.
 	// The body mesh is hidden from its owner until first-person arms exist; others still see it.
@@ -115,6 +135,9 @@ protected:
 	TObjectPtr<UCrossguardLoadoutComponent> LoadoutComponent;
 
 private:
+	// Server. Equips the Debug* items and skills.
+	void ApplyDebugLoadout();
+
 	// Creates any input asset left empty above, with the default bindings.
 	void EnsureDefaultInput();
 	void OnMove(const FInputActionValue& Value);

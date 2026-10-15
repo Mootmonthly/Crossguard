@@ -12,6 +12,7 @@
 #include "InputAction.h"
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
+#include "Engine/DataTable.h"
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Skills/CrossguardLoadoutComponent.h"
@@ -185,6 +186,49 @@ void ACrossguardCharacter::PossessedBy(AController* NewController)
 				AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AttackClass, 1, INDEX_NONE, this));
 			}
 		}
+		ApplyDebugLoadout();
+	}
+}
+
+void ACrossguardCharacter::ApplyDebugLoadout()
+{
+	const auto RollWeapon = [this](FCrossguardWeaponItem Item)
+	{
+		const FCrossguardWeaponRow* Row = EquipmentComponent->WeaponTable != nullptr && !Item.IsEmpty()
+			? EquipmentComponent->WeaponTable->FindRow<FCrossguardWeaponRow>(Item.WeaponId, TEXT("ApplyDebugLoadout"), false)
+			: nullptr;
+		if (bRollDebugAffixes && Row != nullptr)
+		{
+			Item = UCrossguardItemLibrary::RollWeaponItem(EquipmentComponent->AffixTable, Item.WeaponId, *Row, Item.Rarity, FMath::Rand());
+		}
+		return Item;
+	};
+
+	// Main hand first: a two-handed main hand then rejects an off-hand item, as in play.
+	if (!DebugMainHand.IsEmpty())
+	{
+		EquipmentComponent->RequestEquip(ECrossguardEquipmentSlot::MainHand, RollWeapon(DebugMainHand));
+	}
+	if (!DebugOffHand.IsEmpty())
+	{
+		EquipmentComponent->RequestEquip(ECrossguardEquipmentSlot::OffHand, RollWeapon(DebugOffHand));
+	}
+
+	for (FCrossguardArmorItem Piece : DebugArmor)
+	{
+		const FCrossguardArmorRow* Row = EquipmentComponent->ArmorTable != nullptr && !Piece.IsEmpty()
+			? EquipmentComponent->ArmorTable->FindRow<FCrossguardArmorRow>(Piece.ArmorId, TEXT("ApplyDebugLoadout"), false)
+			: nullptr;
+		if (bRollDebugAffixes && Row != nullptr)
+		{
+			Piece = UCrossguardItemLibrary::RollArmorItem(EquipmentComponent->AffixTable, Piece.ArmorId, *Row, Piece.Rarity, FMath::Rand());
+		}
+		EquipmentComponent->RequestEquipArmor(Piece);
+	}
+
+	if (!DebugSkills.IsEmpty())
+	{
+		LoadoutComponent->RequestLoadout(DebugSkills);
 	}
 }
 
