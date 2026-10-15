@@ -116,3 +116,7 @@ and the rules unit tests.
 - Animations, weapon-on-weapon collision (fencing), input bindings.
 - Teams: attacks currently damage any actor with an ability system (no friendly-fire check).
 - Affix pool and applying affix stats.
+- Inventory: the server currently trusts the item a client asks to equip. Once inventory exists,
+  equip by inventory slot and look the item up on the server.
+- Verify in two-client PIE (`showdebug abilitysystem`) that `Equipment.Wielding.*` tags reach
+  simulated proxies; they are added to the equipment effect spec's dynamic granted tags.

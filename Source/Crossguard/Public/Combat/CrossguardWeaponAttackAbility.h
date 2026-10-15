@@ -43,6 +43,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Attack")
 	TMap<FName, TSubclassOf<ACrossguardProjectile>> ProjectileClasses;
 
+	// Seconds trimmed from the attack recovery on the owning client so a held attack button is not
+	// rejected by a server that still sees the previous attack active.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Attack", meta = (ClampMin = "0"))
+	float ClientRecoveryTolerance = 0.05f;
+
+	// Fails without a main-hand weapon that attacks, so the client never predicts a doomed attack.
+	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr,
+		FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 

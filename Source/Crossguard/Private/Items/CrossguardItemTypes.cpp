@@ -11,6 +11,11 @@ namespace
 }
 
 // The two enums must stay in the same order.
+static_assert(static_cast<int>(ECrossguardRarity::Common) == static_cast<int>(Crossguard::ERarity::Common), "Rarity enums out of sync");
+static_assert(static_cast<int>(ECrossguardRarity::Uncommon) == static_cast<int>(Crossguard::ERarity::Uncommon), "Rarity enums out of sync");
+static_assert(static_cast<int>(ECrossguardRarity::Rare) == static_cast<int>(Crossguard::ERarity::Rare), "Rarity enums out of sync");
+static_assert(static_cast<int>(ECrossguardRarity::Epic) == static_cast<int>(Crossguard::ERarity::Epic), "Rarity enums out of sync");
+static_assert(static_cast<int>(ECrossguardRarity::Legendary) == static_cast<int>(Crossguard::ERarity::Legendary), "Rarity enums out of sync");
 static_assert(static_cast<int>(ECrossguardRarity::Mystic) == static_cast<int>(Crossguard::ERarity::Mystic), "Rarity enums out of sync");
 
 int32 UCrossguardItemLibrary::GetRarityLevel(ECrossguardRarity Rarity)

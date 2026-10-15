@@ -19,13 +19,33 @@ UCrossguardWeaponAttackAbility::UCrossguardWeaponAttackAbility()
 	DefaultProjectileClass = ACrossguardProjectile::StaticClass();
 }
 
+namespace
+{
+	const UCrossguardEquipmentComponent* FindEquipment(const FGameplayAbilityActorInfo* ActorInfo)
+	{
+		const AActor* Avatar = ActorInfo != nullptr ? ActorInfo->AvatarActor.Get() : nullptr;
+		return Avatar != nullptr ? Avatar->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
+	}
+}
+
+bool UCrossguardWeaponAttackAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
+	{
+		return false;
+	}
+	const UCrossguardEquipmentComponent* Equipment = FindEquipment(ActorInfo);
+	const FCrossguardWeaponRow* Weapon = Equipment != nullptr ? Equipment->GetWeaponRow(ECrossguardEquipmentSlot::MainHand) : nullptr;
+	return Weapon != nullptr && Weapon->Delivery != ECrossguardAttackDelivery::None && Equipment->GetAttackInterval() > 0.0f;
+}
+
 void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-	const AActor* Avatar = ActorInfo != nullptr ? ActorInfo->AvatarActor.Get() : nullptr;
-	const UCrossguardEquipmentComponent* Equipment = Avatar != nullptr ? Avatar->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
+	const UCrossguardEquipmentComponent* Equipment = FindEquipment(ActorInfo);
 	const FCrossguardWeaponRow* Weapon = Equipment != nullptr ? Equipment->GetWeaponRow(ECrossguardEquipmentSlot::MainHand) : nullptr;
 	const float Interval = Equipment != nullptr ? Equipment->GetAttackInterval() : 0.0f;
 
@@ -55,7 +75,12 @@ void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecH
 		}
 	}
 
-	UAbilityTask_WaitDelay* Recovery = UAbilityTask_WaitDelay::WaitDelay(this, Interval);
+	float RecoverySeconds = Interval;
+	if (!ActorInfo->IsNetAuthority())
+	{
+		RecoverySeconds = FMath::Max(Interval - ClientRecoveryTolerance, 0.0f);
+	}
+	UAbilityTask_WaitDelay* Recovery = UAbilityTask_WaitDelay::WaitDelay(this, RecoverySeconds);
 	Recovery->OnFinish.AddDynamic(this, &UCrossguardWeaponAttackAbility::OnAttackRecovered);
 	Recovery->ReadyForActivation();
 }
@@ -109,8 +134,10 @@ void UCrossguardWeaponAttackAbility::PerformMeleeSwing(const FGameplayEffectSpec
 		return;
 	}
 
-	const FVector Start = Avatar->GetActorLocation();
-	const FVector End = Start + Avatar->GetActorForwardVector() * MeleeRange;
+	// Start one radius ahead so the sphere does not reach behind the character.
+	const FVector Forward = Avatar->GetActorForwardVector();
+	const FVector Start = Avatar->GetActorLocation() + Forward * MeleeRadius;
+	const FVector End = Avatar->GetActorLocation() + Forward * FMath::Max(MeleeRange, MeleeRadius);
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(CrossguardMeleeSwing), false, Avatar);
 
 	// Object-type sweep: returns every pawn in the path. A channel sweep would stop at the first

@@ -10,8 +10,21 @@
 #include "Net/UnrealNetwork.h"
 
 // UE and rules enums must stay in the same order.
-static_assert(static_cast<int>(ECrossguardWeaponType::TwoHandedMelee) == static_cast<int>(Crossguard::EWeaponType::TwoHandedMelee),
-	"Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::Sword) == static_cast<int>(Crossguard::EWeaponType::Sword), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::Axe) == static_cast<int>(Crossguard::EWeaponType::Axe), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::Dagger) == static_cast<int>(Crossguard::EWeaponType::Dagger), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::Spear) == static_cast<int>(Crossguard::EWeaponType::Spear), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::Mace) == static_cast<int>(Crossguard::EWeaponType::Mace), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::Staff) == static_cast<int>(Crossguard::EWeaponType::Staff), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::Hammer) == static_cast<int>(Crossguard::EWeaponType::Hammer), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::Shield) == static_cast<int>(Crossguard::EWeaponType::Shield), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::Bow) == static_cast<int>(Crossguard::EWeaponType::Bow), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::Crossbow) == static_cast<int>(Crossguard::EWeaponType::Crossbow), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::Sling) == static_cast<int>(Crossguard::EWeaponType::Sling), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::Throwing) == static_cast<int>(Crossguard::EWeaponType::Throwing), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::Wand) == static_cast<int>(Crossguard::EWeaponType::Wand), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::AnyMelee) == static_cast<int>(Crossguard::EWeaponType::AnyMelee), "Weapon type enums out of sync");
+static_assert(static_cast<int>(ECrossguardWeaponType::TwoHandedMelee) == static_cast<int>(Crossguard::EWeaponType::TwoHandedMelee), "Weapon type enums out of sync");
 
 namespace
 {
