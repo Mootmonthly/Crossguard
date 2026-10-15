@@ -88,6 +88,36 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Loadout")
 	int32 GetCapacity() const;
 
+	// Skills the player can cast (Active, Spell, Art) among those granted, for the skill wheel.
+	// Includes skills granted while another is active (Dragonification's Flight). Owning client and
+	// server.
+	UFUNCTION(BlueprintPure, Category = "Loadout|Casting")
+	TArray<FName> GetActivatableSkills() const;
+
+	// The skill wheel (hold Q) sets this; E casts it. Local to the owning client.
+	UFUNCTION(BlueprintCallable, Category = "Loadout|Casting")
+	void SetSelectedSkill(FName SkillId) { SelectedSkill = SkillId; }
+
+	UFUNCTION(BlueprintPure, Category = "Loadout|Casting")
+	FName GetSelectedSkill() const { return SelectedSkill; }
+
+	// E: casts the selected skill (predicted on the owning client). False if none is selected or it
+	// cannot be cast now (cooldown, requirements, cost).
+	UFUNCTION(BlueprintCallable, Category = "Loadout|Casting")
+	bool TryActivateSelectedSkill();
+
+	// Called by the character when Q is pressed / released; the skill wheel UI listens.
+	void SetSkillWheelOpen(bool bOpen);
+
+	UFUNCTION(BlueprintPure, Category = "Loadout|Casting")
+	bool IsSkillWheelOpen() const { return bSkillWheelOpen; }
+
+	UPROPERTY(BlueprintAssignable, Category = "Loadout|Casting")
+	FCrossguardLoadoutChanged OnSkillWheelOpened;
+
+	UPROPERTY(BlueprintAssignable, Category = "Loadout|Casting")
+	FCrossguardLoadoutChanged OnSkillWheelClosed;
+
 	UPROPERTY(BlueprintAssignable, Category = "Loadout")
 	FCrossguardLoadoutChanged OnLoadoutChanged;
 
@@ -114,6 +144,9 @@ private:
 
 	// Server only.
 	TArray<FGameplayAbilitySpecHandle> GrantedAbilities;
+
+	FName SelectedSkill;
+	bool bSkillWheelOpen = false;
 
 	// Server only: tells each data-driven passive which skill it plays.
 	UPROPERTY()

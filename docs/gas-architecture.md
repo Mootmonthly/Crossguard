@@ -99,11 +99,19 @@ Might = one Infinite effect adding 10 to Strength.
 
 ## Controls
 
-`ACrossguardCharacter` builds default Enhanced Input bindings in code (no assets needed): WASD
-move, mouse look, Space jump, hold left mouse to attack with the main hand, right mouse for the
-secondary action. Set the character's Input properties to your own `InputAction` /
-`InputMappingContext` assets to rebind. Camera: first person at eye height; the character faces the
-camera direction. The body mesh is hidden from its owner until first-person arms exist.
+`ACrossguardCharacter` builds default Enhanced Input bindings in code (no assets needed); the key
+list is in design-decisions.md, Controls. Set the character's Input properties to your own
+`InputAction` / `InputMappingContext` assets to rebind. Camera: first person at eye height; the
+character faces the camera direction. The body mesh is hidden from its owner until first-person arms
+exist.
+
+- 1 / 2: `UCrossguardEquipmentComponent::RequestSwitchWeaponSet`. Each set is a main hand and an off
+  hand; only the set in hand attacks and counts for stats, tags and skill requirements. Equip into
+  either set with `RequestEquipItem(ItemId, Slot, WeaponSet)`.
+- Hold Q: `UCrossguardLoadoutComponent::SetSkillWheelOpen` broadcasts `OnSkillWheelOpened` /
+  `OnSkillWheelClosed` for the wheel widget, which lists `GetActivatableSkills()` and calls
+  `SetSelectedSkill` for the hovered one.
+- E: `TryActivateSelectedSkill()` casts it.
 
 ## Weapons and equipment
 
@@ -140,8 +148,9 @@ camera direction. The body mesh is hidden from its owner until first-person arms
 - `AddItem` (server) tops up stacks first, then finds the first free spot; ammo tries the Quiver
   first. Dropping a stack on the top-left square of the same item merges them.
 - Using a Skill Gem learns its skill (between raids) and consumes the gem.
-- Consumables: `RequestReadyItem(ItemId)` puts a stack in hand (Q cycles through them for now);
-  left click then uses one (`RequestStartUse` / `RequestStopUse`). The server applies the native
+- Hotbar: keys 3–7 are slots 0–4 (`RequestAssignHotbarSlot`, `RequestUseHotbarSlot`). A slot
+  remembers an item type and rarity (consumables and throwables) and readies the first matching
+  stack (`RequestReadyItem`); pressing it again puts it away. Left click then uses one (`RequestStartUse` / `RequestStopUse`). The server applies the native
   `UCrossguardHealOverTimeEffect` (flat healing spread over the item's heal duration in 0.5 s ticks).
   Items with a use time channel; releasing early removes the effect.
 - Stacks combine only the same item at the same rarity.
@@ -184,10 +193,10 @@ the hub and saved progression); the character stays in the map, now between raid
 
 ### Interaction and lockpicking
 
-- E (`ACrossguardCharacter::TryInteract`) uses the nearest `ICrossguardInteractable` in front of the
+- F (`ACrossguardCharacter::TryInteract`) uses the nearest `ICrossguardInteractable` in front of the
   character within its range: loot containers open, `ACrossguardDoor`s open and close.
 - An actor with a locked `UCrossguardLockComponent` (tick `bLocked` on a placed chest or door) is
-  lockpicked first: `5 s / (1 + Dexterity)`, cannot fail, E again stops. The character needs the
+  lockpicked first: `5 s / (1 + Dexterity)`, cannot fail, F again stops. The character needs the
   `Ability.Lockpicking` tag (grant it from the lockpicking skill's passive effect) or a lockpick
   item (`LockpickItemId`, default `lockpick`; one is used up per lock). When the lock opens, the
   chest or door opens too. The range is re-checked when the time is up.
@@ -206,7 +215,7 @@ the hub and saved progression); the character stays in the map, now between raid
 - `Revive(HealthFraction)` (server, for revive spells) clears `State.Dead`, stands the character up
   and gives back what is still on the body: worn items go back on, the rest into the inventory.
   Testing: `DebugReviveDelay` revives the character that many seconds after death.
-- E (`TryInteract`) opens the nearest container in front of you within its `InteractRange`
+- F (`TryInteract`) opens the nearest container in front of you within its `InteractRange`
   (250 cm). Then `RequestTakeFromContainer(ItemId)` / `RequestPutInContainer(ItemId)` move stacks;
   the server re-checks range and that you are alive on every move. Dead characters cannot use their
   inventory.

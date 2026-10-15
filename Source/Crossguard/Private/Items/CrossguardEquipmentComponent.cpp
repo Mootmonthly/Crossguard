@@ -6,6 +6,7 @@
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemGlobals.h"
 #include "Crossguard.h"
+#include "CrossguardRules/Inventory.h"
 #include "Engine/DataTable.h"
 #include "Net/UnrealNetwork.h"
 
@@ -98,6 +99,10 @@ void UCrossguardEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimeP
 	// Everyone sees what you are holding.
 	DOREPLIFETIME(UCrossguardEquipmentComponent, MainHand);
 	DOREPLIFETIME(UCrossguardEquipmentComponent, OffHand);
+	// Owner only: what is stowed is not visible.
+	DOREPLIFETIME_CONDITION(UCrossguardEquipmentComponent, StowedMainHand, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UCrossguardEquipmentComponent, StowedOffHand, COND_OwnerOnly);
+	DOREPLIFETIME(UCrossguardEquipmentComponent, ActiveWeaponSet);
 	DOREPLIFETIME(UCrossguardEquipmentComponent, Armor);
 }
 
@@ -162,6 +167,40 @@ int32 UCrossguardEquipmentComponent::GetEmptyArmorSlotCount() const
 const FCrossguardWeaponItem& UCrossguardEquipmentComponent::GetItem(ECrossguardEquipmentSlot Slot) const
 {
 	return Slot == ECrossguardEquipmentSlot::MainHand ? MainHand : OffHand;
+}
+
+const FCrossguardWeaponItem& UCrossguardEquipmentComponent::GetWeaponInSet(int32 Set, ECrossguardEquipmentSlot Slot) const
+{
+	if (IsActiveSet(Set))
+	{
+		return GetItem(Slot);
+	}
+	return Slot == ECrossguardEquipmentSlot::MainHand ? StowedMainHand : StowedOffHand;
+}
+
+void UCrossguardEquipmentComponent::RequestSwitchWeaponSet(int32 Set)
+{
+	if (GetOwner() != nullptr && GetOwner()->HasAuthority())
+	{
+		ServerSwitchWeaponSet_Implementation(Set);
+	}
+	else
+	{
+		ServerSwitchWeaponSet(Set);
+	}
+}
+
+void UCrossguardEquipmentComponent::ServerSwitchWeaponSet_Implementation(int32 Set)
+{
+	if (Set < 0 || Set >= Crossguard::WeaponSetCount || Set == ActiveWeaponSet)
+	{
+		return;
+	}
+	Swap(MainHand, StowedMainHand);
+	Swap(OffHand, StowedOffHand);
+	ActiveWeaponSet = Set;
+	RefreshEquipmentEffect();
+	OnEquipmentChanged.Broadcast();
 }
 
 const FCrossguardWeaponRow* UCrossguardEquipmentComponent::GetWeaponRow(ECrossguardEquipmentSlot Slot) const
@@ -282,7 +321,7 @@ void UCrossguardEquipmentComponent::OnRep_Equipment()
 	OnEquipmentChanged.Broadcast();
 }
 
-ECrossguardEquipError UCrossguardEquipmentComponent::CheckEquip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item) const
+ECrossguardEquipError UCrossguardEquipmentComponent::CheckEquip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item, int32 Set) const
 {
 	if (WeaponTable == nullptr || GetAbilitySystem() == nullptr)
 	{
@@ -292,18 +331,22 @@ ECrossguardEquipError UCrossguardEquipmentComponent::CheckEquip(ECrossguardEquip
 	{
 		return ECrossguardEquipError::UnknownWeapon;
 	}
-	const FCrossguardWeaponItem& NewMain = Slot == ECrossguardEquipmentSlot::MainHand ? Item : MainHand;
-	const FCrossguardWeaponItem& NewOff = Slot == ECrossguardEquipmentSlot::OffHand ? Item : OffHand;
+	const FCrossguardWeaponItem& NewMain = Slot == ECrossguardEquipmentSlot::MainHand ? Item : GetWeaponInSet(Set, ECrossguardEquipmentSlot::MainHand);
+	const FCrossguardWeaponItem& NewOff = Slot == ECrossguardEquipmentSlot::OffHand ? Item : GetWeaponInSet(Set, ECrossguardEquipmentSlot::OffHand);
 	return ToEquipError(Crossguard::ValidateEquipment(BuildRulesEquipment(NewMain, NewOff)));
 }
 
-ECrossguardEquipError UCrossguardEquipmentComponent::Equip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item)
+ECrossguardEquipError UCrossguardEquipmentComponent::Equip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item, int32 Set)
 {
 	if (GetOwner() == nullptr || !GetOwner()->HasAuthority())
 	{
 		return ECrossguardEquipError::NotReady;
 	}
-	const ECrossguardEquipError Error = CheckEquip(Slot, Item);
+	if (Set >= Crossguard::WeaponSetCount)
+	{
+		return ECrossguardEquipError::NotReady;
+	}
+	const ECrossguardEquipError Error = CheckEquip(Slot, Item, Set);
 	if (Error != ECrossguardEquipError::None)
 	{
 		UE_LOG(LogCrossguard, Log, TEXT("Equip rejected for %s: slot %d, error %d"), *GetNameSafe(GetOwner()),
@@ -311,7 +354,14 @@ ECrossguardEquipError UCrossguardEquipmentComponent::Equip(ECrossguardEquipmentS
 		return Error;
 	}
 
-	(Slot == ECrossguardEquipmentSlot::MainHand ? MainHand : OffHand) = Item;
+	if (IsActiveSet(Set))
+	{
+		(Slot == ECrossguardEquipmentSlot::MainHand ? MainHand : OffHand) = Item;
+	}
+	else
+	{
+		(Slot == ECrossguardEquipmentSlot::MainHand ? StowedMainHand : StowedOffHand) = Item;
+	}
 	RefreshEquipmentEffect();
 	OnEquipmentChanged.Broadcast();
 	return ECrossguardEquipError::None;

@@ -149,7 +149,7 @@ Independent of category, a skill is:
 - Backpacks and Quivers are extra containers that add 5–30 squares by rarity, in steps of 5
   (Common 5 … Mystic 30). Quivers only hold Arrows and Bolts.
 - On death, all equipped gear and the raid inventory drop. No insurance for now.
-- The body is a container: walk up, press the interact key (E) and take items from it, like opening
+- The body is a container: walk up, press the interact key (F) and take items from it, like opening
   a treasure chest. Anyone can loot it, teammates included. Items can also be put into it.
 - Every death leaves a visible body, even with nothing on it: seeing bodies is information.
 - A downed player can be revived for 120 s; after that they are dead for the raid (it counts as a

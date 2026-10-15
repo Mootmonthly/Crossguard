@@ -37,8 +37,9 @@ enum class ECrossguardSecondaryAction : uint8
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCrossguardEquipmentChanged);
 
-// Main-hand and off-hand weapons and the six armor slots (docs/item-data-schema.md). Dual
-// wielding: any one-handed weapon fits the off hand.
+// Two weapon sets (keys 1 and 2), each a main hand and an off hand, and the six armor slots
+// (docs/item-data-schema.md). Only the active set is in hand: its weapons attack and count for
+// stats, tags and skill requirements. Dual wielding: any one-handed weapon fits the off hand.
 //
 // Changes are server only: players equip through UCrossguardInventoryComponent, which moves the item
 // between the inventory and the slot. The server validates every change, then re-applies one UCrossguardEquipmentEffect holding the
@@ -66,11 +67,25 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment", meta = (RequiredAssetDataTags = "RowStructure=/Script/Crossguard.CrossguardAffixRow"))
 	TObjectPtr<UDataTable> AffixTable;
 
-	// Whether Item (empty: unequip) can go in Slot with the other hand as it is.
-	ECrossguardEquipError CheckEquip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item) const;
+	// Whether Item (empty: unequip) can go in Slot of weapon set Set (-1: the active set) with that
+	// set's other hand as it is.
+	ECrossguardEquipError CheckEquip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item, int32 Set = -1) const;
 
-	// Server. Validates, then puts Item in Slot (empty: unequips). Does not touch the inventory.
-	ECrossguardEquipError Equip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item);
+	// Server. Validates, then puts Item in Slot of weapon set Set (-1: active; empty: unequips). Does
+	// not touch the inventory.
+	ECrossguardEquipError Equip(ECrossguardEquipmentSlot Slot, const FCrossguardWeaponItem& Item, int32 Set = -1);
+
+	// 0 or 1 (keys 1 and 2).
+	UFUNCTION(BlueprintPure, Category = "Equipment")
+	int32 GetActiveWeaponSet() const { return ActiveWeaponSet; }
+
+	// A weapon in either set.
+	UFUNCTION(BlueprintPure, Category = "Equipment")
+	const FCrossguardWeaponItem& GetWeaponInSet(int32 Set, ECrossguardEquipmentSlot Slot) const;
+
+	// Takes weapon set Set (0 or 1) in hand. Instant. Runs on the server; clients forward it.
+	UFUNCTION(BlueprintCallable, Category = "Equipment")
+	void RequestSwitchWeaponSet(int32 Set);
 
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	const FCrossguardWeaponItem& GetItem(ECrossguardEquipmentSlot Slot) const;
@@ -123,6 +138,9 @@ protected:
 	UFUNCTION()
 	void OnRep_Equipment();
 
+	UFUNCTION(Server, Reliable)
+	void ServerSwitchWeaponSet(int32 Set);
+
 private:
 	void RefreshEquipmentEffect();
 	const FCrossguardArmorRow* FindArmor(FName ArmorId) const;
@@ -137,6 +155,18 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_Equipment)
 	FCrossguardWeaponItem OffHand;
+
+	// The set not in hand. Swapped with MainHand / OffHand on a switch.
+	UPROPERTY(ReplicatedUsing = OnRep_Equipment)
+	FCrossguardWeaponItem StowedMainHand;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Equipment)
+	FCrossguardWeaponItem StowedOffHand;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Equipment)
+	int32 ActiveWeaponSet = 0;
+
+	bool IsActiveSet(int32 Set) const { return Set < 0 || Set == ActiveWeaponSet; }
 
 	// One entry per ECrossguardArmorSlot, in enum order.
 	UPROPERTY(ReplicatedUsing = OnRep_Equipment)

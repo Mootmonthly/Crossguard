@@ -82,7 +82,15 @@ void ACrossguardCharacter::EnsureDefaultInput()
 	MakeAction(AttackAction, TEXT("IA_Attack"), EInputActionValueType::Boolean);
 	MakeAction(SecondaryActionInput, TEXT("IA_Secondary"), EInputActionValueType::Boolean);
 	MakeAction(InteractAction, TEXT("IA_Interact"), EInputActionValueType::Boolean);
-	MakeAction(ReadyItemAction, TEXT("IA_ReadyItem"), EInputActionValueType::Boolean);
+	MakeAction(WeaponSet1Action, TEXT("IA_WeaponSet1"), EInputActionValueType::Boolean);
+	MakeAction(WeaponSet2Action, TEXT("IA_WeaponSet2"), EInputActionValueType::Boolean);
+	MakeAction(Hotbar1Action, TEXT("IA_Hotbar1"), EInputActionValueType::Boolean);
+	MakeAction(Hotbar2Action, TEXT("IA_Hotbar2"), EInputActionValueType::Boolean);
+	MakeAction(Hotbar3Action, TEXT("IA_Hotbar3"), EInputActionValueType::Boolean);
+	MakeAction(Hotbar4Action, TEXT("IA_Hotbar4"), EInputActionValueType::Boolean);
+	MakeAction(Hotbar5Action, TEXT("IA_Hotbar5"), EInputActionValueType::Boolean);
+	MakeAction(SkillWheelAction, TEXT("IA_SkillWheel"), EInputActionValueType::Boolean);
+	MakeAction(CastSkillAction, TEXT("IA_CastSkill"), EInputActionValueType::Boolean);
 	MakeAction(SummonPortalAction, TEXT("IA_SummonPortal"), EInputActionValueType::Boolean);
 
 	if (DefaultMappingContext != nullptr)
@@ -110,8 +118,16 @@ void ACrossguardCharacter::EnsureDefaultInput()
 	Context->MapKey(JumpAction, EKeys::SpaceBar);
 	Context->MapKey(AttackAction, EKeys::LeftMouseButton);
 	Context->MapKey(SecondaryActionInput, EKeys::RightMouseButton);
-	Context->MapKey(InteractAction, EKeys::E);
-	Context->MapKey(ReadyItemAction, EKeys::Q);
+	Context->MapKey(InteractAction, EKeys::F);
+	Context->MapKey(WeaponSet1Action, EKeys::One);
+	Context->MapKey(WeaponSet2Action, EKeys::Two);
+	Context->MapKey(Hotbar1Action, EKeys::Three);
+	Context->MapKey(Hotbar2Action, EKeys::Four);
+	Context->MapKey(Hotbar3Action, EKeys::Five);
+	Context->MapKey(Hotbar4Action, EKeys::Six);
+	Context->MapKey(Hotbar5Action, EKeys::Seven);
+	Context->MapKey(SkillWheelAction, EKeys::Q);
+	Context->MapKey(CastSkillAction, EKeys::E);
 	Context->MapKey(SummonPortalAction, EKeys::X);
 	DefaultMappingContext = Context;
 }
@@ -136,7 +152,16 @@ void ACrossguardCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	Input->BindAction(AttackAction, ETriggerEvent::Completed, this, &ACrossguardCharacter::OnAttackReleased);
 	Input->BindAction(SecondaryActionInput, ETriggerEvent::Triggered, this, &ACrossguardCharacter::OnSecondary);
 	Input->BindAction(InteractAction, ETriggerEvent::Started, this, &ACrossguardCharacter::TryInteract);
-	Input->BindAction(ReadyItemAction, ETriggerEvent::Started, this, &ACrossguardCharacter::OnReadyItem);
+	Input->BindAction(WeaponSet1Action, ETriggerEvent::Started, this, &ACrossguardCharacter::OnWeaponSet1);
+	Input->BindAction(WeaponSet2Action, ETriggerEvent::Started, this, &ACrossguardCharacter::OnWeaponSet2);
+	Input->BindAction(Hotbar1Action, ETriggerEvent::Started, this, &ACrossguardCharacter::OnHotbar1);
+	Input->BindAction(Hotbar2Action, ETriggerEvent::Started, this, &ACrossguardCharacter::OnHotbar2);
+	Input->BindAction(Hotbar3Action, ETriggerEvent::Started, this, &ACrossguardCharacter::OnHotbar3);
+	Input->BindAction(Hotbar4Action, ETriggerEvent::Started, this, &ACrossguardCharacter::OnHotbar4);
+	Input->BindAction(Hotbar5Action, ETriggerEvent::Started, this, &ACrossguardCharacter::OnHotbar5);
+	Input->BindAction(SkillWheelAction, ETriggerEvent::Started, this, &ACrossguardCharacter::OnSkillWheelOpened);
+	Input->BindAction(SkillWheelAction, ETriggerEvent::Completed, this, &ACrossguardCharacter::OnSkillWheelClosed);
+	Input->BindAction(CastSkillAction, ETriggerEvent::Started, this, &ACrossguardCharacter::OnCastSkill);
 	Input->BindAction(SummonPortalAction, ETriggerEvent::Started, this, &ACrossguardCharacter::TrySummonPortal);
 }
 
@@ -195,9 +220,54 @@ void ACrossguardCharacter::OnAttackReleased()
 	}
 }
 
-void ACrossguardCharacter::OnReadyItem()
+void ACrossguardCharacter::OnWeaponSet1()
 {
-	InventoryComponent->RequestReadyNextConsumable();
+	EquipmentComponent->RequestSwitchWeaponSet(0);
+}
+
+void ACrossguardCharacter::OnWeaponSet2()
+{
+	EquipmentComponent->RequestSwitchWeaponSet(1);
+}
+
+void ACrossguardCharacter::OnHotbar1()
+{
+	InventoryComponent->RequestUseHotbarSlot(0);
+}
+
+void ACrossguardCharacter::OnHotbar2()
+{
+	InventoryComponent->RequestUseHotbarSlot(1);
+}
+
+void ACrossguardCharacter::OnHotbar3()
+{
+	InventoryComponent->RequestUseHotbarSlot(2);
+}
+
+void ACrossguardCharacter::OnHotbar4()
+{
+	InventoryComponent->RequestUseHotbarSlot(3);
+}
+
+void ACrossguardCharacter::OnHotbar5()
+{
+	InventoryComponent->RequestUseHotbarSlot(4);
+}
+
+void ACrossguardCharacter::OnSkillWheelOpened()
+{
+	LoadoutComponent->SetSkillWheelOpen(true);
+}
+
+void ACrossguardCharacter::OnSkillWheelClosed()
+{
+	LoadoutComponent->SetSkillWheelOpen(false);
+}
+
+void ACrossguardCharacter::OnCastSkill()
+{
+	LoadoutComponent->TryActivateSelectedSkill();
 }
 
 void ACrossguardCharacter::OnSecondary()
@@ -295,6 +365,21 @@ void ACrossguardCharacter::ApplyDebugLoadout()
 		{
 			UE_LOG(LogCrossguard, Warning, TEXT("Debug inventory: %d of %s did not fit or has no data"), Left,
 				*(Item.ItemId.IsNone() ? (Item.Weapon.IsEmpty() ? Item.Armor.ArmorId : Item.Weapon.WeaponId) : Item.ItemId).ToString());
+		}
+	}
+
+	// Testing: the first consumables and throwables go on the hotbar (keys 3-7).
+	int32 HotbarSlot = 0;
+	for (const FCrossguardInventoryItem& Item : InventoryComponent->GetItems())
+	{
+		const bool bHotbarItem = Item.Category == ECrossguardItemCategory::Consumable || Item.Category == ECrossguardItemCategory::Throwable;
+		const bool bAlreadyAssigned = InventoryComponent->GetHotbar().ContainsByPredicate([&Item](const FCrossguardHotbarSlot& Slot)
+		{
+			return Slot.ItemId == Item.ItemId && Slot.Rarity == Item.Rarity;
+		});
+		if (bHotbarItem && !bAlreadyAssigned && HotbarSlot < InventoryComponent->GetHotbar().Num())
+		{
+			InventoryComponent->RequestAssignHotbarSlot(HotbarSlot++, Item.Id);
 		}
 	}
 

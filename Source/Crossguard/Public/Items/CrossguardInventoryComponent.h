@@ -147,6 +147,10 @@ struct CROSSGUARD_API FCrossguardInventoryItem
 	UPROPERTY(BlueprintReadOnly, Category = "Item")
 	ECrossguardEquipmentSlot WornSlot = ECrossguardEquipmentSlot::MainHand;
 
+	// Weapon set (0 or 1) a worn weapon was in.
+	UPROPERTY(BlueprintReadOnly, Category = "Item")
+	int32 WornSet = 0;
+
 	bool IsEmpty() const { return Id == 0; }
 
 	// Stacks combine only the same item at the same rarity, and only stackable items.
@@ -154,6 +158,26 @@ struct CROSSGUARD_API FCrossguardInventoryItem
 	{
 		return MaxStack > 1 && Category == Other.Category && ItemId == Other.ItemId && Rarity == Other.Rarity;
 	}
+};
+
+// A hotbar key (3-7): which item it uses. Remembers the item type and rarity, so a new stack of the
+// same item fills it.
+USTRUCT(BlueprintType)
+struct CROSSGUARD_API FCrossguardHotbarSlot
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Hotbar")
+	ECrossguardItemCategory Category = ECrossguardItemCategory::Other;
+
+	// None: empty slot.
+	UPROPERTY(BlueprintReadOnly, Category = "Hotbar")
+	FName ItemId;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Hotbar")
+	ECrossguardRarity Rarity = ECrossguardRarity::Common;
+
+	bool IsEmpty() const { return ItemId.IsNone(); }
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCrossguardInventoryChanged);
@@ -237,13 +261,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void RequestMoveItem(int32 ItemId, ECrossguardInventoryContainer Container, FIntPoint Position, bool bRotated);
 
-	// Weapons go in Slot; armor in its own slot; a Backpack or Quiver in its container slot. What
-	// was there moves into the inventory.
+	// Weapons go in Slot of weapon set WeaponSet (-1: the one in hand); armor in its own slot; a
+	// Backpack or Quiver in its container slot. What was there moves into the inventory.
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void RequestEquipItem(int32 ItemId, ECrossguardEquipmentSlot Slot = ECrossguardEquipmentSlot::MainHand);
+	void RequestEquipItem(int32 ItemId, ECrossguardEquipmentSlot Slot = ECrossguardEquipmentSlot::MainHand, int32 WeaponSet = -1);
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	void RequestUnequipWeapon(ECrossguardEquipmentSlot Slot);
+	void RequestUnequipWeapon(ECrossguardEquipmentSlot Slot, int32 WeaponSet = -1);
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void RequestUnequipArmor(ECrossguardArmorSlot Slot);
@@ -256,15 +280,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void RequestUseItem(int32 ItemId);
 
-	// Consumables (potions, bandages): ready a stack in hand, then hold left click to use one.
+	// Hotbar keys 3-7 (slots 0-4) hold consumables and throwables.
+	UFUNCTION(BlueprintPure, Category = "Inventory|Hotbar")
+	const TArray<FCrossguardHotbarSlot>& GetHotbar() const { return Hotbar; }
+
+	// Assigns the item type and rarity of an inventory stack to a slot (consumables and throwables).
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Hotbar")
+	void RequestAssignHotbarSlot(int32 Slot, int32 ItemId);
+
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Hotbar")
+	void RequestClearHotbarSlot(int32 Slot);
+
+	// The slot's key: readies the first matching stack (pressing it again puts it away).
+	UFUNCTION(BlueprintCallable, Category = "Inventory|Hotbar")
+	void RequestUseHotbarSlot(int32 Slot);
+
+	// Consumables and throwables: ready a stack in hand, then left click uses or throws one.
 	// After a use the hands go back to the weapon. 0 puts the item away.
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Use")
 	void RequestReadyItem(int32 ItemId);
-
-	// Readies the next consumable stack, then nothing, then the first again. Placeholder for a
-	// hotbar.
-	UFUNCTION(BlueprintCallable, Category = "Inventory|Use")
-	void RequestReadyNextConsumable();
 
 	// 0 when the hands hold the weapon.
 	UFUNCTION(BlueprintPure, Category = "Inventory|Use")
@@ -321,10 +355,10 @@ protected:
 	void ServerMoveItem(int32 ItemId, ECrossguardInventoryContainer Container, FIntPoint Position, bool bRotated);
 
 	UFUNCTION(Server, Reliable)
-	void ServerEquipItem(int32 ItemId, ECrossguardEquipmentSlot Slot);
+	void ServerEquipItem(int32 ItemId, ECrossguardEquipmentSlot Slot, int32 WeaponSet);
 
 	UFUNCTION(Server, Reliable)
-	void ServerUnequipWeapon(ECrossguardEquipmentSlot Slot);
+	void ServerUnequipWeapon(ECrossguardEquipmentSlot Slot, int32 WeaponSet);
 
 	UFUNCTION(Server, Reliable)
 	void ServerUnequipArmor(ECrossguardArmorSlot Slot);
@@ -339,7 +373,10 @@ protected:
 	void ServerReadyItem(int32 ItemId);
 
 	UFUNCTION(Server, Reliable)
-	void ServerReadyNextConsumable();
+	void ServerAssignHotbarSlot(int32 Slot, int32 ItemId);
+
+	UFUNCTION(Server, Reliable)
+	void ServerUseHotbarSlot(int32 Slot);
 
 	UFUNCTION(Server, Reliable)
 	void ServerStartUse();
@@ -367,13 +404,15 @@ protected:
 
 private:
 	FCrossguardInventoryResult MoveItem(int32 ItemId, ECrossguardInventoryContainer Container, FIntPoint Position, bool bRotated);
-	FCrossguardInventoryResult EquipItem(int32 ItemId, ECrossguardEquipmentSlot Slot);
+	FCrossguardInventoryResult EquipItem(int32 ItemId, ECrossguardEquipmentSlot Slot, int32 WeaponSet);
 	FCrossguardInventoryResult EquipContainer(const FCrossguardInventoryItem& Item);
-	FCrossguardInventoryResult UnequipWeapon(ECrossguardEquipmentSlot Slot);
+	FCrossguardInventoryResult UnequipWeapon(ECrossguardEquipmentSlot Slot, int32 WeaponSet);
 	FCrossguardInventoryResult UnequipArmor(ECrossguardArmorSlot Slot);
 	FCrossguardInventoryResult UnequipContainer(ECrossguardInventoryContainer Container);
 	FCrossguardInventoryResult UseItem(int32 ItemId);
 	FCrossguardInventoryResult ReadyItem(int32 ItemId);
+	FCrossguardInventoryResult AssignHotbarSlot(int32 Slot, int32 ItemId);
+	FCrossguardInventoryResult UseHotbarSlot(int32 Slot);
 	FCrossguardInventoryResult StartUse();
 	void StopUse();
 	void FinishChannel();
@@ -415,6 +454,9 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_Inventory)
 	int32 ReadiedItemId = 0;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Inventory)
+	TArray<FCrossguardHotbarSlot> Hotbar;
 
 	// Server only: the channel in progress.
 	FActiveGameplayEffectHandle ChannelEffect;

@@ -51,8 +51,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Combat")
 	bool TrySecondaryAction();
 
-	// E: uses the nearest interactable (body, chest, door) in front of the character, within its
-	// range. If it is locked, starts lockpicking instead; pressing E again stops. Runs on the
+	// F: uses the nearest interactable (body, chest, door) in front of the character, within its
+	// range. If it is locked, starts lockpicking instead; pressing F again stops. Runs on the
 	// server; clients forward it.
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Interaction")
 	void TryInteract();
@@ -140,7 +140,7 @@ public:
 	TArray<FName> DebugSkills;
 
 	// Testing only: added to the inventory at spawn (e.g. Category Ammo, ItemId "arrow", Count 40;
-	// Category SkillGem, ItemId "fireball").
+	// Category SkillGem, ItemId "fireball"). Consumables and throwables also fill the hotbar.
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
 	TArray<FCrossguardInventoryItem> DebugInventory;
 
@@ -163,8 +163,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Camera")
 	TObjectPtr<UCameraComponent> FirstPersonCamera;
 
-	// Input. Leave empty to use the built-in defaults: WASD move, mouse look, Space jump, left
-	// mouse attack, right mouse secondary action. Set these to your own assets to rebind.
+	// Input. Leave empty to use the built-in defaults (docs/design-decisions.md, Controls): WASD
+	// move, mouse look, Space jump, left mouse attack or use, right mouse secondary action, 1/2
+	// weapon sets, 3-7 hotbar, hold Q skill wheel, E cast, F interact, X portal. Set these to your
+	// own assets to rebind.
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 
@@ -186,9 +188,36 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
 	TObjectPtr<UInputAction> InteractAction;
 
-	// Q: ready the next consumable (placeholder until a hotbar exists).
+	// Keys 1 and 2.
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
-	TObjectPtr<UInputAction> ReadyItemAction;
+	TObjectPtr<UInputAction> WeaponSet1Action;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> WeaponSet2Action;
+
+	// Keys 3 to 7, hotbar slots 0 to 4.
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> Hotbar1Action;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> Hotbar2Action;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> Hotbar3Action;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> Hotbar4Action;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> Hotbar5Action;
+
+	// Hold Q: skill wheel.
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> SkillWheelAction;
+
+	// E: cast the selected skill.
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> CastSkillAction;
 
 	// X: summon an extract portal (placeholder key).
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
@@ -244,7 +273,16 @@ private:
 	// Left click pressed / released: uses a readied consumable instead of attacking.
 	void OnAttackPressed();
 	void OnAttackReleased();
-	void OnReadyItem();
+	void OnWeaponSet1();
+	void OnWeaponSet2();
+	void OnHotbar1();
+	void OnHotbar2();
+	void OnHotbar3();
+	void OnHotbar4();
+	void OnHotbar5();
+	void OnSkillWheelOpened();
+	void OnSkillWheelClosed();
+	void OnCastSkill();
 	void OnSecondary();
 
 	UFUNCTION(Server, Reliable)

@@ -43,16 +43,16 @@ On `BP_CrossguardCharacter` → **Crossguard | Debug**:
 | Test | Expected |
 | --- | --- |
 | Shoot the bow 45 times | Arrows run out and the bow stops firing. |
-| Q, then left click | A potion heals 15 HP over 10 s; a bandage heals 10 HP while left click is held for 2 s. |
+| Press 3 (debug consumables fill the hotbar in order), then left click | A potion heals 15 HP over 10 s; a bandage heals 10 HP while left click is held for 2 s. |
 | Kill the dummy | It ragdolls and leaves a body; you get 5 XP (raid XP, shown by `GetRaidXp`). |
-| Put gear on the dummy, kill it, press E at the body | With `bDebugLootTakesAll`, its items move into your inventory. |
+| Put gear on the dummy, kill it, press F at the body | With `bDebugLootTakesAll`, its items move into your inventory. |
 | Die with `DebugReviveDelay` set | You ragdoll, a body appears, then you stand up with your gear back. |
 | Have someone loot your body before the revive | The looted items stay gone. |
 | Place an `ACrossguardExtractionZone`, stand in it 5 s | Output Log: extracted, XP banked, gold banked (250). |
 | Set the game mode's `PortalUnlockSeconds` to 0, place an `ACrossguardPointOfInterest` around you, press X | A portal appears (give `BeamMesh` a mesh to see it); 60 s later it opens; step in to extract. Walk 10 m+ away while it channels and it collapses. |
 | Press X outside a point of interest, or a second time | Refused (Output Log says why). |
-| Place an `ACrossguardDoor` (give it a mesh), press E | It snaps open and closed. |
-| Tick the door's Lock → bLocked, press E | Nothing without a lockpick; with the `Ability.Lockpicking` tag it opens after 5 s. |
+| Place an `ACrossguardDoor` (give it a mesh), press F | It snaps open and closed. |
+| Tick the door's Lock → bLocked, press F | Nothing without a lockpick; with the `Ability.Lockpicking` tag it opens after 5 s. |
 
 Passive skills: put `heroic_might` (or a mastery) in `DebugSkills` and check
 `showdebug abilitysystem`: Strength +10 (masteries only while their weapon is held).

@@ -197,3 +197,50 @@ void UCrossguardLoadoutComponent::ClearGrantedAbilities(UCrossguardAbilitySystem
 	GrantedAbilities.Reset();
 	SkillGrants.Reset();
 }
+
+TArray<FName> UCrossguardLoadoutComponent::GetActivatableSkills() const
+{
+	TArray<FName> Skills;
+	const UCrossguardAbilitySystemComponent* ASC = GetAbilitySystem();
+	if (ASC == nullptr)
+	{
+		return Skills;
+	}
+	for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+	{
+		const UCrossguardGameplayAbility* Ability = Cast<UCrossguardGameplayAbility>(Spec.Ability);
+		if (Ability != nullptr && !Ability->SkillId.IsNone() && Ability->SkillCategory != ECrossguardSkillCategory::Passive)
+		{
+			Skills.AddUnique(Ability->SkillId);
+		}
+	}
+	return Skills;
+}
+
+bool UCrossguardLoadoutComponent::TryActivateSelectedSkill()
+{
+	UCrossguardAbilitySystemComponent* ASC = GetAbilitySystem();
+	if (ASC == nullptr || SelectedSkill.IsNone())
+	{
+		return false;
+	}
+	for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+	{
+		const UCrossguardGameplayAbility* Ability = Cast<UCrossguardGameplayAbility>(Spec.Ability);
+		if (Ability != nullptr && Ability->SkillId == SelectedSkill && Ability->SkillCategory != ECrossguardSkillCategory::Passive)
+		{
+			return ASC->TryActivateAbility(Spec.Handle);
+		}
+	}
+	return false;
+}
+
+void UCrossguardLoadoutComponent::SetSkillWheelOpen(bool bOpen)
+{
+	if (bSkillWheelOpen == bOpen)
+	{
+		return;
+	}
+	bSkillWheelOpen = bOpen;
+	(bOpen ? OnSkillWheelOpened : OnSkillWheelClosed).Broadcast();
+}

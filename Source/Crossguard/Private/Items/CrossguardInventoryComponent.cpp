@@ -74,6 +74,7 @@ static_assert(static_cast<int>(ECrossguardInventoryContainer::Quiver) == static_
 UCrossguardInventoryComponent::UCrossguardInventoryComponent()
 {
 	SetIsReplicatedByDefault(true);
+	Hotbar.SetNum(Crossguard::HotbarSlotCount);
 }
 
 void UCrossguardInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -85,6 +86,7 @@ void UCrossguardInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeP
 	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, EquippedQuiver, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, OpenContainer, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, ReadiedItemId, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UCrossguardInventoryComponent, Hotbar, COND_OwnerOnly);
 }
 
 bool UCrossguardInventoryComponent::IsServer() const
@@ -403,38 +405,38 @@ void UCrossguardInventoryComponent::ServerMoveItem_Implementation(int32 ItemId, 
 	Finish(MoveItem(ItemId, Container, Position, bRotated));
 }
 
-void UCrossguardInventoryComponent::RequestEquipItem(int32 ItemId, ECrossguardEquipmentSlot Slot)
+void UCrossguardInventoryComponent::RequestEquipItem(int32 ItemId, ECrossguardEquipmentSlot Slot, int32 WeaponSet)
 {
 	if (IsServer())
 	{
-		Finish(EquipItem(ItemId, Slot));
+		Finish(EquipItem(ItemId, Slot, WeaponSet));
 	}
 	else
 	{
-		ServerEquipItem(ItemId, Slot);
+		ServerEquipItem(ItemId, Slot, WeaponSet);
 	}
 }
 
-void UCrossguardInventoryComponent::ServerEquipItem_Implementation(int32 ItemId, ECrossguardEquipmentSlot Slot)
+void UCrossguardInventoryComponent::ServerEquipItem_Implementation(int32 ItemId, ECrossguardEquipmentSlot Slot, int32 WeaponSet)
 {
-	Finish(EquipItem(ItemId, Slot));
+	Finish(EquipItem(ItemId, Slot, WeaponSet));
 }
 
-void UCrossguardInventoryComponent::RequestUnequipWeapon(ECrossguardEquipmentSlot Slot)
+void UCrossguardInventoryComponent::RequestUnequipWeapon(ECrossguardEquipmentSlot Slot, int32 WeaponSet)
 {
 	if (IsServer())
 	{
-		Finish(UnequipWeapon(Slot));
+		Finish(UnequipWeapon(Slot, WeaponSet));
 	}
 	else
 	{
-		ServerUnequipWeapon(Slot);
+		ServerUnequipWeapon(Slot, WeaponSet);
 	}
 }
 
-void UCrossguardInventoryComponent::ServerUnequipWeapon_Implementation(ECrossguardEquipmentSlot Slot)
+void UCrossguardInventoryComponent::ServerUnequipWeapon_Implementation(ECrossguardEquipmentSlot Slot, int32 WeaponSet)
 {
-	Finish(UnequipWeapon(Slot));
+	Finish(UnequipWeapon(Slot, WeaponSet));
 }
 
 void UCrossguardInventoryComponent::RequestUnequipArmor(ECrossguardArmorSlot Slot)
@@ -563,7 +565,7 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::MoveItem(int32 ItemId,
 	return {};
 }
 
-FCrossguardInventoryResult UCrossguardInventoryComponent::EquipItem(int32 ItemId, ECrossguardEquipmentSlot Slot)
+FCrossguardInventoryResult UCrossguardInventoryComponent::EquipItem(int32 ItemId, ECrossguardEquipmentSlot Slot, int32 WeaponSet)
 {
 	if (IsOwnerDead())
 	{
@@ -590,13 +592,13 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::EquipItem(int32 ItemId
 	FCrossguardInventoryItem Previous;
 	if (Item.Category == ECrossguardItemCategory::Weapon)
 	{
-		const ECrossguardEquipError Error = Equipment->CheckEquip(Slot, Item.Weapon);
+		const ECrossguardEquipError Error = Equipment->CheckEquip(Slot, Item.Weapon, WeaponSet);
 		if (Error != ECrossguardEquipError::None)
 		{
 			return FailEquip(Error);
 		}
 		Previous.Category = ECrossguardItemCategory::Weapon;
-		Previous.Weapon = Equipment->GetItem(Slot);
+		Previous.Weapon = Equipment->GetWeaponInSet(WeaponSet, Slot);
 	}
 	else if (Item.Category == ECrossguardItemCategory::Armor)
 	{
@@ -632,7 +634,7 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::EquipItem(int32 ItemId
 	ECrossguardEquipError Error = ECrossguardEquipError::NotReady;
 	if (Item.Category == ECrossguardItemCategory::Weapon)
 	{
-		Error = Equipment->Equip(Slot, Item.Weapon);
+		Error = Equipment->Equip(Slot, Item.Weapon, WeaponSet);
 	}
 	else
 	{
@@ -677,7 +679,7 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::EquipContainer(const F
 	return {};
 }
 
-FCrossguardInventoryResult UCrossguardInventoryComponent::UnequipWeapon(ECrossguardEquipmentSlot Slot)
+FCrossguardInventoryResult UCrossguardInventoryComponent::UnequipWeapon(ECrossguardEquipmentSlot Slot, int32 WeaponSet)
 {
 	if (IsOwnerDead())
 	{
@@ -690,12 +692,12 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::UnequipWeapon(ECrossgu
 	}
 	FCrossguardInventoryItem Item;
 	Item.Category = ECrossguardItemCategory::Weapon;
-	Item.Weapon = Equipment->GetItem(Slot);
+	Item.Weapon = Equipment->GetWeaponInSet(WeaponSet, Slot);
 	if (Item.Weapon.IsEmpty())
 	{
 		return Fail(ECrossguardInventoryError::UnknownItem);
 	}
-	const ECrossguardEquipError Error = Equipment->CheckEquip(Slot, FCrossguardWeaponItem());
+	const ECrossguardEquipError Error = Equipment->CheckEquip(Slot, FCrossguardWeaponItem(), WeaponSet);
 	if (Error != ECrossguardEquipError::None)
 	{
 		return FailEquip(Error);
@@ -704,7 +706,7 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::UnequipWeapon(ECrossgu
 	{
 		return Fail(ECrossguardInventoryError::NoRoom);
 	}
-	Equipment->Equip(Slot, FCrossguardWeaponItem());
+	Equipment->Equip(Slot, FCrossguardWeaponItem(), WeaponSet);
 	return {};
 }
 
@@ -963,16 +965,21 @@ TArray<FCrossguardInventoryItem> UCrossguardInventoryComponent::TakeEverything()
 	// an off-hand weapon without a main hand may not validate on its own.
 	if (UCrossguardEquipmentComponent* Equipment = GetEquipment())
 	{
-		for (const ECrossguardEquipmentSlot Slot : {ECrossguardEquipmentSlot::OffHand, ECrossguardEquipmentSlot::MainHand})
+		for (int32 Set = 0; Set < Crossguard::WeaponSetCount; ++Set)
 		{
-			FCrossguardInventoryItem Item;
-			Item.Category = ECrossguardItemCategory::Weapon;
-			Item.Weapon = Equipment->GetItem(Slot);
-			Item.bWasEquipped = true;
-			Item.WornSlot = Slot;
-			if (!Item.Weapon.IsEmpty() && ResolveItemData(Item) && Equipment->Equip(Slot, FCrossguardWeaponItem()) == ECrossguardEquipError::None)
+			for (const ECrossguardEquipmentSlot Slot : {ECrossguardEquipmentSlot::OffHand, ECrossguardEquipmentSlot::MainHand})
 			{
-				Taken.Add(Item);
+				FCrossguardInventoryItem Item;
+				Item.Category = ECrossguardItemCategory::Weapon;
+				Item.Weapon = Equipment->GetWeaponInSet(Set, Slot);
+				Item.bWasEquipped = true;
+				Item.WornSlot = Slot;
+				Item.WornSet = Set;
+				if (!Item.Weapon.IsEmpty() && ResolveItemData(Item)
+					&& Equipment->Equip(Slot, FCrossguardWeaponItem(), Set) == ECrossguardEquipError::None)
+				{
+					Taken.Add(Item);
+				}
 			}
 		}
 		for (uint8 SlotIndex = 0; SlotIndex < static_cast<uint8>(Crossguard::ArmorSlotCount); ++SlotIndex)
@@ -1046,9 +1053,9 @@ TArray<FCrossguardInventoryItem> UCrossguardInventoryComponent::RestoreFromBody(
 		bool bWorn = false;
 		if (Item.bWasEquipped && Equipment != nullptr)
 		{
-			if (Item.Category == ECrossguardItemCategory::Weapon && Equipment->GetItem(Item.WornSlot).IsEmpty())
+			if (Item.Category == ECrossguardItemCategory::Weapon && Equipment->GetWeaponInSet(Item.WornSet, Item.WornSlot).IsEmpty())
 			{
-				bWorn = Equipment->Equip(Item.WornSlot, Item.Weapon) == ECrossguardEquipError::None;
+				bWorn = Equipment->Equip(Item.WornSlot, Item.Weapon, Item.WornSet) == ECrossguardEquipError::None;
 			}
 			else if (Item.Category == ECrossguardItemCategory::Armor)
 			{
@@ -1094,37 +1101,6 @@ void UCrossguardInventoryComponent::ServerReadyItem_Implementation(int32 ItemId)
 	Finish(ReadyItem(ItemId));
 }
 
-void UCrossguardInventoryComponent::RequestReadyNextConsumable()
-{
-	if (!IsServer())
-	{
-		ServerReadyNextConsumable();
-		return;
-	}
-	// Next consumable stack after the readied one, in inventory order; past the last: put away.
-	int32 Next = 0;
-	bool bPassedCurrent = ReadiedItemId == 0;
-	for (const FCrossguardInventoryItem& Item : Items)
-	{
-		if (Item.Category != ECrossguardItemCategory::Consumable)
-		{
-			continue;
-		}
-		if (bPassedCurrent)
-		{
-			Next = Item.Id;
-			break;
-		}
-		bPassedCurrent = Item.Id == ReadiedItemId;
-	}
-	Finish(ReadyItem(Next));
-}
-
-void UCrossguardInventoryComponent::ServerReadyNextConsumable_Implementation()
-{
-	RequestReadyNextConsumable();
-}
-
 FCrossguardInventoryResult UCrossguardInventoryComponent::ReadyItem(int32 ItemId)
 {
 	if (IsOwnerDead())
@@ -1136,7 +1112,7 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::ReadyItem(int32 ItemId
 		return Fail(ECrossguardInventoryError::NotReady);
 	}
 	const int32 Index = IndexOfItem(ItemId);
-	if (ItemId != 0 && (Index == INDEX_NONE || Items[Index].Category != ECrossguardItemCategory::Consumable))
+	if (ItemId != 0 && (Index == INDEX_NONE || !Crossguard::CanAssignToHotbar(ToRulesCategory(Items[Index].Category))))
 	{
 		return Fail(ItemId != 0 && Index != INDEX_NONE ? ECrossguardInventoryError::NotUsable : ECrossguardInventoryError::UnknownItem);
 	}
@@ -1257,4 +1233,91 @@ void UCrossguardInventoryComponent::FinishChannel()
 	ChannelEffect = FActiveGameplayEffectHandle();
 	ReadiedItemId = 0;
 	OnInventoryChanged.Broadcast();
+}
+
+// --- Hotbar ---------------------------------------------------------------------------------------
+
+void UCrossguardInventoryComponent::RequestAssignHotbarSlot(int32 Slot, int32 ItemId)
+{
+	if (IsServer())
+	{
+		Finish(AssignHotbarSlot(Slot, ItemId));
+	}
+	else
+	{
+		ServerAssignHotbarSlot(Slot, ItemId);
+	}
+}
+
+void UCrossguardInventoryComponent::ServerAssignHotbarSlot_Implementation(int32 Slot, int32 ItemId)
+{
+	Finish(AssignHotbarSlot(Slot, ItemId));
+}
+
+void UCrossguardInventoryComponent::RequestClearHotbarSlot(int32 Slot)
+{
+	// Clearing is assigning nothing.
+	RequestAssignHotbarSlot(Slot, 0);
+}
+
+void UCrossguardInventoryComponent::RequestUseHotbarSlot(int32 Slot)
+{
+	if (IsServer())
+	{
+		Finish(UseHotbarSlot(Slot));
+	}
+	else
+	{
+		ServerUseHotbarSlot(Slot);
+	}
+}
+
+void UCrossguardInventoryComponent::ServerUseHotbarSlot_Implementation(int32 Slot)
+{
+	Finish(UseHotbarSlot(Slot));
+}
+
+FCrossguardInventoryResult UCrossguardInventoryComponent::AssignHotbarSlot(int32 Slot, int32 ItemId)
+{
+	if (!Hotbar.IsValidIndex(Slot))
+	{
+		return Fail(ECrossguardInventoryError::InvalidPosition);
+	}
+	if (ItemId == 0)
+	{
+		Hotbar[Slot] = FCrossguardHotbarSlot();
+		return {};
+	}
+	const int32 Index = IndexOfItem(ItemId);
+	if (Index == INDEX_NONE)
+	{
+		return Fail(ECrossguardInventoryError::UnknownItem);
+	}
+	if (!Crossguard::CanAssignToHotbar(ToRulesCategory(Items[Index].Category)))
+	{
+		return Fail(ECrossguardInventoryError::NotUsable);
+	}
+	Hotbar[Slot].Category = Items[Index].Category;
+	Hotbar[Slot].ItemId = Items[Index].ItemId;
+	Hotbar[Slot].Rarity = Items[Index].Rarity;
+	return {};
+}
+
+FCrossguardInventoryResult UCrossguardInventoryComponent::UseHotbarSlot(int32 Slot)
+{
+	if (!Hotbar.IsValidIndex(Slot) || Hotbar[Slot].IsEmpty())
+	{
+		return Fail(ECrossguardInventoryError::UnknownItem);
+	}
+	const FCrossguardHotbarSlot& Assigned = Hotbar[Slot];
+	const FCrossguardInventoryItem* Stack = Items.FindByPredicate([&Assigned](const FCrossguardInventoryItem& Item)
+	{
+		return Item.Category == Assigned.Category && Item.ItemId == Assigned.ItemId && Item.Rarity == Assigned.Rarity;
+	});
+	if (Stack == nullptr)
+	{
+		return Fail(ECrossguardInventoryError::UnknownItem);
+	}
+	// Pressing the key of the item in hand puts it away.
+	return ReadyItem(Stack->Id == ReadiedItemId ? 0 : Stack->Id);
 }
