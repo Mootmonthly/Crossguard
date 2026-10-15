@@ -11,6 +11,8 @@ public class Crossguard : ModuleRules
 			"Core",
 			"CoreUObject",
 			"Engine",
+			// FUniqueNetIdRepl (player ids for team assignment).
+			"CoreOnline",
 			"AIModule",
 			"InputCore",
 			"EnhancedInput",
