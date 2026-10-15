@@ -19,9 +19,6 @@ namespace Crossguard
 		// XP for level 1 -> 2; each later level costs XpGrowth times the previous one.
 		int FirstLevelXp = 50;
 		double XpGrowth = 1.1;
-
-		// Placeholder fee (in-game currency) to reassign all attribute points.
-		int RespecFee = 3;
 	};
 
 	// XP per source (see docs/design-decisions.md, Experience).
@@ -36,8 +33,8 @@ namespace Crossguard
 		int EnchantPerRarityStep = 10;
 		int MinQuest = 10;
 		int MaxQuest = 100;
-		// Placeholder: listed as a source, no amount given yet.
-		int Extract = 0;
+		// Successful extraction.
+		int Extract = 35;
 	};
 
 	struct FInventoryConfig

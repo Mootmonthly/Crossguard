@@ -84,15 +84,15 @@ namespace Crossguard
 		return Lost;
 	}
 
-	ERespecError CanRespec(const FProgressionConfig& Config, bool bInRaid, int Currency)
+	ERespecError CanRespec(bool bInRaid, int RespecTokens)
 	{
 		if (bInRaid)
 		{
 			return ERespecError::InRaid;
 		}
-		if (Currency < Config.RespecFee)
+		if (RespecTokens < 1)
 		{
-			return ERespecError::NotEnoughCurrency;
+			return ERespecError::NoRespecToken;
 		}
 		return ERespecError::None;
 	}

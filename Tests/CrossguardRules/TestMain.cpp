@@ -535,7 +535,7 @@ static void TestExperience()
 	CHECK(XpForSource(Xp, EXpSource::Craft, 0, ERarity::Common) == 10);
 	CHECK(XpForSource(Xp, EXpSource::Craft, 0, ERarity::Epic) == 40);
 	CHECK(XpForSource(Xp, EXpSource::Enchant, 0, ERarity::Mystic) == 60);
-	CHECK(XpForSource(Xp, EXpSource::Extract) == 0);
+	CHECK(XpForSource(Xp, EXpSource::Extract) == 35);
 
 	const FProgressionConfig Config;
 	CHECK(XpToNextLevel(Config, 1) == 50);
@@ -571,7 +571,7 @@ static void TestExperience()
 	Raid.Add(-10);
 	Raid.Add(0);
 	CHECK(Raid.Pending() == 30);
-	CHECK(Raid.Extract(Xp) == 30);
+	CHECK(Raid.Extract(Xp) == 65);
 	CHECK(Raid.Pending() == 0);
 	Raid.Add(50);
 	CHECK(Raid.FailExtract() == 50);
@@ -581,9 +581,9 @@ static void TestExperience()
 	Raid.Add(5);
 	CHECK(Raid.Extract(ExtractReward) == 25);
 
-	CHECK(CanRespec(Config, false, 3) == ERespecError::None);
-	CHECK(CanRespec(Config, false, 2) == ERespecError::NotEnoughCurrency);
-	CHECK(CanRespec(Config, true, 100) == ERespecError::InRaid);
+	CHECK(CanRespec(false, 1) == ERespecError::None);
+	CHECK(CanRespec(false, 0) == ERespecError::NoRespecToken);
+	CHECK(CanRespec(true, 5) == ERespecError::InRaid);
 }
 
 static void TestInventoryGrid()

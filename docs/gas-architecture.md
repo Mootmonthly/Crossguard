@@ -126,19 +126,20 @@ camera direction. The body mesh is hidden from its owner until first-person arms
 ## Progression and Skill Library
 
 `ACrossguardPlayerState` holds what outlives the pawn: banked XP (level is derived from it),
-raid XP, attribute allocation, Skill Library and a placeholder currency. Not saved yet: it lasts for
+raid XP, attribute allocation, Skill Library and respec tokens. Not saved yet: it lasts for
 the session and across seamless travel.
 
 - `AwardXp(Source, QuestXp, Rarity)` (server): in a raid the XP is held as raid XP; between raids it
   is banked at once.
-- `BeginRaid()` / `EndRaid(bExtracted)` (server): extracting banks raid XP, failing loses it. The
+- `BeginRaid()` / `EndRaid(bExtracted)` (server): extracting banks raid XP plus 35, failing loses it. The
   game mode calls `BeginRaid` for every player when `bIsRaid` is on (default). Turn `bIsRaid` off on
   a hub or test map to try between-raid actions.
 - Kills: when damage brings a character to 0 Health, the attribute set calls
   `ACrossguardGameMode::HandleKill`. The killer's player gets `PlayerKill` XP for a player victim,
   otherwise the victim's `KillXpSource` (default `BasicMonster`). No XP for yourself or allies.
 - `RequestAttributeAllocation(Allocation)`: between raids only. Spending unspent points is free;
-  lowering any attribute is a respec and costs the respec fee.
+  lowering any attribute is a respec and uses one respec token. `GrantRespecTokens` (server) is
+  for the store backend once a real-money purchase is verified; no store exists yet.
 - `LearnSkill(SkillId, Catalog)` (server): between raids only; the inventory consumes the Skill Gem
   when it returns `None`.
 - The character copies level and allocation from the player state (`ApplyProgression`). Turn on

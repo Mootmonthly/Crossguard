@@ -41,13 +41,15 @@ Code and data must follow it.
 | Gathering a node (herb, ore) | 10 |
 | Crafting a piece | 10 × (rarity level + 1): Common 10 … Mystic 60 |
 | Enchanting a piece | 10 × (rarity level + 1): Common 10 … Mystic 60 |
-| Extracting | 0 (placeholder; listed as a source, no amount given) |
+| Successful extraction | 35 |
 
 - Level 1 → 2 takes 50 XP; each later level takes 10% more than the one before
   (`50 × 1.1^(level − 1)`, rounded to the nearest whole XP).
 - XP earned in a raid is held until the raid ends. Extracting banks it; failing to extract loses
   it. Dying does not lose it by itself: a teammate can revive you and you can still extract.
-- Respec: reassign all attribute points for a modest in-game fee (placeholder: 3 currency).
+- Respec: reassign all attribute points. Bought with **real money** (revenue beside cosmetics);
+  each purchase grants one respec token. Price not set. Purchases must be verified server-side
+  through the platform store before a token is granted.
 - Assumed until ruled otherwise:
   - Attribute points are assigned, and respecs done, only between raids (levels only change then).
   - Killing yourself or an ally gives no XP.

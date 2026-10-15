@@ -36,7 +36,8 @@ enum class ECrossguardProgressionError : uint8
 	None,
 	// Only allowed between raids.
 	InRaid,
-	NotEnoughCurrency,
+	// No respec token: respecs are bought with real money.
+	NoRespecToken,
 	InvalidAllocation,
 	UnknownSkill,
 	AlreadyLearned,
@@ -47,7 +48,7 @@ enum class ECrossguardProgressionError : uint8
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardProgressionRejected, ECrossguardProgressionError, Error);
 
 // Per-player state that outlives the pawn: team, XP and level, attribute allocation, Skill Library
-// and currency.
+// and respec tokens.
 //
 // Not persisted yet: progression lasts for the session (and across seamless travel) until a save
 // or backend exists.
@@ -104,9 +105,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Progression")
 	const FCrossguardAttributeAllocation& GetAttributeAllocation() const { return AttributeAllocation; }
 
-	// Placeholder until the economy exists. Owner only.
+	// Respecs available. Each real-money respec purchase grants one. Owner only.
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Progression")
-	int32 GetCurrency() const { return Currency; }
+	int32 GetRespecTokens() const { return RespecTokens; }
 
 	// Skills learned from Skill Gems; the loadout can only equip these. Owner only.
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Progression")
@@ -129,9 +130,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Progression")
 	int32 EndRaid(bool bExtracted);
 
-	// Server. Placeholder until the economy exists.
+	// Server. Call only after the store purchase is verified server-side (never on a client's word).
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Progression")
-	void AddCurrency(int32 Amount);
+	void GrantRespecTokens(int32 Count);
 
 	// Server. Learns a Skill Gem's skill. Only between raids; the caller consumes the gem on None.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Progression")
@@ -141,13 +142,13 @@ public:
 	void LearnSkillForTesting(FName SkillId);
 
 	// Sets the attribute allocation. Only between raids. Spending unspent points is free; lowering
-	// any attribute is a respec and costs the respec fee. Clients forward the request; failures
+	// any attribute is a respec and uses one respec token. Clients forward the request; failures
 	// reach the owning client through OnProgressionRejected.
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Progression")
 	void RequestAttributeAllocation(const FCrossguardAttributeAllocation& Allocation);
 
-	// Fires on the server and the owning client when XP, level, allocation, library or currency
-	// change.
+	// Fires on the server and the owning client when XP, level, allocation, library or respec
+	// tokens change.
 	UPROPERTY(BlueprintAssignable, Category = "Crossguard|Progression")
 	FCrossguardProgressionChanged OnProgressionChanged;
 
@@ -191,7 +192,7 @@ private:
 	FCrossguardAttributeAllocation AttributeAllocation;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Progression)
-	int32 Currency = 0;
+	int32 RespecTokens = 0;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Progression)
 	TArray<FName> SkillLibrary;

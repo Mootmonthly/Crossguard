@@ -46,7 +46,7 @@ void ACrossguardPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, RaidXp, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, bInRaid, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, AttributeAllocation, COND_OwnerOnly);
-	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, Currency, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, RespecTokens, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, SkillLibrary, COND_OwnerOnly);
 }
 
@@ -71,7 +71,7 @@ void ACrossguardPlayerState::CopyProperties(APlayerState* PlayerState)
 		Next->RaidXp = RaidXp;
 		Next->bInRaid = bInRaid;
 		Next->AttributeAllocation = AttributeAllocation;
-		Next->Currency = Currency;
+		Next->RespecTokens = RespecTokens;
 		Next->SkillLibrary = SkillLibrary;
 	}
 }
@@ -155,11 +155,11 @@ int32 ACrossguardPlayerState::EndRaid(bool bExtracted)
 	return Banked;
 }
 
-void ACrossguardPlayerState::AddCurrency(int32 Amount)
+void ACrossguardPlayerState::GrantRespecTokens(int32 Count)
 {
-	if (HasAuthority() && Amount != 0)
+	if (HasAuthority() && Count > 0)
 	{
-		Currency = FMath::Max(0, Currency + Amount);
+		RespecTokens += Count;
 		ProgressionChanged();
 	}
 }
@@ -247,16 +247,16 @@ ECrossguardProgressionError ACrossguardPlayerState::ApplyAttributeAllocation(con
 	}
 	if (Crossguard::RequiresRespec(ToRulesAttributes(AttributeAllocation), Requested))
 	{
-		switch (Crossguard::CanRespec(ProgressionConfig, bInRaid, Currency))
+		switch (Crossguard::CanRespec(bInRaid, RespecTokens))
 		{
 		case Crossguard::ERespecError::None:
 			break;
 		case Crossguard::ERespecError::InRaid:
 			return ECrossguardProgressionError::InRaid;
-		case Crossguard::ERespecError::NotEnoughCurrency:
-			return ECrossguardProgressionError::NotEnoughCurrency;
+		case Crossguard::ERespecError::NoRespecToken:
+			return ECrossguardProgressionError::NoRespecToken;
 		}
-		Currency -= ProgressionConfig.RespecFee;
+		--RespecTokens;
 	}
 
 	AttributeAllocation = Allocation;

@@ -58,9 +58,10 @@ namespace Crossguard
 	{
 		None,
 		InRaid,
-		NotEnoughCurrency,
+		// Respecs are bought with real money; each purchase grants one token.
+		NoRespecToken,
 	};
 
-	// Respec clears the attribute allocation for RespecFee currency. Only between raids.
-	CROSSGUARDRULES_API ERespecError CanRespec(const FProgressionConfig& Config, bool bInRaid, int Currency);
+	// A respec reassigns all attribute points and uses one respec token. Only between raids.
+	CROSSGUARDRULES_API ERespecError CanRespec(bool bInRaid, int RespecTokens);
 }
