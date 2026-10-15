@@ -292,10 +292,11 @@ Keep file-local helpers and constants in a uniquely named namespace (unity build
 | | `Place(Character, FloorPoint, Yaw)`, `bKeepDebugLoadout` | Teleport; keep the Blueprint's Debug loadout for characters spawned after setting it. |
 | Gear | `Equip(Character, WeaponId, Slot = MainHand, Rarity = Common)`, `Unequip(Character, Slot)` | Server equip of a fresh weapon in the active set (a two-handed main hand empties the off hand first). Fails the scenario on an error (unknown id, Weapon Table unset). |
 | | `GiveItem(Character, ItemId, Count = 1, Rarity)`, `GiveItemOfCategory(Character, Category, ItemId, Count, Rarity)` | Into the inventory (category from `DT_Items`; `SkillGem` with the skill id). Returns what did not fit. |
-| | `GrantSkills(Character, {TEXT("fireball"), ...})` | The loadout, as `DebugSkills` does (learned first, checked against Skill Capacity); native classes on the ability system when the LoadoutComponent has no Skill Catalog. |
-| Acting | `Face(Character, Yaw)`, `Aim(Character, Target)`, `AimAt(Character, Point)` | Level turn; aim from the eyes at the target's centre (pitch included) for aimed skills and swings. AI-controlled characters keep only the yaw. |
+| | `GrantSkills(Character, {TEXT("fireball"), ...})` | The loadout, as `DebugSkills` does (learned first, checked against Skill Capacity; when over capacity the level is raised, with debug progression, up to 15 until it fits); native classes on the ability system when the LoadoutComponent has no Skill Catalog. |
+| Acting | `Face(Character, Yaw)`, `Aim(Character, Target)`, `AimAt(Character, Point)` | Level turn; aim from the eyes at the target's centre (pitch included) for aimed skills and swings. AI-controlled characters keep only the yaw. The camera lags: wait 0.2 s after `Face`/`Aim` before an aimed skill, swing or guard. |
 | | `BasicAttack(Character)`, `RaiseGuard(Character)`, `LowerGuard(Character)` | Left click (false while the last attack recovers); right click held / released. |
 | | `ActivateSkill(Character, SkillId)`, `IsOnCooldown(Character, SkillId)` | Activates a granted active skill (as E); its `CooldownTags` are on. |
+| | `SetHealth(A, Value)`, `ApplyStatus(A, CrossguardTags::State_Silenced, Seconds)` | Health base value; a status through `UCrossguardSkillAbility::ApplyStatus` (self-applied, so CC immunity still counts). |
 | | `Kill(Victim, Killer = nullptr)` | Lethal damage through the damage effect: death, body and kill XP as in play. |
 | Reading | `Health(A)`, `MaxHealth(A)`, `Stat(A, UCrossguardAttributeSet::GetXAttribute())` | Attributes (−1 / 0 without an ability system). |
 | | `HasTag(A, CrossguardTags::State_Stunned)`, `HasTag(A, TEXT("State.Stunned"))`, `IsDead(A)` | Owned gameplay tags. |
