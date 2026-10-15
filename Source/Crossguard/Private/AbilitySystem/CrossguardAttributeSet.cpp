@@ -152,6 +152,8 @@ void UCrossguardAttributeSet::PostGameplayEffectExecute(const FGameplayEffectMod
 		if (Healing > 0.0f && !bDead)
 		{
 			SetHealth(FMath::Clamp(GetHealth() + Healing, 0.0f, GetMaxHealth()));
+			UE_LOG(LogCrossguard, Log, TEXT("%s healed %.1f by %s (%.1f / %.1f HP)"), *GetNameSafe(GetOwningActor()), Healing,
+				*GetNameSafe(Data.EffectSpec.GetContext().GetOriginalInstigator()), GetHealth(), GetMaxHealth());
 		}
 	}
 	else if (Data.EvaluatedData.Attribute == GetHealthAttribute())
