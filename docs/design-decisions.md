@@ -198,9 +198,10 @@ point of interest instead of only using fixed extraction points. Ruled details:
   channel needs the summoner's side within 10 m.
 - Once open it lasts 30 s. Anyone can step in and extract, enemies included.
 - Fixed extraction points also exist.
-- Assumed until ruled otherwise: "within 10 m" is satisfied by any living member of the summoner's
-  team (the summoner alone when solo), and the channel collapses only when none are left; a
-  collapsed portal still uses up the player's one summon; summoning is on X (placeholder).
+- "Within 10 m" is satisfied by any living member of the summoner's team (the summoner alone when
+  solo); the channel collapses only when none are left.
+- A collapsed portal still uses up the player's one summon for the raid.
+- Summoning is on X for now.
 
 ## Camera
 
