@@ -634,6 +634,12 @@ void ACrossguardCharacter::OnMoveSpeedChanged(const FOnAttributeChangeData& Data
 	ApplyMoveSpeed(Data.NewValue);
 }
 
+void ACrossguardCharacter::SetBaseWalkSpeed(float Speed)
+{
+	BaseWalkSpeed = FMath::Max(Speed, 0.0f);
+	ApplyMoveSpeed(AbilitySystemComponent->GetNumericAttribute(UCrossguardAttributeSet::GetMoveSpeedAttribute()));
+}
+
 void ACrossguardCharacter::ApplyMoveSpeed(float MoveSpeed)
 {
 	// Server and owning client both set it so client-side movement prediction agrees.

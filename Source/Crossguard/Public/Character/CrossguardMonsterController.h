@@ -9,8 +9,10 @@ class ACrossguardMonster;
 
 // Runs a PvE monster (ACrossguardMonster). Twice a second: keeps its target while it is alive,
 // visible (not stealthed) and the monster is within LeashRange of home; otherwise picks the
-// nearest living, visible player or minion within AggroRange that it has line of sight to. Too far
-// from home: drops the target and walks home, ignoring everyone, and is healed on arrival.
+// nearest living, visible player or minion within AggroRange that it has line of sight to (and that
+// stands within LeashRange of home). Too far from home: it retargets such an enemy if there is one;
+// otherwise it walks home, still retargeting anyone who comes into aggro on the way, and fully
+// resets (full Health) only on reaching home. Damage from any range turns it on the attacker.
 // Warriors run up and hit; Mages stop KeepDistance away and cast Fireball. NavMesh paths, or
 // straight lines without one.
 UCLASS()
@@ -23,7 +25,12 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 
+	// Hit by Attacker, from any range: with no target (or walking home), it turns on them.
+	void NotifyAttacked(AActor* Attacker);
+
 private:
+	// The nearest valid target within AggroRange in line of sight, standing within LeashRange of
+	// home (no point chasing someone the leash would pull it back from).
 	AActor* FindTarget(const ACrossguardMonster& Monster) const;
 	bool IsValidTarget(const ACrossguardMonster& Monster, const AActor* Candidate) const;
 	void MoveToGoal(AActor* GoalActor, const FVector& GoalLocation, float Acceptance);

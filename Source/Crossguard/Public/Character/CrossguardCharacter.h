@@ -75,6 +75,10 @@ public:
 	// lootable body where it fell. Always spawned, even when empty: a body is information.
 	virtual void HandleDeath();
 
+	// Server. Damage landed and the character is still alive. Attacker is whoever caused it (the
+	// shooter of a projectile, the summoner's minion, ...). Monsters turn on their attacker.
+	virtual void OnDamaged(AActor* Attacker, float Damage) {}
+
 	// Server. Brings a dead character back with HealthFraction of its Max HP (at least 1 HP). It gets
 	// back what is still on its body: worn gear goes back on, the rest into the inventory. Whatever
 	// was looted is gone. For revive spells. False if the character is not dead, or the 120 s revive
@@ -263,6 +267,9 @@ protected:
 	// MaxWalkSpeed at 100% MoveSpeed.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Movement", meta = (ClampMin = "0"))
 	float BaseWalkSpeed = 450.0f;
+
+	// Changes BaseWalkSpeed and applies it (AI stats from data).
+	void SetBaseWalkSpeed(float Speed);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Abilities")
 	TObjectPtr<UCrossguardAbilitySystemComponent> AbilitySystemComponent;

@@ -13,6 +13,14 @@ ACrossguardMonster::ACrossguardMonster()
 	AttackInterval = 1.5f;
 }
 
+void ACrossguardMonster::OnDamaged(AActor* Attacker, float Damage)
+{
+	if (ACrossguardMonsterController* MonsterController = GetController<ACrossguardMonsterController>())
+	{
+		MonsterController->NotifyAttacked(Attacker);
+	}
+}
+
 void ACrossguardMonster::BeginPlay()
 {
 	Super::BeginPlay();

@@ -28,6 +28,7 @@ public:
 	FVector GetHomeLocation() const { return HomeLocation; }
 
 	virtual void BeginPlay() override;
+	virtual void OnDamaged(AActor* Attacker, float Damage) override;
 
 private:
 	FVector HomeLocation = FVector::ZeroVector;

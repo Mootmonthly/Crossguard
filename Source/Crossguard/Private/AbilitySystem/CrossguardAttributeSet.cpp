@@ -124,7 +124,14 @@ void UCrossguardAttributeSet::PostGameplayEffectExecute(const FGameplayEffectMod
 			SetHealth(FMath::Clamp(GetHealth() - Damage, 0.0f, GetMaxHealth()));
 			UE_LOG(LogCrossguard, Log, TEXT("%s took %.1f damage from %s (%.1f / %.1f HP)"), *GetNameSafe(GetOwningActor()), Damage,
 				*GetNameSafe(Data.EffectSpec.GetContext().GetOriginalInstigator()), GetHealth(), GetMaxHealth());
-			if (GetHealth() <= 0.0f)
+			if (GetHealth() > 0.0f)
+			{
+				if (ACrossguardCharacter* Damaged = Cast<ACrossguardCharacter>(GetOwningActor()))
+				{
+					Damaged->OnDamaged(Data.EffectSpec.GetContext().GetOriginalInstigator(), Damage);
+				}
+			}
+			else
 			{
 				// Server. Clients add the same tag in OnRep_Health when the replicated Health reaches 0.
 				MarkDead();

@@ -43,13 +43,29 @@ AActor* ACrossguardMonsterController::FindTarget(const ACrossguardMonster& Monst
 			continue;
 		}
 		const float Distance = FVector::DistSquared(Monster.GetActorLocation(), Candidate->GetActorLocation());
-		if (Distance < BestDistance && LineOfSightTo(Candidate))
+		if (Distance < BestDistance && FVector::Dist(Monster.GetHomeLocation(), Candidate->GetActorLocation()) <= Monster.LeashRange
+			&& LineOfSightTo(Candidate))
 		{
 			BestDistance = Distance;
 			Best = Candidate;
 		}
 	}
 	return Best;
+}
+
+void ACrossguardMonsterController::NotifyAttacked(AActor* Attacker)
+{
+	const ACrossguardMonster* Monster = Cast<ACrossguardMonster>(GetPawn());
+	if (Monster == nullptr || !Monster->IsAlive() || !IsValidTarget(*Monster, Attacker))
+	{
+		return;
+	}
+	if (bReturningHome || !IsValidTarget(*Monster, Target.Get()))
+	{
+		Target = Attacker;
+		bReturningHome = false;
+		RethinkCountdown = 0.0f;
+	}
 }
 
 void ACrossguardMonsterController::MoveToGoal(AActor* InGoalActor, const FVector& InGoalLocation, float Acceptance)
@@ -90,23 +106,30 @@ void ACrossguardMonsterController::Tick(float DeltaSeconds)
 	{
 		RethinkCountdown = RethinkSeconds;
 		const float FromHome = FVector::Dist(Monster->GetActorLocation(), Home);
-		if (bReturningHome)
+		const bool bTargetValid = IsValidTarget(*Monster, Target.Get());
+		if (bReturningHome || FromHome > Monster->LeashRange || !bTargetValid)
 		{
-			// Walking back: ignore everyone until home, then heal and guard again.
-			if (FromHome <= HomeAcceptance)
+			// Lost the target or pulled too far: another enemy in aggro range first, else home.
+			AActor* Next = FromHome > Monster->LeashRange || !bTargetValid ? FindTarget(*Monster) : Target.Get();
+			if (Next != nullptr)
 			{
+				Target = Next;
 				bReturningHome = false;
-				Monster->RestoreFullHealth();
 			}
-		}
-		else if (FromHome > Monster->LeashRange)
-		{
-			bReturningHome = true;
-			Target.Reset();
-		}
-		else if (!IsValidTarget(*Monster, Target.Get()))
-		{
-			Target = FindTarget(*Monster);
+			else if (FromHome > Monster->LeashRange || bReturningHome)
+			{
+				Target.Reset();
+				bReturningHome = FromHome > HomeAcceptance;
+				// Home with nobody around: a full reset.
+				if (!bReturningHome)
+				{
+					Monster->RestoreFullHealth();
+				}
+			}
+			else
+			{
+				Target.Reset();
+			}
 		}
 
 		if (bReturningHome)
