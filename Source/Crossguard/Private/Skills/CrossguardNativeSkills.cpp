@@ -20,6 +20,7 @@ namespace CrossguardNativeSkills
 			Register(UCrossguardMuteAbility::StaticClass());
 			Register(UCrossguardEldritchShieldAbility::StaticClass());
 			Register(UCrossguardChopDownAbility::StaticClass());
+			Register(UCrossguardSummonSkeletonsAbility::StaticClass());
 			Register(UCrossguardShootingStarAbility::StaticClass());
 			Register(UCrossguardDragonificationAbility::StaticClass());
 			Register(UCrossguardFlareBreathAbility::StaticClass());

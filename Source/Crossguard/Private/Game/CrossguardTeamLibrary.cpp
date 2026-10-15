@@ -1,11 +1,17 @@
 #include "Game/CrossguardTeamLibrary.h"
 
+#include "Character/CrossguardMinion.h"
 #include "Game/CrossguardPlayerState.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/Pawn.h"
 
 int32 UCrossguardTeamLibrary::GetTeamId(const AActor* Actor)
 {
+	// Minions are on their summoner's team.
+	if (const ACrossguardMinion* Minion = Cast<ACrossguardMinion>(Actor))
+	{
+		Actor = Minion->GetSummoner();
+	}
 	const ACrossguardPlayerState* PlayerState = Cast<ACrossguardPlayerState>(Actor);
 	if (PlayerState == nullptr)
 	{

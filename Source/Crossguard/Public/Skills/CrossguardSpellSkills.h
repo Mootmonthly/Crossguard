@@ -5,6 +5,8 @@
 
 #include "CrossguardSpellSkills.generated.h"
 
+class ACrossguardMinion;
+enum class ECrossguardMinionRole : uint8;
 class ACrossguardSpellProjectile;
 
 // [Fireball] (Spell, 15 s): a fireball flies where you aim at 30 m/s. 50 (0.5) Magic Damage to what it
@@ -92,4 +94,31 @@ public:
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+};
+
+// [Summon Skeletons] (Spell, 30 s): 5 Skeleton Warriors (40 HP, 10 Attack Damage hits) and 1
+// Skeleton Mage (30 HP, Fireball every 8 s) appear around you for 60 s. Casting again first
+// dismisses the ones still standing. See ACrossguardMinion and ACrossguardMinionController.
+UCLASS()
+class CROSSGUARD_API UCrossguardSummonSkeletonsAbility : public UCrossguardSkillAbility
+{
+	GENERATED_BODY()
+
+public:
+	UCrossguardSummonSkeletonsAbility();
+
+	// Set Blueprint subclasses for the skeleton meshes.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Summon")
+	TSubclassOf<ACrossguardMinion> WarriorClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Summon")
+	TSubclassOf<ACrossguardMinion> MageClass;
+
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+private:
+	void Summon(TSubclassOf<ACrossguardMinion> Class, ECrossguardMinionRole Role, float Health, const FVector& Location);
+
+	TArray<TWeakObjectPtr<ACrossguardMinion>> Minions;
 };

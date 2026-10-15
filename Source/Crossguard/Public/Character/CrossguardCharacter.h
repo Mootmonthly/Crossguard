@@ -72,7 +72,7 @@ public:
 
 	// Server. Called when Health reaches 0: everything the character carries and wears moves into a
 	// lootable body where it fell. Always spawned, even when empty: a body is information.
-	void HandleDeath();
+	virtual void HandleDeath();
 
 	// Server. Brings a dead character back with HealthFraction of its Max HP (at least 1 HP). It gets
 	// back what is still on its body: worn gear goes back on, the rest into the inventory. Whatever
@@ -117,6 +117,10 @@ public:
 	// XP its killer gets when this character is not player-controlled (monsters, dummies).
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Progression")
 	ECrossguardXpSource KillXpSource = ECrossguardXpSource::BasicMonster;
+
+	// False for summoned minions: killing them gives no XP.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Progression")
+	bool bGrantsKillXp = true;
 
 	// Testing: use Level and AttributeAllocation above instead of the player's progression.
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")

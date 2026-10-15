@@ -1,6 +1,7 @@
 #include "Game/CrossguardGameMode.h"
 
 #include "Character/CrossguardCharacter.h"
+#include "Character/CrossguardMinion.h"
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "Crossguard.h"
@@ -127,6 +128,15 @@ void ACrossguardGameMode::HandleStartingNewPlayer_Implementation(APlayerControll
 
 void ACrossguardGameMode::HandleKill(AActor* Victim, AActor* Killer)
 {
+	// A minion's kills are its summoner's.
+	if (const ACrossguardMinion* Minion = Cast<ACrossguardMinion>(Killer))
+	{
+		Killer = Minion->GetSummoner();
+	}
+	if (const ACrossguardCharacter* VictimCharacter = Cast<ACrossguardCharacter>(Victim); VictimCharacter != nullptr && !VictimCharacter->bGrantsKillXp)
+	{
+		return;
+	}
 	const APawn* KillerPawn = Cast<APawn>(Killer);
 	ACrossguardPlayerState* KillerState = KillerPawn != nullptr ? KillerPawn->GetPlayerState<ACrossguardPlayerState>() : nullptr;
 	if (KillerState == nullptr || Victim == nullptr || Killer == Victim || UCrossguardTeamLibrary::AreAllies(Killer, Victim))
