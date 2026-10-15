@@ -77,7 +77,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 
 | Item | Needs | Notes |
 | --- | --- | --- |
-| Monster AI | Editor, Decision | Built in code: `ACrossguardMonster` guards its spot, aggroes within 15 m (line of sight), chases, attacks (Warrior or Mage), leashes at 30 m from home (retargets anyone in aggro range first, else walks home and fully resets); turns on attackers from any range; drops its `LootTableId`. Needs monster designs (types, stats, meshes) and placing. |
+| Monster AI | Editor, Decision | Built in code: `ACrossguardMonster` guards its spot, aggroes within 15 m (line of sight), chases, attacks (Warrior, Mage or Ranged), uses its skills, leashes at 30 m from home (retargets anyone in aggro range first, else walks home and fully resets); turns on attackers from any range; drops its loot. Mobs come from the Mob Forge (4 so far); `ACrossguardMobSpawner` spawns weighted picks in raids. Needs meshes and placing spawners in maps. |
 | Loot tables | Decision, Code | What monsters, chests and bosses drop. |
 | Treasure chests | Editor | Built in code: an `ACrossguardLootContainer` with a `LootTableId` fills itself when the raid starts (it can be locked). Needs a chest Blueprint with a mesh, placed in maps. |
 | Loot tables | Decision | Built: `Data/Loot/LootTables.json` (monsters, bosses, chests) with placeholder drop rates and rarity weights. Needs real numbers. |
@@ -130,7 +130,7 @@ Decisions that block items above. Answers go into design-decisions.md.
 | Spear: one- or two-handed, inventory size? | Spear (currently: two-handed, 1 × 5, can parry) |
 | Block and parry: how much a shield block stops, the parry window, what a parry does | Block and parry, Triple Thrust piercing |
 | Real drop rates: what each monster and chest drops, and rarity odds | Loot tables (placeholders now) |
-| Monster roster: types, stats, aggro and leash ranges, drops, which ones are bosses | Monster AI: enter them in the Mob Forge (https://claude.ai/artifact/JPDt46urNPnzMsgZuD7RYW) |
+| More monsters: enter them in the Mob Forge (https://claude.ai/artifact/JPDt46urNPnzMsgZuD7RYW) | Monster AI |
 
 ## Placeholders to replace
 

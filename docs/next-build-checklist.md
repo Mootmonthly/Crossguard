@@ -104,6 +104,8 @@ Skills: put them in `DebugSkills` (Skill Capacity permitting; raise `Level` with
 | `summon_tiger` (wand in hand), dummy 8 m away | One cylinder; it leaps at the dummy, readies Slash and Neckbite and hits for 20 (+7, +10 Magic). Log shows the hits. Vanishes after 180 s. |
 | `summon_greater_demon` near a second client | A bigger cylinder: raises Eldritch Shield, hits for 40 with Mortal Strike / Shade Blow riders. Gone after 60 s. |
 | Tiger's Neckbite lands on the second client | For 2 s they cannot cast skills (basic attacks still work); a channel in progress stops. |
+| Place a **CrossguardMobSpawner** (Place Actors, search "Mob Spawner") on a NavMesh: Mobs `skeleton_soldier` (weight 3) and `skeleton_archer` (1), Count 3–5, Radius 600 | On Play, 3–5 skeletons appear around it (cylinders; archers keep away and shoot). Kill one: its body stays. With Respawn Seconds 10, a new one appears 10 s later. |
+| Place a spawner with `mithril_dragon` | A huge cylinder (scale 6) standing on the ground, not sunk into it; it summons skeletons and a demon that fight you, not other monsters. |
 | `spear_two_handed` as `DebugMainHand` | Hits for 33 once every 1.2 s; `triple_thrust` works. |
 
 Passive skills: put `heroic_might` (or a mastery) in `DebugSkills` and check

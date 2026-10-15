@@ -339,6 +339,10 @@ Requirements (weapons, armor, forms, casting weapon) do not apply to AI. Its bas
 next-attack riders like a weapon attack (`FCrossguardRiderAttack::ForAIMelee`); `bWieldsWeapon` /
 `WeaponType` say what it holds (unarmed counts as every melee weapon for riders).
 
+`ACrossguardMobSpawner` (placed in raid maps) spawns `CountMin`–`CountMax` monsters on raid start,
+each a weighted pick of its `Mobs` ids, within `Radius` on the ground; `RespawnSeconds` > 0 replaces
+the dead (default 0: never). Nothing outside raids.
+
 A monster with a `MobId` takes its stats, skills (catalog: the game mode's `MobSkillCatalog`),
 loot table and kill XP from the game mode's `MobTable` (`Data/Mobs/Mobs.json`, edited in the Mob
 Forge, [mob-data-schema.md](mob-data-schema.md)).

@@ -66,8 +66,12 @@ void ACrossguardMonster::ApplyMobData()
 	KillXpSource = Row->Kind == ECrossguardMobKind::Boss ? ECrossguardXpSource::BossMonster : ECrossguardXpSource::BasicMonster;
 	LootTableId = Row->LootTableId;
 	SetBaseWalkSpeed(Row->MoveSpeed);
+	const float OldScale = MobScale;
 	MobScale = FMath::Max(Row->Scale, 0.05f);
 	OnRep_MobScale();
+	// Feet stay on the ground: a bigger capsule grows into the floor otherwise.
+	AddActorWorldOffset(FVector(0.0f, 0.0f, (MobScale - OldScale) * GetDefaultHalfHeight()));
+	HomeLocation = GetActorLocation();
 	// Possession already set Health and granted skills from the old values.
 	GetCrossguardAbilitySystemComponent()->SetFixedMaxHealth(FixedHealth);
 	RestoreFullHealth();
