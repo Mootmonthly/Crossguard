@@ -607,6 +607,9 @@ void ACrossguardCharacter::HandleDeath()
 	// Teammates have this long to revive; then the character is dead for the raid.
 	GetWorldTimerManager().SetTimer(ReviveWindowTimer, this, &ACrossguardCharacter::OnReviveWindowExpired,
 		static_cast<float>(Crossguard::FDeathConfig().ReviveWindowSeconds), false);
+	// Hands drop whatever they held; a revived character draws a weapon set again with 1 / 2.
+	InventoryComponent->ReleaseHeldItem();
+	EquipmentComponent->HolsterWeapons();
 	if (BodyContainerClass == nullptr)
 	{
 		return;

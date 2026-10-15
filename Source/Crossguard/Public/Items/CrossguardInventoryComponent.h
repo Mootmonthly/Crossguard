@@ -254,8 +254,9 @@ public:
 	// items they held.
 	int32 TakeAllOfCategory(ECrossguardItemCategory Category);
 
-	// Server. Empties the hands of any item (a weapon set is being drawn).
-	void ReleaseHeldItem();
+	// Server. Empties the hands of any item (a weapon set is being drawn, or the owner died).
+	// bUpdateEquipment false leaves the held-throwable flag to the caller.
+	void ReleaseHeldItem(bool bUpdateEquipment = true);
 
 	// Server. Removes a whole stack. False if there is no such item.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
@@ -424,6 +425,8 @@ private:
 	void HoldItem(int32 ItemId);
 	// After using one of Used: keep holding the same item if any stack is left, else empty hands.
 	void ContinueWith(const FCrossguardInventoryItem& Used);
+	// Server: empties the hands if the held stack has left the inventory (moved, sold, dropped).
+	void ValidateHeldItem();
 	FCrossguardInventoryResult AssignHotbarSlot(int32 Slot, int32 ItemId);
 	FCrossguardInventoryResult UseHotbarSlot(int32 Slot);
 	FCrossguardInventoryResult StartUse();

@@ -372,6 +372,7 @@ int32 UCrossguardInventoryComponent::TakeAllOfCategory(ECrossguardItemCategory C
 			Items.RemoveAt(Index);
 		}
 	}
+	ValidateHeldItem();
 	OnInventoryChanged.Broadcast();
 	return Taken;
 }
@@ -384,6 +385,7 @@ bool UCrossguardInventoryComponent::RemoveItem(int32 ItemId)
 		return false;
 	}
 	Items.RemoveAt(Index);
+	ValidateHeldItem();
 	OnInventoryChanged.Broadcast();
 	return true;
 }
@@ -504,6 +506,7 @@ void UCrossguardInventoryComponent::OnRep_Inventory()
 
 void UCrossguardInventoryComponent::Finish(const FCrossguardInventoryResult& Result)
 {
+	ValidateHeldItem();
 	if (Result.IsValid())
 	{
 		OnInventoryChanged.Broadcast();
@@ -1169,7 +1172,15 @@ void UCrossguardInventoryComponent::ContinueWith(const FCrossguardInventoryItem&
 	HoldItem(Next != nullptr ? Next->Id : 0);
 }
 
-void UCrossguardInventoryComponent::ReleaseHeldItem()
+void UCrossguardInventoryComponent::ValidateHeldItem()
+{
+	if (IsServer() && ReadiedItemId != 0 && IndexOfItem(ReadiedItemId) == INDEX_NONE)
+	{
+		HoldItem(0);
+	}
+}
+
+void UCrossguardInventoryComponent::ReleaseHeldItem(bool bUpdateEquipment)
 {
 	if (!IsServer())
 	{
@@ -1187,10 +1198,13 @@ void UCrossguardInventoryComponent::ReleaseHeldItem()
 		ChannelEffect = FActiveGameplayEffectHandle();
 	}
 	ReadiedItemId = 0;
-	if (UCrossguardEquipmentComponent* Equipment = GetEquipment())
+	ChannelItem = FCrossguardInventoryItem();
+	UCrossguardEquipmentComponent* Equipment = GetEquipment();
+	if (bUpdateEquipment && Equipment != nullptr)
 	{
 		Equipment->SetHeldThrowable(false, ECrossguardWeaponType::Dagger);
 	}
+	OnInventoryChanged.Broadcast();
 }
 
 void UCrossguardInventoryComponent::RequestStartUse()

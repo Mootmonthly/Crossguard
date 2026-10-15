@@ -203,8 +203,8 @@ void UCrossguardEquipmentComponent::ServerSwitchWeaponSet_Implementation(int32 S
 	{
 		return;
 	}
-	// Already in hand.
-	if (Set == ActiveWeaponSet && bWeaponsDrawn && !bDrawingWeapons)
+	// Already in hand, or already being drawn.
+	if (Set == ActiveWeaponSet && bWeaponsDrawn)
 	{
 		return;
 	}
@@ -215,11 +215,12 @@ void UCrossguardEquipmentComponent::ServerSwitchWeaponSet_Implementation(int32 S
 		ActiveWeaponSet = Set;
 	}
 
-	// Drawing puts away whatever item the hands held.
+	// Drawing puts away whatever item the hands held. The effect is refreshed once, below.
 	if (UCrossguardInventoryComponent* Inventory = GetOwner()->FindComponentByClass<UCrossguardInventoryComponent>())
 	{
-		Inventory->ReleaseHeldItem();
+		Inventory->ReleaseHeldItem(false);
 	}
+	bHoldingThrowable = false;
 	bWeaponsDrawn = true;
 	bDrawingWeapons = true;
 	const float Dexterity = ASC->GetNumericAttribute(UCrossguardAttributeSet::GetDexterityAttribute());
@@ -237,7 +238,7 @@ void UCrossguardEquipmentComponent::FinishDrawing()
 
 void UCrossguardEquipmentComponent::HolsterWeapons()
 {
-	if (GetOwner() == nullptr || !GetOwner()->HasAuthority())
+	if (GetOwner() == nullptr || !GetOwner()->HasAuthority() || (!bWeaponsDrawn && !bDrawingWeapons))
 	{
 		return;
 	}
@@ -300,8 +301,13 @@ bool UCrossguardEquipmentComponent::SatisfiesWeaponRequirement(const TArray<ECro
 	for (const ECrossguardWeaponType Type : AnyOf)
 	{
 		Required.push_back(ToRulesWeaponType(Type));
-		// A throwing knife in hand counts as a dagger.
-		if (bHoldingThrowable && Type == HeldThrowableType)
+	}
+	// A throwing knife in hand counts as a one-handed melee dagger (also for AnyMelee).
+	if (bHoldingThrowable)
+	{
+		Crossguard::FEquipment Held;
+		Held.MainHand = Crossguard::FEquippedWeapon{ToRulesWeaponType(HeldThrowableType), Crossguard::EHandedness::OneHanded, true, true, false};
+		if (Crossguard::SatisfiesWeaponRequirement(Required, Held))
 		{
 			return true;
 		}

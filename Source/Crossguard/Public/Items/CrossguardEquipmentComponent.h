@@ -191,10 +191,10 @@ private:
 
 	bool IsActiveSet(int32 Set) const { return Set < 0 || Set == ActiveWeaponSet; }
 
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing = OnRep_Equipment)
 	bool bWeaponsDrawn = true;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing = OnRep_Equipment)
 	bool bDrawingWeapons = false;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Equipment)
