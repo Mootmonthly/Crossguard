@@ -74,6 +74,14 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes|Magic", ReplicatedUsing = OnRep_MagicResistance)
 	FGameplayAttributeData MagicResistance; // MR
 	CROSSGUARD_ATTRIBUTE_ACCESSORS(UCrossguardAttributeSet, MagicResistance)
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes|Magic", ReplicatedUsing = OnRep_MagicPenetration)
+	FGameplayAttributeData MagicPenetration; // MP: fraction of the target's MR removed
+	CROSSGUARD_ATTRIBUTE_ACCESSORS(UCrossguardAttributeSet, MagicPenetration)
+
+	// Flat damage added to every damaging hit after resistances (TD).
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes|Attack", ReplicatedUsing = OnRep_TrueDamage)
+	FGameplayAttributeData TrueDamage; // TD
+	CROSSGUARD_ATTRIBUTE_ACCESSORS(UCrossguardAttributeSet, TrueDamage)
 
 	// Healing stats.
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes|Healing", ReplicatedUsing = OnRep_AdditionalPhysicalHealing)
@@ -168,6 +176,10 @@ protected:
 	void OnRep_MagicDamageBonus(const FGameplayAttributeData& OldValue);
 	UFUNCTION()
 	void OnRep_MagicResistance(const FGameplayAttributeData& OldValue);
+	UFUNCTION()
+	void OnRep_MagicPenetration(const FGameplayAttributeData& OldValue);
+	UFUNCTION()
+	void OnRep_TrueDamage(const FGameplayAttributeData& OldValue);
 	UFUNCTION()
 	void OnRep_AdditionalPhysicalHealing(const FGameplayAttributeData& OldValue);
 	UFUNCTION()

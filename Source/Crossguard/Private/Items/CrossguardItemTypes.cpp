@@ -1,6 +1,7 @@
 #include "Items/CrossguardItemTypes.h"
 
 #include "CrossguardRules/Items.h"
+#include "Engine/DataTable.h"
 
 namespace
 {
@@ -41,6 +42,54 @@ FLinearColor UCrossguardItemLibrary::GetRarityColor(ECrossguardRarity Rarity)
 int32 UCrossguardItemLibrary::GetAffixSlots(ECrossguardRarity Rarity)
 {
 	return Crossguard::AffixSlots(Crossguard::FItemConfig(), ToRulesRarity(Rarity));
+}
+
+FName UCrossguardItemLibrary::GetAffixPool(const FCrossguardWeaponRow& Weapon)
+{
+	switch (Weapon.Stat)
+	{
+	case ECrossguardWeaponStat::AttackDamage: return FName(TEXT("AttackWeapon"));
+	case ECrossguardWeaponStat::MagicDamage: return FName(TEXT("MagicWeapon"));
+	case ECrossguardWeaponStat::AttackResistance: return NAME_None;
+	}
+	return NAME_None;
+}
+
+FCrossguardWeaponItem UCrossguardItemLibrary::RollWeaponItem(const UDataTable* AffixTable, FName WeaponId, const FCrossguardWeaponRow& Weapon,
+	ECrossguardRarity Rarity, int64 Seed)
+{
+	FCrossguardWeaponItem Item;
+	Item.WeaponId = WeaponId;
+	Item.Rarity = Rarity;
+
+	const FName Pool = GetAffixPool(Weapon);
+	if (AffixTable == nullptr || Pool.IsNone())
+	{
+		return Item;
+	}
+
+	// Sorted by row name so the same seed rolls the same affixes regardless of table order.
+	TArray<FName> RowNames = AffixTable->GetRowNames();
+	RowNames.Sort(FNameLexicalLess());
+	std::vector<Crossguard::FAffixDefinition> Definitions;
+	for (const FName& RowName : RowNames)
+	{
+		const FCrossguardAffixRow* Row = AffixTable->FindRow<FCrossguardAffixRow>(RowName, TEXT("RollWeaponItem"), false);
+		if (Row != nullptr && Row->Pools.Contains(Pool))
+		{
+			Definitions.push_back({std::string(TCHAR_TO_UTF8(*RowName.ToString())), Row->Min, Row->Max, Row->Step});
+		}
+	}
+
+	const int Slots = Crossguard::AffixSlots(Crossguard::FItemConfig(), ToRulesRarity(Rarity));
+	for (const Crossguard::FRolledAffix& Rolled : Crossguard::RollAffixes(Definitions, Slots, static_cast<uint64>(Seed)))
+	{
+		FCrossguardAffix Affix;
+		Affix.AffixId = FName(UTF8_TO_TCHAR(Rolled.Id.c_str()));
+		Affix.Value = static_cast<float>(Rolled.Value);
+		Item.Affixes.Add(Affix);
+	}
+	return Item;
 }
 
 float UCrossguardItemLibrary::GetWeaponValue(const FCrossguardWeaponRow& Weapon, ECrossguardRarity Rarity)

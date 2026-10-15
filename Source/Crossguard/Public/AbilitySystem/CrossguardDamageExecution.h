@@ -11,7 +11,8 @@
 // - SetByCaller.Damage.Attack: base Attack Damage (weapon AD or the skill's amount). Optional.
 // - SetByCaller.Damage.Magic: base Magic Damage. Optional.
 // - SetByCaller.Coefficient: fraction of ADB/MDB that applies. Optional, default 1.
-// Both damage types may be set; they are resolved separately and summed.
+// Both damage types may be set; they are resolved separately and summed. The source's True Damage
+// is added once per hit. AP applies to Attack Damage, Magic Penetration to Magic Damage.
 // Output: IncomingDamage on the target.
 UCLASS()
 class CROSSGUARD_API UCrossguardDamageExecution : public UGameplayEffectExecutionCalculation

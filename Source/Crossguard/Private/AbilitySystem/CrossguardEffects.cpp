@@ -33,8 +33,17 @@ namespace
 			UCrossguardAttributeSet::GetAdditionalMagicDamageAttribute(),
 			UCrossguardAttributeSet::GetMagicDamageBonusAttribute(),
 			UCrossguardAttributeSet::GetMagicResistanceAttribute(),
+			UCrossguardAttributeSet::GetMagicPenetrationAttribute(),
+			UCrossguardAttributeSet::GetTrueDamageAttribute(),
 			UCrossguardAttributeSet::GetMoveSpeedAttribute(),
 			UCrossguardAttributeSet::GetActionSpeedAttribute(),
+			UCrossguardAttributeSet::GetDexterityAttribute(),
+			UCrossguardAttributeSet::GetActiveCooldownReductionAttribute(),
+			UCrossguardAttributeSet::GetSpellCooldownReductionAttribute(),
+			UCrossguardAttributeSet::GetArtCooldownReductionAttribute(),
+			UCrossguardAttributeSet::GetActiveCastTimeReductionAttribute(),
+			UCrossguardAttributeSet::GetSpellCastTimeReductionAttribute(),
+			UCrossguardAttributeSet::GetArtCastTimeReductionAttribute(),
 		};
 		return Attributes;
 	}

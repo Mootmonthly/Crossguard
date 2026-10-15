@@ -1,0 +1,209 @@
+[
+  {
+    "id": "action_speed",
+    "name": "Action Speed",
+    "stat": "ActionSpeed",
+    "min": 0.02,
+    "max": 0.05,
+    "step": 0.01,
+    "pools": [
+      "AttackWeapon",
+      "MagicWeapon"
+    ]
+  },
+  {
+    "id": "active_cast_speed",
+    "name": "Active Cast Speed",
+    "stat": "ActiveCastTimeReduction",
+    "min": 0.02,
+    "max": 0.05,
+    "step": 0.01,
+    "pools": [
+      "MagicWeapon"
+    ]
+  },
+  {
+    "id": "active_cooldown_reduction",
+    "name": "Active Cooldown Reduction",
+    "stat": "ActiveCooldownReduction",
+    "min": 0.02,
+    "max": 0.05,
+    "step": 0.01,
+    "pools": [
+      "AttackWeapon",
+      "MagicWeapon"
+    ]
+  },
+  {
+    "id": "additional_attack_damage",
+    "name": "Additional Attack Damage",
+    "stat": "AdditionalAttackDamage",
+    "min": 1,
+    "max": 3,
+    "step": 1,
+    "pools": [
+      "AttackWeapon"
+    ]
+  },
+  {
+    "id": "additional_magic_damage",
+    "name": "Additional Magic Damage",
+    "stat": "AdditionalMagicDamage",
+    "min": 1,
+    "max": 3,
+    "step": 1,
+    "pools": [
+      "MagicWeapon"
+    ]
+  },
+  {
+    "id": "agility",
+    "name": "Agility",
+    "stat": "Agility",
+    "min": 1,
+    "max": 3,
+    "step": 1,
+    "pools": [
+      "AttackWeapon",
+      "MagicWeapon"
+    ]
+  },
+  {
+    "id": "art_cast_speed",
+    "name": "Art Cast Speed",
+    "stat": "ArtCastTimeReduction",
+    "min": 0.02,
+    "max": 0.05,
+    "step": 0.01,
+    "pools": [
+      "MagicWeapon"
+    ]
+  },
+  {
+    "id": "art_cooldown_reduction",
+    "name": "Art Cooldown Reduction",
+    "stat": "ArtCooldownReduction",
+    "min": 0.02,
+    "max": 0.05,
+    "step": 0.01,
+    "pools": [
+      "AttackWeapon",
+      "MagicWeapon"
+    ]
+  },
+  {
+    "id": "attack_damage_bonus",
+    "name": "Attack Damage Bonus",
+    "stat": "AttackDamageBonus",
+    "min": 0.02,
+    "max": 0.05,
+    "step": 0.01,
+    "pools": [
+      "AttackWeapon"
+    ]
+  },
+  {
+    "id": "attack_penetration",
+    "name": "Attack Penetration",
+    "stat": "AttackPenetration",
+    "min": 0.02,
+    "max": 0.05,
+    "step": 0.01,
+    "pools": [
+      "AttackWeapon"
+    ]
+  },
+  {
+    "id": "dexterity",
+    "name": "Dexterity",
+    "stat": "Dexterity",
+    "min": 0.02,
+    "max": 0.05,
+    "step": 0.01,
+    "pools": [
+      "AttackWeapon",
+      "MagicWeapon"
+    ]
+  },
+  {
+    "id": "intelligence",
+    "name": "Intelligence",
+    "stat": "Intelligence",
+    "min": 1,
+    "max": 3,
+    "step": 1,
+    "pools": [
+      "AttackWeapon",
+      "MagicWeapon"
+    ]
+  },
+  {
+    "id": "magic_damage_bonus",
+    "name": "Magic Damage Bonus",
+    "stat": "MagicDamageBonus",
+    "min": 0.02,
+    "max": 0.05,
+    "step": 0.01,
+    "pools": [
+      "MagicWeapon"
+    ]
+  },
+  {
+    "id": "magic_penetration",
+    "name": "Magic Penetration",
+    "stat": "MagicPenetration",
+    "min": 0.02,
+    "max": 0.05,
+    "step": 0.01,
+    "pools": [
+      "MagicWeapon"
+    ]
+  },
+  {
+    "id": "spell_cast_speed",
+    "name": "Spell Cast Speed",
+    "stat": "SpellCastTimeReduction",
+    "min": 0.02,
+    "max": 0.05,
+    "step": 0.01,
+    "pools": [
+      "MagicWeapon"
+    ]
+  },
+  {
+    "id": "spell_cooldown_reduction",
+    "name": "Spell Cooldown Reduction",
+    "stat": "SpellCooldownReduction",
+    "min": 0.02,
+    "max": 0.05,
+    "step": 0.01,
+    "pools": [
+      "AttackWeapon",
+      "MagicWeapon"
+    ]
+  },
+  {
+    "id": "strength",
+    "name": "Strength",
+    "stat": "Strength",
+    "min": 1,
+    "max": 3,
+    "step": 1,
+    "pools": [
+      "AttackWeapon",
+      "MagicWeapon"
+    ]
+  },
+  {
+    "id": "true_damage",
+    "name": "True Damage",
+    "stat": "TrueDamage",
+    "min": 1,
+    "max": 3,
+    "step": 1,
+    "pools": [
+      "AttackWeapon",
+      "MagicWeapon"
+    ]
+  }
+]

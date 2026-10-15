@@ -23,7 +23,7 @@ namespace Crossguard
 			? Input.Resistance * (1.0 - Clamp01(Input.Penetration))
 			: Input.Resistance;
 		const double ResistanceFactor = FloorZero(1.0 - EffectiveResistance);
-		return Raw * BonusFactor * ResistanceFactor;
+		return Raw * BonusFactor * ResistanceFactor + FloorZero(Input.TrueDamage);
 	}
 
 	double CalculateHealing(double Base, double Flat, double Bonus, double Coefficient)

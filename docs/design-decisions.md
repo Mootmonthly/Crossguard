@@ -160,11 +160,15 @@ Weapons and armor have different affix pools. Weapon pools:
 | AD weapons | AAD, Action Speed, AP, True Damage, ADB, CDR, STR, AGI, INT, Dexterity |
 | MD weapons | AMD, Action Speed, Magic Penetration, True Damage, MDB, Cast Speed, CDR, STR, AGI, INT, Dexterity |
 
-- True Damage ignores all resistances.
-- Magic Penetration is new: the magic counterpart of AP.
-- Pending: affix value ranges; affix slots per rarity (placeholder 0/1/2/3/4/5); exactly how True
-  Damage combines with the damage formula; whether affix CDR and Cast Speed apply to every skill
-  category.
+- **True Damage** is flat damage added after resistances, with no bonus applied:
+  `damage = (base + flat) × (1 + bonus × coefficient) × (1 − resistance × (1 − penetration)) + TD`.
+  It is added once per damaging hit.
+- **Magic Penetration** is the magic counterpart of AP: it removes a percentage of the target's MR.
+- CDR and Cast Speed affixes are split per skill category: Active, Spell and Art CDR; Active, Spell
+  and Art Cast Speed.
+- Ranges: percentage stats 2–5%; base attributes 1–3; AAD and AMD 1–3. True Damage 1–3 is a
+  placeholder (not specified). Values roll on whole steps (1 point, 1%).
+- Pending: affix slots per rarity (placeholder 0/1/2/3/4/5); armor affix pools.
 
 ## Formulas
 

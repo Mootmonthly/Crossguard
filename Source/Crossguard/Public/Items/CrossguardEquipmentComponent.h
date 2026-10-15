@@ -39,7 +39,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FCrossguardEquipRejected, ECrossgua
 // any one-handed weapon fits the off hand.
 //
 // The server validates every change, then re-applies one UCrossguardEquipmentEffect holding the
-// items' stats (shield AR) and the Equipment.Wielding.* tags that mastery effects and skill
+// items' stats (shield AR, affixes) and the Equipment.Wielding.* tags that mastery effects and skill
 // requirements check.
 UCLASS(ClassGroup = (Crossguard), meta = (BlueprintSpawnableComponent))
 class CROSSGUARD_API UCrossguardEquipmentComponent : public UActorComponent
@@ -54,6 +54,10 @@ public:
 	// Imported from Data/Items/WeaponTable.json. Row struct: CrossguardWeaponRow.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment", meta = (RequiredAssetDataTags = "RowStructure=/Script/Crossguard.CrossguardWeaponRow"))
 	TObjectPtr<UDataTable> WeaponTable;
+
+	// Imported from Data/Items/AffixTable.json. Row struct: CrossguardAffixRow.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment", meta = (RequiredAssetDataTags = "RowStructure=/Script/Crossguard.CrossguardAffixRow"))
+	TObjectPtr<UDataTable> AffixTable;
 
 	// Runs on the server; clients forward the request. Rejections reach the owning client.
 	UFUNCTION(BlueprintCallable, Category = "Equipment")

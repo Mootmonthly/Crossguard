@@ -30,6 +30,8 @@ void UCrossguardAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, AdditionalMagicDamage, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, MagicDamageBonus, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, MagicResistance, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, MagicPenetration, COND_OwnerOnly, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, TrueDamage, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, AdditionalPhysicalHealing, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, PhysicalHealingBonus, COND_OwnerOnly, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UCrossguardAttributeSet, AdditionalMagicalHealing, COND_OwnerOnly, REPNOTIFY_Always);
@@ -197,6 +199,16 @@ void UCrossguardAttributeSet::OnRep_MagicDamageBonus(const FGameplayAttributeDat
 void UCrossguardAttributeSet::OnRep_MagicResistance(const FGameplayAttributeData& OldValue)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UCrossguardAttributeSet, MagicResistance, OldValue);
+}
+
+void UCrossguardAttributeSet::OnRep_MagicPenetration(const FGameplayAttributeData& OldValue)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UCrossguardAttributeSet, MagicPenetration, OldValue);
+}
+
+void UCrossguardAttributeSet::OnRep_TrueDamage(const FGameplayAttributeData& OldValue)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UCrossguardAttributeSet, TrueDamage, OldValue);
 }
 
 void UCrossguardAttributeSet::OnRep_AdditionalPhysicalHealing(const FGameplayAttributeData& OldValue)

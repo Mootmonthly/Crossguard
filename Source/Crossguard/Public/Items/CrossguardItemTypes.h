@@ -109,6 +109,34 @@ struct CROSSGUARD_API FCrossguardWeaponRow : public FTableRowBase
 	bool IsMelee() const { return Range == ECrossguardWeaponRange::Melee; }
 };
 
+// One row per affix. Row name = affix id (e.g. "true_damage"). Generated from
+// Data/Items/Affixes.json by Tools/export_affix_table.py.
+USTRUCT(BlueprintType)
+struct CROSSGUARD_API FCrossguardAffixRow : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Affix")
+	FText DisplayName;
+
+	// Attribute name on UCrossguardAttributeSet that the value adds to.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Affix")
+	FName Stat;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Affix")
+	float Min = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Affix")
+	float Max = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Affix")
+	float Step = 0.0f;
+
+	// AttackWeapon, MagicWeapon.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Affix")
+	TArray<FName> Pools;
+};
+
 // A rolled affix on an item instance.
 USTRUCT(BlueprintType)
 struct CROSSGUARD_API FCrossguardAffix
@@ -135,7 +163,7 @@ struct CROSSGUARD_API FCrossguardWeaponItem
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	ECrossguardRarity Rarity = ECrossguardRarity::Common;
 
-	// Not applied to stats yet; the affix pool is not designed.
+	// Added to the wearer's stats while equipped.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
 	TArray<FCrossguardAffix> Affixes;
 
@@ -161,4 +189,14 @@ public:
 	// The weapon's AD, MD or AR at the item's rarity.
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Items")
 	static float GetWeaponValue(const FCrossguardWeaponRow& Weapon, ECrossguardRarity Rarity);
+
+	// The affix pool a weapon rolls from: AttackWeapon (AD), MagicWeapon (MD), or None (shields).
+	UFUNCTION(BlueprintPure, Category = "Crossguard|Items")
+	static FName GetAffixPool(const FCrossguardWeaponRow& Weapon);
+
+	// Server only. A new weapon item with as many distinct affixes from its pool as its rarity
+	// allows. The same Seed always gives the same item.
+	UFUNCTION(BlueprintCallable, Category = "Crossguard|Items")
+	static FCrossguardWeaponItem RollWeaponItem(const UDataTable* AffixTable, FName WeaponId, const FCrossguardWeaponRow& Weapon,
+		ECrossguardRarity Rarity, int64 Seed);
 };

@@ -122,6 +122,17 @@ static void TestDamage()
 	CHECK_NEAR(CalculateDamage({100.0, 0.0, -2.0, 1.0, 0.0, 0.0}), 0.0);
 	CHECK_NEAR(CalculateDamage({100.0, 0.0, 0.0, 1.0, 1.5, 0.0}), 0.0);
 
+	// True Damage: flat, after resistance, no bonus.
+	{
+		FDamageInput Input{100.0, 0.0, 0.50, 1.0, 0.40, 0.0};
+		Input.TrueDamage = 3.0;
+		CHECK_NEAR(CalculateDamage(Input), 100.0 * 1.5 * 0.6 + 3.0);
+		Input.Resistance = 2.0;
+		CHECK_NEAR(CalculateDamage(Input), 3.0);
+		Input.TrueDamage = -5.0;
+		CHECK_NEAR(CalculateDamage(Input), 0.0);
+	}
+
 	CHECK_NEAR(CalculateHealing(20.0, 0.0, 0.10), 22.0);
 	CHECK_NEAR(CalculateHealing(20.0, 5.0, 0.20, 0.5), 27.5);
 }

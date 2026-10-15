@@ -20,11 +20,14 @@ namespace Crossguard
 		double Coefficient = 1.0;
 		// AR or MR of the target.
 		double Resistance = 0.0;
-		// AP of the attacker: fraction of positive Resistance removed, clamped to [0, 1].
+		// AP (or Magic Penetration) of the attacker: fraction of positive Resistance removed,
+		// clamped to [0, 1].
 		double Penetration = 0.0;
+		// True Damage of the attacker: flat, added after resistance, no bonus. Floored at 0.
+		double TrueDamage = 0.0;
 	};
 
-	// (Base + Flat) × (1 + Bonus × Coefficient) × (1 − Resistance × (1 − Penetration)).
+	// (Base + Flat) × (1 + Bonus × Coefficient) × (1 − Resistance × (1 − Penetration)) + TrueDamage.
 	// Negative resistance increases damage and is not reduced by penetration.
 	// Each factor is floored at 0, so damage is never negative.
 	CROSSGUARDRULES_API double CalculateDamage(const FDamageInput& Input);

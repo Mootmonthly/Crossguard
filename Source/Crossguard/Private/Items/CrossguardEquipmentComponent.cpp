@@ -271,6 +271,20 @@ void UCrossguardEquipmentComponent::RefreshEquipmentEffect()
 		{
 			Stats.FindChecked(FName(TEXT("AttackResistance"))) += UCrossguardItemLibrary::GetWeaponValue(*Row, Item->Rarity);
 		}
+		for (const FCrossguardAffix& Affix : Item->Affixes)
+		{
+			const FCrossguardAffixRow* AffixRow = AffixTable != nullptr
+				? AffixTable->FindRow<FCrossguardAffixRow>(Affix.AffixId, TEXT("RefreshEquipmentEffect"), false)
+				: nullptr;
+			float* Total = AffixRow != nullptr ? Stats.Find(AffixRow->Stat) : nullptr;
+			if (Total == nullptr)
+			{
+				UE_LOG(LogCrossguard, Warning, TEXT("Affix %s on %s does not map to an equipment stat"), *Affix.AffixId.ToString(),
+					*Item->WeaponId.ToString());
+				continue;
+			}
+			*Total += Affix.Value;
+		}
 		Spec.Data->DynamicGrantedTags.AddTag(WieldingTag(Row->WeaponType));
 	}
 	for (const ECrossguardWeaponType Wildcard : {ECrossguardWeaponType::AnyMelee, ECrossguardWeaponType::TwoHandedMelee})

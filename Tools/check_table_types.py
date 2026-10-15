@@ -3,6 +3,7 @@
 
 Data/Skills/SkillTable.json -> FCrossguardSkillRow (CrossguardSkillTypes.h)
 Data/Items/WeaponTable.json -> FCrossguardWeaponRow (CrossguardItemTypes.h)
+Data/Items/AffixTable.json -> FCrossguardAffixRow (CrossguardItemTypes.h)
 
 Every JSON field must be a UPROPERTY of the matching struct, every struct field must be present,
 and every enum value must be an entry of the C++ enum. Catches drift between the exporter and the
@@ -22,6 +23,7 @@ HEADERS = [PUBLIC / "Skills" / "CrossguardSkillTypes.h", PUBLIC / "Items" / "Cro
 TABLES = [
     (REPO / "Data" / "Skills" / "SkillTable.json", "FCrossguardSkillRow"),
     (REPO / "Data" / "Items" / "WeaponTable.json", "FCrossguardWeaponRow"),
+    (REPO / "Data" / "Items" / "AffixTable.json", "FCrossguardAffixRow"),
 ]
 
 
@@ -57,6 +59,17 @@ def check(obj, struct, path, enums, structs, errors, is_row=False):
             errors.append(f"{path}: missing field {field}")
 
 
+EFFECTS_CPP = REPO / "Source" / "Crossguard" / "Private" / "AbilitySystem" / "CrossguardEffects.cpp"
+
+
+def equipment_stats():
+    """Attribute names UCrossguardEquipmentEffect can modify (its EquipmentAttributes list)."""
+    text = EFFECTS_CPP.read_text(encoding="utf-8")
+    body = text[text.index("EquipmentAttributes()"):]
+    body = body[: body.index("};")]
+    return set(re.findall(r"UCrossguardAttributeSet::Get(\w+)Attribute\(\)", body))
+
+
 def main():
     enums, structs = {}, {}
     for header in HEADERS:
@@ -80,6 +93,15 @@ def main():
             failed = True
         else:
             print(f"OK: {table.name}: {len(rows)} rows match {row_struct}")
+    # Affix stats must be ones the equipment effect applies.
+    stats = equipment_stats()
+    affixes = json.loads((REPO / "Data" / "Items" / "AffixTable.json").read_text(encoding="utf-8"))
+    for row in affixes:
+        if row["Stat"] not in stats:
+            print(f"ERROR: AffixTable.json: {row['Name']}.Stat: {row['Stat']!r} is not applied by UCrossguardEquipmentEffect")
+            failed = True
+    if not failed:
+        print(f"OK: every affix stat is applied by UCrossguardEquipmentEffect ({len(stats)} stats)")
     return 1 if failed else 0
 
 

@@ -1,0 +1,209 @@
+[
+	{
+		"Name": "action_speed",
+		"DisplayName": "Action Speed",
+		"Stat": "ActionSpeed",
+		"Min": 0.02,
+		"Max": 0.05,
+		"Step": 0.01,
+		"Pools": [
+			"AttackWeapon",
+			"MagicWeapon"
+		]
+	},
+	{
+		"Name": "active_cast_speed",
+		"DisplayName": "Active Cast Speed",
+		"Stat": "ActiveCastTimeReduction",
+		"Min": 0.02,
+		"Max": 0.05,
+		"Step": 0.01,
+		"Pools": [
+			"MagicWeapon"
+		]
+	},
+	{
+		"Name": "active_cooldown_reduction",
+		"DisplayName": "Active Cooldown Reduction",
+		"Stat": "ActiveCooldownReduction",
+		"Min": 0.02,
+		"Max": 0.05,
+		"Step": 0.01,
+		"Pools": [
+			"AttackWeapon",
+			"MagicWeapon"
+		]
+	},
+	{
+		"Name": "additional_attack_damage",
+		"DisplayName": "Additional Attack Damage",
+		"Stat": "AdditionalAttackDamage",
+		"Min": 1,
+		"Max": 3,
+		"Step": 1,
+		"Pools": [
+			"AttackWeapon"
+		]
+	},
+	{
+		"Name": "additional_magic_damage",
+		"DisplayName": "Additional Magic Damage",
+		"Stat": "AdditionalMagicDamage",
+		"Min": 1,
+		"Max": 3,
+		"Step": 1,
+		"Pools": [
+			"MagicWeapon"
+		]
+	},
+	{
+		"Name": "agility",
+		"DisplayName": "Agility",
+		"Stat": "Agility",
+		"Min": 1,
+		"Max": 3,
+		"Step": 1,
+		"Pools": [
+			"AttackWeapon",
+			"MagicWeapon"
+		]
+	},
+	{
+		"Name": "art_cast_speed",
+		"DisplayName": "Art Cast Speed",
+		"Stat": "ArtCastTimeReduction",
+		"Min": 0.02,
+		"Max": 0.05,
+		"Step": 0.01,
+		"Pools": [
+			"MagicWeapon"
+		]
+	},
+	{
+		"Name": "art_cooldown_reduction",
+		"DisplayName": "Art Cooldown Reduction",
+		"Stat": "ArtCooldownReduction",
+		"Min": 0.02,
+		"Max": 0.05,
+		"Step": 0.01,
+		"Pools": [
+			"AttackWeapon",
+			"MagicWeapon"
+		]
+	},
+	{
+		"Name": "attack_damage_bonus",
+		"DisplayName": "Attack Damage Bonus",
+		"Stat": "AttackDamageBonus",
+		"Min": 0.02,
+		"Max": 0.05,
+		"Step": 0.01,
+		"Pools": [
+			"AttackWeapon"
+		]
+	},
+	{
+		"Name": "attack_penetration",
+		"DisplayName": "Attack Penetration",
+		"Stat": "AttackPenetration",
+		"Min": 0.02,
+		"Max": 0.05,
+		"Step": 0.01,
+		"Pools": [
+			"AttackWeapon"
+		]
+	},
+	{
+		"Name": "dexterity",
+		"DisplayName": "Dexterity",
+		"Stat": "Dexterity",
+		"Min": 0.02,
+		"Max": 0.05,
+		"Step": 0.01,
+		"Pools": [
+			"AttackWeapon",
+			"MagicWeapon"
+		]
+	},
+	{
+		"Name": "intelligence",
+		"DisplayName": "Intelligence",
+		"Stat": "Intelligence",
+		"Min": 1,
+		"Max": 3,
+		"Step": 1,
+		"Pools": [
+			"AttackWeapon",
+			"MagicWeapon"
+		]
+	},
+	{
+		"Name": "magic_damage_bonus",
+		"DisplayName": "Magic Damage Bonus",
+		"Stat": "MagicDamageBonus",
+		"Min": 0.02,
+		"Max": 0.05,
+		"Step": 0.01,
+		"Pools": [
+			"MagicWeapon"
+		]
+	},
+	{
+		"Name": "magic_penetration",
+		"DisplayName": "Magic Penetration",
+		"Stat": "MagicPenetration",
+		"Min": 0.02,
+		"Max": 0.05,
+		"Step": 0.01,
+		"Pools": [
+			"MagicWeapon"
+		]
+	},
+	{
+		"Name": "spell_cast_speed",
+		"DisplayName": "Spell Cast Speed",
+		"Stat": "SpellCastTimeReduction",
+		"Min": 0.02,
+		"Max": 0.05,
+		"Step": 0.01,
+		"Pools": [
+			"MagicWeapon"
+		]
+	},
+	{
+		"Name": "spell_cooldown_reduction",
+		"DisplayName": "Spell Cooldown Reduction",
+		"Stat": "SpellCooldownReduction",
+		"Min": 0.02,
+		"Max": 0.05,
+		"Step": 0.01,
+		"Pools": [
+			"AttackWeapon",
+			"MagicWeapon"
+		]
+	},
+	{
+		"Name": "strength",
+		"DisplayName": "Strength",
+		"Stat": "Strength",
+		"Min": 1,
+		"Max": 3,
+		"Step": 1,
+		"Pools": [
+			"AttackWeapon",
+			"MagicWeapon"
+		]
+	},
+	{
+		"Name": "true_damage",
+		"DisplayName": "True Damage",
+		"Stat": "TrueDamage",
+		"Min": 1,
+		"Max": 3,
+		"Step": 1,
+		"Pools": [
+			"AttackWeapon",
+			"MagicWeapon"
+		]
+	}
+]

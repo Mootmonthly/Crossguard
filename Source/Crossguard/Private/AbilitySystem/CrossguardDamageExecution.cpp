@@ -15,6 +15,8 @@ namespace
 		DECLARE_ATTRIBUTE_CAPTUREDEF(AdditionalMagicDamage);
 		DECLARE_ATTRIBUTE_CAPTUREDEF(MagicDamageBonus);
 		DECLARE_ATTRIBUTE_CAPTUREDEF(MagicResistance);
+		DECLARE_ATTRIBUTE_CAPTUREDEF(MagicPenetration);
+		DECLARE_ATTRIBUTE_CAPTUREDEF(TrueDamage);
 
 		FDamageStatics()
 		{
@@ -26,6 +28,8 @@ namespace
 			DEFINE_ATTRIBUTE_CAPTUREDEF(UCrossguardAttributeSet, AdditionalMagicDamage, Source, false);
 			DEFINE_ATTRIBUTE_CAPTUREDEF(UCrossguardAttributeSet, MagicDamageBonus, Source, false);
 			DEFINE_ATTRIBUTE_CAPTUREDEF(UCrossguardAttributeSet, MagicResistance, Target, false);
+			DEFINE_ATTRIBUTE_CAPTUREDEF(UCrossguardAttributeSet, MagicPenetration, Source, false);
+			DEFINE_ATTRIBUTE_CAPTUREDEF(UCrossguardAttributeSet, TrueDamage, Source, false);
 		}
 	};
 
@@ -54,6 +58,8 @@ UCrossguardDamageExecution::UCrossguardDamageExecution()
 	RelevantAttributesToCapture.Add(Statics.AdditionalMagicDamageDef);
 	RelevantAttributesToCapture.Add(Statics.MagicDamageBonusDef);
 	RelevantAttributesToCapture.Add(Statics.MagicResistanceDef);
+	RelevantAttributesToCapture.Add(Statics.MagicPenetrationDef);
+	RelevantAttributesToCapture.Add(Statics.TrueDamageDef);
 }
 
 void UCrossguardDamageExecution::Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams,
@@ -70,6 +76,9 @@ void UCrossguardDamageExecution::Execute_Implementation(const FGameplayEffectCus
 	const float AttackBase = Spec.GetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, false, 0.0f);
 	const float MagicBase = Spec.GetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, false, 0.0f);
 
+	// True Damage is added once per hit, to whichever damage type comes first.
+	const float TrueDamage = Capture(ExecutionParams, EvalParams, Statics.TrueDamageDef);
+
 	double Total = 0.0;
 	if (AttackBase > 0.0f)
 	{
@@ -80,17 +89,19 @@ void UCrossguardDamageExecution::Execute_Implementation(const FGameplayEffectCus
 		Input.Coefficient = Coefficient;
 		Input.Resistance = Capture(ExecutionParams, EvalParams, Statics.AttackResistanceDef);
 		Input.Penetration = Capture(ExecutionParams, EvalParams, Statics.AttackPenetrationDef);
+		Input.TrueDamage = TrueDamage;
 		Total += Crossguard::CalculateDamage(Input);
 	}
 	if (MagicBase > 0.0f)
 	{
-		// There is no magic penetration stat.
 		Crossguard::FDamageInput Input;
 		Input.Base = MagicBase;
 		Input.Flat = Capture(ExecutionParams, EvalParams, Statics.AdditionalMagicDamageDef);
 		Input.Bonus = Capture(ExecutionParams, EvalParams, Statics.MagicDamageBonusDef);
 		Input.Coefficient = Coefficient;
 		Input.Resistance = Capture(ExecutionParams, EvalParams, Statics.MagicResistanceDef);
+		Input.Penetration = Capture(ExecutionParams, EvalParams, Statics.MagicPenetrationDef);
+		Input.TrueDamage = AttackBase > 0.0f ? 0.0f : TrueDamage;
 		Total += Crossguard::CalculateDamage(Input);
 	}
 

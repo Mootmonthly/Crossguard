@@ -48,3 +48,20 @@ character's stat (0 at 10 AGI). The divisor is floored at 0.1.
   two-handed pavise shields come later).
 - **Right click**: off-hand basic attack when dual wielding; block with a shield; parry when the
   off hand is empty and the main-hand weapon can parry; otherwise nothing.
+
+## Affixes
+
+`Data/Items/Affixes.json` is a JSON array of affix definitions, sorted by `id`.
+`Tools/validate_affixes.py` checks it.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `id` | string | `snake_case`, unique. |
+| `name` | string | Display name. |
+| `stat` | enum | The attribute it adds to, by its `UCrossguardAttributeSet` name: `AdditionalAttackDamage`, `AdditionalMagicDamage`, `ActionSpeed`, `AttackPenetration`, `MagicPenetration`, `TrueDamage`, `AttackDamageBonus`, `MagicDamageBonus`, `ActiveCooldownReduction`, `SpellCooldownReduction`, `ArtCooldownReduction`, `ActiveCastTimeReduction`, `SpellCastTimeReduction`, `ArtCastTimeReduction`, `Strength`, `Agility`, `Intelligence`, `Dexterity`. Unique across affixes. |
+| `min`, `max` | number | Roll range, inclusive. Percent stats are fractions (`0.02` = 2%). |
+| `step` | number > 0 | Values land on `min + k × step`. |
+| `pools` | string[] | Which items can roll it: `AttackWeapon` (weapons dealing AD), `MagicWeapon` (weapons dealing MD). Armor pools come later. |
+
+Rolling: an item gets as many distinct affixes from its pool as its rarity has slots
+(`Crossguard::RollAffixes`, deterministic per seed). Shields roll none until armor pools exist.
