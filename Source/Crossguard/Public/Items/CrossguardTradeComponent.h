@@ -172,6 +172,13 @@ private:
 	// 0: asked, 1: was asked.
 	int32 Side = 0;
 	TSharedPtr<Crossguard::FTradeSession> Session;
+	// Server: the offered stacks as they were offered. If one changes (used up, topped up), both
+	// sides unlock, so nobody accepts a deal that changed under them.
+	TArray<FCrossguardInventoryItem> OfferedStacks;
+	// True if every offered stack is still exactly as offered.
+	bool OfferUnchanged() const;
+	// Server: unlocks both sides and takes new snapshots.
+	void ResetAfterChange();
 	double RequestTime = 0.0;
 	FTimerHandle CheckTimer;
 };

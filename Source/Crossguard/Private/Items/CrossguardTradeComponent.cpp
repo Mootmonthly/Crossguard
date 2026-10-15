@@ -87,6 +87,14 @@ void UCrossguardTradeComponent::ServerRequestTrade_Implementation(APawn* Target)
 	Other->View.State = ECrossguardTradeState::RequestReceived;
 	Other->View.Partner = Cast<APawn>(GetOwner());
 	StartChecks();
+	// A listen-server host gets no OnRep.
+	for (const UCrossguardTradeComponent* Trader : {static_cast<const UCrossguardTradeComponent*>(this), static_cast<const UCrossguardTradeComponent*>(Other)})
+	{
+		if (const APawn* Pawn = Cast<APawn>(Trader->GetOwner()); Pawn != nullptr && Pawn->IsLocallyControlled())
+		{
+			Trader->LogView();
+		}
+	}
 	OnTradeChanged.Broadcast();
 	Other->OnTradeChanged.Broadcast();
 }
@@ -120,15 +128,17 @@ void UCrossguardTradeComponent::ServerSetOffer_Implementation(const TArray<int32
 	}
 	Crossguard::FTradeOffer Offer;
 	Offer.Gold = Gold;
+	TArray<FCrossguardInventoryItem> Stacks;
 	for (const int32 ItemId : ItemIds)
 	{
 		// Only stacks actually in the inventory (not worn, not in hand).
-		FCrossguardInventoryItem Unused;
-		if (!Inventory->FindItem(ItemId, Unused) || ItemId == Inventory->GetReadiedItemId())
+		FCrossguardInventoryItem Stack;
+		if (!Inventory->FindItem(ItemId, Stack) || ItemId == Inventory->GetReadiedItemId())
 		{
 			return;
 		}
 		Offer.ItemIds.push_back(ItemId);
+		Stacks.Add(Stack);
 	}
 	const Crossguard::ETradeError Error = Session->SetOffer(TradeConfig(), Side, Offer, GetBankedGold(), IsInRaid());
 	if (Error != Crossguard::ETradeError::None)
@@ -136,6 +146,7 @@ void UCrossguardTradeComponent::ServerSetOffer_Implementation(const TArray<int32
 		UE_LOG(LogCrossguard, Log, TEXT("Trade offer from %s refused: %d"), *GetNameSafe(GetOwner()), static_cast<int32>(Error));
 		return;
 	}
+	OfferedStacks = Stacks;
 	RefreshViews();
 }
 
@@ -181,6 +192,23 @@ void UCrossguardTradeComponent::Complete()
 		EndTrade(ECrossguardTradeEnd::PartnerGone);
 		return;
 	}
+	// What CheckTrade watches, checked again now: an accept can land between checks.
+	if (!IsOwnerAlive() || !Other->IsOwnerAlive())
+	{
+		EndTrade(ECrossguardTradeEnd::PartnerGone);
+		return;
+	}
+	if (FVector::Dist(GetOwner()->GetActorLocation(), Other->GetOwner()->GetActorLocation()) > TradeConfig().MaxDistanceCm)
+	{
+		EndTrade(ECrossguardTradeEnd::TooFar);
+		return;
+	}
+	// A stack changed since it was offered: back to looking, not a swap of something else.
+	if (!OfferUnchanged() || !Other->OfferUnchanged())
+	{
+		ResetAfterChange();
+		return;
+	}
 	const auto ToArray = [](const std::vector<int>& Ids)
 	{
 		TArray<int32> Out;
@@ -201,7 +229,13 @@ void UCrossguardTradeComponent::Complete()
 	TArray<FCrossguardInventoryItem> TheirItems;
 	const bool bMineThere = MyInventory->ExchangeItems(MyIds, {}, false, &MyItems);
 	const bool bTheirsThere = TheirInventory->ExchangeItems(TheirIds, {}, false, &TheirItems);
-	const bool bGold = MyOffer.Gold <= GetBankedGold() && TheirOffer.Gold <= Other->GetBankedGold();
+	ACrossguardPlayerState* MyState = Cast<APawn>(GetOwner()) != nullptr ? Cast<APawn>(GetOwner())->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	ACrossguardPlayerState* TheirState = Cast<APawn>(Other->GetOwner()) != nullptr ? Cast<APawn>(Other->GetOwner())->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	// Gold still banked, and room for it on the other side (banked gold is an int32).
+	const bool bAnyGold = MyOffer.Gold > 0 || TheirOffer.Gold > 0;
+	const bool bGold = MyOffer.Gold <= GetBankedGold() && TheirOffer.Gold <= Other->GetBankedGold()
+		&& (!bAnyGold || (MyState != nullptr && TheirState != nullptr && TheirState->CanReceiveGold(FMath::Max<int64>(MyOffer.Gold - TheirOffer.Gold, 0))
+			&& MyState->CanReceiveGold(FMath::Max<int64>(TheirOffer.Gold - MyOffer.Gold, 0))));
 	if (!bMineThere || !bTheirsThere || !bGold || !MyInventory->ExchangeItems(MyIds, TheirItems, false)
 		|| !TheirInventory->ExchangeItems(TheirIds, MyItems, false))
 	{
@@ -211,8 +245,6 @@ void UCrossguardTradeComponent::Complete()
 	MyInventory->ExchangeItems(MyIds, TheirItems, true);
 	TheirInventory->ExchangeItems(TheirIds, MyItems, true);
 
-	ACrossguardPlayerState* MyState = Cast<APawn>(GetOwner()) != nullptr ? Cast<APawn>(GetOwner())->GetPlayerState<ACrossguardPlayerState>() : nullptr;
-	ACrossguardPlayerState* TheirState = Cast<APawn>(Other->GetOwner()) != nullptr ? Cast<APawn>(Other->GetOwner())->GetPlayerState<ACrossguardPlayerState>() : nullptr;
 	if (MyState != nullptr && TheirState != nullptr)
 	{
 		if (MyOffer.Gold > 0 && MyState->SpendGold(static_cast<int32>(MyOffer.Gold)))
@@ -225,7 +257,7 @@ void UCrossguardTradeComponent::Complete()
 		}
 	}
 	UE_LOG(LogCrossguard, Log, TEXT("Trade %s <-> %s: %d stacks + %lld gold for %d stacks + %lld gold"), *GetNameSafe(GetOwner()),
-		*GetNameSafe(Other->GetOwner()), MyItems.Num(), MyOffer.Gold, TheirItems.Num(), TheirOffer.Gold);
+		*GetNameSafe(Other->GetOwner()), MyItems.Num(), static_cast<int64>(MyOffer.Gold), TheirItems.Num(), static_cast<int64>(TheirOffer.Gold));
 	EndTrade(ECrossguardTradeEnd::Completed);
 }
 
@@ -315,7 +347,14 @@ void UCrossguardTradeComponent::CheckTrade()
 	// on completion.
 	if (View.State == ECrossguardTradeState::Open && Side == 0)
 	{
-		RefreshViews(false);
+		if (!OfferUnchanged() || !Other->OfferUnchanged())
+		{
+			ResetAfterChange();
+		}
+		else
+		{
+			RefreshViews(false);
+		}
 	}
 }
 
@@ -342,6 +381,7 @@ void UCrossguardTradeComponent::ResetLocal()
 	}
 	Partner.Reset();
 	Session.Reset();
+	OfferedStacks.Reset();
 	View = FCrossguardTradeView();
 	OnTradeChanged.Broadcast();
 }
@@ -395,4 +435,60 @@ int32 UCrossguardTradeComponent::GetBankedGold() const
 	const APawn* Pawn = Cast<APawn>(GetOwner());
 	const ACrossguardPlayerState* State = Pawn != nullptr ? Pawn->GetPlayerState<ACrossguardPlayerState>() : nullptr;
 	return State != nullptr ? State->GetGold() : 0;
+}
+
+bool UCrossguardTradeComponent::OfferUnchanged() const
+{
+	const UCrossguardInventoryComponent* Inventory = GetInventory();
+	if (Inventory == nullptr)
+	{
+		return OfferedStacks.IsEmpty();
+	}
+	for (const FCrossguardInventoryItem& Offered : OfferedStacks)
+	{
+		FCrossguardInventoryItem Now;
+		if (!Inventory->FindItem(Offered.Id, Now) || Now.Count != Offered.Count || Now.ItemId != Offered.ItemId || Now.Rarity != Offered.Rarity
+			|| Now.Weapon.WeaponId != Offered.Weapon.WeaponId || Now.Armor.ArmorId != Offered.Armor.ArmorId)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+void UCrossguardTradeComponent::ResetAfterChange()
+{
+	UCrossguardTradeComponent* Other = Partner.Get();
+	if (!Session.IsValid() || Other == nullptr)
+	{
+		return;
+	}
+	// Each offer again as the stacks are now: changed ones at their new count, gone ones dropped
+	// (gold too if it is no longer banked). Both sides unlock.
+	Session->Unlock(0);
+	Session->Unlock(1);
+	for (UCrossguardTradeComponent* Trader : {this, Other})
+	{
+		const UCrossguardInventoryComponent* Inventory = Trader->GetInventory();
+		Crossguard::FTradeOffer Offer;
+		Offer.Gold = Session->GetOffer(Trader->Side).Gold;
+		TArray<FCrossguardInventoryItem> Stacks;
+		for (const FCrossguardInventoryItem& Offered : Trader->OfferedStacks)
+		{
+			FCrossguardInventoryItem Current;
+			if (Inventory != nullptr && Inventory->FindItem(Offered.Id, Current))
+			{
+				Offer.ItemIds.push_back(Current.Id);
+				Stacks.Add(Current);
+			}
+		}
+		if (Session->SetOffer(TradeConfig(), Trader->Side, Offer, Trader->GetBankedGold(), Trader->IsInRaid()) != Crossguard::ETradeError::None)
+		{
+			Offer.Gold = 0;
+			Session->SetOffer(TradeConfig(), Trader->Side, Offer, Trader->GetBankedGold(), Trader->IsInRaid());
+		}
+		Trader->OfferedStacks = Stacks;
+	}
+	UE_LOG(LogCrossguard, Display, TEXT("Trade %s <-> %s: an offered stack changed; both unlocked"), *GetNameSafe(GetOwner()), *GetNameSafe(Other->GetOwner()));
+	RefreshViews();
 }

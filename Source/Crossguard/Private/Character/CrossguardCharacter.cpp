@@ -1108,7 +1108,7 @@ void ACrossguardCharacter::GuildRank(const FString& PlayerId, const FString& New
 {
 	UCrossguardGuildComponent* Guild = GuildComponentOf(*this);
 	const int64 Value = StaticEnum<ECrossguardGuildRank>()->GetValueByNameString(NewRank);
-	if (Guild != nullptr && Value != INDEX_NONE)
+	if (Guild != nullptr && Value >= 0 && Value <= static_cast<int64>(ECrossguardGuildRank::Leader))
 	{
 		Guild->RequestSetRank(PlayerId, static_cast<ECrossguardGuildRank>(Value));
 	}

@@ -17,10 +17,13 @@ items. (Guilds do need them; see [guild-rules.md](guild-rules.md).)
    gold is gold coins: offer them as items. Each side sees copies of the other's items, affixes
    included; nobody else sees the offers.
 4. **Lock**: each side locks their offer. Changing an offer (only possible unlocked) unlocks both
-   sides, so nobody agrees to a deal that changed under them. Unlocking takes back both acceptances.
+   sides, so nobody agrees to a deal that changed under them. The same happens if an offered stack
+   changes on its own (used up, topped up by a pickup, dropped): the offer follows the stack and
+   both sides unlock. Unlocking takes back both acceptances.
 5. **Accept**: with both offers locked, each side accepts. When both have, the server checks that
-   every offered stack is still there, that the gold is still banked, and that each side has room
-   for what they get once their own offer is gone, then swaps everything at once. Otherwise
+   both are still alive and close, that every offered stack is still as offered, that the gold is
+   still banked (and fits the receiver's), and that each side has room for what they get once their
+   own offer is gone, then swaps everything at once. Otherwise
    nothing changes and the trade ends (`NoRoom`).
 
 The trade ends when either side cancels or declines, moves more than 5 m away, dies or leaves, or

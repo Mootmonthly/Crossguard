@@ -41,6 +41,9 @@ public:
 	// Rebuilds one player's guild view (on joining the server, after changes).
 	void RefreshPlayer(ACrossguardPlayerState* PlayerState);
 
+	// Their online id is known: their own view, and their guildmates see them online.
+	void PlayerJoined(ACrossguardPlayerState* PlayerState);
+
 private:
 	static ECrossguardGuildResult ToResult(Crossguard::EGuildError Error);
 	static double Now();

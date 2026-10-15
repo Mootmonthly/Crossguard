@@ -189,6 +189,9 @@ ECrossguardGuildResult UCrossguardGuildSubsystem::SetRank(ACrossguardPlayerState
 	case ECrossguardGuildRank::Member:
 		Error = Registry.Demote(ActorId, Target);
 		break;
+	default:
+		// Not a rank (a client can send any byte).
+		return ECrossguardGuildResult::InvalidData;
 	}
 	if (const Crossguard::FGuild* Guild = Registry.GuildOf(ActorId); Error == Crossguard::EGuildError::None && Guild != nullptr)
 	{
@@ -210,10 +213,19 @@ ECrossguardGuildResult UCrossguardGuildSubsystem::Leave(ACrossguardPlayerState* 
 		return ECrossguardGuildResult::NotInGuild;
 	}
 	const std::string GuildId = Guild->Id;
-	// The last member takes the bank: it must fit first.
+	// The last member takes the bank: between raids only (not into a raid inventory), and it must
+	// fit first, gold included.
 	TArray<FCrossguardInventoryItem> BankStacks;
 	if (Guild->Members.size() == 1)
 	{
+		if ((Guild->Bank.Gold > 0 || !Guild->Bank.Items.empty()) && !IsBetweenRaids(Actor))
+		{
+			return ECrossguardGuildResult::OnlyBetweenRaids;
+		}
+		if (!Actor->CanReceiveGold(Guild->Bank.Gold))
+		{
+			return ECrossguardGuildResult::GoldOverflow;
+		}
 		for (const Crossguard::FGuildBankItem& Stored : Guild->Bank.Items)
 		{
 			if (const FCrossguardInventoryItem* Item = BankItemData.Find(BankKey(GuildId, Stored.SlotId)))
@@ -244,7 +256,8 @@ ECrossguardGuildResult UCrossguardGuildSubsystem::Leave(ACrossguardPlayerState* 
 		}
 		if (Result.Gold > 0)
 		{
-			Actor->AddGold(static_cast<int32>(FMath::Min<int64>(Result.Gold, MAX_int32)));
+			// Checked to fit above.
+			Actor->AddGold(static_cast<int32>(Result.Gold));
 		}
 		UE_LOG(LogCrossguard, Log, TEXT("Guild %s disbanded"), *ToFString(GuildId));
 	}
@@ -266,6 +279,10 @@ ECrossguardGuildResult UCrossguardGuildSubsystem::MoveGold(ACrossguardPlayerStat
 	}
 	const std::string ActorId = ToStd(PlayerIdOf(Actor));
 	Crossguard::EGuildError Error = Crossguard::EGuildError::InvalidAmount;
+	if (Amount == MIN_int32)
+	{
+		return ECrossguardGuildResult::InvalidAmount;
+	}
 	if (Amount > 0)
 	{
 		if (Actor->GetGold() < Amount)
@@ -280,6 +297,10 @@ ECrossguardGuildResult UCrossguardGuildSubsystem::MoveGold(ACrossguardPlayerStat
 	}
 	else if (Amount < 0)
 	{
+		if (!Actor->CanReceiveGold(-static_cast<int64>(Amount)))
+		{
+			return ECrossguardGuildResult::GoldOverflow;
+		}
 		Error = Registry.WithdrawGold(ActorId, -static_cast<int64>(Amount), Now());
 		if (Error == Crossguard::EGuildError::None)
 		{
@@ -348,6 +369,10 @@ ECrossguardGuildResult UCrossguardGuildSubsystem::GiveGold(ACrossguardPlayerStat
 	if (Recipient == nullptr)
 	{
 		return ECrossguardGuildResult::RecipientOffline;
+	}
+	if (Amount > 0 && !Recipient->CanReceiveGold(Amount))
+	{
+		return ECrossguardGuildResult::GoldOverflow;
 	}
 	const std::string ActorId = ToStd(PlayerIdOf(Actor));
 	const Crossguard::EGuildError Error = Registry.RedistributeGold(ActorId, ToStd(RecipientId), Amount, Now());
@@ -481,17 +506,33 @@ void UCrossguardGuildSubsystem::RefreshPlayer(ACrossguardPlayerState* PlayerStat
 	const double Time = Now();
 	for (const auto& [Id, Other] : Registry.All())
 	{
-		for (const Crossguard::FGuildInvite& Invite : Other.Invites)
+		for (const Crossguard::FGuildInvite& PendingInvite : Other.Invites)
 		{
-			if (Invite.PlayerId == ToStd(PlayerId) && Time < Invite.ExpiresAt)
+			if (PendingInvite.PlayerId == ToStd(PlayerId) && Time < PendingInvite.ExpiresAt)
 			{
 				FCrossguardGuildInviteView& Out = View->Invites.AddDefaulted_GetRef();
 				Out.GuildId = ToFString(Other.Id);
 				Out.GuildName = ToFString(Other.Name);
-				const FString* Name = DisplayNames.Find(ToFString(Invite.InvitedBy));
-				Out.InvitedBy = Name != nullptr ? *Name : ToFString(Invite.InvitedBy);
+				const FString* Name = DisplayNames.Find(ToFString(PendingInvite.InvitedBy));
+				Out.InvitedBy = Name != nullptr ? *Name : ToFString(PendingInvite.InvitedBy);
 			}
 		}
 	}
+	// Player states replicate rarely by default: send it now.
+	PlayerState->ForceNetUpdate();
 	View->OnGuildChanged.Broadcast();
+}
+
+void UCrossguardGuildSubsystem::PlayerJoined(ACrossguardPlayerState* PlayerState)
+{
+	Registry.PruneExpiredInvites(Now());
+	const Crossguard::FGuild* Guild = PlayerState != nullptr ? Registry.GuildOf(ToStd(PlayerIdOf(PlayerState))) : nullptr;
+	if (Guild != nullptr)
+	{
+		RefreshGuild(Guild->Id, PlayerState);
+	}
+	else
+	{
+		RefreshPlayer(PlayerState);
+	}
 }

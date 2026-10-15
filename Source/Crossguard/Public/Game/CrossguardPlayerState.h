@@ -78,6 +78,8 @@ public:
 
 	// Seamless travel: carry the team, party key and progression to the new player state.
 	virtual void CopyProperties(APlayerState* PlayerState) override;
+	// The online id arrives after BeginPlay for joining players: guilds know players by it.
+	virtual void OnSetUniqueId() override;
 
 	// IGenericTeamAgentInterface. Perception asks the pawn, which forwards here. Team ids above 254
 	// report NoTeam.
@@ -122,6 +124,9 @@ public:
 	// Server. Adds banked gold (vendor sales, extraction).
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Progression")
 	void AddGold(int32 Amount);
+
+	// Whether Amount more banked gold fits (it is an int32).
+	bool CanReceiveGold(int64 Amount) const { return Amount >= 0 && static_cast<int64>(Gold) + Amount <= MAX_int32; }
 
 	// Server. Takes Amount from the banked gold. False, changing nothing, if there is not enough.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Progression")

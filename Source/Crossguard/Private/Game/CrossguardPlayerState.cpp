@@ -6,6 +6,8 @@
 #include "GameFramework/Pawn.h"
 #include "Items/CrossguardInventoryComponent.h"
 #include "Game/CrossguardGuildComponent.h"
+#include "Engine/GameInstance.h"
+#include "Game/CrossguardGuildSubsystem.h"
 #include "Items/CrossguardStashComponent.h"
 #include "Items/CrossguardVendorComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -323,4 +325,15 @@ void ACrossguardPlayerState::ProgressionChanged()
 void ACrossguardPlayerState::OnRep_Progression()
 {
 	OnProgressionChanged.Broadcast();
+}
+
+void ACrossguardPlayerState::OnSetUniqueId()
+{
+	Super::OnSetUniqueId();
+	UGameInstance* GameInstance = GetGameInstance();
+	UCrossguardGuildSubsystem* Guilds = HasAuthority() && GameInstance != nullptr ? GameInstance->GetSubsystem<UCrossguardGuildSubsystem>() : nullptr;
+	if (Guilds != nullptr)
+	{
+		Guilds->PlayerJoined(this);
+	}
 }
