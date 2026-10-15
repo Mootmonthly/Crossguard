@@ -29,6 +29,7 @@
 #include "Interaction/CrossguardInteractable.h"
 #include "Interaction/CrossguardLockComponent.h"
 #include "Items/CrossguardLootContainer.h"
+#include "Items/CrossguardTradeComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
 #include "Skills/CrossguardLoadoutComponent.h"
@@ -48,6 +49,7 @@ ACrossguardCharacter::ACrossguardCharacter()
 	LoadoutComponent = CreateDefaultSubobject<UCrossguardLoadoutComponent>(TEXT("LoadoutComponent"));
 	EquipmentComponent = CreateDefaultSubobject<UCrossguardEquipmentComponent>(TEXT("EquipmentComponent"));
 	InventoryComponent = CreateDefaultSubobject<UCrossguardInventoryComponent>(TEXT("InventoryComponent"));
+	TradeComponent = CreateDefaultSubobject<UCrossguardTradeComponent>(TEXT("TradeComponent"));
 	TrackingComponent = CreateDefaultSubobject<UCrossguardTrackingComponent>(TEXT("TrackingComponent"));
 	TrackingComponent->SetupAttachment(GetRootComponent());
 	WeaponAttackAbilityClass = UCrossguardWeaponAttackAbility::StaticClass();
@@ -968,4 +970,52 @@ void ACrossguardCharacter::OnReviveWindowExpired()
 	{
 		GameMode->HandlePermanentDeath(this);
 	}
+}
+
+// --- Trading from the console (until a trade window exists) ---------------------------------------
+
+void ACrossguardCharacter::TradeItems()
+{
+	for (const FCrossguardInventoryItem& Item : InventoryComponent->GetItems())
+	{
+		const FName What = Item.Category == ECrossguardItemCategory::Weapon ? Item.Weapon.WeaponId
+			: Item.Category == ECrossguardItemCategory::Armor ? Item.Armor.ArmorId : Item.ItemId;
+		UE_LOG(LogCrossguard, Display, TEXT("Trade: item id %d = %s x%d"), Item.Id, *What.ToString(), Item.Count);
+	}
+}
+
+void ACrossguardCharacter::TradeNearest()
+{
+	APawn* Nearest = nullptr;
+	float NearestDistance = TNumericLimits<float>::Max();
+	for (TActorIterator<ACrossguardCharacter> It(GetWorld()); It; ++It)
+	{
+		ACrossguardCharacter* Other = *It;
+		const float Distance = FVector::Dist(GetActorLocation(), Other->GetActorLocation());
+		// Other players: only player characters have a player state on clients.
+		if (Other != this && Other->GetPlayerState() != nullptr && Distance < NearestDistance)
+		{
+			Nearest = Other;
+			NearestDistance = Distance;
+		}
+	}
+	UE_LOG(LogCrossguard, Display, TEXT("Trade: asking %s"), *GetNameSafe(Nearest));
+	TradeComponent->RequestTrade(Nearest);
+}
+
+void ACrossguardCharacter::TradeRespond(bool bAccept) { TradeComponent->RespondToTrade(bAccept); }
+void ACrossguardCharacter::TradeLock(bool bLocked) { TradeComponent->RequestLock(bLocked); }
+void ACrossguardCharacter::TradeAccept() { TradeComponent->RequestAccept(); }
+void ACrossguardCharacter::TradeCancel() { TradeComponent->RequestCancel(); }
+
+void ACrossguardCharacter::TradeOffer(const FString& ItemIds, int32 Gold)
+{
+	TArray<FString> Parts;
+	ItemIds.ParseIntoArray(Parts, TEXT(","));
+	TArray<int32> Ids;
+	for (const FString& Part : Parts)
+	{
+		Ids.Add(FCString::Atoi(*Part.TrimStartAndEnd()));
+	}
+	TradeComponent->RequestSetOffer(Ids, Gold);
 }

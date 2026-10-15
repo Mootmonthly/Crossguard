@@ -286,6 +286,16 @@ bool UCrossguardInventoryComponent::PlaceNewItem(FCrossguardInventoryItem Item)
 
 int32 UCrossguardInventoryComponent::AddItem(const FCrossguardInventoryItem& NewItem)
 {
+	const int32 Remaining = AddItemSilently(NewItem);
+	if (IsServer())
+	{
+		OnInventoryChanged.Broadcast();
+	}
+	return Remaining;
+}
+
+int32 UCrossguardInventoryComponent::AddItemSilently(const FCrossguardInventoryItem& NewItem)
+{
 	int32 Remaining = FMath::Max(1, NewItem.Count);
 	FCrossguardInventoryItem Item = NewItem;
 	Item.Count = 1;
@@ -323,9 +333,53 @@ int32 UCrossguardInventoryComponent::AddItem(const FCrossguardInventoryItem& New
 		}
 		Remaining -= Stack.Count;
 	}
-
-	OnInventoryChanged.Broadcast();
 	return Remaining;
+}
+
+bool UCrossguardInventoryComponent::ExchangeItems(const TArray<int32>& GiveIds, const TArray<FCrossguardInventoryItem>& Receive, bool bApply,
+	TArray<FCrossguardInventoryItem>* OutGiven)
+{
+	if (!IsServer())
+	{
+		return false;
+	}
+	// Tried on the real state, then put back unless it all worked and bApply. Nothing replicates in
+	// between (same frame).
+	const TArray<FCrossguardInventoryItem> SavedItems = Items;
+	const int32 SavedNextItemId = NextItemId;
+	TArray<FCrossguardInventoryItem> Given;
+	bool bOk = true;
+	for (const int32 GiveId : GiveIds)
+	{
+		const int32 Index = IndexOfItem(GiveId);
+		// The readied item is in hand: not tradable until put away.
+		if (Index == INDEX_NONE || GiveId == ReadiedItemId)
+		{
+			bOk = false;
+			break;
+		}
+		Given.Add(Items[Index]);
+		Items.RemoveAt(Index);
+	}
+	for (int32 Index = 0; bOk && Index < Receive.Num(); ++Index)
+	{
+		bOk = AddItemSilently(Receive[Index]) == 0;
+	}
+	if (!bOk || !bApply)
+	{
+		Items = SavedItems;
+		NextItemId = SavedNextItemId;
+	}
+	else
+	{
+		ValidateHeldItem();
+		OnInventoryChanged.Broadcast();
+	}
+	if (OutGiven != nullptr)
+	{
+		*OutGiven = Given;
+	}
+	return bOk;
 }
 
 int32 UCrossguardInventoryComponent::CountItem(FName ItemId) const

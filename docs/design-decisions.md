@@ -146,7 +146,7 @@ Rulings for the first skills built in C++ (defaults proposed and accepted, plus 
 | Splinter of Winter | Dagger attacks: +5 Magic Damage and -10% speed for 3 s. |
 | Multiscale | Requires Plate armor (Skill Forge). +15% Attack and Magic Resistance to you, every party member and party minions, at any distance. Two Multiscales do not stack. Off while you are Muted or dead. Also comes with The Mithril Knight. |
 | Silence | (Crowd control.) A Silenced character cannot activate skills; a skill already running is interrupted. Basic attacks and passives keep working (unlike Mute, which also switches passives off). Affects players, minions and monsters alike. |
-| Summon Tiger | A tiger for 180 s: 100 HP, 20 Attack Damage claw attacks (assumed once a second). Skills Hunter's Leap, Neckbite, Slash. Its claws count as any melee weapon for Slash. The Pet Gem (Tiger) requirement is not checked yet (no such item). |
+| Summon Tiger | A tiger for 180 s: 100 HP, 20 Attack Damage claw attacks (assumed once a second). Skills Hunter's Leap, Neckbite, Slash. Its claws count as any melee weapon for Slash. Needs a Pet Gem (Tiger) (`pet_gem_tiger`, an item) in the inventory; it is not used up. |
 | Summon Greater Demon | A large demon (assumed 1.5× size, 3 m reach) for 60 s: 220 HP, a two-handed sword dealing 40 Attack Damage once every 1.4 s (the sword's speed). Skills Mortal Strike, Sword Mastery, Eldritch Shield, Shade Blow. |
 | Minion and monster skills | Mobs can have any skill but Flight (AI cannot fly) and Hunter's Tracking (a player's screen effect); bundles grant their skills. Next-attack skills only suit the role whose attack carries them (melee ones Warriors, Purge Shot and Arcane Arrows Ranged). An AI uses an active skill as soon as it is ready and its target is in that skill's range, aimed straight at the target; its skills come with it: weapon, armor, form and casting-weapon requirements do not apply (Multiscale needs no Plate). Recasting a summon replaces the previous one. When each skill fires (assumptions): next-attack skills within reach + 2 m; Hunter's Leap and Like A Lion at a visible target beyond 1.5 reaches but within the leap; Fireball, Mute (not on the Muted), Parting the Land, Flare Breath, Shooting Star (3–9 m) at a visible target in range; Cleave and Triple Thrust within their reach; Eldritch Shield, Unleash, Immutable within 10 m, Quickshot 15 m, Dragonification 15 m, summons 20 m, Light 30 m; Stealth to sneak in from 15 m; Wall (Mage and Ranged only) when a target is within 6 m; Heal and Greater Heal on itself at 60% Health, Benediction at 35% (it revives nobody). An AI's Like A Lion leaps at its own target. Next-attack skills are only readied when its weapon suits them (natural attacks suit all). A mob's attacks break its Stealth, and Action Speed (Quickshot) shortens its attack interval. |
 | Monster team | Monsters, and minions they summon, are one team: allies of each other (party skills such as Immutable and Multiscale reach other monsters; a monster's Multiscale only within 30 m), never targets for each other. |
@@ -399,6 +399,10 @@ All values live in one config (`FScalingConfig` in `CrossguardRules`):
 - ADB, AR, Active cast time / CDR, PHB: 0% at 10 STR.
 - Movement Speed 100%, Action Speed 0%, Dexterity, Art cast time / CDR: at 10 AGI.
 - MDB, MR, MHB, Spell cast time / CDR: 0% at 10 INT.
+
+## Trading
+
+Players trade face to face, in raids or between them: ask within 5 m, both offer, both lock, both accept, the server swaps everything or nothing. Banked gold only between raids (in raids, gold coins are items). Details and assumptions: [trading.md](trading.md).
 
 ## Open questions
 

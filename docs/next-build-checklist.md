@@ -106,6 +106,8 @@ Skills: put them in `DebugSkills` (Skill Capacity permitting; raise `Level` with
 | Tiger's Neckbite lands on the second client | For 2 s they cannot cast skills (basic attacks still work); a channel in progress stops. |
 | Place a **CrossguardMobSpawner** (Place Actors, search "Mob Spawner") on a NavMesh: Mobs `skeleton_soldier` (weight 3) and `skeleton_archer` (1), Count 3–5, Radius 600 | On Play, 3–5 skeletons appear around it (cylinders; archers keep away and shoot). Kill one: its body stays. With Respawn Seconds 10, a new one appears 10 s later. |
 | Place a spawner with `mithril_dragon` | A huge cylinder (scale 6) standing on the ground, not sunk into it; it summons skeletons and a demon that fight you, not other monsters. |
+| Trading (2 clients): both stand close; client 1 console `TradeItems`, `TradeNearest`; client 2 `TradeRespond 1`; each `TradeOffer "<ids>" 0`, `TradeLock 1`, `TradeAccept` | The log shows each step; after both accept, the items swap inventories. Walk 6 m apart mid-trade: it ends (TooFar). |
+| `summon_tiger` without a `pet_gem_tiger` in the inventory | Refused; with one (DebugInventory), it works and the gem stays. |
 | `spear_two_handed` as `DebugMainHand` | Hits for 33 once every 1.2 s; `triple_thrust` works. |
 
 Passive skills: put `heroic_might` (or a mastery) in `DebugSkills` and check

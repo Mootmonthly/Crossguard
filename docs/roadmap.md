@@ -92,7 +92,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Item | Needs | Notes |
 | --- | --- | --- |
 | Crafting and enchanting | Decision, Code | XP is ruled (10–60 by rarity); recipes are not. |
-| Trading | Code | Player to player. |
+| Trading | Editor | Built in code ([trading.md](trading.md)): ask, offer, lock, accept, all-or-nothing swap. Needs a trade window UI (console commands for now). |
 | Auction house | Code, Decision | Needs the backend and a currency. |
 | Guilds and guild bank | Code | Members deposit; officers withdraw, manage, redistribute. |
 | Respec store purchase | Code | Grants respec tokens after a verified purchase; price not set. |
@@ -126,8 +126,7 @@ Decisions that block items above. Answers go into design-decisions.md.
 | Is drinking a potion instant? Does bandaging slow movement? | Consumables (currently: instant, full speed) |
 | Respec price? | Store |
 | Jewelry, quarterstaffs, two-handed pavise shields, the Beastial transformation for Neckbite | Later content |
-| Is the Pet Gem (Tiger) an item that is used up? Tiger attack speed, Demon size? | Summon Tiger, Summon Greater Demon (currently: not checked; 1 s; 1.5×) |
-| Spear: one- or two-handed, inventory size? | Spear (currently: two-handed, 1 × 5, can parry) |
+| Tiger attack speed, Demon size? | Summon Tiger, Summon Greater Demon (currently: 1 s; 1.5×) |
 | Block and parry: how much a shield block stops, the parry window, what a parry does | Block and parry, Triple Thrust piercing |
 | Real drop rates: what each monster and chest drops, and rarity odds | Loot tables (placeholders now) |
 | More monsters: enter them in the Mob Forge (https://claude.ai/artifact/JPDt46urNPnzMsgZuD7RYW) | Monster AI |

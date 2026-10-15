@@ -197,7 +197,7 @@ protected:
 };
 
 // [Summon Tiger] (Spell, 185 s): a tiger for 180 s. 100 HP, 20 Attack Damage claws; Hunter's Leap,
-// Neckbite, Slash. (Its Pet Gem (Tiger) requirement is not checked yet: the item does not exist.)
+// Neckbite, Slash. Needs a Pet Gem (Tiger) in the inventory (not used up; AI summoners need none).
 UCLASS()
 class CROSSGUARD_API UCrossguardSummonTigerAbility : public UCrossguardSummonCompanionAbility
 {
@@ -205,6 +205,10 @@ class CROSSGUARD_API UCrossguardSummonTigerAbility : public UCrossguardSummonCom
 
 public:
 	UCrossguardSummonTigerAbility();
+
+	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr,
+		FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 };
 
 // [Summon Greater Demon] (Spell, 240 s): a large demon for 60 s. 220 HP, a two-handed sword

@@ -176,6 +176,28 @@
 		"bHasCountsAsWeapon": false
 	},
 	{
+		"Name": "pet_gem_tiger",
+		"DisplayName": "Pet Gem (Tiger)",
+		"Category": "Tool",
+		"GridWidth": 1,
+		"GridHeight": 1,
+		"MaxStack": 1,
+		"SellValue": 0,
+		"SellPerRarity": 0,
+		"HealAmount": 0,
+		"HealPerRarity": 0,
+		"HealDuration": 0,
+		"UseTime": 0,
+		"ThrowDamageType": "Attack",
+		"ThrowDamage": 0,
+		"ThrowDamagePerRarity": 0,
+		"ThrowRadiusMeters": 0,
+		"ThrowDotPerSecond": 0,
+		"ThrowDotSeconds": 0,
+		"CountsAsWeapon": "Sword",
+		"bHasCountsAsWeapon": false
+	},
+	{
 		"Name": "ruby",
 		"DisplayName": "Ruby",
 		"Category": "Trinket",

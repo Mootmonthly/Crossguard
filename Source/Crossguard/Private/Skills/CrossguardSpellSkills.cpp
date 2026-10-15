@@ -10,6 +10,7 @@
 #include "Character/CrossguardMinion.h"
 #include "Combat/CrossguardSpellProjectile.h"
 #include "Engine/World.h"
+#include "Items/CrossguardInventoryComponent.h"
 #include "Skills/CrossguardLoadoutComponent.h"
 #include "Skills/CrossguardSkillCatalog.h"
 
@@ -43,6 +44,7 @@ namespace
 	constexpr float SpellAIHealBelow = 0.6f;
 	constexpr float SpellAIChopDownLead = 200.0f;
 	constexpr float SpellAISummonRange = 2000.0f;
+	const FName TigerPetGemId(TEXT("pet_gem_tiger"));
 }
 
 // --- Fireball -------------------------------------------------------------------------------------
@@ -445,6 +447,23 @@ UCrossguardSummonTigerAbility::UCrossguardSummonTigerAbility()
 	AttackInterval = 1.0f;
 	Seconds = 180.0f;
 	Skills = {TEXT("hunters_leap"), TEXT("neckbite"), TEXT("slash")};
+}
+
+bool UCrossguardSummonTigerAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
+	{
+		return false;
+	}
+	// The Pet Gem (Tiger) somewhere in the inventory (Data/Items/Items.json; Skills.json requirement).
+	const AActor* Avatar = ActorInfo != nullptr ? ActorInfo->AvatarActor.Get() : nullptr;
+	if (Avatar == nullptr || Avatar->IsA<ACrossguardAICharacter>())
+	{
+		return Avatar != nullptr;
+	}
+	const UCrossguardInventoryComponent* Inventory = Avatar->FindComponentByClass<UCrossguardInventoryComponent>();
+	return Inventory != nullptr && Inventory->CountItem(TigerPetGemId) > 0;
 }
 
 UCrossguardSummonGreaterDemonAbility::UCrossguardSummonGreaterDemonAbility()

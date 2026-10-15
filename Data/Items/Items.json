@@ -95,6 +95,16 @@
     "sellPerRarity": 0
   },
   {
+    "id": "pet_gem_tiger",
+    "name": "Pet Gem (Tiger)",
+    "category": "Tool",
+    "gridWidth": 1,
+    "gridHeight": 1,
+    "maxStack": 1,
+    "sellValue": 0,
+    "sellPerRarity": 0
+  },
+  {
     "id": "ruby",
     "name": "Ruby",
     "category": "Trinket",

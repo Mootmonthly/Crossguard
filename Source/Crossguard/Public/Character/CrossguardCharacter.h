@@ -21,6 +21,7 @@ struct FInputActionValue;
 class UCrossguardEquipmentComponent;
 class UCrossguardWeaponAttackAbility;
 class UCrossguardLoadoutComponent;
+class UCrossguardTradeComponent;
 class UCrossguardTrackingComponent;
 struct FOnAttributeChangeData;
 
@@ -42,6 +43,32 @@ public:
 	UCrossguardLoadoutComponent* GetLoadoutComponent() const { return LoadoutComponent; }
 	UCrossguardEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
 	UCrossguardInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
+	UCrossguardTradeComponent* GetTradeComponent() const { return TradeComponent; }
+
+	// Trading until a trade window exists (console, the ` key; the Output Log shows every change):
+	// TradeItems lists your inventory's item ids; TradeNearest asks the nearest player; TradeRespond
+	// 1 or 0; TradeOffer "3,7" 0 offers item ids and banked gold; TradeLock 1 or 0; TradeAccept;
+	// TradeCancel.
+	UFUNCTION(Exec)
+	void TradeItems();
+
+	UFUNCTION(Exec)
+	void TradeNearest();
+
+	UFUNCTION(Exec)
+	void TradeRespond(bool bAccept);
+
+	UFUNCTION(Exec)
+	void TradeOffer(const FString& ItemIds, int32 Gold);
+
+	UFUNCTION(Exec)
+	void TradeLock(bool bLocked);
+
+	UFUNCTION(Exec)
+	void TradeAccept();
+
+	UFUNCTION(Exec)
+	void TradeCancel();
 
 	// Left click: basic attack with the main-hand weapon.
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Combat")
@@ -295,6 +322,10 @@ protected:
 	// Set its ItemTable in the character Blueprint.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Inventory")
 	TObjectPtr<UCrossguardInventoryComponent> InventoryComponent;
+
+	// Player-to-player trading.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Inventory")
+	TObjectPtr<UCrossguardTradeComponent> TradeComponent;
 
 	// [Hunter's Tracking] footprints, drawn on this character's own screen only.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Skills")

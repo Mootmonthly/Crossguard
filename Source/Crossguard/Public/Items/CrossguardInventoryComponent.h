@@ -264,6 +264,12 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	bool RemoveItem(int32 ItemId);
 
+	// Server, for trades: removes the GiveIds stacks and adds Receive, all or nothing. False,
+	// changing nothing, if a Give id is missing or readied, or Receive does not fit once they are
+	// gone. bApply false only checks. OutGiven: the removed stacks.
+	bool ExchangeItems(const TArray<int32>& GiveIds, const TArray<FCrossguardInventoryItem>& Receive, bool bApply,
+		TArray<FCrossguardInventoryItem>* OutGiven = nullptr);
+
 	// Client requests: run on the server (clients forward them). Rejections reach the owning
 	// client through OnInventoryRejected.
 
@@ -474,6 +480,8 @@ private:
 	bool FindPlacement(FCrossguardInventoryItem& Item) const;
 	// Gives the item a new id, finds it a spot and adds it. False if it does not fit.
 	bool PlaceNewItem(FCrossguardInventoryItem Item);
+	// AddItem without the change broadcast.
+	int32 AddItemSilently(const FCrossguardInventoryItem& NewItem);
 	int32 IndexOfItem(int32 ItemId) const;
 	UCrossguardEquipmentComponent* GetEquipment() const;
 	bool IsServer() const;
