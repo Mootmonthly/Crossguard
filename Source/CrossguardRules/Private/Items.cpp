@@ -157,9 +157,10 @@ namespace Crossguard
 			double Value;
 			if (Affix.Step > 0.0 && Affix.Max > Affix.Min)
 			{
-				// Every grid value from Min to Max inclusive is equally likely. The epsilon keeps
-				// Max on the grid despite floating-point error (e.g. 0.01 to 0.05 by 0.01).
-				const size_t Steps = static_cast<size_t>(std::floor((Affix.Max - Affix.Min) / Affix.Step + 1e-9));
+				// Every grid value from Min to Max inclusive is equally likely. The tolerance keeps
+				// Max on the grid despite rounding, including ranges stored as float in Unreal data
+				// tables (0.05f - 0.02f) / 0.01f can come out just under 3.
+				const size_t Steps = static_cast<size_t>(std::floor((Affix.Max - Affix.Min) / Affix.Step + 1e-4));
 				Value = Affix.Min + static_cast<double>(Rng.NextIndex(Steps + 1)) * Affix.Step;
 			}
 			else

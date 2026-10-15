@@ -395,6 +395,17 @@ static void TestAffixRolls()
 			}
 		}
 	}
+	// Ranges that went through float (Unreal data tables) still reach Max.
+	{
+		const std::vector<FAffixDefinition> FloatPool{{"pct", static_cast<float>(0.02), static_cast<float>(0.05), static_cast<float>(0.01)}};
+		bool bReachedMax = false;
+		for (uint64_t Seed = 0; Seed < 500 && !bReachedMax; ++Seed)
+		{
+			bReachedMax = std::fabs(RollAffixes(FloatPool, 1, Seed)[0].Value - static_cast<float>(0.05)) < 1e-6;
+		}
+		CHECK(bReachedMax);
+	}
+
 	CHECK(bInRange);
 	CHECK(bOnGrid);
 	CHECK(bDistinct);
