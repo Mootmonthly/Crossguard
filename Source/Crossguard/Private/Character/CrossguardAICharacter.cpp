@@ -4,6 +4,7 @@
 #include "AbilitySystem/CrossguardEffects.h"
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemGlobals.h"
+#include "Combat/CrossguardProjectile.h"
 #include "Combat/CrossguardSpellProjectile.h"
 #include "Combat/CrossguardWeaponAttackAbility.h"
 #include "Components/CapsuleComponent.h"
@@ -30,6 +31,7 @@ ACrossguardAICharacter::ACrossguardAICharacter()
 {
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 	FireballClass = ACrossguardSpellProjectile::StaticClass();
+	ArrowClass = ACrossguardProjectile::StaticClass();
 	// AI turns toward where it moves.
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
@@ -139,24 +141,35 @@ bool ACrossguardAICharacter::TryUseSkills(AActor* Target)
 	return false;
 }
 
+TOptional<ECrossguardWeaponType> ACrossguardAICharacter::GetWieldedWeapon() const
+{
+	if (CombatRole == ECrossguardCombatRole::Ranged)
+	{
+		return ECrossguardWeaponType::Bow;
+	}
+	return bWieldsWeapon ? TOptional<ECrossguardWeaponType>(WeaponType) : TOptional<ECrossguardWeaponType>();
+}
+
 bool ACrossguardAICharacter::WieldsAnyOf(const TArray<ECrossguardWeaponType>& AnyOf) const
 {
 	if (AnyOf.IsEmpty())
 	{
 		return true;
 	}
-	if (!bWieldsWeapon)
+	const TOptional<ECrossguardWeaponType> Held = GetWieldedWeapon();
+	if (!Held.IsSet())
 	{
 		return false;
 	}
+	const ECrossguardWeaponType Type = Held.GetValue();
 	// The enums match (static_assert in CrossguardEquipmentComponent.cpp).
 	Crossguard::FEquipment Equipment;
 	Crossguard::FEquippedWeapon Weapon;
-	Weapon.Type = static_cast<Crossguard::EWeaponType>(WeaponType);
-	Weapon.Handedness = bTwoHandedWeapon ? Crossguard::EHandedness::TwoHanded : Crossguard::EHandedness::OneHanded;
-	Weapon.bMelee = WeaponType != ECrossguardWeaponType::Bow && WeaponType != ECrossguardWeaponType::Crossbow
-		&& WeaponType != ECrossguardWeaponType::Sling && WeaponType != ECrossguardWeaponType::Wand
-		&& WeaponType != ECrossguardWeaponType::MagicStaff;
+	Weapon.Type = static_cast<Crossguard::EWeaponType>(Type);
+	Weapon.Handedness = bTwoHandedWeapon || CombatRole == ECrossguardCombatRole::Ranged ? Crossguard::EHandedness::TwoHanded
+		: Crossguard::EHandedness::OneHanded;
+	Weapon.bMelee = Type != ECrossguardWeaponType::Bow && Type != ECrossguardWeaponType::Crossbow && Type != ECrossguardWeaponType::Sling
+		&& Type != ECrossguardWeaponType::Wand && Type != ECrossguardWeaponType::MagicStaff;
 	Equipment.MainHand = Weapon;
 	std::vector<Crossguard::EWeaponType> Required;
 	for (const ECrossguardWeaponType Type : AnyOf)
@@ -212,20 +225,52 @@ bool ACrossguardAICharacter::TryAttack(AActor* Target)
 	{
 		return false;
 	}
-	// Readied next-attack skills ride on the hit, as on a weapon attack; AttackDamage stands in for
-	// the weapon's damage.
-	const TOptional<ECrossguardWeaponType> Weapon = bWieldsWeapon ? TOptional<ECrossguardWeaponType>(WeaponType) : TOptional<ECrossguardWeaponType>();
-	const FCrossguardAttackRiders Riders = UCrossguardWeaponAttackAbility::GatherRiders(FCrossguardRiderAttack::ForAIMelee(Weapon), ASC);
+	// Readied next-attack skills ride on the attack, as on a weapon attack; AttackDamage stands in
+	// for the weapon's damage.
+	const bool bRanged = CombatRole == ECrossguardCombatRole::Ranged;
+	const FCrossguardRiderAttack Attack = bRanged ? FCrossguardRiderAttack::ForAIRanged() : FCrossguardRiderAttack::ForAIMelee(GetWieldedWeapon());
+	const FCrossguardAttackRiders Riders = UCrossguardWeaponAttackAbility::GatherRiders(Attack, ASC);
 	const FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(UCrossguardDamageEffect::StaticClass(), 1.0f, ASC->MakeEffectContext());
 	if (Spec.IsValid())
 	{
 		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack,
 			AttackDamage * Riders.WeaponMultiplier + Riders.WeaponFlat + Riders.AttackAdd);
 		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, Riders.MagicAdd);
-		ASC->ApplyGameplayEffectSpecToTarget(*Spec.Data, TargetASC);
-		UCrossguardWeaponAttackAbility::ApplyRiders(Riders, TargetASC);
-		UCrossguardWeaponAttackAbility::FinishMeleeHits(Riders, ASC, {Target});
+		if (bRanged)
+		{
+			ShootArrow(Target, Spec, Riders);
+		}
+		else
+		{
+			ASC->ApplyGameplayEffectSpecToTarget(*Spec.Data, TargetASC);
+			UCrossguardWeaponAttackAbility::ApplyRiders(Riders, TargetASC);
+			UCrossguardWeaponAttackAbility::FinishMeleeHits(Riders, ASC, {Target});
+		}
 	}
 	NextAttackTime = Now + AttackInterval;
 	return true;
+}
+
+void ACrossguardAICharacter::ShootArrow(AActor* Target, const FGameplayEffectSpecHandle& Spec, const FCrossguardAttackRiders& Riders)
+{
+	UWorld* World = GetWorld();
+	if (World == nullptr || ArrowClass == nullptr)
+	{
+		return;
+	}
+	// From the eyes straight at the target's middle (arrows fly without gravity).
+	FVector Eyes;
+	FRotator Unused;
+	GetActorEyesViewPoint(Eyes, Unused);
+	const FRotator Aim = (Target->GetActorLocation() - Eyes).Rotation();
+	const FTransform SpawnTransform(Aim, Eyes + Aim.Vector() * 50.0f);
+	ACrossguardProjectile* Arrow = World->SpawnActorDeferred<ACrossguardProjectile>(ArrowClass, SpawnTransform, this, this,
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	if (Arrow != nullptr)
+	{
+		Arrow->DamageSpec = Spec;
+		Arrow->OnHitSpecs = Riders.OnHitSpecs;
+		Arrow->bCancelSkillsOnHit = Riders.bCancelSkills;
+		Arrow->FinishSpawning(SpawnTransform);
+	}
 }

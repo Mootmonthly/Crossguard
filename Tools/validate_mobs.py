@@ -10,14 +10,14 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from ai_skills import is_ai_usable, load_skills  # noqa: E402
+from ai_skills import is_ai_usable, load_skills, roles_for  # noqa: E402
 from validate_loot import LOOT_FIELDS, ids_by_kind, validate_loot_body  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 SOURCE = REPO / "Data" / "Mobs" / "Mobs.json"
 ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 KINDS = {"Monster", "Boss"}
-ROLES = {"Warrior", "Mage"}
+ROLES = {"Warrior", "Mage", "Ranged"}
 
 
 def is_num(v):
@@ -81,6 +81,9 @@ def validate(mobs):
             if mob["id"] in ids:
                 err("duplicate id")
             ids.append(mob["id"])
+        if mob.get("combatRole") == "Ranged" and non_negative(mob.get("keepDistance")) and positive(mob.get("attackRange")) \
+                and mob["keepDistance"] > mob["attackRange"]:
+            err("keepDistance is larger than attackRange: a Ranged mob would stand out of its own range")
         if positive(mob.get("aggroRange", 0)) and positive(mob.get("leashRange")) and mob["aggroRange"] > mob["leashRange"]:
             err("aggroRange is larger than leashRange: it would aggro on enemies it must not chase")
         mob_skills = mob.get("skills")
@@ -92,6 +95,8 @@ def validate(mobs):
                     err(f"skills: no skill '{skill_id}' in Skills.json")
                 elif not is_ai_usable(skills[skill_id]):
                     err(f"skills: '{skill_id}' is not AI-usable (an AI active or a data-only passive)")
+                elif roles_for(skill_id) and mob.get("combatRole") not in roles_for(skill_id):
+                    err(f"skills: '{skill_id}' is only used by {' or '.join(roles_for(skill_id))} mobs")
         loot = mob.get("loot")
         if isinstance(loot, dict):
             if set(loot) != LOOT_FIELDS:

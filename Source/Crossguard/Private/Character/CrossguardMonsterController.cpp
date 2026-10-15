@@ -138,8 +138,7 @@ void ACrossguardMonsterController::Tick(float DeltaSeconds)
 		}
 		else if (AActor* Enemy = Target.Get())
 		{
-			const bool bMage = Monster->CombatRole == ECrossguardCombatRole::Mage;
-			MoveToGoal(Enemy, FVector::ZeroVector, bMage ? Monster->KeepDistance : Monster->AttackRange * 0.5f);
+			MoveToGoal(Enemy, FVector::ZeroVector, Monster->KeepsDistance() ? Monster->KeepDistance : Monster->AttackRange * 0.5f);
 		}
 		else if (FromHome > MonsterHomeAcceptance)
 		{
@@ -158,8 +157,8 @@ void ACrossguardMonsterController::Tick(float DeltaSeconds)
 		// Focus aims its eyes (aimed skills).
 		SetFocus(Enemy);
 		Monster->TryUseSkills(Enemy);
-		// The Mage needs to see its target; the Warrior checks its reach itself.
-		if (Monster->CombatRole != ECrossguardCombatRole::Mage || LineOfSightTo(Enemy))
+		// Mage and Ranged need to see their target; the Warrior checks its reach itself.
+		if (!Monster->KeepsDistance() || LineOfSightTo(Enemy))
 		{
 			Monster->TryAttack(Enemy);
 		}

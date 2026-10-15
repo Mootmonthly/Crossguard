@@ -7,6 +7,9 @@
 
 #include "CrossguardAICharacter.generated.h"
 
+class ACrossguardProjectile;
+struct FCrossguardAttackRiders;
+struct FGameplayEffectSpecHandle;
 class ACrossguardSpellProjectile;
 class UCrossguardSkillCatalog;
 class UCrossguardSkillGrant;
@@ -20,6 +23,8 @@ enum class ECrossguardCombatRole : uint8
 	Warrior,
 	// Keeps its distance and casts Fireball.
 	Mage,
+	// Keeps its distance and shoots arrows (Attack Damage) with a bow.
+	Ranged,
 };
 
 // A character run by AI (summoned minions, monsters): fixed Health instead of level-based
@@ -47,7 +52,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|AI", meta = (ClampMin = "1"))
 	float FixedHealth = 40.0f;
 
-	// Warrior: Attack Damage per hit, one hit per AttackInterval, within AttackRange (cm).
+	// Warrior: Attack Damage per hit, one hit per AttackInterval, within AttackRange (cm). Ranged: the
+	// same per arrow, shooting at targets within AttackRange that it can see.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|AI", meta = (ClampMin = "0"))
 	float AttackDamage = 10.0f;
 
@@ -57,7 +63,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|AI", meta = (ClampMin = "0"))
 	float AttackRange = 200.0f;
 
-	// Mage: seconds between fireballs, and the distance it keeps from its target (cm).
+	// Mage: seconds between fireballs. Mage and Ranged: the distance it keeps from its target (cm).
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|AI", meta = (ClampMin = "0.1"))
 	float FireballInterval = 8.0f;
 
@@ -67,8 +73,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|AI")
 	TSubclassOf<ACrossguardSpellProjectile> FireballClass;
 
+	// Ranged: what it shoots.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|AI")
+	TSubclassOf<ACrossguardProjectile> ArrowClass;
+
+	// Mage and Ranged stand off at KeepDistance and need line of sight to attack.
+	bool KeepsDistance() const { return CombatRole != ECrossguardCombatRole::Warrior; }
+
 	// The weapon it fights with, for skills that care (Sword Mastery, Shade Blow). The damage is
-	// still AttackDamage. Off: natural attacks (claws, fists).
+	// still AttackDamage. Off: natural attacks (claws, fists). Ranged characters always count as
+	// wielding a two-handed Bow.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|AI")
 	bool bWieldsWeapon = false;
 
@@ -96,8 +110,12 @@ public:
 	// Whether its weapon satisfies a weapon requirement (data passives' Wielding conditions).
 	bool WieldsAnyOf(const TArray<ECrossguardWeaponType>& AnyOf) const;
 
-	// Server. Hits Target if it is in range and the attack is ready (Warrior), or casts Fireball at
-	// it if ready (Mage). False if nothing happened.
+	// What it holds: its weapon, a Bow if Ranged, unset for natural attacks.
+	TOptional<ECrossguardWeaponType> GetWieldedWeapon() const;
+
+	// Server. Hits Target if it is in range and the attack is ready (Warrior), casts Fireball at it
+	// if ready (Mage), or shoots an arrow at it if it is in range and ready (Ranged). False if nothing
+	// happened.
 	bool TryAttack(AActor* Target);
 
 	bool IsAlive() const;
@@ -115,6 +133,7 @@ protected:
 
 private:
 	void ClearSkills();
+	void ShootArrow(AActor* Target, const FGameplayEffectSpecHandle& Spec, const FCrossguardAttackRiders& Riders);
 
 	double NextAttackTime = 0.0;
 	double NextSkillCheckTime = 0.0;

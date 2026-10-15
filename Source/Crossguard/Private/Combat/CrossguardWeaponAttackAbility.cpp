@@ -177,6 +177,14 @@ FCrossguardRiderAttack FCrossguardRiderAttack::ForAIMelee(const TOptional<ECross
 	return Attack;
 }
 
+FCrossguardRiderAttack FCrossguardRiderAttack::ForAIRanged()
+{
+	FCrossguardRiderAttack Attack;
+	Attack.bRanged = true;
+	Attack.WeaponType = ECrossguardWeaponType::Bow;
+	return Attack;
+}
+
 FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCrossguardRiderAttack& Attack, UAbilitySystemComponent* ASC)
 {
 	FCrossguardAttackRiders Riders;

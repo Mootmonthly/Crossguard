@@ -317,7 +317,8 @@ the session and across seamless travel.
 ## AI characters
 
 `ACrossguardAICharacter` (abstract): fixed Health (`FixedHealth`, kept through stat changes), a
-Warrior or Mage attack (`CombatRole`), a placeholder cylinder. Two kinds:
+Warrior, Mage or Ranged attack (`CombatRole`; Ranged shoots `ArrowClass` arrows for `AttackDamage` and
+counts as holding a bow), a placeholder cylinder. Two kinds:
 
 - `ACrossguardMinion` + `ACrossguardMinionController`: summoned, on the summoner's team, no body,
   no XP.

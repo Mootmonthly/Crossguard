@@ -193,7 +193,8 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
 (() => {
   // Schema enums: keep in step with docs/mob-data-schema.md and Tools/validate_mobs.py.
   const KINDS = ["Monster", "Boss"];
-  const ROLES = ["Warrior", "Mage"];
+  const ROLES = ["Warrior", "Mage", "Ranged"];
+  const ROLE_HINTS = { Warrior: "Runs up and hits.", Mage: "Keeps its distance and casts Fireball.", Ranged: "Keeps its distance and shoots arrows (a bow)." };
   const RARITIES = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mystic"];
   const DROP_KINDS = ["Gold", "Item", "Weapon", "Armor", "SkillGem"];
   const DROP_LABELS = { Gold: "Gold coins", Item: "Item", Weapon: "Weapon", Armor: "Armor", SkillGem: "Skill Gem" };
@@ -299,12 +300,14 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
     for (const [k, label] of Object.entries(positive)) if (!(num(m[k]) > 0)) errs.push(`${label} must be above 0.`);
     const nonNeg = { attackDamage: "Attack damage", keepDistance: "Keep distance", aggroRange: "Aggro range", moveSpeed: "Move speed" };
     for (const [k, label] of Object.entries(nonNeg)) if (!(num(m[k]) >= 0)) errs.push(`${label} must be 0 or more.`);
+    if (m.combatRole === "Ranged" && num(m.keepDistance) > num(m.attackRange)) errs.push("Keeps away farther than it can shoot: it would never hit anything.");
     if (num(m.aggroRange) > num(m.leashRange)) errs.push("Aggro range is larger than leash range: it would pick fights it must not chase.");
     m.skills.forEach((id, i) => {
       const ref = refs.skills.find((r) => r.id === id);
       if (m.skills.indexOf(id) !== i) errs.push(`Skill "${id}" is listed twice.`);
       else if (refs.skills.length && !ref) errs.push(`No skill with id "${id}".`);
       else if (ref && skillRefsReady() && !ref.aiUsable) errs.push(`${ref.name} cannot be used by mobs. Remove it.`);
+      else if (ref && Array.isArray(ref.roles) && !ref.roles.includes(m.combatRole)) errs.push(`${ref.name} is only used by ${ref.roles.join(" or ")} mobs.`);
     });
     const loot = m.loot;
     const [rmin, rmax] = loot.rolls;
@@ -326,8 +329,8 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
 
   function summary(m) {
     const bits = [m.kind, m.combatRole, `${fmt(num(m.health), 0)} HP`];
-    if (m.combatRole === "Warrior") bits.push(`${fmt(num(m.attackDamage))} per ${fmt(num(m.attackInterval))} s`);
-    else bits.push(`Fireball every ${fmt(num(m.fireballInterval))} s`);
+    if (m.combatRole === "Mage") bits.push(`Fireball every ${fmt(num(m.fireballInterval))} s`);
+    else bits.push(`${fmt(num(m.attackDamage))} per ${m.combatRole === "Ranged" ? "arrow" : "hit"}, every ${fmt(num(m.attackInterval))} s`);
     bits.push(`aggro ${fmt(num(m.aggroRange))} m`, `leash ${fmt(num(m.leashRange))} m`);
     return bits.join(" · ");
   }
@@ -472,7 +475,8 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
         ref && ref.category ? h("span", { class: "cat", text: ref.category }) : null,
         h("button", { type: "button", "aria-label": `Remove ${ref ? ref.name : id}`, title: "Remove", onclick: () => { m.skills.splice(i, 1); refreshSkills(); } }, "×"));
     });
-    const available = () => aiSkills().filter((r) => !m.skills.includes(r.id));
+    // Only skills its combat role uses (next-attack skills ride on one kind of attack).
+    const available = () => aiSkills().filter((r) => !m.skills.includes(r.id) && (!Array.isArray(r.roles) || r.roles.includes(m.combatRole)));
     const options = (q) => available()
       .filter((r) => !q || r.id.includes(q) || r.name.toLowerCase().includes(q) || (r.category || "").toLowerCase().includes(q))
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -506,6 +510,7 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
     const rerender = () => renderEditor();
     const entry = selectedId ? store.get(selectedId) : null;
     const mage = m.combatRole === "Mage";
+    const ranged = m.combatRole === "Ranged";
 
     const head = h("div", { class: "editor-head" },
       h("h2", { id: "editor-title", text: m.name || (isNew ? "New mob" : m.id) }),
@@ -531,15 +536,15 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
           textField("Name", m.name, (v) => { m.name = v; if (isNew && !idTouched) { m.id = v.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, ""); const idEl = $("f-id"); if (idEl) idEl.value = m.id; } touch(); }, { id: "f-name" }),
           textField("Id", m.id, (v) => { idTouched = true; m.id = v.trim(); touch(); }, { id: "f-id", mono: true, readonly: !isNew, hint: isNew ? "snake_case; cannot change after creating" : "Fixed. Duplicate to rename." }),
           selectField("Kind", m.kind, KINDS.map((k) => [k, k]), (v) => { m.kind = v; touch(); rerender(); }, { id: "f-kind", hint: m.kind === "Boss" ? "Killer gets boss XP (50)." : "Killer gets monster XP (5)." }),
-          selectField("Fights as", m.combatRole, ROLES.map((r) => [r, r]), (v) => { m.combatRole = v; touch(); rerender(); }, { id: "f-role", hint: mage ? "Keeps its distance and casts Fireball." : "Runs up and hits." }))),
+          selectField("Fights as", m.combatRole, ROLES.map((r) => [r, r]), (v) => { m.combatRole = v; touch(); rerender(); }, { id: "f-role", hint: ROLE_HINTS[m.combatRole] }))),
       section("Combat",
         h("div", { class: "grid" },
           numberField("Health", m.health, (v) => { m.health = v; touch(); }, { min: "1", id: "f-health" }),
-          numberField("Attack damage", m.attackDamage, (v) => { m.attackDamage = v; touch(); }, { min: "0", id: "f-damage", inactive: mage, hint: "Per hit, before resistance. Warriors." }),
-          numberField("Seconds between hits", m.attackInterval, (v) => { m.attackInterval = v; touch(); }, { min: "0", id: "f-interval", inactive: mage, hint: "Warriors." }),
-          numberField("Reach (m)", m.attackRange, (v) => { m.attackRange = v; touch(); }, { min: "0", id: "f-range", inactive: mage, hint: "A sword swing is about 2 m. Warriors." }),
+          numberField("Attack damage", m.attackDamage, (v) => { m.attackDamage = v; touch(); }, { min: "0", id: "f-damage", inactive: mage, hint: "Per hit or arrow, before resistance. Warriors and Ranged." }),
+          numberField("Seconds between attacks", m.attackInterval, (v) => { m.attackInterval = v; touch(); }, { min: "0", id: "f-interval", inactive: mage, hint: "Warriors and Ranged. A player's bow: 1 s." }),
+          numberField(ranged ? "Shooting range (m)" : "Reach (m)", m.attackRange, (v) => { m.attackRange = v; touch(); }, { min: "0", id: "f-range", inactive: mage, hint: ranged ? "Shoots enemies it can see this close." : "A sword swing is about 2 m. Warriors." }),
           numberField("Seconds between fireballs", m.fireballInterval, (v) => { m.fireballInterval = v; touch(); }, { min: "0", id: "f-fireball", inactive: !mage, hint: "Mages. Fireball: 50 + 15 splash, as the skill." }),
-          numberField("Keeps away (m)", m.keepDistance, (v) => { m.keepDistance = v; touch(); }, { min: "0", id: "f-keep", inactive: !mage, hint: "Mages." }))),
+          numberField("Keeps away (m)", m.keepDistance, (v) => { m.keepDistance = v; touch(); }, { min: "0", id: "f-keep", inactive: !(mage || ranged), hint: "Mages and Ranged. Ranged: no more than its shooting range." }))),
       section("Behaviour",
         h("div", { class: "grid" },
           numberField("Aggro range (m)", m.aggroRange, (v) => { m.aggroRange = v; touch(); }, { min: "0", id: "f-aggro", hint: "Notices enemies it can see this close." }),

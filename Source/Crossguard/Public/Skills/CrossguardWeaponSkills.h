@@ -15,8 +15,8 @@ class CROSSGUARD_API UCrossguardNextAttackAbility : public UCrossguardSkillAbili
 public:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
-	// AI: when about to hit (within its attack reach plus a step) and not already readied. Ranged
-	// ones (Purge Shot) never: AI does not shoot.
+	// AI: when about to attack (within its attack range plus a step) and not already readied; melee
+	// ones for Warriors, bow ones (Purge Shot) for Ranged.
 	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
 
 protected:

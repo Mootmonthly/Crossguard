@@ -111,10 +111,9 @@ void ACrossguardMinionController::Tick(float DeltaSeconds)
 	{
 		RethinkCountdown = RethinkSeconds;
 		Target = FindTarget(*Minion);
-		const bool bMage = Minion->CombatRole == ECrossguardCombatRole::Mage;
 		if (AActor* Enemy = Target.Get())
 		{
-			MoveToward(Enemy, bMage ? Minion->KeepDistance : Minion->AttackRange * 0.5f);
+			MoveToward(Enemy, Minion->KeepsDistance() ? Minion->KeepDistance : Minion->AttackRange * 0.5f);
 		}
 		else if (ACrossguardCharacter* Summoner = Minion->GetSummoner())
 		{
@@ -134,8 +133,8 @@ void ACrossguardMinionController::Tick(float DeltaSeconds)
 		{
 			SetFocus(Enemy);
 			Minion->TryUseSkills(Enemy);
-			// The Mage needs to see its target; the Warrior checks its reach itself.
-			if (Minion->CombatRole != ECrossguardCombatRole::Mage || LineOfSightTo(Enemy))
+			// Mage and Ranged need to see their target; the Warrior checks its reach itself.
+			if (!Minion->KeepsDistance() || LineOfSightTo(Enemy))
 			{
 				Minion->TryAttack(Enemy);
 			}

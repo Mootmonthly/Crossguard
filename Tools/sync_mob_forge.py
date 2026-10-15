@@ -15,7 +15,7 @@ mob table and the loot table. It prints a JSON report: applied ids, deleted ids,
 writes nothing.
 
 --catalog writes the forge's "refs/catalog" document: the weapon, armor, item and skill ids and
-names the drop and skill editors offer. Skills also carry their gem rarity, category and aiUsable
+names the drop and skill editors offer. Skills also carry their gem rarity, category, aiUsable and roles (null: any combat role)
 (Tools/ai_skills.py).
 """
 
@@ -26,7 +26,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from ai_skills import is_ai_usable, load_skills  # noqa: E402
+from ai_skills import is_ai_usable, load_skills, roles_for  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 MOBS = REPO / "Data" / "Mobs" / "Mobs.json"
@@ -84,7 +84,8 @@ def catalog():
         return [{"id": e["id"], "name": e["name"]} for e in json.loads(path.read_text(encoding="utf-8"))]
 
     items = REPO / "Data" / "Items"
-    skills = [{"id": s["id"], "name": s["name"], "rarity": s["rarity"], "category": s["category"], "aiUsable": is_ai_usable(s)}
+    skills = [{"id": s["id"], "name": s["name"], "rarity": s["rarity"], "category": s["category"], "aiUsable": is_ai_usable(s),
+               "roles": roles_for(s["id"])}
               for s in load_skills().values()]
     return {"weapons": names(items / "Weapons.json"), "armor": names(items / "Armor.json"),
             "items": names(items / "Items.json"), "skills": skills}

@@ -14,13 +14,13 @@ starts (the game mode's **Mob Table** must be set).
 | `id` | string | `snake_case`, unique. The monster's Mob Id. |
 | `name` | string | Display name. |
 | `kind` | enum | `Monster` (killer gets basic monster XP, 5) or `Boss` (boss XP, 50). |
-| `combatRole` | enum | `Warrior` (runs up and hits) or `Mage` (keeps its distance, casts Fireball: 50 + 15 splash, as the skill). |
+| `combatRole` | enum | `Warrior` (runs up and hits), `Mage` (keeps its distance, casts Fireball: 50 + 15 splash, as the skill) or `Ranged` (keeps its distance, shoots arrows with a bow: skeleton archers). |
 | `health` | number > 0 | Max HP. |
-| `attackDamage` | number ≥ 0 | Warrior: Attack Damage per hit, before resistance. |
-| `attackInterval` | number > 0 | Warrior: seconds between hits. |
-| `attackRange` | number > 0 | Warrior: reach in meters. |
+| `attackDamage` | number ≥ 0 | Warrior and Ranged: Attack Damage per hit or arrow, before resistance. |
+| `attackInterval` | number > 0 | Warrior and Ranged: seconds between attacks. |
+| `attackRange` | number > 0 | Warrior: reach in meters. Ranged: shooting range in meters (it shoots targets it can see this close). |
 | `fireballInterval` | number > 0 | Mage: seconds between fireballs. |
-| `keepDistance` | number ≥ 0 | Mage: meters it stays from its target. |
+| `keepDistance` | number ≥ 0 | Mage and Ranged: meters it stays from its target. Ranged: at most `attackRange`. |
 | `aggroRange` | number ≥ 0 | Meters within which it notices enemies it can see. At most `leashRange`. |
 | `leashRange` | number > 0 | Meters from home where it gives up: retargets someone in aggro range, or walks home and fully resets. |
 | `moveSpeed` | number ≥ 0 | Meters per second (a player walks 4.5). |
@@ -35,8 +35,10 @@ starts (the game mode's **Mob Table** must be set).
 A mob can only have skills the monster AI can use (`Tools/ai_skills.py`, shared by the validator
 and the Mob Forge sync):
 
-- **AI actives**: `slash`, `mortal_strike`, `shade_blow`, `gouge`, `neckbite`, `hunters_leap`,
-  `eldritch_shield` (the C++ skills that override `ShouldAIUse`).
+- **AI actives**: `slash`, `mortal_strike`, `shade_blow`, `gouge`, `neckbite`, `purge_shot`,
+  `hunters_leap`, `eldritch_shield` (the C++ skills that override `ShouldAIUse`). Next-attack skills
+  ride on one kind of attack, so only one role may have them: the melee ones (`slash`,
+  `mortal_strike`, `shade_blow`, `gouge`, `neckbite`) Warriors, `purge_shot` Ranged.
 - **Data-only passives**: category `Passive`, no `includes`, and no native C++ class (so not
   `hunters_tracking`, `multiscale` or `splinter_of_winter`). Their stat bonuses come from the
   skill data.
