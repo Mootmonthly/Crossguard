@@ -65,9 +65,15 @@ void ACrossguardMonster::ApplyMobData()
 	SetBaseWalkSpeed(Row->MoveSpeed);
 	MobScale = FMath::Max(Row->Scale, 0.05f);
 	OnRep_MobScale();
-	// Possession already set Health from the old value.
+	// Possession already set Health and granted skills from the old values.
 	GetCrossguardAbilitySystemComponent()->SetFixedMaxHealth(FixedHealth);
 	RestoreFullHealth();
+	SkillIds = Row->Skills;
+	if (GameMode->MobSkillCatalog != nullptr)
+	{
+		SkillCatalog = GameMode->MobSkillCatalog;
+	}
+	GrantSkills();
 }
 
 void ACrossguardMonster::OnRep_MobScale()

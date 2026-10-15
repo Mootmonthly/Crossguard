@@ -92,6 +92,25 @@
     "canParry": false
   },
   {
+    "id": "spear_two_handed",
+    "name": "Spear",
+    "weaponType": "Spear",
+    "handedness": "TwoHanded",
+    "range": "Melee",
+    "gridWidth": 1,
+    "gridHeight": 5,
+    "stat": "AttackDamage",
+    "baseValue": 33,
+    "perRarity": 2,
+    "attackSpeed": {
+      "attacks": 1,
+      "perSeconds": 1.2
+    },
+    "delivery": "MeleeSwing",
+    "ammo": null,
+    "canParry": true
+  },
+  {
     "id": "staff_two_handed",
     "name": "Two-Handed Staff",
     "weaponType": "MagicStaff",

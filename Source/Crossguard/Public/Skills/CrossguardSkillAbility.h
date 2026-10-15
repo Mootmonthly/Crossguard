@@ -5,6 +5,7 @@
 
 #include "CrossguardSkillAbility.generated.h"
 
+class ACrossguardAICharacter;
 class UAbilitySystemComponent;
 
 // Base for skills implemented in C++ (docs/gas-architecture.md, Skills). Helpers for aiming and for
@@ -44,7 +45,7 @@ public:
 	// Applies Spec to Target unless it grants a crowd-control state Target is immune to.
 	static void ApplyOnHitSpec(const FGameplayEffectSpecHandle& Spec, UAbilitySystemComponent* Target);
 
-	// Crowd control (docs/design-decisions.md): Slow, Blind, knock-up (later Silence, Stun, Root).
+	// Crowd control (docs/design-decisions.md): Slow, Blind, knock-up, Silence (later Stun, Root).
 	// Mute is not crowd control.
 	static bool IsCrowdControl(const FGameplayTag& State);
 	// [Immutable]: State.CCImmune, or the Immutable passive while not Muted.
@@ -65,6 +66,12 @@ public:
 	// The first living actor with an ability system under the crosshair within Range (cm), not the
 	// caster.
 	AActor* FindAimedTarget(float Range) const;
+
+	// AI characters (summons, monsters): whether to use this skill on Target now, judged on the class
+	// default object (ACrossguardAICharacter::TryUseSkills; cooldowns and blocking tags are checked
+	// on activation). Default: never. Skills an AI can use override it; Tools/ai_skills.py lists them
+	// for the Mob Forge.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const { return false; }
 
 protected:
 	// Instant skills: commit (cooldown) and end. False if the commit failed (the ability has ended).

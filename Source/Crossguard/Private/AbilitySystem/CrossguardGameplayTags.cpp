@@ -19,6 +19,7 @@ namespace CrossguardTags
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Dead, "State.Dead", "Health reached 0.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Muted, "State.Muted", "Cannot cast skills; passive skills are off.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Silenced, "State.Silenced", "Cannot activate skills; passives and basic attacks still work. Crowd control.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Slowed, "State.Slowed", "Movement speed reduced.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Blinded, "State.Blinded", "Screen flashed white.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Flying, "State.Flying", "Flying (Flight).");
@@ -29,6 +30,7 @@ namespace CrossguardTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_NextAttack_ShadeBlow, "State.NextAttack.ShadeBlow", "Next melee attack: +20 Magic Damage and blocks healing 5 s (Shade Blow).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_NextAttack_Gouge, "State.NextAttack.Gouge", "Next melee attack: 25 Attack Damage over 5 s and a 5% slow (Gouge).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_NextAttack_PurgeShot, "State.NextAttack.PurgeShot", "Next bow or crossbow attack: +10 Magic Damage and a 3 s Mute (Purge Shot).");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_NextAttack_Neckbite, "State.NextAttack.Neckbite", "Next melee attack: +10 Magic Damage and a 2 s Silence (Neckbite).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_ArcaneArrows, "State.ArcaneArrows", "Bow attacks deal +5 Magic Damage (Arcane Arrows).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_HealBlocked, "State.HealBlocked", "Cannot be healed (Shade Blow).");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Stealthed, "State.Stealthed", "Invisible to enemies (Stealth).");
@@ -45,6 +47,8 @@ namespace CrossguardTags
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Fireball, "Cooldown.Skill.Fireball");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_ChopDown, "Cooldown.Skill.ChopDown");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_SummonSkeletons, "Cooldown.Skill.SummonSkeletons");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_SummonTiger, "Cooldown.Skill.SummonTiger");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_SummonGreaterDemon, "Cooldown.Skill.SummonGreaterDemon");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_EldritchShield, "Cooldown.Skill.EldritchShield");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_ShootingStar, "Cooldown.Skill.ShootingStar");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Heal, "Cooldown.Skill.Heal");
@@ -60,6 +64,7 @@ namespace CrossguardTags
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_TripleThrust, "Cooldown.Skill.TripleThrust");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_PartingTheLand, "Cooldown.Skill.PartingTheLand");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_HuntersLeap, "Cooldown.Skill.HuntersLeap");
+	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Neckbite, "Cooldown.Skill.Neckbite");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_GreaterHeal, "Cooldown.Skill.GreaterHeal");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Benediction, "Cooldown.Skill.Benediction");
 	UE_DEFINE_GAMEPLAY_TAG(Cooldown_Skill_Unleash, "Cooldown.Skill.Unleash");

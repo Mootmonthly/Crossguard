@@ -133,6 +133,7 @@ void ACrossguardMinionController::Tick(float DeltaSeconds)
 		if (IsAliveTarget(Enemy))
 		{
 			SetFocus(Enemy);
+			Minion->TryUseSkills(Enemy);
 			// The Mage needs to see its target; the Warrior checks its reach itself.
 			if (Minion->CombatRole != ECrossguardCombatRole::Mage || LineOfSightTo(Enemy))
 			{

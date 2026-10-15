@@ -11,6 +11,8 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/RootMotionSource.h"
+#include "AIController.h"
+#include "Character/CrossguardAICharacter.h"
 #include "Character/CrossguardCharacter.h"
 #include "EngineUtils.h"
 #include "Game/CrossguardTeamLibrary.h"
@@ -38,6 +40,10 @@ namespace
 	constexpr float PartingHalfWidth = 100.0f;
 	constexpr float PartingKnockUpSpeed = 700.0f;
 	constexpr float PartingKnockUpSeconds = 1.0f;
+	// AI use (assumptions): ready a next-attack skill this far beyond the attack reach (cm); leap only
+	// at targets beyond this many attack reaches.
+	constexpr float AINextAttackLead = 200.0f;
+	constexpr float AILeapMinReaches = 1.5f;
 	constexpr float PartingWallHeight = 300.0f;
 	constexpr float PartingWallThickness = 50.0f;
 	constexpr float PartingWallGap = 60.0f;
@@ -113,6 +119,13 @@ void UCrossguardNextAttackAbility::ActivateAbility(const FGameplayAbilitySpecHan
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }
 
+bool UCrossguardNextAttackAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	const UAbilitySystemComponent* ASC = User.GetAbilitySystemComponent();
+	return bMeleeRider && ASC != nullptr && !ASC->HasMatchingGameplayTag(ReadyTag)
+		&& FVector::Dist(User.GetActorLocation(), Target.GetActorLocation()) <= User.AttackRange + AINextAttackLead;
+}
+
 UCrossguardSlashAbility::UCrossguardSlashAbility()
 {
 	SkillId = TEXT("slash");
@@ -166,6 +179,24 @@ UCrossguardPurgeShotAbility::UCrossguardPurgeShotAbility()
 	RequiredWeapons = {ECrossguardWeaponType::Bow, ECrossguardWeaponType::Crossbow};
 	SetAssetTags(FGameplayTagContainer(CrossguardTags::Skill_Weapon_Ranged));
 	ReadyTag = CrossguardTags::State_NextAttack_PurgeShot;
+	bMeleeRider = false;
+}
+
+UCrossguardNeckbiteAbility::UCrossguardNeckbiteAbility()
+{
+	SkillId = TEXT("neckbite");
+	SkillCategory = ECrossguardSkillCategory::Active;
+	BaseCooldownSeconds = 7.0f;
+	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_Neckbite);
+	ReadyTag = CrossguardTags::State_NextAttack_Neckbite;
+}
+
+bool UCrossguardNeckbiteAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	// AI only until Beastial forms exist (Summon Tiger's tiger).
+	return ActorInfo != nullptr && Cast<ACrossguardAICharacter>(ActorInfo->AvatarActor.Get()) != nullptr
+		&& Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags);
 }
 
 // --- Bow buffs ------------------------------------------------------------------------------------
@@ -557,6 +588,19 @@ UCrossguardHuntersLeapAbility::UCrossguardHuntersLeapAbility()
 	SkillCategory = ECrossguardSkillCategory::Art;
 	BaseCooldownSeconds = 15.0f;
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_HuntersLeap);
+}
+
+bool UCrossguardHuntersLeapAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	const UAbilitySystemComponent* ASC = User.GetAbilitySystemComponent();
+	const AController* Controller = User.GetController();
+	if (ASC == nullptr || Controller == nullptr)
+	{
+		return false;
+	}
+	const float Leap = FMath::Max(ASC->GetNumericAttribute(UCrossguardAttributeSet::GetAgilityAttribute()), 0.0f) * LeapCmPerAgility;
+	const float Distance = FVector::Dist(User.GetActorLocation(), Target.GetActorLocation());
+	return Distance > User.AttackRange * AILeapMinReaches && Distance <= Leap && Controller->LineOfSightTo(&Target);
 }
 
 void UCrossguardHuntersLeapAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

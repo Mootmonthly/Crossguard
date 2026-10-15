@@ -103,7 +103,7 @@ Code and data must follow it.
 | Gouge | Cooldown 7 s |
 | Shade Blow | Cooldown 10 s |
 | Arcane Arrows | Cooldown 25 s |
-| Neckbite | Cooldown 7 s. Requires a Beastial transformation Art (not designed yet). |
+| Neckbite | Cooldown 7 s. Next melee attack +10 Magic Damage and a 2 s Silence. For now only Summon Tiger's tiger has it; Beastial forms for players come later. |
 | Parting The Land | 65 Attack Damage, coefficient 1.0 |
 | Chop Down | Slow: -50% Movement Speed for 2 s |
 | Hunter's Leap | 0.5 m per point of AGI (5 m at 10 AGI) |
@@ -141,10 +141,14 @@ Rulings for the first skills built in C++ (defaults proposed and accepted, plus 
 | Like A Lion, He Leapt | (Skill Forge.) Leaps at the nearest enemy within 30 m: players first, then monsters and minions; stealthed enemies are skipped; needs line of sight (walls and other world geometry block it, characters do not). Lands 1.5 m short. STR ×1.2 for 6 s. No enemy in range: fails, no cooldown. |
 | Light | A light over your head for 120 s; recasting replaces it. |
 | Wall | 4 m wide, 3 m tall, 0.5 m thick, 3 m in front, across your view. Indestructible, 15 s. |
-| Stealth | Invisible to everyone outside your party (and to minions) for 12 s. Attacking, casting or taking damage ends it early. The exit bonus (+10% speed, +25% Attack Bonus for 3 s) applies however it ends, except death or Mute. Later: an indicator so teammates can tell you are stealthed. |
-| Immutable | Crowd control = Slow, Blind, knock-up, Grounding (later Silence, Stun, Root). **Mute is not crowd control.** Equipped (and not Muted): permanently immune. Activated: you and party members within 10 m immune for 5 s. Existing crowd control is not removed. |
+| Stealth | Invisible to everyone outside your party (and to minions) for 12 s. Attacking, casting or taking damage ends it early. The exit bonus (+10% speed, +25% Attack Bonus for 3 s) applies however it ends, except death or Mute. Later (with visual assets): party members see a purple outline around you while you are stealthed. |
+| Immutable | Crowd control = Slow, Blind, knock-up, Grounding, Silence (later Stun, Root). **Mute is not crowd control.** Equipped (and not Muted): permanently immune. Activated: you and party members within 10 m immune for 5 s. Existing crowd control is not removed. |
 | Splinter of Winter | Dagger attacks: +5 Magic Damage and -10% speed for 3 s. |
 | Multiscale | Requires Plate armor (Skill Forge). +15% Attack and Magic Resistance to you, every party member and party minions, at any distance. Two Multiscales do not stack. Off while you are Muted or dead. Also comes with The Mithril Knight. |
+| Silence | (Crowd control.) A Silenced character cannot activate skills; a skill already running is interrupted. Basic attacks and passives keep working (unlike Mute, which also switches passives off). Affects players, minions and monsters alike. |
+| Summon Tiger | A tiger for 180 s: 100 HP, 20 Attack Damage claw attacks (assumed once a second). Skills Hunter's Leap, Neckbite, Slash. Its claws count as any melee weapon for Slash. The Pet Gem (Tiger) requirement is not checked yet (no such item). |
+| Summon Greater Demon | A large demon (assumed 1.5× size, 3 m reach) for 60 s: 220 HP, a two-handed sword dealing 40 Attack Damage once every 1.4 s (the sword's speed). Skills Mortal Strike, Sword Mastery, Eldritch Shield, Shade Blow. |
+| Minion and monster skills | An AI uses an active skill as soon as it is ready and its target is in that skill's range: next-attack skills within its reach + 2 m, Hunter's Leap at a visible target beyond 1.5 reaches but within one leap, Eldritch Shield once the target is within 10 m (assumptions). Its skills come with it: weapon, armor, form and casting-weapon requirements do not apply. Recasting a summon replaces the previous one. |
 | Hunter's Tracking | Footprints of enemy players from the last 30 s, on your screen only, for enemies your client knows about (about 150 m). Stealthed enemies leave none. Off while Muted or dead. The +20 m hearing waits for the sound system. |
 
 Dropped items land about 1.5 m ahead (never through a wall) and lie there until picked up (interact key) or the raid ends; a pickup takes what
@@ -178,7 +182,7 @@ Independent of category, a skill is:
 - Inventory is a grid; items take up space (Dark and Darker style). The raid inventory has 50
   squares (10 × 5, placeholder shape).
 - Item sizes (width × height, rotatable): dagger and wand 1 × 2; one-handed sword and axe 1 × 3;
-  shield 2 × 2; two-handed weapons and bows 2 × 4; helm, gloves, boots, cape 2 × 2; chest and legs
+  shield 2 × 2; spear 1 × 5; other two-handed weapons and bows 2 × 4; helm, gloves, boots, cape 2 × 2; chest and legs
   2 × 3; Skill Gems, potions and bandages 1 × 1; throwables (explosive bottles, throwing knives and
   axes, javelins) 1 × 3.
 - Arrows are 1 × 3 and Bolts 1 × 2, each stacking up to 20 in the same squares. Throwables stack
@@ -320,6 +324,7 @@ point of interest instead of only using fixed extraction points. Ruled details:
 | One-Handed Shield | 8% AR | +2% | does not attack; melee weapon |
 | Two-Handed Sword | 37 AD | +3 | once every 1.4 s |
 | Two-Handed Axe | 35 AD | +3 | once every 1.2 s |
+| Spear | 33 AD | +2 | once every 1.2 s |
 | Bow | 30 AD | +2 | 1 per second; projectile |
 | One-Handed Wand | 15 MD | +2 | 1.2 per second; hitscan |
 | Two-Handed Staff | 30 MD | +3 | once every 1.3 s; slower projectile |

@@ -24,7 +24,7 @@ checks it.
 | --- | --- | --- |
 | `id` | string | `snake_case`, unique. |
 | `name` | string | Display name. |
-| `weaponType` | enum | A `WeaponType` from `docs/skill-data-schema.md`: `Sword`, `Axe`, `Dagger`, `Shield`, `Bow`, `Wand`, `MagicStaff`, ... Skill requirements match on this. |
+| `weaponType` | enum | A `WeaponType` from `docs/skill-data-schema.md`: `Sword`, `Axe`, `Dagger`, `Spear`, `Shield`, `Bow`, `Wand`, `MagicStaff`, ... Skill requirements match on this. |
 | `handedness` | enum | `OneHanded` or `TwoHanded`. |
 | `range` | enum | `Melee` or `Ranged`. |
 | `gridWidth`, `gridHeight` | integer ≥ 1 | Squares the weapon takes in the inventory grid, unrotated (see [Grid size](#grid-size)). |
@@ -55,6 +55,7 @@ Weapons (width × height):
 | One-handed sword, one-handed axe | 1 × 3 |
 | One-handed wand | 1 × 2 |
 | Shield | 2 × 2 |
+| Spear | 1 × 5 |
 | Two-handed weapons (sword, axe, staff, bow) | 2 × 4 |
 
 Armor by slot:

@@ -155,11 +155,18 @@ void ACrossguardMonsterController::Tick(float DeltaSeconds)
 
 	if (AActor* Enemy = Target.Get(); Enemy != nullptr && !bReturningHome && IsValidTarget(*Monster, Enemy))
 	{
+		// Focus aims its eyes (aimed skills).
+		SetFocus(Enemy);
+		Monster->TryUseSkills(Enemy);
 		// The Mage needs to see its target; the Warrior checks its reach itself.
 		if (Monster->CombatRole != ECrossguardCombatRole::Mage || LineOfSightTo(Enemy))
 		{
 			Monster->TryAttack(Enemy);
 		}
+	}
+	else
+	{
+		ClearFocus(EAIFocusPriority::Gameplay);
 	}
 
 	// No NavMesh path: walk straight at the goal.

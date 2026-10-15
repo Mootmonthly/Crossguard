@@ -71,6 +71,10 @@ struct CROSSGUARD_API FCrossguardMobRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob")
 	float Scale = 1.0f;
 
+	// Skill ids the mob has: AI-usable actives it uses on its target, passives always on.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob")
+	TArray<FName> Skills;
+
 	// Its drops: the loot table "mob_<id>" (exported from the mob's own loot).
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob")
 	FName LootTableId;

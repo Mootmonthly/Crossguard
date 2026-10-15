@@ -75,6 +75,8 @@ class CROSSGUARD_API UCrossguardEldritchShieldAbility : public UCrossguardSkillA
 public:
 	UCrossguardEldritchShieldAbility();
 
+	// AI: once a target is within 10 m.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -100,11 +102,35 @@ public:
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 };
 
+// Base for summoning skills (Spell: Minion): casting again first dismisses the minions still
+// standing, and so does unequipping the skill. See ACrossguardMinion and ACrossguardMinionController.
+UCLASS(Abstract)
+class CROSSGUARD_API UCrossguardSummonAbility : public UCrossguardSkillAbility
+{
+	GENERATED_BODY()
+
+public:
+	UCrossguardSummonAbility();
+
+	virtual void OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
+
+protected:
+	// Server. Dismisses the previous minions.
+	void DismissMinions();
+
+	// Server. Spawns one minion at Location for Seconds; Setup fills it in before it finishes
+	// spawning. Null if there was no room.
+	ACrossguardMinion* SpawnMinion(TSubclassOf<ACrossguardMinion> Class, const FVector& Location, float Seconds,
+		TFunctionRef<void(ACrossguardMinion&)> Setup, float Scale = 1.0f);
+
+private:
+	TArray<TWeakObjectPtr<ACrossguardMinion>> Minions;
+};
+
 // [Summon Skeletons] (Spell, 30 s): 5 Skeleton Warriors (40 HP, 10 Attack Damage hits) and 1
-// Skeleton Mage (30 HP, Fireball every 8 s) appear around you for 60 s. Casting again first
-// dismisses the ones still standing. See ACrossguardMinion and ACrossguardMinionController.
+// Skeleton Mage (30 HP, Fireball every 8 s) appear around you for 60 s.
 UCLASS()
-class CROSSGUARD_API UCrossguardSummonSkeletonsAbility : public UCrossguardSkillAbility
+class CROSSGUARD_API UCrossguardSummonSkeletonsAbility : public UCrossguardSummonAbility
 {
 	GENERATED_BODY()
 
@@ -120,10 +146,58 @@ public:
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
-	virtual void OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
+};
 
-private:
-	void Summon(TSubclassOf<ACrossguardMinion> Class, ECrossguardCombatRole Role, float Health, const FVector& Location);
+// Summons one companion with skills ([Summon Tiger], [Summon Greater Demon]) in front of you. It
+// uses its active skills as soon as they are ready and its target is in their range.
+UCLASS(Abstract)
+class CROSSGUARD_API UCrossguardSummonCompanionAbility : public UCrossguardSummonAbility
+{
+	GENERATED_BODY()
 
-	TArray<TWeakObjectPtr<ACrossguardMinion>> Minions;
+public:
+	// Set a Blueprint subclass for the mesh.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Summon")
+	TSubclassOf<ACrossguardMinion> CompanionClass;
+
+	UCrossguardSummonCompanionAbility();
+
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+protected:
+
+	float Health = 100.0f;
+	float AttackDamage = 10.0f;
+	float AttackInterval = 1.0f;
+	// cm.
+	float AttackRange = 200.0f;
+	float Seconds = 60.0f;
+	float Scale = 1.0f;
+	bool bWieldsWeapon = false;
+	ECrossguardWeaponType WeaponType = ECrossguardWeaponType::Sword;
+	bool bTwoHandedWeapon = false;
+	TArray<FName> Skills;
+};
+
+// [Summon Tiger] (Spell, 185 s): a tiger for 180 s. 100 HP, 20 Attack Damage claws; Hunter's Leap,
+// Neckbite, Slash. (Its Pet Gem (Tiger) requirement is not checked yet: the item does not exist.)
+UCLASS()
+class CROSSGUARD_API UCrossguardSummonTigerAbility : public UCrossguardSummonCompanionAbility
+{
+	GENERATED_BODY()
+
+public:
+	UCrossguardSummonTigerAbility();
+};
+
+// [Summon Greater Demon] (Spell, 240 s): a large demon for 60 s. 220 HP, a two-handed sword
+// dealing 40 Attack Damage; Mortal Strike, Sword Mastery, Eldritch Shield, Shade Blow.
+UCLASS()
+class CROSSGUARD_API UCrossguardSummonGreaterDemonAbility : public UCrossguardSummonCompanionAbility
+{
+	GENERATED_BODY()
+
+public:
+	UCrossguardSummonGreaterDemonAbility();
 };

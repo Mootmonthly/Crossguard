@@ -25,6 +25,21 @@ starts (the game mode's **Mob Table** must be set).
 | `leashRange` | number > 0 | Meters from home where it gives up: retargets someone in aggro range, or walks home and fully resets. |
 | `moveSpeed` | number ≥ 0 | Meters per second (a player walks 4.5). |
 | `scale` | number > 0 | Size; 1 = player size. |
+| `skills` | string[] | Skill ids from `Data/Skills/Skills.json`, no duplicates, each [AI-usable](#ai-usable-skills). Actives it uses on its target; passives are always on. `[]` for none. Exported as `Skills`. |
 | `loot` | object | Its drops: `rolls`, `nothingWeight`, `rarityWeights`, `entries`, exactly as a table in [loot-data-schema.md](loot-data-schema.md) (no `id`). |
 | `description` | string | Free text. |
 | `notes` | string[] | Open questions. |
+
+## AI-usable skills
+
+A mob can only have skills the monster AI can use (`Tools/ai_skills.py`, shared by the validator
+and the Mob Forge sync):
+
+- **AI actives**: `slash`, `mortal_strike`, `shade_blow`, `gouge`, `neckbite`, `hunters_leap`,
+  `eldritch_shield` (the C++ skills that override `ShouldAIUse`).
+- **Data-only passives**: category `Passive`, no `includes`, and no native C++ class (so not
+  `hunters_tracking`, `multiscale` or `splinter_of_winter`). Their stat bonuses come from the
+  skill data.
+
+Bundles, other actives, Spells and Arts cannot be given to mobs. When a C++ skill gains AI support
+or a passive gets a native class, update both lists in `Tools/ai_skills.py`.

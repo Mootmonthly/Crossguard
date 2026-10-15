@@ -94,7 +94,8 @@ FGameplayEffectSpecHandle UCrossguardSkillAbility::MakeMuteSpec(UAbilitySystemCo
 
 bool UCrossguardSkillAbility::IsCrowdControl(const FGameplayTag& State)
 {
-	return State == CrossguardTags::State_Slowed || State == CrossguardTags::State_Blinded || State == CrossguardTags::State_KnockedUp;
+	return State == CrossguardTags::State_Slowed || State == CrossguardTags::State_Blinded || State == CrossguardTags::State_KnockedUp
+		|| State == CrossguardTags::State_Silenced;
 }
 
 bool UCrossguardSkillAbility::IsCrowdControlImmune(const UAbilitySystemComponent* Target)

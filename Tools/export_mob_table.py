@@ -35,6 +35,7 @@ def row(mob):
         "LeashRange": round(mob["leashRange"] * 100, 3),
         "MoveSpeed": round(mob["moveSpeed"] * 100, 3),
         "Scale": mob["scale"],
+        "Skills": mob["skills"],
         "LootTableId": "mob_" + mob["id"],
     }
 

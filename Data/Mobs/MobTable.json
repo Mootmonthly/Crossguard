@@ -14,6 +14,7 @@
 		"LeashRange": 3000,
 		"MoveSpeed": 450.0,
 		"Scale": 1,
+		"Skills": [],
 		"LootTableId": "mob_example_brute"
 	}
 ]

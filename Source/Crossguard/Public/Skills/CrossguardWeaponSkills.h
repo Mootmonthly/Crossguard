@@ -15,8 +15,13 @@ class CROSSGUARD_API UCrossguardNextAttackAbility : public UCrossguardSkillAbili
 public:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	// AI: when about to hit (within its attack reach plus a step) and not already readied. Ranged
+	// ones (Purge Shot) never: AI does not shoot.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
 
 protected:
+	// Melee next-attack skill (AI use).
+	bool bMeleeRider = true;
 	FGameplayTag ReadyTag;
 	// Assumption (as Chop Down): unused after this long, it is lost.
 	float ReadySeconds = 10.0f;
@@ -74,6 +79,22 @@ class CROSSGUARD_API UCrossguardPurgeShotAbility : public UCrossguardNextAttackA
 
 public:
 	UCrossguardPurgeShotAbility();
+};
+
+// [Neckbite] (Active, 7 s): next melee attack +10 Magic Damage and Silences for 2 s (no skills; running
+// ones stop). Crowd control. For now only the tiger of [Summon Tiger] has it: players cannot activate
+// it until Beastial forms exist.
+UCLASS()
+class CROSSGUARD_API UCrossguardNeckbiteAbility : public UCrossguardNextAttackAbility
+{
+	GENERATED_BODY()
+
+public:
+	UCrossguardNeckbiteAbility();
+
+	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr,
+		FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 };
 
 // [Quickshot] (Active, 25 s, bow): +5% Movement Speed and +25% Action Speed for 8 s.
@@ -188,6 +209,8 @@ public:
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	// AI: to close in on a target out of its reach but within one leap, in line of sight.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
 
 private:
 	UFUNCTION()

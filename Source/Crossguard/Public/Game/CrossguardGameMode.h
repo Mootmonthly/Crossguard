@@ -9,6 +9,7 @@
 #include "CrossguardGameMode.generated.h"
 
 class ACrossguardCharacter;
+class UCrossguardSkillCatalog;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardPlayerExtracted, ACrossguardCharacter*, Character);
 
@@ -75,6 +76,11 @@ public:
 	// take their stats from it.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Mobs")
 	TObjectPtr<UDataTable> MobTable;
+
+	// The skill catalog (DA_SkillCatalog) mobs' skills are looked up in. Unset: native skills only
+	// (data passives such as Sword Mastery do nothing).
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Mobs")
+	TObjectPtr<UCrossguardSkillCatalog> MobSkillCatalog;
 
 	// Server. Rolls a loot table with a fresh random seed. Empty if the table or data is missing.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Loot")

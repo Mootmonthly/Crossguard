@@ -16,11 +16,11 @@ order changes.
 | Area | What exists |
 | --- | --- |
 | Rules library | Engine-free C++ for formulas, progression, XP, loadouts, items, affixes, armor, teams, inventory grid; 386 unit-test checks. |
-| Data pipeline | JSON → validators → Unreal data tables, cross-checked against the C++ structs (`Tools/run_checks.sh`). 49 skills, 9 weapons, 16 armor pieces, 23 affixes, 4 general items. |
+| Data pipeline | JSON → validators → Unreal data tables, cross-checked against the C++ structs (`Tools/run_checks.sh`). 49 skills, 10 weapons, 16 armor pieces, 23 affixes, 4 general items. |
 | Character | First-person camera, Enhanced Input built in code, GAS stats derived from STR/AGI/INT. |
 | Combat | Weapon attacks (melee sweep, hitscan wand, projectiles), damage and healing formulas, dual wield, cooldowns with CDR cap. Bows use arrows. |
 | Equipment | Main hand / off hand, six armor slots, rolled affixes, equipment stats and tags. |
-| Skills | Loadout validation (Capacity, bundles, superseded skills), Skill Library gating. Passive stat bonuses play from the skill data. 47 of 50 skills playable: 32 in C++ (including the next-attack system, Stealth, walls, CC immunity, party auras, tracking) and the stat passives from data. |
+| Skills | Loadout validation (Capacity, bundles, superseded skills), Skill Library gating. Passive stat bonuses play from the skill data. All 50 skills playable: 35 in C++ (including the next-attack system, Stealth, walls, CC immunity, party auras, tracking, Silence and minions that use skills) and the stat passives from data. Neckbite is the tiger's only, until Beastial forms exist. |
 | Progression | XP sources, level curve, raid XP banked on extraction, attribute allocation, paid respec tokens. Session only, not saved. |
 | Stash | Per-character tabs of 10 × 30, between raids only. Not saved yet. |
 | Inventory | Server-authoritative 10 × 5 grid, Backpack and Quiver, stacking by type and rarity, equip through the inventory, Skill Gems, hotbar keys 3–7 for potions, bandages and throwables, two weapon sets on 1 and 2. |
@@ -63,13 +63,13 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 
 | Item | Needs | Notes |
 | --- | --- | --- |
-| Remaining skills | Code, Decision | Summon Tiger and Summon Greater Demon (minions that use skills), Neckbite (needs a Beastial form), Hunter's Tracking hearing range (needs sound), Triple Thrust piercing (needs blocking), Arcane Arrows dropoff (needs arrow dropoff). |
-| Stealth teammate indicator | Editor | Teammates should see when an ally is stealthed (outline or translucency). |
+| Remaining skill parts | Code, Decision | Neckbite for players (needs Beastial forms), Pet Gem (Tiger) item, Hunter's Tracking hearing range (needs sound), Triple Thrust piercing (needs blocking), Arcane Arrows dropoff (needs arrow dropoff). |
+| Stealth teammate indicator | Editor | Party members see a purple outline around a stealthed ally (with the visual assets). |
 | Skill visuals | Editor | Fireball, breath, shield, Blind screen effect, dragon form, skeleton meshes. |
 | Passives on others and free-text mechanics | Code | Data-driven passives cover Self stat modifiers (masteries, Heroic Might, Cor Leonis, ...); party auras, on-hit slows and mechanics like Hunter's Tracking still need code. |
 | Block (shields) and parry | Code | Right-click actions already chosen by the rules; not built. |
-| Status effects | Code | Silence, stuns and other crowd control. (Slow, Mute, Blind and Attack Damage shields exist.) |
-| Minions | Code | Summon Tiger, Summon Greater Demon, minion CDR. Skeletons exist. |
+| Status effects | Code | Stun, Root. (Slow, Mute, Silence, Blind and Attack Damage shields exist.) |
+| Minions | Code, Editor | Minion CDR; meshes for skeletons, tiger and demon. All three summons exist; minions and monsters use their skills. |
 | Animations, first-person arms | Editor | Melee hits are sphere sweeps until weapon collision exists. |
 | Weapon-on-weapon collision (fencing) | Code, Editor | |
 
@@ -126,10 +126,9 @@ Decisions that block items above. Answers go into design-decisions.md.
 | Is drinking a potion instant? Does bandaging slow movement? | Consumables (currently: instant, full speed) |
 | Respec price? | Store |
 | Jewelry, quarterstaffs, two-handed pavise shields, the Beastial transformation for Neckbite | Later content |
-| What does Silence do, as opposed to Mute? | Neckbite, crowd control |
-| Tiger and Greater Demon stats (HP, damage, speed, size)? Is the Pet Gem (Tiger) used up? | Summon Tiger, Summon Greater Demon |
+| Is the Pet Gem (Tiger) an item that is used up? Tiger attack speed, Demon size? | Summon Tiger, Summon Greater Demon (currently: not checked; 1 s; 1.5×) |
+| Spear: one- or two-handed, inventory size? | Spear (currently: two-handed, 1 × 5, can parry) |
 | Block and parry: how much a shield block stops, the parry window, what a parry does | Block and parry, Triple Thrust piercing |
-| Spear stats (no spear in the weapon data yet) | Spear skills (Triple Thrust, Spear Mastery, Spear of Liscor) |
 | Real drop rates: what each monster and chest drops, and rarity odds | Loot tables (placeholders now) |
 | Monster roster: types, stats, aggro and leash ranges, drops, which ones are bosses | Monster AI: enter them in the Mob Forge (https://claude.ai/artifact/JPDt46urNPnzMsgZuD7RYW) |
 

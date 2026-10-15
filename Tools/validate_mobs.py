@@ -2,7 +2,7 @@
 """Validate Data/Mobs/Mobs.json against docs/mob-data-schema.md.
 
 Each mob's loot is checked like a loot table (Tools/validate_loot.py): every weapon, armor, item
-and skill it names must exist.
+and skill it names must exist. Its skills must exist and be AI-usable (Tools/ai_skills.py).
 """
 import json
 import re
@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ai_skills import is_ai_usable, load_skills  # noqa: E402
 from validate_loot import LOOT_FIELDS, ids_by_kind, validate_loot_body  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
@@ -46,6 +47,7 @@ SPEC = {
     "leashRange": (positive, "number > 0 (meters)"),
     "moveSpeed": (non_negative, "number >= 0 (meters per second)"),
     "scale": (positive, "number > 0"),
+    "skills": (lambda v: isinstance(v, list) and all(isinstance(x, str) for x in v), "array of skill ids"),
     "loot": (lambda v: isinstance(v, dict), "object"),
     "description": (lambda v: isinstance(v, str), "string"),
     "notes": (lambda v: isinstance(v, list) and all(isinstance(x, str) for x in v), "array of strings"),
@@ -55,6 +57,7 @@ SPEC = {
 def validate(mobs):
     errors = []
     known = ids_by_kind()
+    skills = load_skills()
     if not isinstance(mobs, list):
         return ["top level must be an array"]
     ids = []
@@ -80,6 +83,15 @@ def validate(mobs):
             ids.append(mob["id"])
         if positive(mob.get("aggroRange", 0)) and positive(mob.get("leashRange")) and mob["aggroRange"] > mob["leashRange"]:
             err("aggroRange is larger than leashRange: it would aggro on enemies it must not chase")
+        mob_skills = mob.get("skills")
+        if isinstance(mob_skills, list):
+            for j, skill_id in enumerate(mob_skills):
+                if skill_id in mob_skills[:j]:
+                    err(f"skills: '{skill_id}' listed twice")
+                elif skill_id not in skills:
+                    err(f"skills: no skill '{skill_id}' in Skills.json")
+                elif not is_ai_usable(skills[skill_id]):
+                    err(f"skills: '{skill_id}' is not AI-usable (an AI active or a data-only passive)")
         loot = mob.get("loot")
         if isinstance(loot, dict):
             if set(loot) != LOOT_FIELDS:

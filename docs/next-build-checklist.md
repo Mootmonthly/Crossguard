@@ -27,8 +27,9 @@ Loot: import `Data/Loot/LootTable.json` as `DT_Loot` (row struct `CrossguardLoot
 Item tables (`DT_Weapons`, `DT_Armor`, `DT_Affixes`, `DT_Items`) and Skill Catalog `DA_SkillCatalog`.
 
 Mobs: import `Data/Mobs/MobTable.json` as `DT_Mobs` (row struct `CrossguardMobRow`) and set the game
-mode's **Crossguard | Mobs → Mob Table** to it. A placed `ACrossguardMonster` with **Mob Id**
-`example_brute` takes that mob's stats.
+mode's **Crossguard | Mobs → Mob Table** to it, and **Mob Skill Catalog** to `DA_SkillCatalog`. A
+placed `ACrossguardMonster` with **Mob Id** `example_brute` takes that mob's stats. Reimport
+`DT_Mobs` (new `Skills` column) and `DT_Weapons` (new spear) if they already exist.
 
 ## 3. Character settings
 
@@ -100,6 +101,10 @@ Skills: put them in `DebugSkills` (Skill Capacity permitting; raise `Level` with
 | `hunters_tracking`, second client (enemy) walks around | Small grey marks follow their path on your screen, fading after 30 s. |
 | Press 3 with a potion readied, then G; walk to the box and press F | The stack drops as a small box and comes back on pickup. |
 | `summon_skeletons` (needs a NavMesh Bounds Volume) | 6 cylinders appear, attack the dummy, follow you otherwise, vanish after 60 s; casting again replaces them. |
+| `summon_tiger` (wand in hand), dummy 8 m away | One cylinder; it leaps at the dummy, readies Slash and Neckbite and hits for 20 (+7, +10 Magic). Log shows the hits. Vanishes after 180 s. |
+| `summon_greater_demon` near a second client | A bigger cylinder: raises Eldritch Shield, hits for 40 with Mortal Strike / Shade Blow riders. Gone after 60 s. |
+| Tiger's Neckbite lands on the second client | For 2 s they cannot cast skills (basic attacks still work); a channel in progress stops. |
+| `spear_two_handed` as `DebugMainHand` | Hits for 33 once every 1.2 s; `triple_thrust` works. |
 
 Passive skills: put `heroic_might` (or a mastery) in `DebugSkills` and check
 `showdebug abilitysystem`: Strength +10 (masteries only while their weapon is held).

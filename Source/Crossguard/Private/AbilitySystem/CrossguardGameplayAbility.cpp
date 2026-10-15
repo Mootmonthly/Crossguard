@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/CrossguardEffects.h"
 #include "AbilitySystem/CrossguardGameplayTags.h"
+#include "Character/CrossguardAICharacter.h"
 #include "Items/CrossguardEquipmentComponent.h"
 #include "CrossguardRules/Combat.h"
 
@@ -10,9 +11,11 @@ UCrossguardGameplayAbility::UCrossguardGameplayAbility()
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 	CooldownGameplayEffectClass = UCrossguardCooldownEffect::StaticClass();
-	// No casting while dead, Muted, or in dragon form (Dragonification's own skills opt back in).
+	// No casting while dead, Muted, Silenced, or in dragon form (Dragonification's own skills opt
+	// back in).
 	ActivationBlockedTags.AddTag(CrossguardTags::State_Dead);
 	ActivationBlockedTags.AddTag(CrossguardTags::State_Muted);
+	ActivationBlockedTags.AddTag(CrossguardTags::State_Silenced);
 	ActivationBlockedTags.AddTag(CrossguardTags::State_Dragonified);
 }
 
@@ -22,6 +25,11 @@ bool UCrossguardGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHa
 	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
 	{
 		return false;
+	}
+	// An AI's skills come with it (a summon's, a monster's): no weapon or armor requirements.
+	if (ActorInfo != nullptr && Cast<ACrossguardAICharacter>(ActorInfo->AvatarActor.Get()) != nullptr)
+	{
+		return true;
 	}
 	// Every Spell needs a casting weapon in hand (a Wand or a Two-Handed Staff), except in dragon
 	// form, where Flare Breath and Flight are cast without hands.

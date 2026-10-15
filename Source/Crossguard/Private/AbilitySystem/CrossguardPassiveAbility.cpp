@@ -11,6 +11,8 @@ UCrossguardPassiveAbility::UCrossguardPassiveAbility()
 	// Passives activate once when granted; Mute switches their bonuses off instead of blocking that.
 	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Dead);
 	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Muted);
+	// Silence stops activating skills only; passives stay on.
+	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Silenced);
 	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Dragonified);
 }
 

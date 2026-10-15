@@ -4,6 +4,7 @@
 #include "AbilitySystem/CrossguardEffects.h"
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
+#include "Character/CrossguardAICharacter.h"
 #include "Crossguard.h"
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Skills/CrossguardSkillCatalog.h"
@@ -137,6 +138,7 @@ void UCrossguardDataPassiveAbility::Refresh()
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
 	const AActor* Avatar = GetAvatarActorFromActorInfo();
 	const UCrossguardEquipmentComponent* Equipment = Avatar != nullptr ? Avatar->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
+	const ACrossguardAICharacter* AICharacter = Cast<ACrossguardAICharacter>(Avatar);
 	// Muted: bonuses off until it ends.
 	if (Row == nullptr || ASC == nullptr || !IsActive() || ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted))
 	{
@@ -155,7 +157,10 @@ void UCrossguardDataPassiveAbility::Refresh()
 		case ECrossguardConditionType::None:
 			break;
 		case ECrossguardConditionType::Wielding:
-			bApplies = bApplies && Equipment != nullptr && Equipment->SatisfiesWeaponRequirement(Modifier.Condition.Weapons);
+			// An AI character's weapon is its own (bWieldsWeapon), not equipment.
+			bApplies = bApplies
+				&& (AICharacter != nullptr ? AICharacter->WieldsAnyOf(Modifier.Condition.Weapons)
+										   : Equipment != nullptr && Equipment->SatisfiesWeaponRequirement(Modifier.Condition.Weapons));
 			break;
 		case ECrossguardConditionType::Armor:
 			bApplies = bApplies && Equipment != nullptr && Equipment->SatisfiesArmorRequirement(Modifier.Condition.Armor);

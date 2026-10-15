@@ -6,9 +6,12 @@
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Character/CrossguardAICharacter.h"
 #include "Character/CrossguardMinion.h"
 #include "Combat/CrossguardSpellProjectile.h"
 #include "Engine/World.h"
+#include "Skills/CrossguardLoadoutComponent.h"
+#include "Skills/CrossguardSkillCatalog.h"
 
 namespace
 {
@@ -31,6 +34,10 @@ namespace
 	constexpr float SkeletonSeconds = 60.0f;
 	// Assumption: how far from the caster they appear.
 	constexpr float SkeletonRingRadius = 250.0f;
+	// Assumption: where a summoned companion appears, in front of the caster (cm).
+	constexpr float CompanionDistance = 200.0f;
+	// Assumption: an AI raises Eldritch Shield once its target is this close (cm).
+	constexpr float AIShieldRange = 1000.0f;
 }
 
 // --- Fireball -------------------------------------------------------------------------------------
@@ -175,6 +182,12 @@ UCrossguardEldritchShieldAbility::UCrossguardEldritchShieldAbility()
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_EldritchShield);
 }
 
+bool UCrossguardEldritchShieldAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	// Assumption: raised when the fight is about to start.
+	return FVector::Dist(User.GetActorLocation(), Target.GetActorLocation()) <= AIShieldRange;
+}
+
 void UCrossguardEldritchShieldAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -241,20 +254,21 @@ void UCrossguardChopDownAbility::ActivateAbility(const FGameplayAbilitySpecHandl
 
 // --- Summon Skeletons -----------------------------------------------------------------------------
 
-UCrossguardSummonSkeletonsAbility::UCrossguardSummonSkeletonsAbility()
+UCrossguardSummonAbility::UCrossguardSummonAbility()
 {
-	SkillId = TEXT("summon_skeletons");
 	SkillCategory = ECrossguardSkillCategory::Spell;
-	BaseCooldownSeconds = 30.0f;
-	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_SummonSkeletons);
-	WarriorClass = ACrossguardMinion::StaticClass();
-	MageClass = ACrossguardMinion::StaticClass();
 	SetAssetTags(FGameplayTagContainer(CrossguardTags::Skill_Minion));
 }
 
-void UCrossguardSummonSkeletonsAbility::OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+void UCrossguardSummonAbility::OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
-	// Unequipped: the skeletons go with the skill.
+	// Unequipped: the minions go with the skill.
+	DismissMinions();
+	Super::OnRemoveAbility(ActorInfo, Spec);
+}
+
+void UCrossguardSummonAbility::DismissMinions()
+{
 	for (const TWeakObjectPtr<ACrossguardMinion>& Old : Minions)
 	{
 		if (ACrossguardMinion* Minion = Old.Get())
@@ -263,7 +277,45 @@ void UCrossguardSummonSkeletonsAbility::OnRemoveAbility(const FGameplayAbilityAc
 		}
 	}
 	Minions.Reset();
-	Super::OnRemoveAbility(ActorInfo, Spec);
+}
+
+ACrossguardMinion* UCrossguardSummonAbility::SpawnMinion(TSubclassOf<ACrossguardMinion> Class, const FVector& Location, float Seconds,
+	TFunctionRef<void(ACrossguardMinion&)> Setup, float Scale)
+{
+	ACrossguardCharacter* Summoner = Cast<ACrossguardCharacter>(GetAvatarActorFromActorInfo());
+	UWorld* World = Summoner != nullptr ? Summoner->GetWorld() : nullptr;
+	if (World == nullptr || Class == nullptr)
+	{
+		return nullptr;
+	}
+	// The spawn scale reaches clients with the actor.
+	const FTransform Transform(Summoner->GetActorRotation(), Location, FVector(Scale));
+	// Nudged out of walls and each other; skipped if there is no room.
+	ACrossguardMinion* Minion = World->SpawnActorDeferred<ACrossguardMinion>(Class, Transform, Summoner, Summoner,
+		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding);
+	if (Minion == nullptr)
+	{
+		return nullptr;
+	}
+	Minion->SetSummoner(Summoner);
+	Setup(*Minion);
+	Minion->FinishSpawning(Transform);
+	if (!IsValid(Minion))
+	{
+		return nullptr;
+	}
+	Minion->SetLifeSpan(Seconds);
+	Minions.Add(Minion);
+	return Minion;
+}
+
+UCrossguardSummonSkeletonsAbility::UCrossguardSummonSkeletonsAbility()
+{
+	SkillId = TEXT("summon_skeletons");
+	BaseCooldownSeconds = 30.0f;
+	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_SummonSkeletons);
+	WarriorClass = ACrossguardMinion::StaticClass();
+	MageClass = ACrossguardMinion::StaticClass();
 }
 
 void UCrossguardSummonSkeletonsAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -277,15 +329,16 @@ void UCrossguardSummonSkeletonsAbility::ActivateAbility(const FGameplayAbilitySp
 	if (ActorInfo->IsNetAuthority() && Avatar != nullptr)
 	{
 		// The previous ones still standing die.
-		for (const TWeakObjectPtr<ACrossguardMinion>& Old : Minions)
-		{
-			if (ACrossguardMinion* Minion = Old.Get())
-			{
-				Minion->Dismiss();
-			}
-		}
-		Minions.Reset();
+		DismissMinions();
 
+		const auto Skeleton = [](ECrossguardCombatRole Role, float Health)
+		{
+			return [Role, Health](ACrossguardMinion& Minion)
+			{
+				Minion.CombatRole = Role;
+				Minion.FixedHealth = Health;
+			};
+		};
 		// In a ring around the caster, the Mage behind.
 		const FVector Center = Avatar->GetActorLocation();
 		const FRotator Facing(0.0f, Avatar->GetActorRotation().Yaw, 0.0f);
@@ -293,37 +346,83 @@ void UCrossguardSummonSkeletonsAbility::ActivateAbility(const FGameplayAbilitySp
 		{
 			const float Yaw = -90.0f + 180.0f * Index / (SkeletonWarriors - 1);
 			const FVector Offset = Facing.RotateVector(FRotator(0.0f, Yaw, 0.0f).Vector() * SkeletonRingRadius);
-			Summon(WarriorClass, ECrossguardCombatRole::Warrior, SkeletonWarriorHealth, Center + Offset);
+			SpawnMinion(WarriorClass, Center + Offset, SkeletonSeconds, Skeleton(ECrossguardCombatRole::Warrior, SkeletonWarriorHealth));
 		}
-		Summon(MageClass, ECrossguardCombatRole::Mage, SkeletonMageHealth, Center - Facing.Vector() * SkeletonRingRadius);
+		SpawnMinion(MageClass, Center - Facing.Vector() * SkeletonRingRadius, SkeletonSeconds,
+			Skeleton(ECrossguardCombatRole::Mage, SkeletonMageHealth));
 	}
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }
 
-void UCrossguardSummonSkeletonsAbility::Summon(TSubclassOf<ACrossguardMinion> Class, ECrossguardCombatRole Role, float Health,
-	const FVector& Location)
+// --- Summon Tiger, Summon Greater Demon -----------------------------------------------------------
+
+UCrossguardSummonCompanionAbility::UCrossguardSummonCompanionAbility()
 {
-	ACrossguardCharacter* Summoner = Cast<ACrossguardCharacter>(GetAvatarActorFromActorInfo());
-	UWorld* World = Summoner != nullptr ? Summoner->GetWorld() : nullptr;
-	if (World == nullptr || Class == nullptr)
+	CompanionClass = ACrossguardMinion::StaticClass();
+}
+
+void UCrossguardSummonCompanionAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+{
+	if (!CommitOrCancel(Handle, ActorInfo, ActivationInfo))
 	{
 		return;
 	}
-	const FTransform Transform(Summoner->GetActorRotation(), Location);
-	// Nudged out of walls and each other; skipped if there is no room.
-	ACrossguardMinion* Minion = World->SpawnActorDeferred<ACrossguardMinion>(Class, Transform, Summoner, Summoner,
-		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding);
-	if (Minion == nullptr)
+	const ACrossguardCharacter* Summoner = Cast<ACrossguardCharacter>(ActorInfo->AvatarActor.Get());
+	if (ActorInfo->IsNetAuthority() && Summoner != nullptr)
 	{
-		return;
+		DismissMinions();
+		// The summoner's catalog: data passives (Sword Mastery) are played from its rows.
+		const UCrossguardLoadoutComponent* Loadout = Summoner->GetLoadoutComponent();
+		UCrossguardSkillCatalog* Catalog = Loadout != nullptr ? Loadout->SkillCatalog.Get() : nullptr;
+		const FRotator Facing(0.0f, Summoner->GetActorRotation().Yaw, 0.0f);
+		SpawnMinion(CompanionClass, Summoner->GetActorLocation() + Facing.Vector() * CompanionDistance, Seconds,
+			[this, Catalog](ACrossguardMinion& Minion)
+			{
+				Minion.CombatRole = ECrossguardCombatRole::Warrior;
+				Minion.FixedHealth = Health;
+				Minion.AttackDamage = AttackDamage;
+				Minion.AttackInterval = AttackInterval;
+				Minion.AttackRange = AttackRange;
+				Minion.bWieldsWeapon = bWieldsWeapon;
+				Minion.WeaponType = WeaponType;
+				Minion.bTwoHandedWeapon = bTwoHandedWeapon;
+				Minion.SkillIds = Skills;
+				Minion.SkillCatalog = Catalog;
+			},
+			Scale);
 	}
-	Minion->CombatRole = Role;
-	Minion->FixedHealth = Health;
-	Minion->SetSummoner(Summoner);
-	Minion->FinishSpawning(Transform);
-	if (IsValid(Minion))
-	{
-		Minion->SetLifeSpan(SkeletonSeconds);
-		Minions.Add(Minion);
-	}
+	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+}
+
+UCrossguardSummonTigerAbility::UCrossguardSummonTigerAbility()
+{
+	SkillId = TEXT("summon_tiger");
+	BaseCooldownSeconds = 185.0f;
+	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_SummonTiger);
+	Health = 100.0f;
+	AttackDamage = 20.0f;
+	// Assumption: one claw attack a second.
+	AttackInterval = 1.0f;
+	Seconds = 180.0f;
+	Skills = {TEXT("hunters_leap"), TEXT("neckbite"), TEXT("slash")};
+}
+
+UCrossguardSummonGreaterDemonAbility::UCrossguardSummonGreaterDemonAbility()
+{
+	SkillId = TEXT("summon_greater_demon");
+	BaseCooldownSeconds = 240.0f;
+	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_SummonGreaterDemon);
+	Health = 220.0f;
+	AttackDamage = 40.0f;
+	// The two-handed sword's speed (Data/Items/Weapons.json: once every 1.4 s).
+	AttackInterval = 1.4f;
+	// Assumptions: "large" is 1.5x, with a matching reach.
+	AttackRange = 300.0f;
+	Scale = 1.5f;
+	Seconds = 60.0f;
+	bWieldsWeapon = true;
+	WeaponType = ECrossguardWeaponType::Sword;
+	bTwoHandedWeapon = true;
+	Skills = {TEXT("mortal_strike"), TEXT("sword_mastery"), TEXT("eldritch_shield"), TEXT("shade_blow")};
 }

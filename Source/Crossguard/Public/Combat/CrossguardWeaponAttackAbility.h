@@ -23,11 +23,28 @@ struct FCrossguardAttackRiders
 	bool bGroundFlying = false;
 	// [Purge Shot]: the Mute also stops running skills.
 	bool bCancelSkills = false;
+	// [Neckbite]: a Silence that lands also stops running skills.
+	bool bSilence = false;
 	// [Mortal Strike]: a kill removes its cooldown.
 	bool bMortalStrike = false;
 };
 struct FCrossguardWeaponRow;
 struct FCrossguardWeaponItem;
+
+// The attack riders are gathered for: a weapon's, or an AI character's own attack.
+struct FCrossguardRiderAttack
+{
+	bool bMelee = false;
+	// Bow or crossbow.
+	bool bRanged = false;
+	// Unset: an unarmed AI's natural attack (a tiger's claws), which counts as every melee weapon for
+	// next-attack skills but as no weapon for always-on effects (Splinter of Winter, Arcane Arrows).
+	TOptional<ECrossguardWeaponType> WeaponType;
+
+	static FCrossguardRiderAttack ForWeapon(const FCrossguardWeaponRow& Weapon);
+	// AI basic attacks (ACrossguardAICharacter): melee, with WeaponType if it wields one.
+	static FCrossguardRiderAttack ForAIMelee(const TOptional<ECrossguardWeaponType>& WeaponType);
+};
 
 // Basic attack with the weapon in Slot (left click: main hand; right click when dual wielding:
 // off hand, see UCrossguardOffHandAttackAbility). Each hand keeps its own attack interval. Damage = the weapon's AD or MD at its rarity, through the
@@ -47,7 +64,8 @@ struct FCrossguardWeaponItem;
 // - Melee, with the skill's own weapon (Slash: sword or dagger; Shade Blow: sword or axe; Gouge:
 //   dagger; Chop Down: axe; Mortal Strike: any): [Slash] +7 weapon damage, [Mortal Strike] +20 Attack Damage (a kill refreshes its
 //   cooldown), [Shade Blow] +20 Magic Damage and no healing 5 s, [Gouge] 25 Attack Damage over 5 s
-//   and -5% speed, [Chop Down] (axe) 110%, -50% speed 2 s, ends Flight.
+//   and -5% speed, [Chop Down] (axe) 110%, -50% speed 2 s, ends Flight, [Neckbite] (AI only for
+//   now) +10 Magic Damage and a 2 s Silence (running skills stop).
 // - Bow / crossbow: [Purge Shot] +10 Magic Damage and a 3 s Mute.
 // Always on: [Arcane Arrows] +5 Magic Damage on bow attacks while active; [Splinter of Winter]
 // +5 Magic Damage and -10% speed 3 s on dagger attacks.
@@ -92,11 +110,14 @@ public:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
-private:
-	// Server. Collects (and uses up) what applies to this attack.
-	FCrossguardAttackRiders GatherRiders(const FCrossguardWeaponRow& Weapon, UAbilitySystemComponent* ASC) const;
+	// Server. Collects (and uses up) what applies to this attack. Shared with AI basic attacks.
+	static FCrossguardAttackRiders GatherRiders(const FCrossguardRiderAttack& Attack, UAbilitySystemComponent* ASC);
 	// Server. On-hit parts of Riders for one target hit.
-	void ApplyRiders(const FCrossguardAttackRiders& Riders, UAbilitySystemComponent* TargetASC) const;
+	static void ApplyRiders(const FCrossguardAttackRiders& Riders, UAbilitySystemComponent* TargetASC);
+	// Server. After a melee attack: [Mortal Strike] gives its cooldown back if a target hit is dead.
+	static void FinishMeleeHits(const FCrossguardAttackRiders& Riders, UAbilitySystemComponent* ASC, const TArray<AActor*>& Hit);
+
+private:
 	FGameplayEffectSpecHandle MakeWeaponDamageSpec(const FCrossguardWeaponRow& Weapon, const FCrossguardWeaponItem& Item,
 		const FCrossguardAttackRiders& Riders) const;
 	// Returns the actors damaged.

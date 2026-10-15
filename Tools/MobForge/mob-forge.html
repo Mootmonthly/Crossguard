@@ -139,6 +139,15 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
 .row .remove { align-self: center; }
 .row .reads { grid-column: 1 / -1; font-size: .8rem; display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .row .reads .chance { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border-radius: 999px; background: var(--accent-soft); border: 1px solid transparent; font-size: .85rem; }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.chip .cat { font-size: .72rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.chip button { border: 0; background: transparent; cursor: pointer; width: 22px; height: 22px; border-radius: 50%; line-height: 1; color: var(--muted); }
+.chip button:hover { background: var(--surface); color: var(--bad); }
+.skill-picker { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr) auto; gap: 8px; align-items: end; }
+@media (max-width: 560px) { .skill-picker { grid-template-columns: minmax(0, 1fr); } }
+.skill-picker input, .skill-picker select { padding: 6px 9px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--sunken); min-width: 0; width: 100%; }
 .loot-summary { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .85rem; padding: 10px 12px; border-radius: var(--radius); background: var(--accent-soft); }
 .loot-summary b { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 500; }
 
@@ -236,7 +245,7 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
     return {
       id: "", name: "", kind: "Monster", combatRole: "Warrior",
       health: 80, attackDamage: 12, attackInterval: 1.5, attackRange: 2, fireballInterval: 8, keepDistance: 8,
-      aggroRange: 15, leashRange: 30, moveSpeed: 4.5, scale: 1,
+      aggroRange: 15, leashRange: 30, moveSpeed: 4.5, scale: 1, skills: [],
       loot: {
         rolls: [0, 2], nothingWeight: 40,
         rarityWeights: { Common: 60, Uncommon: 25, Rare: 10, Epic: 4, Legendary: 1, Mystic: 0 },
@@ -257,6 +266,15 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
   function gemRarity(id) {
     const s = refs.skills.find((r) => r.id === id);
     return s ? s.rarity : null;
+  }
+  // Skills a mob can have: AI actives and data-only passives (Tools/ai_skills.py).
+  function aiSkills() { return refs.skills.filter((r) => r.aiUsable); }
+  // False until a catalog with aiUsable has loaded (catalogs from before the Skills section lack it).
+  function skillRefsReady() { return refs.skills.some((r) => typeof r.aiUsable === "boolean"); }
+  // Documents saved before a field existed.
+  function withDefaults(mob) {
+    if (!Array.isArray(mob.skills)) mob.skills = [];
+    return mob;
   }
 
   // ---- Loot maths ----
@@ -282,6 +300,12 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
     const nonNeg = { attackDamage: "Attack damage", keepDistance: "Keep distance", aggroRange: "Aggro range", moveSpeed: "Move speed" };
     for (const [k, label] of Object.entries(nonNeg)) if (!(num(m[k]) >= 0)) errs.push(`${label} must be 0 or more.`);
     if (num(m.aggroRange) > num(m.leashRange)) errs.push("Aggro range is larger than leash range: it would pick fights it must not chase.");
+    m.skills.forEach((id, i) => {
+      const ref = refs.skills.find((r) => r.id === id);
+      if (m.skills.indexOf(id) !== i) errs.push(`Skill "${id}" is listed twice.`);
+      else if (refs.skills.length && !ref) errs.push(`No skill with id "${id}".`);
+      else if (ref && skillRefsReady() && !ref.aiUsable) errs.push(`${ref.name} cannot be used by mobs. Remove it.`);
+    });
     const loot = m.loot;
     const [rmin, rmax] = loot.rolls;
     if (!(Number.isInteger(rmin) && Number.isInteger(rmax) && rmin >= 0 && rmin <= rmax)) errs.push("Drops per kill: whole numbers, min 0 or more, max at least min.");
@@ -438,6 +462,38 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
       h("div", {}, h("button", { class: "btn small", type: "button", onclick: () => { loot.entries.push({ kind: "Item", id: null, weight: 10, count: [1, 1] }); refreshLoot(); } }, "Add drop")));
   }
 
+  function skillsSection(m) {
+    const refreshSkills = () => { const box = $("skills-box"); if (box) box.replaceWith(skillsSection(m)); touch(); };
+    const chips = m.skills.map((id, i) => {
+      const ref = refs.skills.find((r) => r.id === id);
+      const ok = !refs.skills.length || (ref && (ref.aiUsable || !skillRefsReady()));
+      return h("span", { class: "chip" + (ok ? "" : " bad") },
+        h("span", { text: ref ? ref.name : id }),
+        ref && ref.category ? h("span", { class: "cat", text: ref.category }) : null,
+        h("button", { type: "button", "aria-label": `Remove ${ref ? ref.name : id}`, title: "Remove", onclick: () => { m.skills.splice(i, 1); refreshSkills(); } }, "×"));
+    });
+    const available = () => aiSkills().filter((r) => !m.skills.includes(r.id));
+    const options = (q) => available()
+      .filter((r) => !q || r.id.includes(q) || r.name.toLowerCase().includes(q) || (r.category || "").toLowerCase().includes(q))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((r) => h("option", { value: r.id }, `${r.name} · ${r.category || "?"}`));
+    const pick = h("select", { id: "skill-pick", "aria-label": "Skill to add" }, options(""));
+    const add = () => { if (pick.value && !m.skills.includes(pick.value)) { m.skills.push(pick.value); refreshSkills(); const el = $("skill-search"); if (el) el.focus(); } };
+    const picker = !skillRefsReady()
+      ? h("span", { class: "hint", text: "The skill list loads with the catalog. Ask Claude to sync mobs if it stays empty." })
+      : !available().length
+        ? h("span", { class: "hint", text: "Every skill a mob can use is already chosen." })
+        : h("div", { class: "skill-picker" },
+            h("label", { class: "field" }, h("span", { text: "Search" }),
+              h("input", { type: "search", id: "skill-search", placeholder: "Name or category", oninput: (e) => pick.replaceChildren(...options(e.target.value.trim().toLowerCase())) })),
+            h("label", { class: "field" }, h("span", { text: "Skill" }), pick),
+            h("button", { class: "btn small", type: "button", id: "skill-add", onclick: add }, "Add skill"));
+    return h("div", { id: "skills-box", class: "rows" },
+      m.skills.length ? h("div", { class: "chips" }, chips) : h("span", { class: "hint", text: "No skills: it only uses its basic attack or Fireball." }),
+      picker,
+      h("span", { class: "hint", text: "Actives it uses on its target; passives are always on. Only skills mobs can use are offered." }));
+  }
+
   function renderEditor() {
     const editor = $("editor");
     if (!draft) {
@@ -490,6 +546,7 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
           numberField("Leash range (m)", m.leashRange, (v) => { m.leashRange = v; touch(); }, { min: "0", id: "f-leash", hint: "Gives up this far from home: retargets, or walks back and resets." }),
           numberField("Move speed (m/s)", m.moveSpeed, (v) => { m.moveSpeed = v; touch(); }, { min: "0", id: "f-speed", hint: `A player walks ${PLAYER_WALK} m/s.` }),
           numberField("Size", m.scale, (v) => { m.scale = v; touch(); }, { min: "0", id: "f-scale", hint: "1 = player size." }))),
+      section("Skills", skillsSection(m)),
       section("Drops", lootSection(m, rerender)),
       section("Text",
         h("label", { class: "field wide" }, h("span", { text: "Description" }),
@@ -602,7 +659,7 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
       for (const ch of snap.docChanges()) {
         if (ch.type === "removed") { store.delete(ch.doc.id); continue; }
         const data = ch.doc.data();
-        if (data && data.mob) store.set(ch.doc.id, clone(data));
+        if (data && data.mob) { const entry = clone(data); withDefaults(entry.mob); store.set(ch.doc.id, entry); }
       }
       if (selectedId && !store.has(selectedId) && !isNew) { selectedId = null; draft = null; }
       if (selectedId && !dirty && !isNew && store.has(selectedId)) draft = clone(store.get(selectedId).mob);

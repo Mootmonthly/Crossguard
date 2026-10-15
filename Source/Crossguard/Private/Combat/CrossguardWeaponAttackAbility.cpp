@@ -18,8 +18,9 @@ UCrossguardWeaponAttackAbility::UCrossguardWeaponAttackAbility()
 {
 	// Not a skill: no cooldown effect, no CDR. The attack interval is the rate limit.
 	CooldownGameplayEffectClass = nullptr;
-	// Basic attacks still work while Muted.
+	// Basic attacks still work while Muted or Silenced.
 	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Muted);
+	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Silenced);
 	DefaultProjectileClass = ACrossguardProjectile::StaticClass();
 }
 
@@ -55,6 +56,8 @@ namespace
 	constexpr float SplinterSlow = 0.1f;
 	constexpr float SplinterSlowSeconds = 3.0f;
 	constexpr float ArcaneArrowsMagicDamage = 5.0f;
+	constexpr float NeckbiteMagicDamage = 10.0f;
+	constexpr float NeckbiteSilenceSeconds = 2.0f;
 
 	bool IsRangedWeapon(ECrossguardWeaponType Type)
 	{
@@ -108,7 +111,7 @@ void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecH
 		}
 
 		UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
-		const FCrossguardAttackRiders Riders = GatherRiders(*Weapon, ASC);
+		const FCrossguardAttackRiders Riders = GatherRiders(FCrossguardRiderAttack::ForWeapon(*Weapon), ASC);
 		const FCrossguardWeaponItem& Item = Equipment->GetItem(Slot);
 		const FGameplayEffectSpecHandle Spec = MakeWeaponDamageSpec(*Weapon, Item, Riders);
 		switch (Weapon->Delivery)
@@ -116,18 +119,11 @@ void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecH
 		case ECrossguardAttackDelivery::MeleeSwing:
 		{
 			const TArray<AActor*> Hit = PerformMeleeSwing(Spec);
-			bool bKilled = false;
 			for (AActor* Target : Hit)
 			{
-				UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
-				ApplyRiders(Riders, TargetASC);
-				bKilled |= TargetASC != nullptr && TargetASC->HasMatchingGameplayTag(CrossguardTags::State_Dead);
+				ApplyRiders(Riders, UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target));
 			}
-			// [Mortal Strike]: a kill gives the skill back.
-			if (Riders.bMortalStrike && bKilled && ASC != nullptr)
-			{
-				ASC->RemoveActiveEffectsWithGrantedTags(FGameplayTagContainer(CrossguardTags::Cooldown_Skill_MortalStrike));
-			}
+			FinishMeleeHits(Riders, ASC, Hit);
 			break;
 		}
 		case ECrossguardAttackDelivery::Hitscan:
@@ -164,31 +160,57 @@ void UCrossguardWeaponAttackAbility::OnAttackRecovered()
 	EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), true, false);
 }
 
-FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCrossguardWeaponRow& Weapon, UAbilitySystemComponent* ASC) const
+FCrossguardRiderAttack FCrossguardRiderAttack::ForWeapon(const FCrossguardWeaponRow& Weapon)
+{
+	FCrossguardRiderAttack Attack;
+	Attack.bMelee = Weapon.Delivery == ECrossguardAttackDelivery::MeleeSwing;
+	Attack.bRanged = IsRangedWeapon(Weapon.WeaponType);
+	Attack.WeaponType = Weapon.WeaponType;
+	return Attack;
+}
+
+FCrossguardRiderAttack FCrossguardRiderAttack::ForAIMelee(const TOptional<ECrossguardWeaponType>& WeaponType)
+{
+	FCrossguardRiderAttack Attack;
+	Attack.bMelee = true;
+	Attack.WeaponType = WeaponType;
+	return Attack;
+}
+
+FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCrossguardRiderAttack& Attack, UAbilitySystemComponent* ASC)
 {
 	FCrossguardAttackRiders Riders;
 	if (ASC == nullptr)
 	{
 		return Riders;
 	}
-	const bool bMelee = Weapon.Delivery == ECrossguardAttackDelivery::MeleeSwing;
-	// Each skill's own weapon requirement (Data/Skills/Skills.json) decides which attack uses it.
-	const auto MeleeWith = [&Weapon, bMelee](std::initializer_list<ECrossguardWeaponType> Types)
+	const bool bMelee = Attack.bMelee;
+	const auto Wields = [&Attack](ECrossguardWeaponType Type)
+	{
+		return Attack.WeaponType.IsSet() && Attack.WeaponType.GetValue() == Type;
+	};
+	// Each skill's own weapon requirement (Data/Skills/Skills.json) decides which attack uses it. An
+	// unarmed AI attack counts as every melee weapon.
+	const auto MeleeWith = [&Attack, &Wields, bMelee](std::initializer_list<ECrossguardWeaponType> Types)
 	{
 		if (!bMelee)
 		{
 			return false;
 		}
+		if (!Attack.WeaponType.IsSet())
+		{
+			return true;
+		}
 		for (const ECrossguardWeaponType Type : Types)
 		{
-			if (Weapon.WeaponType == Type)
+			if (Wields(Type))
 			{
 				return true;
 			}
 		}
 		return false;
 	};
-	const bool bRanged = IsRangedWeapon(Weapon.WeaponType);
+	const bool bRanged = Attack.bRanged;
 	FGameplayTagContainer UsedUp;
 	// A readied next-attack skill is used up by the next qualifying attack, hit or miss.
 	const auto Ready = [ASC, &UsedUp](const FGameplayTag& Tag, bool bQualifies)
@@ -232,17 +254,23 @@ FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCros
 		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeMuteSpec(ASC, PurgeShotMuteSeconds, 0.0f));
 		Riders.bCancelSkills = true;
 	}
+	if (Ready(CrossguardTags::State_NextAttack_Neckbite, bMelee))
+	{
+		Riders.MagicAdd += NeckbiteMagicDamage;
+		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeStatusSpec(ASC, CrossguardTags::State_Silenced, NeckbiteSilenceSeconds));
+		Riders.bSilence = true;
+	}
 	if (!UsedUp.IsEmpty())
 	{
 		ASC->RemoveActiveEffectsWithGrantedTags(UsedUp);
 	}
 
 	// Always-on: [Arcane Arrows] while active, [Splinter of Winter] while equipped and not Muted.
-	if (Weapon.WeaponType == ECrossguardWeaponType::Bow && ASC->HasMatchingGameplayTag(CrossguardTags::State_ArcaneArrows))
+	if (Wields(ECrossguardWeaponType::Bow) && ASC->HasMatchingGameplayTag(CrossguardTags::State_ArcaneArrows))
 	{
 		Riders.MagicAdd += ArcaneArrowsMagicDamage;
 	}
-	if (Weapon.WeaponType == ECrossguardWeaponType::Dagger && ASC->HasMatchingGameplayTag(CrossguardTags::Passive_SplinterOfWinter)
+	if (Wields(ECrossguardWeaponType::Dagger) && ASC->HasMatchingGameplayTag(CrossguardTags::Passive_SplinterOfWinter)
 		&& !ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted))
 	{
 		Riders.MagicAdd += SplinterMagicDamage;
@@ -251,7 +279,7 @@ FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCros
 	return Riders;
 }
 
-void UCrossguardWeaponAttackAbility::ApplyRiders(const FCrossguardAttackRiders& Riders, UAbilitySystemComponent* TargetASC) const
+void UCrossguardWeaponAttackAbility::ApplyRiders(const FCrossguardAttackRiders& Riders, UAbilitySystemComponent* TargetASC)
 {
 	if (TargetASC == nullptr)
 	{
@@ -261,7 +289,8 @@ void UCrossguardWeaponAttackAbility::ApplyRiders(const FCrossguardAttackRiders& 
 	{
 		UCrossguardSkillAbility::ApplyOnHitSpec(OnHit, TargetASC);
 	}
-	if (Riders.bCancelSkills)
+	// A Silence that landed (not on a crowd-control immune target) also interrupts.
+	if (Riders.bCancelSkills || (Riders.bSilence && TargetASC->HasMatchingGameplayTag(CrossguardTags::State_Silenced)))
 	{
 		UCrossguardSkillAbility::CancelActiveSkills(TargetASC);
 	}
@@ -271,6 +300,24 @@ void UCrossguardWeaponAttackAbility::ApplyRiders(const FCrossguardAttackRiders& 
 	{
 		const FGameplayTagContainer FlightTag(CrossguardTags::Ability_Flight);
 		TargetASC->CancelAbilities(&FlightTag);
+	}
+}
+
+void UCrossguardWeaponAttackAbility::FinishMeleeHits(const FCrossguardAttackRiders& Riders, UAbilitySystemComponent* ASC, const TArray<AActor*>& Hit)
+{
+	if (!Riders.bMortalStrike || ASC == nullptr)
+	{
+		return;
+	}
+	for (const AActor* Target : Hit)
+	{
+		const UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
+		// [Mortal Strike]: a kill gives the skill back.
+		if (TargetASC != nullptr && TargetASC->HasMatchingGameplayTag(CrossguardTags::State_Dead))
+		{
+			ASC->RemoveActiveEffectsWithGrantedTags(FGameplayTagContainer(CrossguardTags::Cooldown_Skill_MortalStrike));
+			return;
+		}
 	}
 }
 

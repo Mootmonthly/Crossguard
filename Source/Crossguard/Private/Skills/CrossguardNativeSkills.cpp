@@ -24,6 +24,8 @@ namespace CrossguardNativeSkills
 			Register(UCrossguardEldritchShieldAbility::StaticClass());
 			Register(UCrossguardChopDownAbility::StaticClass());
 			Register(UCrossguardSummonSkeletonsAbility::StaticClass());
+			Register(UCrossguardSummonTigerAbility::StaticClass());
+			Register(UCrossguardSummonGreaterDemonAbility::StaticClass());
 			Register(UCrossguardShootingStarAbility::StaticClass());
 			Register(UCrossguardDragonificationAbility::StaticClass());
 			Register(UCrossguardFlareBreathAbility::StaticClass());
@@ -33,6 +35,7 @@ namespace CrossguardNativeSkills
 			Register(UCrossguardShadeBlowAbility::StaticClass());
 			Register(UCrossguardGougeAbility::StaticClass());
 			Register(UCrossguardPurgeShotAbility::StaticClass());
+			Register(UCrossguardNeckbiteAbility::StaticClass());
 			Register(UCrossguardQuickshotAbility::StaticClass());
 			Register(UCrossguardArcaneArrowsAbility::StaticClass());
 			Register(UCrossguardCleaveAbility::StaticClass());

@@ -5,13 +5,26 @@
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemGlobals.h"
 #include "Combat/CrossguardSpellProjectile.h"
+#include "Combat/CrossguardWeaponAttackAbility.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Crossguard.h"
+#include "CrossguardRules/Items.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Skills/CrossguardDataPassiveAbility.h"
+#include "Skills/CrossguardNativeSkills.h"
+#include "Skills/CrossguardSkillAbility.h"
+#include "Skills/CrossguardSkillCatalog.h"
 #include "Skills/CrossguardSpellSkills.h"
 #include "UObject/ConstructorHelpers.h"
+
+namespace
+{
+	// How often an AI looks for a skill to use.
+	constexpr double AISkillCheckSeconds = 0.25;
+}
 
 ACrossguardAICharacter::ACrossguardAICharacter()
 {
@@ -46,6 +59,111 @@ void ACrossguardAICharacter::PossessedBy(AController* NewController)
 	// Fixed Health instead of level-based attributes, kept when buffs change the attributes.
 	GetCrossguardAbilitySystemComponent()->SetFixedMaxHealth(FixedHealth);
 	RestoreFullHealth();
+	GrantSkills();
+}
+
+void ACrossguardAICharacter::ClearSkills()
+{
+	if (UCrossguardAbilitySystemComponent* ASC = GetCrossguardAbilitySystemComponent())
+	{
+		for (const FGameplayAbilitySpecHandle& Handle : GrantedSkills)
+		{
+			// Cancel first so an active passive runs EndAbility and removes its effects.
+			ASC->CancelAbilityHandle(Handle);
+			ASC->ClearAbility(Handle);
+		}
+	}
+	GrantedSkills.Reset();
+	SkillGrants.Reset();
+}
+
+void ACrossguardAICharacter::GrantSkills()
+{
+	UCrossguardAbilitySystemComponent* ASC = GetCrossguardAbilitySystemComponent();
+	if (!HasAuthority() || ASC == nullptr)
+	{
+		return;
+	}
+	ClearSkills();
+	for (const FName& SkillId : SkillIds)
+	{
+		const TSubclassOf<UCrossguardGameplayAbility> AbilityClass = SkillCatalog != nullptr ? SkillCatalog->FindAbilityClass(SkillId)
+			: CrossguardNativeSkills::Find(SkillId);
+		if (AbilityClass != nullptr)
+		{
+			GrantedSkills.Add(ASC->GiveAbility(FGameplayAbilitySpec(AbilityClass, 1, INDEX_NONE, this)));
+			continue;
+		}
+		// Passives without a class are played from their data row (as a player's loadout does).
+		const FCrossguardSkillRow* Row = SkillCatalog != nullptr ? SkillCatalog->FindSkill(SkillId) : nullptr;
+		if (Row != nullptr && Row->Category == ECrossguardSkillCategory::Passive)
+		{
+			UCrossguardSkillGrant* Grant = NewObject<UCrossguardSkillGrant>(this);
+			Grant->SkillId = SkillId;
+			Grant->Catalog = SkillCatalog;
+			SkillGrants.Add(Grant);
+			GrantedSkills.Add(ASC->GiveAbility(FGameplayAbilitySpec(UCrossguardDataPassiveAbility::StaticClass(), 1, INDEX_NONE, Grant)));
+			continue;
+		}
+		UE_LOG(LogCrossguard, Warning, TEXT("%s: skill '%s' has no ability class%s"), *GetName(), *SkillId.ToString(),
+			SkillCatalog == nullptr ? TEXT(" (no skill catalog: native skills only)") : TEXT(""));
+	}
+}
+
+bool ACrossguardAICharacter::TryUseSkills(AActor* Target)
+{
+	UCrossguardAbilitySystemComponent* ASC = GetCrossguardAbilitySystemComponent();
+	const double Now = GetWorld()->GetTimeSeconds();
+	if (!HasAuthority() || !IsAlive() || ASC == nullptr || Target == nullptr || Now < NextSkillCheckTime)
+	{
+		return false;
+	}
+	NextSkillCheckTime = Now + AISkillCheckSeconds;
+	for (const FGameplayAbilitySpecHandle& Handle : GrantedSkills)
+	{
+		const FGameplayAbilitySpec* Spec = ASC->FindAbilitySpecFromHandle(Handle);
+		const UCrossguardSkillAbility* Skill = Spec != nullptr ? Cast<UCrossguardSkillAbility>(Spec->Ability) : nullptr;
+		if (Skill == nullptr || Spec->IsActive() || !Skill->ShouldAIUse(*this, *Target)
+			|| !Skill->CanActivateAbility(Handle, ASC->AbilityActorInfo.Get()))
+		{
+			continue;
+		}
+		// Skills aim and leap where the character faces (its controller's focus aims the eyes).
+		const FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
+		SetActorRotation(FRotator(0.0f, ToTarget.Rotation().Yaw, 0.0f));
+		if (ASC->TryActivateAbility(Handle))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool ACrossguardAICharacter::WieldsAnyOf(const TArray<ECrossguardWeaponType>& AnyOf) const
+{
+	if (AnyOf.IsEmpty())
+	{
+		return true;
+	}
+	if (!bWieldsWeapon)
+	{
+		return false;
+	}
+	// The enums match (static_assert in CrossguardEquipmentComponent.cpp).
+	Crossguard::FEquipment Equipment;
+	Crossguard::FEquippedWeapon Weapon;
+	Weapon.Type = static_cast<Crossguard::EWeaponType>(WeaponType);
+	Weapon.Handedness = bTwoHandedWeapon ? Crossguard::EHandedness::TwoHanded : Crossguard::EHandedness::OneHanded;
+	Weapon.bMelee = WeaponType != ECrossguardWeaponType::Bow && WeaponType != ECrossguardWeaponType::Crossbow
+		&& WeaponType != ECrossguardWeaponType::Sling && WeaponType != ECrossguardWeaponType::Wand
+		&& WeaponType != ECrossguardWeaponType::MagicStaff;
+	Equipment.MainHand = Weapon;
+	std::vector<Crossguard::EWeaponType> Required;
+	for (const ECrossguardWeaponType Type : AnyOf)
+	{
+		Required.push_back(static_cast<Crossguard::EWeaponType>(Type));
+	}
+	return Crossguard::SatisfiesWeaponRequirement(Required, Equipment);
 }
 
 void ACrossguardAICharacter::RestoreFullHealth()
@@ -76,6 +194,11 @@ bool ACrossguardAICharacter::TryAttack(AActor* Target)
 
 	if (CombatRole == ECrossguardCombatRole::Mage)
 	{
+		// Fireball is a skill: not while Muted or Silenced.
+		if (ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted) || ASC->HasMatchingGameplayTag(CrossguardTags::State_Silenced))
+		{
+			return false;
+		}
 		FVector Eyes;
 		FRotator Unused;
 		GetActorEyesViewPoint(Eyes, Unused);
@@ -89,12 +212,19 @@ bool ACrossguardAICharacter::TryAttack(AActor* Target)
 	{
 		return false;
 	}
+	// Readied next-attack skills ride on the hit, as on a weapon attack; AttackDamage stands in for
+	// the weapon's damage.
+	const TOptional<ECrossguardWeaponType> Weapon = bWieldsWeapon ? TOptional<ECrossguardWeaponType>(WeaponType) : TOptional<ECrossguardWeaponType>();
+	const FCrossguardAttackRiders Riders = UCrossguardWeaponAttackAbility::GatherRiders(FCrossguardRiderAttack::ForAIMelee(Weapon), ASC);
 	const FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(UCrossguardDamageEffect::StaticClass(), 1.0f, ASC->MakeEffectContext());
 	if (Spec.IsValid())
 	{
-		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, AttackDamage);
-		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, 0.0f);
+		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack,
+			AttackDamage * Riders.WeaponMultiplier + Riders.WeaponFlat + Riders.AttackAdd);
+		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, Riders.MagicAdd);
 		ASC->ApplyGameplayEffectSpecToTarget(*Spec.Data, TargetASC);
+		UCrossguardWeaponAttackAbility::ApplyRiders(Riders, TargetASC);
+		UCrossguardWeaponAttackAbility::FinishMeleeHits(Riders, ASC, {Target});
 	}
 	NextAttackTime = Now + AttackInterval;
 	return true;

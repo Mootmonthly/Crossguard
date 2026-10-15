@@ -6,8 +6,14 @@ https://claude.ai/artifact/JPDt46urNPnzMsgZuD7RYW
 `mob-forge.html` is the published page's source. It stores one document per mob in the
 artifact's database (`mobs/<id>`: `{mob, meta: {updatedAt, syncedAt, deleted}}`) and validates
 edits with the same rules as `Tools/validate_mobs.py`. `refs/catalog` holds the weapon, armor,
-item and skill ids (with gem rarities) the drop editor offers; Claude refreshes it at each sync.
+item and skill ids (skills with gem rarity, category and `aiUsable`) the drop and skill editors
+offer; Claude refreshes it at each sync with `python3 Tools/sync_mob_forge.py --catalog <file>`.
 Only editors can write.
+
+The Skills section picks the mob's `skills` from the catalog skills with `aiUsable` true: AI
+actives it uses on its target, and data-only passives that are always on (see
+[AI-usable skills](../../docs/mob-data-schema.md#ai-usable-skills)). Documents saved before the
+field existed load and sync as `skills: []`.
 
 ## Syncing into the repo
 
@@ -20,6 +26,6 @@ Ask Claude to "sync mobs". Claude:
    you.
 3. Runs `Tools/run_checks.sh`, commits and pushes.
 4. Marks the synced documents (`meta.syncedAt`), deletes the ones marked for deletion, and
-   refreshes `refs/catalog`.
+   refreshes `refs/catalog` from `Tools/sync_mob_forge.py --catalog`.
 
 After a sync, reimport `DT_Mobs` and `DT_Loot` in the editor.

@@ -46,14 +46,16 @@ subclass with visuals) wins. Catalog data validation also flags cooldowns that d
 | --- | --- | --- |
 | Fireball | `UCrossguardFireballAbility` | `ACrossguardSpellProjectile` (direct hit + splash). `LaunchFireball` is shared with the Skeleton Mage. |
 | Heal | `UCrossguardHealAbility` | `FindAimedTarget` (pawn sweep from the eyes). |
-| Mute | `UCrossguardMuteAbility` | `UCrossguardMuteEffect`: periodic damage + `State.Muted`. Every skill has `State.Muted` in `ActivationBlockedTags` except basic attacks and passives; data passives remove their stats while muted. |
+| Mute | `UCrossguardMuteAbility` | `UCrossguardMuteEffect`: periodic damage + `State.Muted`. Every skill has `State.Muted` in `ActivationBlockedTags` except basic attacks and passives; data passives remove their stats while muted. `State.Silenced` (crowd control) is blocked the same way but leaves passives on. |
 | Eldritch Shield | `UCrossguardEldritchShieldAbility` | `AttackShield` attribute, used up by the damage execution before Health (Attack Damage only). |
 | Chop Down | `UCrossguardChopDownAbility` | Adds `State.ChopDownReady`; `UCrossguardWeaponAttackAbility` reads it on the next melee axe attack. |
 | Shooting Star | `UCrossguardShootingStarAbility` | Root motion dash (predicted); path damage and Blind (`State.Blinded`) on the server. |
 | Dragonification | `UCrossguardDragonificationAbility` | `State.Dragonified` (blocks other skills and drawing weapons), `UCrossguardTimedStatsEffect`, grants Flare Breath and Flight until it ends. |
 | Flare Breath | `UCrossguardFlareBreathAbility` | Server timer every 0.25 s, cone overlap. |
 | Flight | `UCrossguardFlightAbility` | `MOVE_Flying` on server and owner; asset tag `Ability.Flight`, owned tag `State.Flying`. |
-| Summon Skeletons | `UCrossguardSummonSkeletonsAbility` | `ACrossguardMinion` + `ACrossguardMinionController`. Minions need a NavMesh to path; without one they walk straight. |
+| Summon Skeletons | `UCrossguardSummonSkeletonsAbility` | `ACrossguardMinion` + `ACrossguardMinionController`. Minions need a NavMesh to path; without one they walk straight. Base `UCrossguardSummonAbility`: recast or unequip dismisses the old minions. |
+| Summon Tiger, Summon Greater Demon | `UCrossguardSummonCompanionAbility` subclasses | One minion with stats, a weapon (or claws) and `SkillIds`; it uses its skills (see AI characters). The summoner's loadout catalog plays data passives (Sword Mastery). |
+| Neckbite | `UCrossguardNeckbiteAbility` | Next-attack: `State.NextAttack.Neckbite` → +10 Magic Damage and `State.Silenced` 2 s. Activates only on AI characters for now. |
 
 | Next-attack skills | `UCrossguardNextAttackAbility` subclasses | Add a `State.NextAttack.*` tag; `UCrossguardWeaponAttackAbility::GatherRiders` turns readied tags (and Arcane Arrows / Splinter of Winter) into `FCrossguardAttackRiders`: extra damage and on-hit specs, also carried by projectiles. |
 | Quickshot, Arcane Arrows, Cleave, Triple Thrust, Parting the Land, Hunter's Leap | `CrossguardWeaponSkills` | Hunter's Leap: root motion jump (predicted). |
@@ -323,7 +325,18 @@ Warrior or Mage attack (`CombatRole`), a placeholder cylinder. Two kinds:
   `LeashRange`), targets players and minions it can see, never other monsters, drops a body with
   its `LootTableId` roll, gives its killer `KillXpSource` XP.
 
-Both path on the NavMesh, or walk straight without one. A monster with a `MobId` takes its stats,
+Both path on the NavMesh, or walk straight without one.
+
+Skills: `SkillIds` are granted on possession (from `SkillCatalog`, or native classes only without
+one). The controllers call `TryUseSkills(Target)` a few times a second: the first granted skill
+whose `UCrossguardSkillAbility::ShouldAIUse` says yes and that can activate is used, facing the
+target first (the controller's focus aims the eyes). `ShouldAIUse` is overridden by the next-attack
+skills, Hunter's Leap and Eldritch Shield; `Tools/ai_skills.py` mirrors that list for the Mob Forge.
+Requirements (weapons, armor, forms, casting weapon) do not apply to AI. Its basic attack gathers
+next-attack riders like a weapon attack (`FCrossguardRiderAttack::ForAIMelee`); `bWieldsWeapon` /
+`WeaponType` say what it holds (unarmed counts as every melee weapon for riders).
+
+A monster with a `MobId` takes its stats, skills (catalog: the game mode's `MobSkillCatalog`),
 loot table and kill XP from the game mode's `MobTable` (`Data/Mobs/Mobs.json`, edited in the Mob
 Forge, [mob-data-schema.md](mob-data-schema.md)).
 
