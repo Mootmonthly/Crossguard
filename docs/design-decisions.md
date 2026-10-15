@@ -32,15 +32,22 @@ Code and data must follow it.
 
 ## Experience
 
-XP sources:
+| Source | XP |
+| --- | --- |
+| Basic monster kill (skeleton, goblin, ...) | 5 |
+| Boss monster kill (dragon, ...) | 50 |
+| Player kill | 25 |
+| Quest | 10–100, set per quest |
+| Gathering a node (herb, ore) | 10 |
+| Crafting a piece | 10 × (rarity level + 1): Common 10 … Mystic 60 |
+| Enchanting a piece | 10 × (rarity level + 1): Common 10 … Mystic 60 |
+| Extracting | 0 (placeholder; listed as a source, no amount given) |
 
-- Killing monsters
-- Killing players
-- Completing quests
-- Gathering resources (herbs, ore)
-- Crafting equipment pieces
-- Enchanting equipment pieces
-- Extracting
+- Level 1 → 2 takes 50 XP; each later level takes 10% more than the one before
+  (`50 × 1.1^(level − 1)`, rounded to the nearest whole XP).
+- XP earned in a raid is held until the raid ends. Extracting banks it; failing to extract loses
+  it. Dying does not lose it by itself: a teammate can revive you and you can still extract.
+- Respec: reassign all attribute points for a modest in-game fee (placeholder: 3 currency).
 
 ## Levels, attributes and Skill Capacity
 
@@ -112,6 +119,21 @@ Independent of category, a skill is:
 - Neither, if it has no weapon requirement (e.g. Dragonification).
 
 "Melee Skills -10% Cooldown" style effects apply to skills with the matching weapon tag.
+
+## Inventory, death and Skill Gems
+
+- Inventory is a grid; items take up space (Dark and Darker style). The raid inventory has 50
+  squares (10 × 5, placeholder shape).
+- Backpacks and Quivers are extra containers that add 5–30 squares by rarity, in steps of 5
+  (Common 5 … Mystic 30). Quivers only hold Arrows and Bolts.
+- On death, all equipped gear and the raid inventory drop. No insurance for now.
+- Skill Gems are items. Only between raids, right-clicking a gem in the inventory or stash learns
+  its skill permanently into the character's Skill Library and consumes the gem. A skill already
+  in the library cannot be learned again (the gem is kept). Gems can also be sold on the auction
+  house, deposited in a guild bank, or traded.
+- The loadout can only equip skills in the Skill Library.
+- Guild banks: a shared stash per guild; every member deposits, only officers withdraw, manage or
+  redistribute.
 
 ## Camera
 
