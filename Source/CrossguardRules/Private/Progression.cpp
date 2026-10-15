@@ -33,4 +33,9 @@ namespace Crossguard
 		}
 		return EAllocationError::None;
 	}
+
+	bool RequiresRespec(const FAttributes& Current, const FAttributes& Requested)
+	{
+		return Requested.Str < Current.Str || Requested.Agi < Current.Agi || Requested.Int < Current.Int;
+	}
 }

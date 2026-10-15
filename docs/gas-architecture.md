@@ -123,6 +123,29 @@ camera direction. The body mesh is hidden from its owner until first-person arms
   `EmptyArmorSlots` × 0.05; [Armor Mastery] and [The Mithril Knight] effects require the plate tags.
   Abilities can also set `RequiredArmor`.
 
+## Progression and Skill Library
+
+`ACrossguardPlayerState` holds what outlives the pawn: banked XP (level is derived from it),
+raid XP, attribute allocation, Skill Library and a placeholder currency. Not saved yet: it lasts for
+the session and across seamless travel.
+
+- `AwardXp(Source, QuestXp, Rarity)` (server): in a raid the XP is held as raid XP; between raids it
+  is banked at once.
+- `BeginRaid()` / `EndRaid(bExtracted)` (server): extracting banks raid XP, failing loses it. The
+  game mode calls `BeginRaid` for every player when `bIsRaid` is on (default). Turn `bIsRaid` off on
+  a hub or test map to try between-raid actions.
+- Kills: when damage brings a character to 0 Health, the attribute set calls
+  `ACrossguardGameMode::HandleKill`. The killer's player gets `PlayerKill` XP for a player victim,
+  otherwise the victim's `KillXpSource` (default `BasicMonster`). No XP for yourself or allies.
+- `RequestAttributeAllocation(Allocation)`: between raids only. Spending unspent points is free;
+  lowering any attribute is a respec and costs the respec fee.
+- `LearnSkill(SkillId, Catalog)` (server): between raids only; the inventory consumes the Skill Gem
+  when it returns `None`.
+- The character copies level and allocation from the player state (`ApplyProgression`). Turn on
+  `bUseDebugProgression` to use the character's own `Level` and `AttributeAllocation` instead.
+- The loadout only accepts skills in the player's Skill Library. Debug skills are learned
+  automatically. AI pawns have no player state and skip the check.
+
 ## Teams
 
 - `ACrossguardGameMode` (default pawn `ACrossguardCharacter`, player state
@@ -155,7 +178,8 @@ and the rules unit tests.
 ## Not built yet
 
 - Generating the stat-modifier effects for passives from the table (currently made by hand).
-- Skill Gem ownership; restricting when the loadout can change.
+- Restricting when the loadout can change (e.g. only between raids).
+- Saving progression; extraction points; reviving.
 - Shields (Eldritch Shield), CC, Mute, Silence, minions.
 - Client-side ability system init for pawns without a PlayerState (AI). Players are covered by
   `OnRep_PlayerState`.

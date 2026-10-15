@@ -68,6 +68,10 @@ static void TestProgression()
 	CHECK(ValidateAllocation(Config, 1, {31, 0, 0}) == EAllocationError::TooManyPoints);
 	CHECK(ValidateAllocation(Config, 2, {31, 1, 1}) == EAllocationError::None);
 	CHECK(ValidateAllocation(Config, 1, {-1, 20, 11}) == EAllocationError::NegativeAttribute);
+
+	CHECK(!RequiresRespec({10, 10, 10}, {10, 10, 10}));
+	CHECK(!RequiresRespec({10, 10, 10}, {13, 10, 10}));
+	CHECK(RequiresRespec({10, 10, 10}, {12, 9, 12}));
 }
 
 static void TestDerivedStats()

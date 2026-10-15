@@ -2,6 +2,8 @@
 
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "Crossguard.h"
+#include "Engine/World.h"
+#include "Game/CrossguardGameMode.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
 
@@ -115,6 +117,7 @@ void UCrossguardAttributeSet::PostGameplayEffectExecute(const FGameplayEffectMod
 		SetIncomingDamage(0.0f);
 		if (Damage > 0.0f)
 		{
+			const bool bWasAlive = GetHealth() > 0.0f;
 			SetHealth(FMath::Clamp(GetHealth() - Damage, 0.0f, GetMaxHealth()));
 			UE_LOG(LogCrossguard, Log, TEXT("%s took %.1f damage from %s (%.1f / %.1f HP)"), *GetNameSafe(GetOwningActor()), Damage,
 				*GetNameSafe(Data.EffectSpec.GetContext().GetOriginalInstigator()), GetHealth(), GetMaxHealth());
@@ -122,6 +125,12 @@ void UCrossguardAttributeSet::PostGameplayEffectExecute(const FGameplayEffectMod
 			{
 				// Server. Clients add the same tag in OnRep_Health when the replicated Health reaches 0.
 				MarkDead();
+				const UWorld* World = GetOwningActor() != nullptr ? GetOwningActor()->GetWorld() : nullptr;
+				ACrossguardGameMode* GameMode = World != nullptr ? World->GetAuthGameMode<ACrossguardGameMode>() : nullptr;
+				if (bWasAlive && GameMode != nullptr)
+				{
+					GameMode->HandleKill(GetOwningActor(), Data.EffectSpec.GetContext().GetOriginalInstigator());
+				}
 			}
 		}
 	}

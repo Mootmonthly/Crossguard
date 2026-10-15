@@ -173,6 +173,7 @@ void ACrossguardCharacter::PossessedBy(AController* NewController)
 
 	// Server.
 	InitializeAbilitySystem();
+	PullProgression();
 	AbilitySystemComponent->InitializeAttributes(Level, AttributeAllocation);
 	EquipmentComponent->InitializeEquipmentEffect();
 
@@ -228,7 +229,39 @@ void ACrossguardCharacter::ApplyDebugLoadout()
 
 	if (!DebugSkills.IsEmpty())
 	{
+		if (ACrossguardPlayerState* Progression = GetPlayerState<ACrossguardPlayerState>())
+		{
+			for (const FName& Skill : DebugSkills)
+			{
+				Progression->LearnSkillForTesting(Skill);
+			}
+		}
 		LoadoutComponent->RequestLoadout(DebugSkills);
+	}
+}
+
+bool ACrossguardCharacter::PullProgression()
+{
+	const ACrossguardPlayerState* Progression = GetPlayerState<ACrossguardPlayerState>();
+	if (bUseDebugProgression || Progression == nullptr)
+	{
+		return false;
+	}
+	const int32 NewLevel = Progression->GetCharacterLevel();
+	const FCrossguardAttributeAllocation& NewAllocation = Progression->GetAttributeAllocation();
+	const bool bChanged = NewLevel != Level || NewAllocation.Strength != AttributeAllocation.Strength
+		|| NewAllocation.Agility != AttributeAllocation.Agility || NewAllocation.Intelligence != AttributeAllocation.Intelligence;
+	Level = NewLevel;
+	AttributeAllocation = NewAllocation;
+	return bChanged;
+}
+
+void ACrossguardCharacter::ApplyProgression()
+{
+	// XP earned in a raid does not change the level, so this does not refill Health mid-raid.
+	if (HasAuthority() && PullProgression())
+	{
+		AbilitySystemComponent->InitializeAttributes(Level, AttributeAllocation);
 	}
 }
 

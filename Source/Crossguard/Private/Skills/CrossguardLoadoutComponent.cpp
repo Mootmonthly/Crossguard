@@ -7,6 +7,7 @@
 #include "Crossguard.h"
 #include "CrossguardRules/Loadout.h"
 #include "CrossguardRules/Progression.h"
+#include "Game/CrossguardPlayerState.h"
 #include "Net/UnrealNetwork.h"
 #include "Skills/CrossguardSkillCatalog.h"
 
@@ -80,8 +81,22 @@ FCrossguardLoadoutResult UCrossguardLoadoutComponent::ValidateLoadout(const TArr
 		Ids.push_back(ToRulesId(Skill));
 	}
 
+	// Players can only equip skills in their Skill Library. AI pawns have no player state and no
+	// library check.
+	const APawn* Pawn = Cast<APawn>(GetOwner());
+	const ACrossguardPlayerState* Progression = Pawn != nullptr ? Pawn->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	Crossguard::FSkillLibrary Library;
+	if (Progression != nullptr)
+	{
+		for (const FName& Learned : Progression->GetSkillLibrary())
+		{
+			Library.Add(ToRulesId(Learned));
+		}
+	}
+
 	Result.Capacity = GetCapacity();
-	const Crossguard::FLoadoutResult Rules = Crossguard::ValidateLoadout(SkillCatalog->BuildRulesCatalog(), Ids, Result.Capacity);
+	const Crossguard::FLoadoutResult Rules = Crossguard::ValidateLoadout(
+		SkillCatalog->BuildRulesCatalog(), Ids, Result.Capacity, Progression != nullptr ? &Library : nullptr);
 	Result.Error = ToLoadoutError(Rules.Error);
 	Result.SkillId = Rules.SkillId.empty() ? NAME_None : FName(UTF8_TO_TCHAR(Rules.SkillId.c_str()));
 	Result.OtherSkillId = Rules.OtherSkillId.empty() ? NAME_None : FName(UTF8_TO_TCHAR(Rules.OtherSkillId.c_str()));

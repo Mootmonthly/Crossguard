@@ -3,6 +3,7 @@
 #include "Character/CrossguardCharacter.h"
 #include "Crossguard.h"
 #include "Game/CrossguardPlayerState.h"
+#include "Game/CrossguardTeamLibrary.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -105,4 +106,35 @@ void ACrossguardGameMode::Logout(AController* Exiting)
 		Teams.Leave(std::string(TCHAR_TO_UTF8(*Key)));
 	}
 	Super::Logout(Exiting);
+}
+
+void ACrossguardGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
+{
+	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+
+	ACrossguardPlayerState* PlayerState = NewPlayer != nullptr ? NewPlayer->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	if (bIsRaid && PlayerState != nullptr)
+	{
+		PlayerState->BeginRaid();
+	}
+}
+
+void ACrossguardGameMode::HandleKill(AActor* Victim, AActor* Killer)
+{
+	const APawn* KillerPawn = Cast<APawn>(Killer);
+	ACrossguardPlayerState* KillerState = KillerPawn != nullptr ? KillerPawn->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	if (KillerState == nullptr || Victim == nullptr || Killer == Victim || UCrossguardTeamLibrary::AreAllies(Killer, Victim))
+	{
+		return;
+	}
+
+	const APawn* VictimPawn = Cast<APawn>(Victim);
+	if (VictimPawn != nullptr && VictimPawn->IsPlayerControlled())
+	{
+		KillerState->AwardXp(ECrossguardXpSource::PlayerKill);
+	}
+	else if (const ACrossguardCharacter* Monster = Cast<ACrossguardCharacter>(Victim))
+	{
+		KillerState->AwardXp(Monster->KillXpSource);
+	}
 }

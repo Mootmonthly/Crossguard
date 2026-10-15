@@ -55,8 +55,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardLoadoutRejected, const FC
 // catalog and the character's Skill Capacity, then grants one ability per effective skill: equipped
 // skills plus their bundle components, each once.
 //
-// Not yet checked: whether the player owns the Skill Gems, and whether equipping is allowed at
-// the current moment (e.g. only outside a match).
+// Players can only equip skills in their Skill Library (ACrossguardPlayerState).
+// Not yet checked: whether equipping is allowed at the current moment (e.g. only outside a raid).
 UCLASS(ClassGroup = (Crossguard), meta = (BlueprintSpawnableComponent))
 class CROSSGUARD_API UCrossguardLoadoutComponent : public UActorComponent
 {

@@ -3,6 +3,7 @@
 #include "AbilitySystem/CrossguardAbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "CoreMinimal.h"
+#include "Game/CrossguardPlayerState.h"
 #include "GameFramework/Character.h"
 #include "GenericTeamAgentInterface.h"
 #include "Items/CrossguardItemTypes.h"
@@ -55,13 +56,26 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	// Placeholder until progression is loaded from the player's save. Replicated so clients can
-	// show Skill Capacity.
+	// Server. Copies level and attribute allocation from the player state and re-initializes the
+	// attributes if either changed. Called by the player state; does nothing with
+	// bUseDebugProgression or without a player state (AI).
+	void ApplyProgression();
+
+	// Copied from the player state for players. Set by hand for AI, or with bUseDebugProgression.
+	// Replicated so clients can show Skill Capacity.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category = "Crossguard|Progression", meta = (ClampMin = "1"))
 	int32 Level = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Progression")
 	FCrossguardAttributeAllocation AttributeAllocation;
+
+	// XP its killer gets when this character is not player-controlled (monsters, dummies).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Progression")
+	ECrossguardXpSource KillXpSource = ECrossguardXpSource::BasicMonster;
+
+	// Testing: use Level and AttributeAllocation above instead of the player's progression.
+	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
+	bool bUseDebugProgression = false;
 
 	// Testing only, until inventory exists: equipped on the server when the character spawns.
 	// Item ids are row names in the weapon / armor tables (e.g. "sword_one_handed", "plate_helm").
@@ -74,7 +88,8 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
 	TArray<FCrossguardArmorItem> DebugArmor;
 
-	// Skill ids to equip (subject to Skill Capacity at Level).
+	// Skill ids to equip (subject to Skill Capacity at Level). Players learn them into their Skill
+	// Library first, without gems.
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
 	TArray<FName> DebugSkills;
 
@@ -146,6 +161,8 @@ private:
 	void OnSecondary();
 
 	void InitializeAbilitySystem();
+	// Copies level and allocation from the player state. Returns true if either changed.
+	bool PullProgression();
 	void OnMoveSpeedChanged(const FOnAttributeChangeData& Data);
 	void ApplyMoveSpeed(float MoveSpeed);
 

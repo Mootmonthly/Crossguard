@@ -48,6 +48,11 @@ Code and data must follow it.
 - XP earned in a raid is held until the raid ends. Extracting banks it; failing to extract loses
   it. Dying does not lose it by itself: a teammate can revive you and you can still extract.
 - Respec: reassign all attribute points for a modest in-game fee (placeholder: 3 currency).
+- Assumed until ruled otherwise:
+  - Attribute points are assigned, and respecs done, only between raids (levels only change then).
+  - Killing yourself or an ally gives no XP.
+  - XP keeps accumulating at max level, so raising the cap mid-season levels characters up.
+  - Quest XP outside 10–100 is clamped into that range.
 
 ## Levels, attributes and Skill Capacity
 

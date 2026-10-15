@@ -26,6 +26,18 @@ public:
 	// Seamless travel skips InitNewPlayer: re-register the player with the party key their player
 	// state carried over.
 	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
+	// Starts the raid for each player when this map is a raid.
+	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
+
+	// Server. Called by the attribute set when damage brings a character to 0 Health. Awards kill
+	// XP to the killer's player: PlayerKill for a player-controlled victim, otherwise the victim's
+	// KillXpSource. No XP for killing yourself or an ally.
+	virtual void HandleKill(AActor* Victim, AActor* Killer);
+
+	// Raid maps hold XP until extraction and block between-raid actions (learning Skill Gems,
+	// changing attributes). Turn off for a hub / test map where those should work.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard")
+	bool bIsRaid = true;
 
 	static const TCHAR* PartyOption;
 

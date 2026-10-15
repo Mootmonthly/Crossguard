@@ -31,4 +31,7 @@ namespace Crossguard
 	// Attributes start at 0 and are assigned freely. Unspent points are allowed.
 	CROSSGUARDRULES_API EAllocationError ValidateAllocation(
 		const FProgressionConfig& Config, int Level, const FAttributes& Allocation);
+
+	// Spending unspent points is free; lowering any attribute is a respec (see Experience.h).
+	CROSSGUARDRULES_API bool RequiresRespec(const FAttributes& Current, const FAttributes& Requested);
 }
