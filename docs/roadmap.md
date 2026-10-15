@@ -57,6 +57,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Drop and pick up single items | Editor | Built in code (G drops the stack in hand, F picks up). Needs drag-to-drop in the inventory UI and item meshes. |
 | Revive spell | Decision, Code | Calls the existing `Revive`. Comes from the skills you add in the Skill Forge. |
 | Saving progression | Code, Decision | XP, level, attributes, Skill Library, stash, respec tokens. Needs a choice of backend. |
+| Steam accounts | Editor | Lasting player ids for guilds and saves: plugin + config steps in [steam-setup.md](steam-setup.md). |
 | Loadout timing | Decision | Can the loadout change during a raid, or only between raids? |
 
 ## Milestone 2: Combat depth
