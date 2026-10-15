@@ -1751,6 +1751,9 @@ bool FCrossguardScenarioSupportMultiscale::RunTest(const FString& Parameters)
 
 	FScenario Scenario(*this);
 
+	static const TCHAR* const AllNames[] = {TEXT("Knight"), TEXT("Friend"), TEXT("Outsider")};
+	static const TCHAR* const PartyNames[] = {TEXT("Knight"), TEXT("Friend")};
+
 	Scenario.Step(TEXT("Two party members (one in Plate) and an outsider"), [](FScenarioContext& C)
 	{
 		ACrossguardCharacter* Knight = C.SpawnPlayer(TEXT("Knight"), FVector(0.0f, Row, 0.0f), 0.0f, TEXT("Scales"));
@@ -1761,18 +1764,20 @@ bool FCrossguardScenarioSupportMultiscale::RunTest(const FString& Parameters)
 			return;
 		}
 		// Multiscale needs Plate armor (Skill Forge).
-		if (!EquipArmorPiece(C, Knight, TEXT("plate_cuirass")))
-		{
-			return;
-		}
-		C.Require(C.HasTag(Knight, CrossguardTags::Equipment_Armor_Plate), TEXT("the knight counts as wearing Plate (Equipment.Armor.Plate)"));
+		EquipArmorPiece(C, Knight, TEXT("plate_cuirass"));
 	});
 
 	Scenario.Wait(0.5f);
 
 	Scenario.Step(TEXT("The knight equips Multiscale"), [](FScenarioContext& C)
 	{
-		for (const TCHAR* Name : {TEXT("Knight"), TEXT("Friend"), TEXT("Outsider")})
+		ACrossguardCharacter* Knight = Character(C, TEXT("Knight"));
+		if (!C.Require(Knight != nullptr && C.HasTag(Knight, CrossguardTags::Equipment_Armor_Plate),
+			TEXT("the knight counts as wearing Plate (Equipment.Armor.Plate)")))
+		{
+			return;
+		}
+		for (const TCHAR* Name : AllNames)
 		{
 			ACrossguardCharacter* Member = Character(C, Name);
 			if (Member == nullptr)
@@ -1783,7 +1788,7 @@ bool FCrossguardScenarioSupportMultiscale::RunTest(const FString& Parameters)
 			C.SetNumber(FName(*(FString(Name) + TEXT(".Ar"))), C.Stat(Member, UCrossguardAttributeSet::GetAttackResistanceAttribute()));
 			C.SetNumber(FName(*(FString(Name) + TEXT(".Mr"))), C.Stat(Member, UCrossguardAttributeSet::GetMagicResistanceAttribute()));
 		}
-		C.Require(GrantSkillsAtCost(C, Character(C, TEXT("Knight")), {TEXT("multiscale")}, CostMultiscale), TEXT("Multiscale granted"));
+		C.Require(GrantSkillsAtCost(C, Knight, {TEXT("multiscale")}, CostMultiscale), TEXT("Multiscale granted"));
 	});
 
 	// The aura refreshes every second.
@@ -1791,7 +1796,7 @@ bool FCrossguardScenarioSupportMultiscale::RunTest(const FString& Parameters)
 
 	Scenario.Step(TEXT("The knight and the party member have +0.15; the outsider nothing"), [](FScenarioContext& C)
 	{
-		for (const TCHAR* Name : {TEXT("Knight"), TEXT("Friend"), TEXT("Outsider")})
+		for (const TCHAR* Name : AllNames)
 		{
 			ACrossguardCharacter* Member = Character(C, Name);
 			if (Member == nullptr)
@@ -1817,7 +1822,7 @@ bool FCrossguardScenarioSupportMultiscale::RunTest(const FString& Parameters)
 
 	Scenario.Step(TEXT("Unequipped: the bonus is gone from everyone"), [](FScenarioContext& C)
 	{
-		for (const TCHAR* Name : {TEXT("Knight"), TEXT("Friend")})
+		for (const TCHAR* Name : PartyNames)
 		{
 			ACrossguardCharacter* Member = Character(C, Name);
 			if (Member == nullptr)
