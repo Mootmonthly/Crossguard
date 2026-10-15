@@ -1,7 +1,10 @@
 #include "Character/CrossguardCharacter.h"
 
 #include "AbilitySystem/CrossguardAttributeSet.h"
+#include "AbilitySystem/CrossguardGameplayTags.h"
 #include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Combat/CrossguardWeaponAttackAbility.h"
 #include "Crossguard.h"
 #include "EnhancedInputComponent.h"
@@ -18,6 +21,7 @@
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Items/CrossguardLootContainer.h"
 #include "Net/UnrealNetwork.h"
+#include "TimerManager.h"
 #include "Skills/CrossguardLoadoutComponent.h"
 
 ACrossguardCharacter::ACrossguardCharacter()
@@ -404,18 +408,100 @@ void ACrossguardCharacter::HandleDeath()
 		return;
 	}
 	TArray<FCrossguardInventoryItem> Dropped = InventoryComponent->TakeEverything();
-	if (Dropped.IsEmpty())
+	// Died again with items still left on the previous body (they did not fit at the revive): one
+	// body holds everything.
+	if (Body != nullptr)
 	{
-		return;
+		Dropped.Append(Body->TakeAllItems());
+		Body->Destroy();
+		Body = nullptr;
 	}
 
 	FActorSpawnParameters Params;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	ACrossguardLootContainer* Body = GetWorld()->SpawnActor<ACrossguardLootContainer>(BodyContainerClass, GetActorTransform(), Params);
+	Body = GetWorld()->SpawnActor<ACrossguardLootContainer>(BodyContainerClass, GetActorTransform(), Params);
 	if (Body == nullptr)
 	{
 		UE_LOG(LogCrossguard, Warning, TEXT("%s died but its body container could not be spawned; %d items lost"), *GetName(), Dropped.Num());
 		return;
 	}
 	Body->InitializeContents(Dropped);
+	Body->SetBodyMesh(GetMesh()->GetSkeletalMeshAsset(), MeshRelativeTransform);
+
+	if (DebugReviveDelay > 0.0f)
+	{
+		FTimerHandle Handle;
+		GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateWeakLambda(this, [this]() { Revive(0.5f); }), DebugReviveDelay, false);
+	}
+}
+
+bool ACrossguardCharacter::Revive(float HealthFraction)
+{
+	if (!HasAuthority() || !AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Dead))
+	{
+		return false;
+	}
+
+	const float MaxHealth = AbilitySystemComponent->GetNumericAttribute(UCrossguardAttributeSet::GetMaxHealthAttribute());
+	const float Health = FMath::Max(1.0f, MaxHealth * FMath::Clamp(HealthFraction, 0.0f, 1.0f));
+	AbilitySystemComponent->SetNumericAttributeBase(UCrossguardAttributeSet::GetHealthAttribute(), Health);
+	AttributeSet->ClearDead();
+
+	// Whatever is still on the body comes back; anything that does not fit stays on it.
+	if (Body != nullptr)
+	{
+		const TArray<FCrossguardInventoryItem> Leftover = InventoryComponent->RestoreFromBody(Body->TakeAllItems());
+		if (Leftover.IsEmpty())
+		{
+			Body->Destroy();
+			Body = nullptr;
+		}
+		else
+		{
+			Body->InitializeContents(Leftover);
+		}
+	}
+	UE_LOG(LogCrossguard, Log, TEXT("%s revived with %.0f HP"), *GetName(), Health);
+	return true;
+}
+
+void ACrossguardCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+	MeshRelativeTransform = GetMesh()->GetRelativeTransform();
+	MeshCollisionProfile = GetMesh()->GetCollisionProfileName();
+}
+
+void ACrossguardCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// The character is going away (e.g. its player left): the body stays as a ragdoll.
+	if (HasAuthority() && Body != nullptr)
+	{
+		Body->ShowBodyMesh();
+		Body = nullptr;
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
+void ACrossguardCharacter::SetDeadVisuals(bool bDead)
+{
+	UCapsuleComponent* Capsule = GetCapsuleComponent();
+	USkeletalMeshComponent* BodyMesh = GetMesh();
+	if (bDead)
+	{
+		GetCharacterMovement()->StopMovementImmediately();
+		GetCharacterMovement()->DisableMovement();
+		// Walk-through: the ragdoll and the body container are what others interact with.
+		Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		BodyMesh->SetCollisionProfileName(TEXT("Ragdoll"));
+		BodyMesh->SetSimulatePhysics(true);
+		return;
+	}
+
+	BodyMesh->SetSimulatePhysics(false);
+	BodyMesh->SetCollisionProfileName(MeshCollisionProfile);
+	BodyMesh->AttachToComponent(Capsule, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	BodyMesh->SetRelativeTransform(MeshRelativeTransform);
+	Capsule->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 }

@@ -1,12 +1,19 @@
 #include "Items/CrossguardLootContainer.h"
 
 #include "Components/SceneComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Engine/SkeletalMesh.h"
 #include "Net/UnrealNetwork.h"
 
 ACrossguardLootContainer::ACrossguardLootContainer()
 {
 	bReplicates = true;
 	SetRootComponent(CreateDefaultSubobject<USceneComponent>(TEXT("Root")));
+
+	BodyMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BodyMesh"));
+	BodyMeshComponent->SetupAttachment(GetRootComponent());
+	BodyMeshComponent->SetVisibility(false);
+	BodyMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 void ACrossguardLootContainer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -15,6 +22,9 @@ void ACrossguardLootContainer::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 
 	DOREPLIFETIME(ACrossguardLootContainer, Items);
 	DOREPLIFETIME(ACrossguardLootContainer, GridSize);
+	DOREPLIFETIME(ACrossguardLootContainer, BodyMesh);
+	DOREPLIFETIME(ACrossguardLootContainer, BodyMeshTransform);
+	DOREPLIFETIME(ACrossguardLootContainer, bShowBodyMesh);
 }
 
 Crossguard::FInventoryGrid ACrossguardLootContainer::BuildGrid(FIntPoint Size) const
@@ -113,4 +123,57 @@ bool ACrossguardLootContainer::AddItem(const FCrossguardInventoryItem& NewItem)
 void ACrossguardLootContainer::OnRep_Contents()
 {
 	OnContentsChanged.Broadcast();
+}
+
+TArray<FCrossguardInventoryItem> ACrossguardLootContainer::TakeAllItems()
+{
+	TArray<FCrossguardInventoryItem> Taken;
+	if (HasAuthority())
+	{
+		Taken = MoveTemp(Items);
+		Items.Reset();
+		OnContentsChanged.Broadcast();
+	}
+	return Taken;
+}
+
+void ACrossguardLootContainer::SetBodyMesh(USkeletalMesh* Mesh, const FTransform& RelativeTransform)
+{
+	if (HasAuthority())
+	{
+		BodyMesh = Mesh;
+		BodyMeshTransform = RelativeTransform;
+		ApplyBodyMesh();
+	}
+}
+
+void ACrossguardLootContainer::ShowBodyMesh()
+{
+	if (HasAuthority() && !bShowBodyMesh)
+	{
+		bShowBodyMesh = true;
+		ApplyBodyMesh();
+	}
+}
+
+void ACrossguardLootContainer::OnRep_BodyMesh()
+{
+	ApplyBodyMesh();
+}
+
+void ACrossguardLootContainer::ApplyBodyMesh()
+{
+	if (BodyMeshComponent->GetSkeletalMeshAsset() != BodyMesh)
+	{
+		BodyMeshComponent->SetSkeletalMeshAsset(BodyMesh);
+	}
+	if (!bShowBodyMesh || BodyMesh == nullptr || BodyMeshComponent->IsVisible())
+	{
+		return;
+	}
+	// Collapses from where the character stood. Not synced between machines; it is only a marker.
+	BodyMeshComponent->SetRelativeTransform(BodyMeshTransform);
+	BodyMeshComponent->SetVisibility(true);
+	BodyMeshComponent->SetCollisionProfileName(TEXT("Ragdoll"));
+	BodyMeshComponent->SetSimulatePhysics(true);
 }

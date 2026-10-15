@@ -134,6 +134,11 @@ camera direction. The body mesh is hidden from its owner until first-person arms
 
 - On death (`ACrossguardCharacter::HandleDeath`), everything the character wears and carries moves
   into an `ACrossguardLootContainer` spawned where it died: a 10-wide grid that grows taller to fit.
+  A body is spawned even when empty. The dead character ragdolls; if it is removed (its player
+  left), the container shows a ragdoll copy of its mesh instead.
+- `Revive(HealthFraction)` (server, for revive spells) clears `State.Dead`, stands the character up
+  and gives back what is still on the body: worn items go back on, the rest into the inventory.
+  Testing: `DebugReviveDelay` revives the character that many seconds after death.
 - E (`TryInteract`) opens the nearest container in front of you within its `InteractRange`
   (250 cm). Then `RequestTakeFromContainer(ItemId)` / `RequestPutInContainer(ItemId)` move stacks;
   the server re-checks range and that you are alive on every move. Dead characters cannot use their
@@ -218,6 +223,6 @@ and the rules unit tests.
 - Affix pool and applying affix stats.
 - Inventory and loot UI, single-item drops and pickups in the world, stash and guild bank,
   splitting stacks, using consumables, bows consuming arrows, treasure chests (reuse
-  `ACrossguardLootContainer`), reviving, a body that stays when the pawn is removed.
+  `ACrossguardLootContainer`), a revive spell.
 - Verify in two-client PIE (`showdebug abilitysystem`) that `Equipment.Wielding.*` tags reach
   simulated proxies; they are added to the equipment effect spec's dynamic granted tags.

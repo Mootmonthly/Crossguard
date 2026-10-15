@@ -893,6 +893,8 @@ TArray<FCrossguardInventoryItem> UCrossguardInventoryComponent::TakeEverything()
 			FCrossguardInventoryItem Item;
 			Item.Category = ECrossguardItemCategory::Weapon;
 			Item.Weapon = Equipment->GetItem(Slot);
+			Item.bWasEquipped = true;
+			Item.WornSlot = Slot;
 			if (!Item.Weapon.IsEmpty() && ResolveItemData(Item) && Equipment->Equip(Slot, FCrossguardWeaponItem()) == ECrossguardEquipError::None)
 			{
 				Taken.Add(Item);
@@ -904,6 +906,7 @@ TArray<FCrossguardInventoryItem> UCrossguardInventoryComponent::TakeEverything()
 			FCrossguardInventoryItem Item;
 			Item.Category = ECrossguardItemCategory::Armor;
 			Item.Armor = Equipment->GetArmorItem(Slot);
+			Item.bWasEquipped = true;
 			if (!Item.Armor.IsEmpty() && ResolveItemData(Item) && Equipment->EquipArmor(Slot, FCrossguardArmorItem()) == ECrossguardEquipError::None)
 			{
 				Taken.Add(Item);
@@ -915,14 +918,84 @@ TArray<FCrossguardInventoryItem> UCrossguardInventoryComponent::TakeEverything()
 	{
 		if (!Slot->IsEmpty() && ResolveItemData(*Slot))
 		{
+			Slot->bWasEquipped = true;
 			Taken.Add(*Slot);
 		}
 		*Slot = FCrossguardInventoryItem();
 	}
 
-	Taken.Append(Items);
+	for (FCrossguardInventoryItem& Item : Items)
+	{
+		Item.bWasEquipped = false;
+		Taken.Add(Item);
+	}
 	Items.Reset();
 	OpenContainer = nullptr;
 	OnInventoryChanged.Broadcast();
 	return Taken;
+}
+
+TArray<FCrossguardInventoryItem> UCrossguardInventoryComponent::RestoreFromBody(const TArray<FCrossguardInventoryItem>& BodyItems)
+{
+	TArray<FCrossguardInventoryItem> Leftover;
+	UCrossguardEquipmentComponent* Equipment = GetEquipment();
+	if (!IsServer())
+	{
+		return BodyItems;
+	}
+
+	TArray<FCrossguardInventoryItem> Loose;
+	// Containers first: what was in them goes back into them.
+	for (const FCrossguardInventoryItem& Item : BodyItems)
+	{
+		FCrossguardInventoryItem* Slot = Item.ContainerKind == ECrossguardInventoryContainer::Quiver ? &EquippedQuiver : &EquippedBackpack;
+		if (Item.bWasEquipped && Item.Category == ECrossguardItemCategory::Container && Item.ContainerKind != ECrossguardInventoryContainer::Main && Slot->IsEmpty())
+		{
+			*Slot = Item;
+			Slot->bWasEquipped = false;
+		}
+		else
+		{
+			Loose.Add(Item);
+		}
+	}
+
+	// Then worn gear, main hand before off hand so a dual-wield setup validates.
+	Loose.StableSort([](const FCrossguardInventoryItem& A, const FCrossguardInventoryItem& B)
+	{
+		return A.bWasEquipped && !B.bWasEquipped
+			|| (A.bWasEquipped == B.bWasEquipped && A.WornSlot == ECrossguardEquipmentSlot::MainHand && B.WornSlot != ECrossguardEquipmentSlot::MainHand);
+	});
+	for (FCrossguardInventoryItem Item : Loose)
+	{
+		bool bWorn = false;
+		if (Item.bWasEquipped && Equipment != nullptr)
+		{
+			if (Item.Category == ECrossguardItemCategory::Weapon && Equipment->GetItem(Item.WornSlot).IsEmpty())
+			{
+				bWorn = Equipment->Equip(Item.WornSlot, Item.Weapon) == ECrossguardEquipError::None;
+			}
+			else if (Item.Category == ECrossguardItemCategory::Armor)
+			{
+				ECrossguardArmorSlot ArmorSlot = ECrossguardArmorSlot::Head;
+				bWorn = Equipment->GetArmorSlotFor(Item.Armor.ArmorId, ArmorSlot) && Equipment->GetArmorItem(ArmorSlot).IsEmpty()
+					&& Equipment->EquipArmor(ArmorSlot, Item.Armor) == ECrossguardEquipError::None;
+			}
+		}
+		if (bWorn)
+		{
+			continue;
+		}
+
+		Item.bWasEquipped = false;
+		const int32 Left = AddItem(Item);
+		if (Left > 0)
+		{
+			Item.Count = Left;
+			Leftover.Add(Item);
+		}
+	}
+
+	OnInventoryChanged.Broadcast();
+	return Leftover;
 }

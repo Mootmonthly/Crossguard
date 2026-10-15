@@ -177,6 +177,10 @@ void UCrossguardAttributeSet::OnRep_Health(const FGameplayAttributeData& OldValu
 	{
 		MarkDead();
 	}
+	else
+	{
+		ClearDead();
+	}
 }
 
 void UCrossguardAttributeSet::MarkDead()
@@ -185,6 +189,23 @@ void UCrossguardAttributeSet::MarkDead()
 	if (ASC != nullptr && !ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead))
 	{
 		ASC->AddLooseGameplayTag(CrossguardTags::State_Dead);
+		if (ACrossguardCharacter* Character = Cast<ACrossguardCharacter>(GetOwningActor()))
+		{
+			Character->SetDeadVisuals(true);
+		}
+	}
+}
+
+void UCrossguardAttributeSet::ClearDead()
+{
+	UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
+	if (ASC != nullptr && ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead))
+	{
+		ASC->RemoveLooseGameplayTag(CrossguardTags::State_Dead);
+		if (ACrossguardCharacter* Character = Cast<ACrossguardCharacter>(GetOwningActor()))
+		{
+			Character->SetDeadVisuals(false);
+		}
 	}
 }
 

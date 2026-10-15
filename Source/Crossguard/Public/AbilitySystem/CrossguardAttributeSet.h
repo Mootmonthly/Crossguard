@@ -155,9 +155,15 @@ public:
 	FGameplayAttributeData IncomingHealing;
 	CROSSGUARD_ATTRIBUTE_ACCESSORS(UCrossguardAttributeSet, IncomingHealing)
 
-protected:
-	// Adds State.Dead once. Runs on the server and, through OnRep_Health, on every client.
+	// Adds State.Dead once and ragdolls the character. Runs on the server and, through OnRep_Health,
+	// on every client.
 	void MarkDead();
+
+	// Revive: removes State.Dead and stands the character back up. Runs on the server and, through
+	// OnRep_Health when Health rises above 0, on every client.
+	void ClearDead();
+
+protected:
 
 	UFUNCTION()
 	void OnRep_Strength(const FGameplayAttributeData& OldValue);

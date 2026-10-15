@@ -145,6 +145,9 @@ Independent of category, a skill is:
 - On death, all equipped gear and the raid inventory drop. No insurance for now.
 - The body is a container: walk up, press the interact key (E) and take items from it, like opening
   a treasure chest. Anyone can loot it, teammates included. Items can also be put into it.
+- Every death leaves a visible body, even with nothing on it: seeing bodies is information.
+- Revived players get back whatever is still on their body (worn gear goes back on). Anything
+  looted while they were down is gone unless they get it back from whoever took it.
 - Skill Gems are items. Only between raids, right-clicking a gem in the inventory or stash learns
   its skill permanently into the character's Skill Library and consumes the gem. A skill already
   in the library cannot be learned again (the gem is kept). Gems can also be sold on the auction

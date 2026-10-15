@@ -6,6 +6,9 @@
 
 #include "CrossguardLootContainer.generated.h"
 
+class USkeletalMesh;
+class USkeletalMeshComponent;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCrossguardLootContentsChanged);
 
 // A grid of items in the world that players open with the interact key and loot: a dead
@@ -43,6 +46,14 @@ public:
 	// Server. Puts the item in the first free spot (rotation allowed). False if it does not fit.
 	bool AddItem(const FCrossguardInventoryItem& Item);
 
+	// Server. Empties the container and returns its items.
+	TArray<FCrossguardInventoryItem> TakeAllItems();
+
+	// Server. A body: the mesh shown, as a ragdoll, once the dead character itself is gone (e.g.
+	// the player left). While the character exists, its own ragdoll is the body.
+	void SetBodyMesh(USkeletalMesh* Mesh, const FTransform& RelativeTransform);
+	void ShowBodyMesh();
+
 	// How close a player must be to open it and move items, in cm.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot", meta = (ClampMin = "0"))
 	float InteractRange = 250.0f;
@@ -61,6 +72,12 @@ protected:
 	UFUNCTION()
 	void OnRep_Contents();
 
+	UFUNCTION()
+	void OnRep_BodyMesh();
+
+	UPROPERTY(VisibleAnywhere, Category = "Loot")
+	TObjectPtr<USkeletalMeshComponent> BodyMeshComponent;
+
 private:
 	Crossguard::FInventoryGrid BuildGrid(FIntPoint Size) const;
 	// Places Item in the first free spot of a grid of Size. Does not add it.
@@ -71,6 +88,17 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_Contents)
 	FIntPoint GridSize = FIntPoint(10, 5);
+
+	UPROPERTY(ReplicatedUsing = OnRep_BodyMesh)
+	TObjectPtr<USkeletalMesh> BodyMesh;
+
+	UPROPERTY(ReplicatedUsing = OnRep_BodyMesh)
+	FTransform BodyMeshTransform;
+
+	UPROPERTY(ReplicatedUsing = OnRep_BodyMesh)
+	bool bShowBodyMesh = false;
+
+	void ApplyBodyMesh();
 
 	// Server only.
 	int32 NextItemId = 1;

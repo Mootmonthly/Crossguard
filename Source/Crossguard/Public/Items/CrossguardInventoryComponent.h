@@ -131,6 +131,14 @@ struct CROSSGUARD_API FCrossguardInventoryItem
 	UPROPERTY(BlueprintReadOnly, Category = "Item")
 	bool bRotated = false;
 
+	// On a body: the item was worn when its owner died, so a revive puts it back on. WornSlot is the
+	// hand for weapons; armor and containers know their own slot.
+	UPROPERTY(BlueprintReadOnly, Category = "Item")
+	bool bWasEquipped = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Item")
+	ECrossguardEquipmentSlot WornSlot = ECrossguardEquipmentSlot::MainHand;
+
 	bool IsEmpty() const { return Id == 0; }
 
 	// Stacks combine only the same item at the same rarity, and only stackable items.
@@ -248,8 +256,12 @@ public:
 	void RequestPutInContainer(int32 ItemId);
 
 	// Server. Death: empties the inventory, the Backpack and Quiver slots and every equipment slot,
-	// and returns all of it as items with their data filled in.
+	// and returns all of it as items with their data filled in. Worn items are marked bWasEquipped.
 	TArray<FCrossguardInventoryItem> TakeEverything();
+
+	// Server. Revive: puts worn items back on (containers first, so their contents fit), then adds
+	// the rest. Returns what could not be placed.
+	TArray<FCrossguardInventoryItem> RestoreFromBody(const TArray<FCrossguardInventoryItem>& BodyItems);
 
 	UPROPERTY(BlueprintAssignable, Category = "Inventory")
 	FCrossguardInventoryChanged OnInventoryChanged;

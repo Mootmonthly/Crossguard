@@ -56,8 +56,21 @@ public:
 	void TryInteract();
 
 	// Server. Called when Health reaches 0: everything the character carries and wears moves into a
-	// lootable body at its feet. Nothing is spawned if it carried nothing.
+	// lootable body where it fell. Always spawned, even when empty: a body is information.
 	void HandleDeath();
+
+	// Server. Brings a dead character back with HealthFraction of its Max HP (at least 1 HP). It gets
+	// back what is still on its body: worn gear goes back on, the rest into the inventory. Whatever
+	// was looted is gone. For revive spells. False if the character is not dead.
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Death")
+	bool Revive(float HealthFraction = 0.5f);
+
+	// Ragdolls the character when dead, stands it back up when revived. Runs on every machine
+	// (called by the attribute set when State.Dead is added or removed).
+	void SetDeadVisuals(bool bDead);
+
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	// Adds the mapping context for the local player.
@@ -110,6 +123,11 @@ public:
 	// Category SkillGem, ItemId "fireball").
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
 	TArray<FCrossguardInventoryItem> DebugInventory;
+
+	// Testing until revive spells exist: seconds after death until the character revives itself at
+	// half health. 0: never.
+	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug", meta = (ClampMin = "0"))
+	float DebugReviveDelay = 0.0f;
 
 	// Testing until the inventory UI exists: opening a container takes everything that fits.
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
@@ -203,6 +221,14 @@ private:
 	bool PullProgression();
 	void OnMoveSpeedChanged(const FOnAttributeChangeData& Data);
 	void ApplyMoveSpeed(float MoveSpeed);
+
+	// Server. This character's body while it is dead.
+	UPROPERTY()
+	TObjectPtr<ACrossguardLootContainer> Body;
+
+	// The mesh's place on the capsule, restored on revive.
+	FTransform MeshRelativeTransform;
+	FName MeshCollisionProfile;
 
 	bool bMoveSpeedBound = false;
 	bool bWeaponAttackGranted = false;
