@@ -1,8 +1,9 @@
 """Which skills a mob can have (docs/mob-data-schema.md). Used by Tools/validate_mobs.py and
 Tools/sync_mob_forge.py (the Mob Forge's skill picker).
 
-A skill is AI-usable if the monster AI can use it on its target (AI_ACTIVE_SKILLS), or if it is a
-data-only passive: category Passive, no included skills, and no native C++ class.
+Nearly every skill is AI-usable: in C++ every active skill overrides UCrossguardSkillAbility::ShouldAIUse
+(so the monster AI knows when to use it on its target), passives are always on, and bundles grant
+their included skills. Only the skills in NOT_AI_SKILLS cannot be given to mobs.
 """
 import json
 from pathlib import Path
@@ -10,23 +11,24 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 SKILLS = REPO / "Data" / "Skills" / "Skills.json"
 
-# Mirrors the C++ skills that override ShouldAIUse (Source/Crossguard/Private/Skills).
-AI_ACTIVE_SKILLS = {"slash", "mortal_strike", "shade_blow", "gouge", "neckbite", "purge_shot", "hunters_leap", "eldritch_shield"}
+# Skill id -> why a mob cannot have it. Kept with reasons so the validator and docs can say why.
+NOT_AI_SKILLS = {
+    "flight": "AI cannot fly",
+    "hunters_tracking": "a player's screen effect",
+}
 
-# Next-attack skills ride on one kind of attack, so only that combat role ever uses them (C++
-# UCrossguardNextAttackAbility::ShouldAIUse). Skills not listed suit every role.
+# Skills that ride on one kind of attack or weapon, so only that combat role ever uses them (C++
+# ShouldAIUse). Skills not listed suit every role.
 SKILL_ROLES = {
     "slash": {"Warrior"},
     "mortal_strike": {"Warrior"},
     "shade_blow": {"Warrior"},
     "gouge": {"Warrior"},
     "neckbite": {"Warrior"},
+    "chop_down": {"Warrior"},
     "purge_shot": {"Ranged"},
+    "arcane_arrows": {"Ranged"},
 }
-
-# Mirrors the Passive-category skills in the native registry (CrossguardNativeSkills.cpp): their
-# effect lives in C++ that only runs for players.
-NATIVE_PASSIVES = {"hunters_tracking", "multiscale", "splinter_of_winter"}
 
 
 def load_skills(path=SKILLS):
@@ -35,9 +37,7 @@ def load_skills(path=SKILLS):
 
 
 def is_ai_usable(skill):
-    if skill["id"] in AI_ACTIVE_SKILLS:
-        return True
-    return skill.get("category") == "Passive" and not skill.get("includes") and skill["id"] not in NATIVE_PASSIVES
+    return skill["id"] not in NOT_AI_SKILLS
 
 
 def roles_for(skill_id):

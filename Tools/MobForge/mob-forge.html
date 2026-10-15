@@ -134,7 +134,8 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
 .rows { display: flex; flex-direction: column; gap: 8px; }
 .row { display: grid; gap: 8px; align-items: end; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--sunken); }
 .row.drop { grid-template-columns: minmax(100px, 1fr) minmax(140px, 2fr) repeat(3, minmax(64px, .7fr)) auto; }
-@media (max-width: 700px) { .row.drop { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.row.drop.typed { grid-template-columns: minmax(100px, 1fr) minmax(120px, 1.5fr) minmax(100px, 1fr) repeat(3, minmax(64px, .7fr)) auto; }
+@media (max-width: 700px) { .row.drop, .row.drop.typed { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .row label { display: flex; flex-direction: column; gap: 3px; font-size: .75rem; color: var(--muted); min-width: 0; }
 .row .remove { align-self: center; }
 .row .reads { grid-column: 1 / -1; font-size: .8rem; display: flex; flex-wrap: wrap; gap: 4px 14px; }
@@ -194,6 +195,10 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
   // Schema enums: keep in step with docs/mob-data-schema.md and Tools/validate_mobs.py.
   const KINDS = ["Monster", "Boss"];
   const ROLES = ["Warrior", "Mage", "Ranged"];
+  // Weapon types a Warrior cannot hold (it attacks in melee); see Tools/validate_mobs.py.
+  const RANGED_WEAPON_TYPES = ["Bow", "Crossbow", "Sling"];
+  // Armor.json armorType values: an any-armor drop can be limited to one.
+  const ARMOR_TYPES = ["Cloth", "Leather", "Plate"];
   const ROLE_HINTS = { Warrior: "Runs up and hits.", Mage: "Keeps its distance and casts Fireball.", Ranged: "Keeps its distance and shoots arrows (a bow)." };
   const RARITIES = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mystic"];
   const DROP_KINDS = ["Gold", "Item", "Weapon", "Armor", "SkillGem"];
@@ -244,7 +249,7 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
 
   function blankMob() {
     return {
-      id: "", name: "", kind: "Monster", combatRole: "Warrior",
+      id: "", name: "", kind: "Monster", combatRole: "Warrior", weapon: null,
       health: 80, attackDamage: 12, attackInterval: 1.5, attackRange: 2, fireballInterval: 8, keepDistance: 8,
       aggroRange: 15, leashRange: 30, moveSpeed: 4.5, scale: 1, skills: [],
       loot: {
@@ -268,14 +273,25 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
     const s = refs.skills.find((r) => r.id === id);
     return s ? s.rarity : null;
   }
-  // Skills a mob can have: AI actives and data-only passives (Tools/ai_skills.py).
+  // Skills a mob can have: all but the few the AI cannot use (Tools/ai_skills.py NOT_AI_SKILLS).
   function aiSkills() { return refs.skills.filter((r) => r.aiUsable); }
   // False until a catalog with aiUsable has loaded (catalogs from before the Skills section lack it).
   function skillRefsReady() { return refs.skills.some((r) => typeof r.aiUsable === "boolean"); }
   // Documents saved before a field existed.
   function withDefaults(mob) {
     if (!Array.isArray(mob.skills)) mob.skills = [];
+    if (mob.weapon === undefined) mob.weapon = null;
     return mob;
+  }
+  // Why a catalog weapon does not suit the role, or null (mirrors weapon_problem in Tools/validate_mobs.py).
+  // Catalogs from before the Weapon field lack weaponType; skip the role rules then.
+  function weaponProblem(role, w) {
+    if (!w || !w.weaponType) return null;
+    if (w.weaponType === "Shield") return "a shield is not a weapon a mob can hold";
+    if (role === "Warrior" && RANGED_WEAPON_TYPES.includes(w.weaponType)) return `a Warrior cannot hold a ${w.weaponType}`;
+    // Ranged mobs shoot arrows: wands and staves are casting weapons, not theirs.
+    if (role === "Ranged" && !RANGED_WEAPON_TYPES.includes(w.weaponType)) return "a Ranged mob holds a bow, crossbow or sling, or none (a bow)";
+    return null;
   }
 
   // ---- Loot maths ----
@@ -301,6 +317,12 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
     const nonNeg = { attackDamage: "Attack damage", keepDistance: "Keep distance", aggroRange: "Aggro range", moveSpeed: "Move speed" };
     for (const [k, label] of Object.entries(nonNeg)) if (!(num(m[k]) >= 0)) errs.push(`${label} must be 0 or more.`);
     if (m.combatRole === "Ranged" && num(m.keepDistance) > num(m.attackRange)) errs.push("Keeps away farther than it can shoot: it would never hit anything.");
+    if (m.weapon !== null && typeof m.weapon !== "string") errs.push("Weapon must be a weapon id or none.");
+    else if (m.weapon) {
+      const w = refs.weapons.find((r) => r.id === m.weapon);
+      if (refs.weapons.length && !w) errs.push(`No weapon with id "${m.weapon}".`);
+      else if (weaponProblem(m.combatRole, w)) errs.push(`${w.name}: ${weaponProblem(m.combatRole, w)}. Pick another weapon.`);
+    }
     if (num(m.aggroRange) > num(m.leashRange)) errs.push("Aggro range is larger than leash range: it would pick fights it must not chase.");
     m.skills.forEach((id, i) => {
       const ref = refs.skills.find((r) => r.id === id);
@@ -322,13 +344,16 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
       const [cmin, cmax] = e.count;
       if (!(Number.isInteger(cmin) && Number.isInteger(cmax) && cmin >= 1 && cmin <= cmax)) errs.push(`${where}: count must be whole numbers, min 1 or more, max at least min.`);
       if (e.kind === "Item" && !e.id) errs.push(`${where}: pick which item.`);
+      if (e.armorType != null && (e.kind !== "Armor" || e.id || !ARMOR_TYPES.includes(e.armorType))) errs.push(`${where}: an armor type only narrows "any armor".`);
       if (e.id && e.kind !== "Gold" && !refKnown(e.kind, e.id)) errs.push(`${where}: no ${DROP_LABELS[e.kind].toLowerCase()} with id "${e.id}".`);
     });
     return errs;
   }
 
   function summary(m) {
-    const bits = [m.kind, m.combatRole, `${fmt(num(m.health), 0)} HP`];
+    const bits = [m.kind, m.combatRole];
+    if (m.weapon) { const w = refs.weapons.find((r) => r.id === m.weapon); bits.push(w ? w.name : m.weapon); }
+    bits.push(`${fmt(num(m.health), 0)} HP`);
     if (m.combatRole === "Mage") bits.push(`Fireball every ${fmt(num(m.fireballInterval))} s`);
     else bits.push(`${fmt(num(m.attackDamage))} per ${m.combatRole === "Ranged" ? "arrow" : "hit"}, every ${fmt(num(m.attackInterval))} s`);
     bits.push(`aggro ${fmt(num(m.aggroRange))} m`, `leash ${fmt(num(m.leashRange))} m`);
@@ -432,11 +457,13 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
       const reads = [h("span", {}, "Chance per drop: ", h("span", { class: "chance", text: pct(stats.chances[i] || 0) }))];
       if (isGem && !e.id) reads.push(h("span", { text: "Any Skill Gem: rolls a rarity below, then a skill of that rarity." }));
       if (fixedRarity) reads.push(h("span", { class: `r-${fixedRarity}`, text: `Drops at its skill's rarity: ${fixedRarity}` }));
-      if ((e.kind === "Weapon" || e.kind === "Armor") && !e.id) reads.push(h("span", { text: `Any ${e.kind.toLowerCase()}, at a rolled rarity with rolled affixes.` }));
-      return h("div", { class: "row drop" },
+      if ((e.kind === "Weapon" || e.kind === "Armor") && !e.id) reads.push(h("span", { text: `Any ${e.kind === "Armor" && e.armorType ? e.armorType.toLowerCase() + " armor piece" : e.kind.toLowerCase()}, at a rolled rarity with rolled affixes.` }));
+      const anyArmor = e.kind === "Armor" && !e.id;
+      return h("div", { class: "row drop" + (anyArmor ? " typed" : "") },
         h("label", {}, "Drops", h("select", { id: `drop-kind-${i}`, onchange: (ev) => {
           e.kind = ev.target.value;
           e.id = e.kind === "Gold" ? null : (WILDCARD.includes(e.kind) ? null : e.id);
+          if (e.kind !== "Armor") delete e.armorType;
           if (ONE_AT_A_TIME.includes(e.kind)) e.count = [1, 1];
           refreshLoot();
         } }, DROP_KINDS.map((k) => h("option", { value: k, selected: k === e.kind ? "selected" : null }, DROP_LABELS[k])))),
@@ -444,8 +471,12 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
           ? h("label", {}, "Which", h("input", { type: "text", value: "Gold coins", readonly: true, id: `drop-id-${i}` }))
           : h("label", {}, "Which",
               h("input", { type: "text", list: listId, id: `drop-id-${i}`, class: "mono", value: e.id ?? "", placeholder: WILDCARD.includes(e.kind) ? "any (leave empty)" : "item id",
-                onchange: (ev) => { const v = ev.target.value.trim().toLowerCase(); e.id = v || null; refreshLoot(); } }),
+                onchange: (ev) => { const v = ev.target.value.trim().toLowerCase(); e.id = v || null; if (e.id) delete e.armorType; refreshLoot(); } }),
               h("datalist", { id: listId }, refList(e.kind).map((r) => h("option", { value: r.id }, r.name || r.id)))),
+        anyArmor
+          ? h("label", {}, "Armor type", h("select", { id: `drop-armor-type-${i}`, onchange: (ev) => { if (ev.target.value) e.armorType = ev.target.value; else delete e.armorType; refreshLoot(); } },
+              [["", "Any type"], ...ARMOR_TYPES.map((t) => [t, t])].map(([v, label]) => h("option", { value: v, selected: (e.armorType || "") === v ? "selected" : null }, label))))
+          : null,
         h("label", {}, "Weight", h("input", { type: "number", min: "0", step: "1", id: `drop-weight-${i}`, value: e.weight, onchange: (ev) => { e.weight = num(ev.target.value); refreshLoot(); } })),
         h("label", {}, "Min", h("input", { type: "number", min: "1", step: "1", id: `drop-min-${i}`, value: e.count[0], disabled: ONE_AT_A_TIME.includes(e.kind) ? "disabled" : null, onchange: (ev) => { e.count[0] = num(ev.target.value); refreshLoot(); } })),
         h("label", {}, "Max", h("input", { type: "number", min: "1", step: "1", id: `drop-max-${i}`, value: e.count[1], disabled: ONE_AT_A_TIME.includes(e.kind) ? "disabled" : null, onchange: (ev) => { e.count[1] = num(ev.target.value); refreshLoot(); } })),
@@ -465,6 +496,17 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
       h("div", {}, h("button", { class: "btn small", type: "button", onclick: () => { loot.entries.push({ kind: "Item", id: null, weight: 10, count: [1, 1] }); refreshLoot(); } }, "Add drop")));
   }
 
+  // Only weapons its combat role can hold; the current one stays listed (and errors) if it no longer fits.
+  function weaponField(m, rerender) {
+    const fits = refs.weapons.filter((w) => !weaponProblem(m.combatRole, w)).map((w) => [w.id, w.name]);
+    if (m.weapon && !fits.some(([id]) => id === m.weapon)) {
+      const w = refs.weapons.find((r) => r.id === m.weapon);
+      fits.unshift([m.weapon, w ? `${w.name} (does not suit ${m.combatRole})` : `${m.weapon} (unknown)`]);
+    }
+    return selectField("Weapon", m.weapon || "", [["", "None (natural attacks)"], ...fits], (v) => { m.weapon = v || null; touch(); rerender(); },
+      { id: "f-weapon", hint: "For skills that care (masteries, Shade Blow). Damage stays Attack damage." + (m.combatRole === "Ranged" ? " None = a bow." : "") });
+  }
+
   function skillsSection(m) {
     const refreshSkills = () => { const box = $("skills-box"); if (box) box.replaceWith(skillsSection(m)); touch(); };
     const chips = m.skills.map((id, i) => {
@@ -475,7 +517,7 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
         ref && ref.category ? h("span", { class: "cat", text: ref.category }) : null,
         h("button", { type: "button", "aria-label": `Remove ${ref ? ref.name : id}`, title: "Remove", onclick: () => { m.skills.splice(i, 1); refreshSkills(); } }, "×"));
     });
-    // Only skills its combat role uses (next-attack skills ride on one kind of attack).
+    // Only skills its combat role uses (some ride on one kind of attack).
     const available = () => aiSkills().filter((r) => !m.skills.includes(r.id) && (!Array.isArray(r.roles) || r.roles.includes(m.combatRole)));
     const options = (q) => available()
       .filter((r) => !q || r.id.includes(q) || r.name.toLowerCase().includes(q) || (r.category || "").toLowerCase().includes(q))
@@ -486,7 +528,7 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
     const picker = !skillRefsReady()
       ? h("span", { class: "hint", text: "The skill list loads with the catalog. Ask Claude to sync mobs if it stays empty." })
       : !available().length
-        ? h("span", { class: "hint", text: "Every skill a mob can use is already chosen." })
+        ? h("span", { class: "hint", text: "Every skill a mob of this role can use is already chosen." })
         : h("div", { class: "skill-picker" },
             h("label", { class: "field" }, h("span", { text: "Search" }),
               h("input", { type: "search", id: "skill-search", placeholder: "Name or category", oninput: (e) => pick.replaceChildren(...options(e.target.value.trim().toLowerCase())) })),
@@ -495,7 +537,7 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
     return h("div", { id: "skills-box", class: "rows" },
       m.skills.length ? h("div", { class: "chips" }, chips) : h("span", { class: "hint", text: "No skills: it only uses its basic attack or Fireball." }),
       picker,
-      h("span", { class: "hint", text: "Actives it uses on its target; passives are always on. Only skills mobs can use are offered." }));
+      h("span", { class: "hint", text: "Actives it uses on its target; passives are always on; bundles grant their skills. Offers every skill its role can use (all but a few, like Flight)." }));
   }
 
   function renderEditor() {
@@ -539,6 +581,7 @@ legend { font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transf
           selectField("Fights as", m.combatRole, ROLES.map((r) => [r, r]), (v) => { m.combatRole = v; touch(); rerender(); }, { id: "f-role", hint: ROLE_HINTS[m.combatRole] }))),
       section("Combat",
         h("div", { class: "grid" },
+          weaponField(m, rerender),
           numberField("Health", m.health, (v) => { m.health = v; touch(); }, { min: "1", id: "f-health" }),
           numberField("Attack damage", m.attackDamage, (v) => { m.attackDamage = v; touch(); }, { min: "0", id: "f-damage", inactive: mage, hint: "Per hit or arrow, before resistance. Warriors and Ranged." }),
           numberField("Seconds between attacks", m.attackInterval, (v) => { m.attackInterval = v; touch(); }, { min: "0", id: "f-interval", inactive: mage, hint: "Warriors and Ranged. A player's bow: 1 s." }),

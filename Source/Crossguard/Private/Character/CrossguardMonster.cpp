@@ -52,6 +52,9 @@ void ACrossguardMonster::ApplyMobData()
 		return;
 	}
 	CombatRole = Row->CombatRole;
+	bWieldsWeapon = Row->bWieldsWeapon;
+	WeaponType = Row->WeaponType;
+	bTwoHandedWeapon = Row->bTwoHandedWeapon;
 	FixedHealth = Row->Health;
 	AttackDamage = Row->AttackDamage;
 	AttackInterval = Row->AttackInterval;

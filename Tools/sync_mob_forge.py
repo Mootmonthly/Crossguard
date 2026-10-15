@@ -15,7 +15,8 @@ mob table and the loot table. It prints a JSON report: applied ids, deleted ids,
 writes nothing.
 
 --catalog writes the forge's "refs/catalog" document: the weapon, armor, item and skill ids and
-names the drop and skill editors offer. Skills also carry their gem rarity, category, aiUsable and roles (null: any combat role)
+names the drop, weapon and skill editors offer. Weapons also carry weaponType, handedness and range
+(the weapon picker's role rules). Skills also carry their gem rarity, category, aiUsable and roles (null: any combat role)
 (Tools/ai_skills.py).
 """
 
@@ -33,12 +34,12 @@ MOBS = REPO / "Data" / "Mobs" / "Mobs.json"
 TOOLS = REPO / "Tools"
 
 # Field order of Mobs.json (docs/mob-data-schema.md); the forge's database returns keys sorted.
-FIELD_ORDER = ["id", "name", "kind", "combatRole", "health", "attackDamage", "attackInterval", "attackRange",
+FIELD_ORDER = ["id", "name", "kind", "combatRole", "weapon", "health", "attackDamage", "attackInterval", "attackRange",
                "fireballInterval", "keepDistance", "aggroRange", "leashRange", "moveSpeed", "scale", "skills", "loot",
                "description", "notes"]
 LOOT_ORDER = ["rolls", "nothingWeight", "rarityWeights", "entries"]
 RARITY_ORDER = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mystic"]
-ENTRY_ORDER = ["kind", "id", "weight", "count"]
+ENTRY_ORDER = ["kind", "id", "armorType", "weight", "count"]
 
 
 def ordered(obj, order):
@@ -48,6 +49,7 @@ def ordered(obj, order):
 def normalize(mob):
     # Documents saved before a field existed.
     mob.setdefault("skills", [])
+    mob.setdefault("weapon", None)
     mob = ordered(mob, FIELD_ORDER)
     loot = mob.get("loot")
     if isinstance(loot, dict):
@@ -84,10 +86,12 @@ def catalog():
         return [{"id": e["id"], "name": e["name"]} for e in json.loads(path.read_text(encoding="utf-8"))]
 
     items = REPO / "Data" / "Items"
+    weapons = [{"id": w["id"], "name": w["name"], "weaponType": w["weaponType"], "handedness": w["handedness"], "range": w["range"]}
+               for w in json.loads((items / "Weapons.json").read_text(encoding="utf-8"))]
     skills = [{"id": s["id"], "name": s["name"], "rarity": s["rarity"], "category": s["category"], "aiUsable": is_ai_usable(s),
                "roles": roles_for(s["id"])}
               for s in load_skills().values()]
-    return {"weapons": names(items / "Weapons.json"), "armor": names(items / "Armor.json"),
+    return {"weapons": weapons, "armor": names(items / "Armor.json"),
             "items": names(items / "Items.json"), "skills": skills}
 
 

@@ -3,6 +3,7 @@
 #include "AbilitySystem/CrossguardEffects.h"
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
+#include "Character/CrossguardAICharacter.h"
 #include "Character/CrossguardCharacter.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -51,9 +52,10 @@ void UCrossguardMultiscaleAbility::RefreshAura()
 	{
 		return;
 	}
-	// Off while Muted or dead, and without Plate armor (Skills.json requirement).
+	// Off while Muted or dead, and without Plate armor (Skills.json requirement; an AI's skills have
+	// no requirements).
 	if (ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted) || ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead)
-		|| !ASC->HasMatchingGameplayTag(CrossguardTags::Equipment_Armor_Plate))
+		|| (!ASC->HasMatchingGameplayTag(CrossguardTags::Equipment_Armor_Plate) && !Avatar->IsA<ACrossguardAICharacter>()))
 	{
 		RemoveAll();
 		return;

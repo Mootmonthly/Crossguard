@@ -44,6 +44,7 @@ namespace
 	// at targets beyond this many attack reaches.
 	constexpr float AINextAttackLead = 200.0f;
 	constexpr float AILeapMinReaches = 1.5f;
+	constexpr float WeaponAIBuffRange = 1500.0f;
 	constexpr float PartingWallHeight = 300.0f;
 	constexpr float PartingWallThickness = 50.0f;
 	constexpr float PartingWallGap = 60.0f;
@@ -59,6 +60,11 @@ namespace
 	// The main-hand weapon's damage as a spec from Ability: Fraction of its value, plus AttackBonus.
 	FGameplayEffectSpecHandle MakeMainHandSpec(const UCrossguardSkillAbility& Ability, const AActor* Avatar, float Fraction, float AttackBonus)
 	{
+		// An AI's Attack Damage stands in for its weapon.
+		if (const ACrossguardAICharacter* AI = Cast<ACrossguardAICharacter>(Avatar))
+		{
+			return Ability.MakeDamageSpec(AI->AttackDamage * Fraction + AttackBonus, 0.0f);
+		}
 		const UCrossguardEquipmentComponent* Equipment = Avatar != nullptr ? Avatar->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
 		const FCrossguardWeaponRow* Weapon = Equipment != nullptr ? Equipment->GetWeaponRow(ECrossguardEquipmentSlot::MainHand) : nullptr;
 		if (Weapon == nullptr)
@@ -214,6 +220,11 @@ UCrossguardQuickshotAbility::UCrossguardQuickshotAbility()
 	SetAssetTags(FGameplayTagContainer(CrossguardTags::Skill_Weapon_Ranged));
 }
 
+bool UCrossguardQuickshotAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return AIHasInRange(User, Target, WeaponAIBuffRange, false);
+}
+
 void UCrossguardQuickshotAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -238,6 +249,13 @@ UCrossguardArcaneArrowsAbility::UCrossguardArcaneArrowsAbility()
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_ArcaneArrows);
 	RequiredWeapons.Add(ECrossguardWeaponType::Bow);
 	SetAssetTags(FGameplayTagContainer(CrossguardTags::Skill_Weapon_Ranged));
+}
+
+bool UCrossguardArcaneArrowsAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	const UAbilitySystemComponent* ASC = User.GetAbilitySystemComponent();
+	return User.CombatRole == ECrossguardCombatRole::Ranged && ASC != nullptr && !ASC->HasMatchingGameplayTag(CrossguardTags::State_ArcaneArrows)
+		&& AIHasInRange(User, Target, User.AttackRange + AINextAttackLead, false);
 }
 
 void UCrossguardArcaneArrowsAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -265,6 +283,11 @@ UCrossguardCleaveAbility::UCrossguardCleaveAbility()
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_Cleave);
 	RequiredWeapons.Add(ECrossguardWeaponType::AnyMelee);
 	SetAssetTags(MeleeTags());
+}
+
+bool UCrossguardCleaveAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return AIHasInRange(User, Target, CleaveRange * 0.9f, false);
 }
 
 void UCrossguardCleaveAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -320,6 +343,11 @@ UCrossguardTripleThrustAbility::UCrossguardTripleThrustAbility()
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_TripleThrust);
 	RequiredWeapons.Add(ECrossguardWeaponType::Spear);
 	SetAssetTags(MeleeTags());
+}
+
+bool UCrossguardTripleThrustAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return AIHasInRange(User, Target, TripleThrustReach * 0.9f, false);
 }
 
 void UCrossguardTripleThrustAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -409,6 +437,11 @@ UCrossguardPartingTheLandAbility::UCrossguardPartingTheLandAbility()
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_PartingTheLand);
 	RequiredWeapons.Add(ECrossguardWeaponType::TwoHandedMelee);
 	SetAssetTags(MeleeTags());
+}
+
+bool UCrossguardPartingTheLandAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return AIHasInRange(User, Target, PartingLength * 0.9f);
 }
 
 void UCrossguardPartingTheLandAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -542,6 +575,12 @@ AActor* UCrossguardLikeALionAbility::FindLeapTarget() const
 		}
 	}
 	return BestPlayer != nullptr ? BestPlayer : BestOther;
+}
+
+bool UCrossguardLikeALionAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return FVector::Dist(User.GetActorLocation(), Target.GetActorLocation()) > User.AttackRange * AILeapMinReaches
+		&& AIHasInRange(User, Target, LionRange);
 }
 
 void UCrossguardLikeALionAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

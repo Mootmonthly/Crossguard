@@ -69,11 +69,18 @@ public:
 
 	// AI characters (summons, monsters): whether to use this skill on Target now, judged on the class
 	// default object (ACrossguardAICharacter::TryUseSkills; cooldowns and blocking tags are checked
-	// on activation). Default: never. Skills an AI can use override it; Tools/ai_skills.py lists them
-	// for the Mob Forge.
+	// on activation). Default: never. Every active skill an AI can use overrides it (all but Flight;
+	// Tools/ai_skills.py mirrors the list for the Mob Forge). An AI aims its skills straight at
+	// Target, or at itself when AIAimsAtSelf (heals).
 	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const { return false; }
+	virtual bool AIAimsAtSelf() const { return false; }
 
 protected:
+	// ShouldAIUse helpers: Target within Range (cm), optionally in the AI's line of sight; the AI's
+	// Health at or below Fraction of its Max HP.
+	static bool AIHasInRange(const ACrossguardAICharacter& User, const AActor& Target, float Range, bool bNeedsSight = true);
+	static bool AIIsHurt(const ACrossguardAICharacter& User, float Fraction);
+
 	// Instant skills: commit (cooldown) and end. False if the commit failed (the ability has ended).
 	bool CommitOrCancel(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo);

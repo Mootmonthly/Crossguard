@@ -13,7 +13,11 @@ class CROSSGUARD_API UCrossguardTeamLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
-	// -1 if the actor has no team.
+	// The team every monster (and every minion a monster summons) is on: monsters are allies of
+	// each other, never of players.
+	static constexpr int32 MonsterTeamId = 1 << 20;
+
+	// -1 if the actor has no team; MonsterTeamId for monsters.
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Team")
 	static int32 GetTeamId(const AActor* Actor);
 

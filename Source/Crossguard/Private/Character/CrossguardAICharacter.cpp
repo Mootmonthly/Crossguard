@@ -11,6 +11,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Crossguard.h"
 #include "CrossguardRules/Items.h"
+#include "CrossguardRules/Loadout.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -20,6 +21,8 @@
 #include "Skills/CrossguardSkillCatalog.h"
 #include "Skills/CrossguardSpellSkills.h"
 #include "UObject/ConstructorHelpers.h"
+
+#include <algorithm>
 
 namespace
 {
@@ -87,7 +90,26 @@ void ACrossguardAICharacter::GrantSkills()
 		return;
 	}
 	ClearSkills();
-	for (const FName& SkillId : SkillIds)
+	// Bundles ([The Mithril Knight]) grant the skills they include, as in a player's loadout; needs
+	// the catalog's data.
+	TArray<FName> Effective = SkillIds;
+	if (SkillCatalog != nullptr)
+	{
+		std::vector<std::string> Ids;
+		for (const FName& SkillId : SkillIds)
+		{
+			Ids.push_back(std::string(TCHAR_TO_UTF8(*SkillId.ToString())));
+		}
+		const std::unordered_set<std::string> Resolved = Crossguard::ResolveLoadoutEffects(SkillCatalog->BuildRulesCatalog(), Ids);
+		std::vector<std::string> Sorted(Resolved.begin(), Resolved.end());
+		std::sort(Sorted.begin(), Sorted.end());
+		Effective.Reset();
+		for (const std::string& Id : Sorted)
+		{
+			Effective.Add(FName(UTF8_TO_TCHAR(Id.c_str())));
+		}
+	}
+	for (const FName& SkillId : Effective)
 	{
 		const TSubclassOf<UCrossguardGameplayAbility> AbilityClass = SkillCatalog != nullptr ? SkillCatalog->FindAbilityClass(SkillId)
 			: CrossguardNativeSkills::Find(SkillId);
@@ -121,7 +143,17 @@ bool ACrossguardAICharacter::TryUseSkills(AActor* Target)
 		return false;
 	}
 	NextSkillCheckTime = Now + AISkillCheckSeconds;
-	for (const FGameplayAbilitySpecHandle& Handle : GrantedSkills)
+	// Every skill it has, including ones granted by its skills (Dragonification's Flare Breath).
+	// Handles first: activating can grant abilities.
+	TArray<FGameplayAbilitySpecHandle> Handles;
+	for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+	{
+		if (Spec.Ability != nullptr && Spec.Ability->IsA<UCrossguardSkillAbility>())
+		{
+			Handles.Add(Spec.Handle);
+		}
+	}
+	for (const FGameplayAbilitySpecHandle& Handle : Handles)
 	{
 		const FGameplayAbilitySpec* Spec = ASC->FindAbilitySpecFromHandle(Handle);
 		const UCrossguardSkillAbility* Skill = Spec != nullptr ? Cast<UCrossguardSkillAbility>(Spec->Ability) : nullptr;
@@ -130,7 +162,9 @@ bool ACrossguardAICharacter::TryUseSkills(AActor* Target)
 		{
 			continue;
 		}
-		// Skills aim and leap where the character faces (its controller's focus aims the eyes).
+		// Skills aim at Target (or itself), and dashes and leaps go where the character faces. Timed
+		// skills (a breath) keep aiming there.
+		SkillAimTarget = Skill->AIAimsAtSelf() ? static_cast<AActor*>(this) : Target;
 		const FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
 		SetActorRotation(FRotator(0.0f, ToTarget.Rotation().Yaw, 0.0f));
 		if (ASC->TryActivateAbility(Handle))
@@ -143,11 +177,13 @@ bool ACrossguardAICharacter::TryUseSkills(AActor* Target)
 
 TOptional<ECrossguardWeaponType> ACrossguardAICharacter::GetWieldedWeapon() const
 {
-	if (CombatRole == ECrossguardCombatRole::Ranged)
+	if (bWieldsWeapon)
 	{
-		return ECrossguardWeaponType::Bow;
+		return WeaponType;
 	}
-	return bWieldsWeapon ? TOptional<ECrossguardWeaponType>(WeaponType) : TOptional<ECrossguardWeaponType>();
+	// Ranged without a weapon set: a bow.
+	return CombatRole == ECrossguardCombatRole::Ranged ? TOptional<ECrossguardWeaponType>(ECrossguardWeaponType::Bow)
+		: TOptional<ECrossguardWeaponType>();
 }
 
 bool ACrossguardAICharacter::WieldsAnyOf(const TArray<ECrossguardWeaponType>& AnyOf) const
@@ -166,8 +202,8 @@ bool ACrossguardAICharacter::WieldsAnyOf(const TArray<ECrossguardWeaponType>& An
 	Crossguard::FEquipment Equipment;
 	Crossguard::FEquippedWeapon Weapon;
 	Weapon.Type = static_cast<Crossguard::EWeaponType>(Type);
-	Weapon.Handedness = bTwoHandedWeapon || CombatRole == ECrossguardCombatRole::Ranged ? Crossguard::EHandedness::TwoHanded
-		: Crossguard::EHandedness::OneHanded;
+	Weapon.Handedness = bTwoHandedWeapon || (!bWieldsWeapon && CombatRole == ECrossguardCombatRole::Ranged)
+		? Crossguard::EHandedness::TwoHanded : Crossguard::EHandedness::OneHanded;
 	Weapon.bMelee = Type != ECrossguardWeaponType::Bow && Type != ECrossguardWeaponType::Crossbow && Type != ECrossguardWeaponType::Sling
 		&& Type != ECrossguardWeaponType::Wand && Type != ECrossguardWeaponType::MagicStaff;
 	Equipment.MainHand = Weapon;

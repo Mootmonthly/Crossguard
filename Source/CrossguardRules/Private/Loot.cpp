@@ -108,6 +108,7 @@ namespace Crossguard
 			FLootDrop Drop;
 			Drop.Kind = Entry.Kind;
 			Drop.Id = Entry.Id;
+			Drop.ArmorType = Entry.ArmorType;
 			Drop.Count = std::max(1, RollRange(Rng, Entry.CountMin, Entry.CountMax));
 			Drop.Seed = Rng.Next();
 

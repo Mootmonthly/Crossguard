@@ -35,6 +35,9 @@ namespace Crossguard
 		int Weight = 1;
 		int CountMin = 1;
 		int CountMax = 1;
+		// "Any armor" only: limits the pick to one armor type ("Cloth", "Leather", "Plate"). Empty:
+		// every type. The game picks the piece (FLootDrop::ArmorType).
+		std::string ArmorType;
 	};
 
 	struct FLootTable
@@ -53,6 +56,8 @@ namespace Crossguard
 	{
 		ELootKind Kind = ELootKind::Item;
 		std::string Id;
+		// The entry's ArmorType, for the game's "any armor" pick.
+		std::string ArmorType;
 		ERarity Rarity = ERarity::Common;
 		int Count = 1;
 		// For the game's own rolls on this drop (affixes), so a seed gives the same loot.

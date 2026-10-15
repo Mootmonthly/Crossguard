@@ -32,6 +32,19 @@ struct CROSSGUARD_API FCrossguardMobRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob")
 	ECrossguardCombatRole CombatRole = ECrossguardCombatRole::Warrior;
 
+	// The weapon it holds (Data/Items/Weapons.json `weapon`), for skills that care (masteries, Shade
+	// Blow); damage stays AttackDamage. Ranged mobs without one hold a bow.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob")
+	bool bWieldsWeapon = false;
+
+	// Its weapon's type (Sword when it has none).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob")
+	ECrossguardWeaponType WeaponType = ECrossguardWeaponType::Sword;
+
+	// Its weapon is two-handed.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob")
+	bool bTwoHandedWeapon = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob")
 	float Health = 80.0f;
 

@@ -1,10 +1,13 @@
 #include "Skills/CrossguardSkillAbility.h"
 
+#include "AbilitySystem/CrossguardAttributeSet.h"
 #include "AbilitySystem/CrossguardEffects.h"
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Character/CrossguardAICharacter.h"
 #include "Engine/World.h"
+#include "GameFramework/Controller.h"
 
 FGameplayEffectSpecHandle UCrossguardSkillAbility::MakeDamageSpec(float AttackDamage, float MagicDamage, float Coefficient) const
 {
@@ -202,6 +205,13 @@ void UCrossguardSkillAbility::GetAim(FVector& OutLocation, FVector& OutDirection
 		Avatar->GetActorEyesViewPoint(OutLocation, Rotation);
 	}
 	OutDirection = Rotation.Vector();
+	// AI: straight at the target its skill was used on (TryUseSkills), not where its view lags.
+	const ACrossguardAICharacter* AI = Cast<ACrossguardAICharacter>(Avatar);
+	const AActor* AimTarget = AI != nullptr ? AI->GetSkillAimTarget() : nullptr;
+	if (AimTarget != nullptr && AimTarget != Avatar)
+	{
+		OutDirection = (AimTarget->GetActorLocation() - OutLocation).GetSafeNormal();
+	}
 }
 
 AActor* UCrossguardSkillAbility::FindAimedTarget(float Range) const
@@ -209,6 +219,11 @@ AActor* UCrossguardSkillAbility::FindAimedTarget(float Range) const
 	AActor* Avatar = GetAvatarActorFromActorInfo();
 	UWorld* World = Avatar != nullptr ? Avatar->GetWorld() : nullptr;
 	if (World == nullptr)
+	{
+		return nullptr;
+	}
+	// AI aiming at itself (heals): nobody under the crosshair.
+	if (const ACrossguardAICharacter* AI = Cast<ACrossguardAICharacter>(Avatar); AI != nullptr && AI->GetSkillAimTarget() == Avatar)
 	{
 		return nullptr;
 	}
@@ -242,4 +257,25 @@ bool UCrossguardSkillAbility::CommitOrCancel(const FGameplayAbilitySpecHandle Ha
 		return false;
 	}
 	return true;
+}
+
+bool UCrossguardSkillAbility::AIHasInRange(const ACrossguardAICharacter& User, const AActor& Target, float Range, bool bNeedsSight)
+{
+	if (FVector::Dist(User.GetActorLocation(), Target.GetActorLocation()) > Range)
+	{
+		return false;
+	}
+	const AController* Controller = User.GetController();
+	return !bNeedsSight || (Controller != nullptr && Controller->LineOfSightTo(&Target));
+}
+
+bool UCrossguardSkillAbility::AIIsHurt(const ACrossguardAICharacter& User, float Fraction)
+{
+	const UAbilitySystemComponent* ASC = User.GetAbilitySystemComponent();
+	if (ASC == nullptr)
+	{
+		return false;
+	}
+	const float MaxHealth = ASC->GetNumericAttribute(UCrossguardAttributeSet::GetMaxHealthAttribute());
+	return MaxHealth > 0.0f && ASC->GetNumericAttribute(UCrossguardAttributeSet::GetHealthAttribute()) <= MaxHealth * Fraction;
 }

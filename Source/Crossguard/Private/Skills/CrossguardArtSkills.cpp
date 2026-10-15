@@ -6,6 +6,7 @@
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Character/CrossguardAICharacter.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/World.h"
@@ -40,6 +41,10 @@ namespace
 
 	constexpr float FlightSeconds = 20.0f;
 
+	// AI use (assumptions, cm).
+	constexpr float ArtAIShootingStarMin = 300.0f;
+	constexpr float ArtAIDragonRange = 1500.0f;
+
 	ACharacter* AsCharacter(const FGameplayAbilityActorInfo* ActorInfo)
 	{
 		return ActorInfo != nullptr ? Cast<ACharacter>(ActorInfo->AvatarActor.Get()) : nullptr;
@@ -56,6 +61,12 @@ UCrossguardShootingStarAbility::UCrossguardShootingStarAbility()
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_ShootingStar);
 	RequiredWeapons.Add(ECrossguardWeaponType::Sword);
 	SetAssetTags(FGameplayTagContainer(CrossguardTags::Skill_Weapon_Melee));
+}
+
+bool UCrossguardShootingStarAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return FVector::Dist(User.GetActorLocation(), Target.GetActorLocation()) >= ArtAIShootingStarMin
+		&& AIHasInRange(User, Target, ShootingStarDistance * 0.9f);
 }
 
 void UCrossguardShootingStarAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -205,6 +216,11 @@ UCrossguardDragonificationAbility::UCrossguardDragonificationAbility()
 	FlightClass = UCrossguardFlightAbility::StaticClass();
 }
 
+bool UCrossguardDragonificationAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return AIHasInRange(User, Target, ArtAIDragonRange, false);
+}
+
 void UCrossguardDragonificationAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -283,6 +299,11 @@ UCrossguardFlareBreathAbility::UCrossguardFlareBreathAbility()
 	BaseCooldownSeconds = 45.0f;
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_FlareBreath);
 	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Dragonified);
+}
+
+bool UCrossguardFlareBreathAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return AIHasInRange(User, Target, FlareBreathRange * 0.9f);
 }
 
 void UCrossguardFlareBreathAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

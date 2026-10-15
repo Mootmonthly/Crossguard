@@ -31,9 +31,9 @@ enum class ECrossguardCombatRole : uint8
 // attributes, a simple attack, and a placeholder look (a cylinder until a Blueprint subclass sets a
 // mesh). Its controller decides whom to attack.
 //
-// Skills: SkillIds are granted on possession. Passives run on their own; active skills are used by
-// TryUseSkills as soon as they are ready and the target is in their range (each skill's
-// ShouldAIUse). An AI's skills come with it: weapon, armor, form and casting-weapon requirements do
+// Skills: SkillIds are granted on possession (bundles with their included skills). Passives run on
+// their own; active skills are used by TryUseSkills as soon as they are ready and the target is in
+// their range (each skill's ShouldAIUse), aimed straight at the target. An AI's skills come with it: weapon, armor, form and casting-weapon requirements do
 // not apply. Silence and Mute stop its skills (and a Mage's Fireball) like anyone's. Its basic
 // attack carries next-attack skills (Slash, Mortal Strike, Neckbite, ...) like a weapon attack:
 // with no weapon (claws) it counts as every melee weapon.
@@ -81,8 +81,8 @@ public:
 	bool KeepsDistance() const { return CombatRole != ECrossguardCombatRole::Warrior; }
 
 	// The weapon it fights with, for skills that care (Sword Mastery, Shade Blow). The damage is
-	// still AttackDamage. Off: natural attacks (claws, fists). Ranged characters always count as
-	// wielding a two-handed Bow.
+	// still AttackDamage. Off: natural attacks (claws, fists); a Ranged character then holds a
+	// two-handed Bow.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|AI")
 	bool bWieldsWeapon = false;
 
@@ -110,8 +110,11 @@ public:
 	// Whether its weapon satisfies a weapon requirement (data passives' Wielding conditions).
 	bool WieldsAnyOf(const TArray<ECrossguardWeaponType>& AnyOf) const;
 
-	// What it holds: its weapon, a Bow if Ranged, unset for natural attacks.
+	// What it holds: its weapon, else a Bow if Ranged, unset for natural attacks.
 	TOptional<ECrossguardWeaponType> GetWieldedWeapon() const;
+
+	// Who its last skill was aimed at (itself for heals); UCrossguardSkillAbility::GetAim aims there.
+	const AActor* GetSkillAimTarget() const { return SkillAimTarget.Get(); }
 
 	// Server. Hits Target if it is in range and the attack is ready (Warrior), casts Fireball at it
 	// if ready (Mage), or shoots an arrow at it if it is in range and ready (Ranged). False if nothing
@@ -137,6 +140,7 @@ private:
 
 	double NextAttackTime = 0.0;
 	double NextSkillCheckTime = 0.0;
+	TWeakObjectPtr<AActor> SkillAimTarget;
 
 	TArray<FGameplayAbilitySpecHandle> GrantedSkills;
 

@@ -791,8 +791,8 @@ static void TestLoot()
 	Table.RollsMax = 4;
 	Table.NothingWeight = 1;
 	Table.RarityWeights = {50, 25, 13, 7, 4, 1};
-	Table.Entries = {{ELootKind::Weapon, "sword_one_handed", 3, 1, 1}, {ELootKind::Gold, "gold_coin", 3, 5, 20},
-		{ELootKind::SkillGem, "", 2, 1, 1}, {ELootKind::Item, "healing_potion", 2, 1, 3}};
+	Table.Entries = {{ELootKind::Weapon, "sword_one_handed", 3, 1, 1, ""}, {ELootKind::Gold, "gold_coin", 3, 5, 20, ""},
+		{ELootKind::SkillGem, "", 2, 1, 1, ""}, {ELootKind::Item, "healing_potion", 2, 1, 3, ""}};
 	const std::vector<FLootDrop> First = RollLoot(Table, Gems, 42);
 	const std::vector<FLootDrop> Again = RollLoot(Table, Gems, 42);
 	CHECK(First.size() == Again.size());
@@ -802,6 +802,14 @@ static void TestLoot()
 		bSame = First[I].Id == Again[I].Id && First[I].Count == Again[I].Count && First[I].Rarity == Again[I].Rarity && First[I].Seed == Again[I].Seed;
 	}
 	CHECK(bSame);
+
+	// "Any armor" of one type: the drop carries the type for the game's pick.
+	{
+		FLootTable ArmorTable;
+		ArmorTable.Entries = {{ELootKind::Armor, "", 1, 1, 1, "Plate"}};
+		const std::vector<FLootDrop> ArmorDrops = RollLoot(ArmorTable, Gems, 7);
+		CHECK(ArmorDrops.size() == 1 && ArmorDrops[0].Kind == ELootKind::Armor && ArmorDrops[0].Id.empty() && ArmorDrops[0].ArmorType == "Plate");
+	}
 
 	int Total = 0;
 	int GemDrops = 0;
@@ -842,7 +850,7 @@ static void TestLoot()
 	// A wanted rarity with no gems falls back to the nearest one below; above only if none below.
 	FLootTable OnlyRare;
 	OnlyRare.RarityWeights = {0, 0, 1, 0, 0, 0};
-	OnlyRare.Entries = {{ELootKind::SkillGem, "", 1, 1, 1}};
+	OnlyRare.Entries = {{ELootKind::SkillGem, "", 1, 1, 1, ""}};
 	const std::vector<FLootDrop> Rare = RollLoot(OnlyRare, Gems, 7);
 	CHECK(Rare.size() == 1 && Rare[0].Rarity == ERarity::Common);
 	FLootTable OnlyLegendary = OnlyRare;
@@ -855,7 +863,7 @@ static void TestLoot()
 
 	// A named gem drops at its skill's rarity; no gems at all: no "any gem" drop.
 	FLootTable Named;
-	Named.Entries = {{ELootKind::SkillGem, "cor_leonis", 1, 1, 1}};
+	Named.Entries = {{ELootKind::SkillGem, "cor_leonis", 1, 1, 1, ""}};
 	const std::vector<FLootDrop> Mystic = RollLoot(Named, Gems, 3);
 	CHECK(Mystic.size() == 1 && Mystic[0].Rarity == ERarity::Mystic);
 	CHECK(RollLoot(OnlyRare, {}, 3).empty());
@@ -863,7 +871,7 @@ static void TestLoot()
 	// Only "nothing", or no rolls: empty.
 	FLootTable Nothing;
 	Nothing.NothingWeight = 1;
-	Nothing.Entries = {{ELootKind::Gold, "gold_coin", 0, 1, 1}};
+	Nothing.Entries = {{ELootKind::Gold, "gold_coin", 0, 1, 1, ""}};
 	CHECK(RollLoot(Nothing, Gems, 9).empty());
 	FLootTable NoRolls = Table;
 	NoRolls.RollsMin = 0;
@@ -873,11 +881,11 @@ static void TestLoot()
 	// Rarity weights steer weapon rarity.
 	FLootTable AllEpic;
 	AllEpic.RarityWeights = {0, 0, 0, 1, 0, 0};
-	AllEpic.Entries = {{ELootKind::Weapon, "bow", 1, 1, 1}};
+	AllEpic.Entries = {{ELootKind::Weapon, "bow", 1, 1, 1, ""}};
 	CHECK(RollLoot(AllEpic, Gems, 11).at(0).Rarity == ERarity::Epic);
 	// Gear always drops one piece per drop.
 	FLootTable ManySwords;
-	ManySwords.Entries = {{ELootKind::Weapon, "sword_one_handed", 1, 3, 3}};
+	ManySwords.Entries = {{ELootKind::Weapon, "sword_one_handed", 1, 3, 3, ""}};
 	CHECK(RollLoot(ManySwords, Gems, 5).at(0).Count == 1);
 }
 

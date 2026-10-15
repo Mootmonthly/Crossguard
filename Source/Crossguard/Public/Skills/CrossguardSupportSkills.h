@@ -32,6 +32,10 @@ class CROSSGUARD_API UCrossguardBenedictionAbility : public UCrossguardSkillAbil
 public:
 	UCrossguardBenedictionAbility();
 
+	// AI: on itself, once down to 35% Health (it revives no bodies).
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
+	virtual bool AIAimsAtSelf() const override { return true; }
+
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
@@ -49,6 +53,9 @@ class CROSSGUARD_API UCrossguardUnleashAbility : public UCrossguardSkillAbility
 public:
 	UCrossguardUnleashAbility();
 
+	// AI: once a target is within 10 m.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
+
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 };
@@ -61,6 +68,9 @@ class CROSSGUARD_API UCrossguardLightAbility : public UCrossguardSkillAbility
 
 public:
 	UCrossguardLightAbility();
+
+	// AI: once a target is within 30 m (it lights the fight).
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
 
 	// Set a Blueprint subclass for the look.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Light")
@@ -83,6 +93,9 @@ class CROSSGUARD_API UCrossguardWallAbility : public UCrossguardSkillAbility
 public:
 	UCrossguardWallAbility();
 
+	// AI (Mage and Ranged): a wall between it and a target closing in within 6 m.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Wall")
 	TSubclassOf<ACrossguardWall> WallClass;
 
@@ -101,6 +114,9 @@ class CROSSGUARD_API UCrossguardStealthAbility : public UCrossguardSkillAbility
 
 public:
 	UCrossguardStealthAbility();
+
+	// AI: to sneak up on a target within 15 m but beyond twice its reach.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
@@ -129,6 +145,9 @@ class CROSSGUARD_API UCrossguardImmutableAbility : public UCrossguardSkillAbilit
 
 public:
 	UCrossguardImmutableAbility();
+
+	// AI: once a target is within 10 m.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
 
 	virtual void OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
 	virtual void OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;

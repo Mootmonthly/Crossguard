@@ -6,6 +6,7 @@
 #include "Character/CrossguardMinion.h"
 #include "Character/CrossguardMonster.h"
 #include "Engine/World.h"
+#include "Game/CrossguardTeamLibrary.h"
 #include "EngineUtils.h"
 #include "Navigation/PathFollowingComponent.h"
 
@@ -25,8 +26,8 @@ bool ACrossguardMonsterController::IsValidTarget(const ACrossguardMonster& Monst
 {
 	const ACrossguardCharacter* Character = Cast<ACrossguardCharacter>(Candidate);
 	const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Candidate);
-	// Players and minions; never another monster. Alive and not stealthed.
-	return Character != nullptr && Character != &Monster && !Character->IsA<ACrossguardMonster>()
+	// Players and their minions; never another monster or a monster's minion. Alive and not stealthed.
+	return Character != nullptr && Character != &Monster && !UCrossguardTeamLibrary::AreAllies(&Monster, Character)
 		&& (Character->IsPlayerControlled() || Character->IsA<ACrossguardMinion>()) && !Character->IsActorBeingDestroyed()
 		&& ASC != nullptr && !ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead) && !ASC->HasMatchingGameplayTag(CrossguardTags::State_Stealthed);
 }

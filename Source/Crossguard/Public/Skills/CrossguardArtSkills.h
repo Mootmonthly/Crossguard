@@ -16,6 +16,9 @@ class CROSSGUARD_API UCrossguardShootingStarAbility : public UCrossguardSkillAbi
 public:
 	UCrossguardShootingStarAbility();
 
+	// AI: a target it can see 3 to 9 m ahead (the dash goes 10 m).
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
+
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -45,6 +48,9 @@ class CROSSGUARD_API UCrossguardDragonificationAbility : public UCrossguardSkill
 
 public:
 	UCrossguardDragonificationAbility();
+
+	// AI: once a target is within 15 m.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
 
 	// The skills granted for the duration. Set Blueprint subclasses for visuals.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dragonification")
@@ -76,6 +82,9 @@ class CROSSGUARD_API UCrossguardFlareBreathAbility : public UCrossguardSkillAbil
 
 public:
 	UCrossguardFlareBreathAbility();
+
+	// AI: a target it can see within the breath's reach.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;

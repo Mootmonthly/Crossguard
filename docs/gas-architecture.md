@@ -331,8 +331,10 @@ Both path on the NavMesh, or walk straight without one.
 Skills: `SkillIds` are granted on possession (from `SkillCatalog`, or native classes only without
 one). The controllers call `TryUseSkills(Target)` a few times a second: the first granted skill
 whose `UCrossguardSkillAbility::ShouldAIUse` says yes and that can activate is used, facing the
-target first (the controller's focus aims the eyes). `ShouldAIUse` is overridden by the next-attack
-skills, Hunter's Leap and Eldritch Shield; `Tools/ai_skills.py` mirrors that list for the Mob Forge.
+target first. Every active skill but Flight overrides `ShouldAIUse`; `GetAim` / `FindAimedTarget`
+aim an AI's skills straight at `GetSkillAimTarget()` (itself for skills with `AIAimsAtSelf`, the
+heals). Bundles are expanded with the catalog. `Tools/ai_skills.py` mirrors the rules for the Mob
+Forge. Monsters and their minions share `UCrossguardTeamLibrary::MonsterTeamId`.
 Requirements (weapons, armor, forms, casting weapon) do not apply to AI. Its basic attack gathers
 next-attack riders like a weapon attack (`FCrossguardRiderAttack::ForAIMelee`); `bWieldsWeapon` /
 `WeaponType` say what it holds (unarmed counts as every melee weapon for riders).

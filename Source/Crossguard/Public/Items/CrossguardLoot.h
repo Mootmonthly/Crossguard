@@ -35,6 +35,13 @@ struct CROSSGUARD_API FCrossguardLootEntry
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
 	FName Id;
 
+	// Any armor piece of ArmorType only (Id None, Kind Armor, bHasArmorType).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+	bool bHasArmorType = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot")
+	ECrossguardArmorType ArmorType = ECrossguardArmorType::Cloth;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Loot", meta = (ClampMin = "0"))
 	int32 Weight = 1;
 

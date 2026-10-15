@@ -30,6 +30,10 @@ namespace
 			Crossguard::FLootEntry RulesEntry;
 			RulesEntry.Kind = static_cast<Crossguard::ELootKind>(static_cast<uint8>(Entry.Kind));
 			RulesEntry.Id = Entry.Id.IsNone() ? std::string() : std::string(TCHAR_TO_UTF8(*Entry.Id.ToString()));
+			if (Entry.bHasArmorType)
+			{
+				RulesEntry.ArmorType = TCHAR_TO_UTF8(*StaticEnum<ECrossguardArmorType>()->GetNameStringByValue(static_cast<int64>(Entry.ArmorType)));
+			}
 			RulesEntry.Weight = Entry.Weight;
 			RulesEntry.CountMin = Entry.CountMin;
 			RulesEntry.CountMax = Entry.CountMax;
@@ -68,6 +72,26 @@ namespace
 			return NAME_None;
 		}
 		const TArray<FName> Names = Table->GetRowNames();
+		return Names.IsEmpty() ? NAME_None : Names[Stream.RandHelper(Names.Num())];
+	}
+
+	// The drop's armor piece; for "any armor" of one type, a random piece of that type.
+	FName PickArmor(const UDataTable* Table, const Crossguard::FLootDrop& Drop, FRandomStream& Stream)
+	{
+		if (!Drop.Id.empty() || Drop.ArmorType.empty() || Table == nullptr)
+		{
+			return PickRow(Table, Drop.Id, Stream);
+		}
+		const FString Wanted = UTF8_TO_TCHAR(Drop.ArmorType.c_str());
+		TArray<FName> Names;
+		Table->ForeachRow<FCrossguardArmorRow>(TEXT("PickArmor"), [&Names, &Wanted](const FName& RowName, const FCrossguardArmorRow& Row)
+		{
+			if (StaticEnum<ECrossguardArmorType>()->GetNameStringByValue(static_cast<int64>(Row.ArmorType)) == Wanted)
+			{
+				Names.Add(RowName);
+			}
+		});
+		// Row order from the table, so a seed gives the same piece.
 		return Names.IsEmpty() ? NAME_None : Names[Stream.RandHelper(Names.Num())];
 	}
 }
@@ -151,7 +175,7 @@ TArray<FCrossguardInventoryItem> UCrossguardLootLibrary::RollLoot(const FCrossgu
 		}
 		case Crossguard::ELootKind::Armor:
 		{
-			const FName ArmorId = PickRow(Sources.ArmorTable, Drop.Id, Stream);
+			const FName ArmorId = PickArmor(Sources.ArmorTable, Drop, Stream);
 			const FCrossguardArmorRow* Armor = Sources.ArmorTable != nullptr && !ArmorId.IsNone()
 				? Sources.ArmorTable->FindRow<FCrossguardArmorRow>(ArmorId, TEXT("RollLoot"), false) : nullptr;
 			if (Armor == nullptr)

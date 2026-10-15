@@ -5,6 +5,7 @@
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Character/CrossguardAICharacter.h"
 #include "Character/CrossguardCharacter.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
@@ -28,6 +29,12 @@ namespace
 	constexpr float StealthExitAttackBonus = 0.25f;
 	constexpr float ImmutableRange = 1000.0f;
 	constexpr float ImmutableSeconds = 5.0f;
+	// AI use (assumptions, cm and fractions of Max HP).
+	constexpr float SupportAIBenedictionBelow = 0.35f;
+	constexpr float SupportAIBuffRange = 1000.0f;
+	constexpr float SupportAILightRange = 3000.0f;
+	constexpr float SupportAIWallRange = 600.0f;
+	constexpr float SupportAIStealthRange = 1500.0f;
 
 	bool IsDead(const AActor* Actor)
 	{
@@ -91,6 +98,11 @@ ACrossguardCharacter* UCrossguardBenedictionAbility::FindAimedBody(float Range) 
 	return Best;
 }
 
+bool UCrossguardBenedictionAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return AIIsHurt(User, SupportAIBenedictionBelow);
+}
+
 void UCrossguardBenedictionAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -103,7 +115,9 @@ void UCrossguardBenedictionAbility::ActivateAbility(const FGameplayAbilitySpecHa
 		// The nearer of a living character under the crosshair and a body near it.
 		AActor* const AimedLiving = FindAimedTarget(BenedictionRange);
 		AActor* Living = AimedLiving;
-		ACrossguardCharacter* Body = FindAimedBody(BenedictionRange);
+		// An AI heals itself (monsters and minions cannot be revived, and it must not revive its kills).
+		const bool bAI = Cast<ACrossguardAICharacter>(ActorInfo->AvatarActor.Get()) != nullptr;
+		ACrossguardCharacter* Body = bAI ? nullptr : FindAimedBody(BenedictionRange);
 		const FVector From = ActorInfo->AvatarActor->GetActorLocation();
 		if (Living != nullptr && Body != nullptr)
 		{
@@ -148,6 +162,11 @@ UCrossguardUnleashAbility::UCrossguardUnleashAbility()
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_Unleash);
 }
 
+bool UCrossguardUnleashAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return AIHasInRange(User, Target, SupportAIBuffRange, false);
+}
+
 void UCrossguardUnleashAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -174,6 +193,11 @@ UCrossguardLightAbility::UCrossguardLightAbility()
 	BaseCooldownSeconds = 30.0f;
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_Light);
 	OrbClass = ACrossguardLightOrb::StaticClass();
+}
+
+bool UCrossguardLightAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return AIHasInRange(User, Target, SupportAILightRange, false);
 }
 
 void UCrossguardLightAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -214,6 +238,11 @@ UCrossguardWallAbility::UCrossguardWallAbility()
 	WallClass = ACrossguardWall::StaticClass();
 }
 
+bool UCrossguardWallAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return User.KeepsDistance() && AIHasInRange(User, Target, SupportAIWallRange, false);
+}
+
 void UCrossguardWallAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -249,6 +278,12 @@ UCrossguardStealthAbility::UCrossguardStealthAbility()
 	SkillCategory = ECrossguardSkillCategory::Active;
 	BaseCooldownSeconds = 20.0f;
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_Stealth);
+}
+
+bool UCrossguardStealthAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return FVector::Dist(User.GetActorLocation(), Target.GetActorLocation()) > User.AttackRange * 2.0f
+		&& AIHasInRange(User, Target, SupportAIStealthRange, false);
 }
 
 void UCrossguardStealthAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -368,6 +403,11 @@ void UCrossguardImmutableAbility::OnRemoveAbility(const FGameplayAbilityActorInf
 		ActorInfo->AbilitySystemComponent->RemoveLooseGameplayTag(CrossguardTags::Passive_Immutable);
 	}
 	Super::OnRemoveAbility(ActorInfo, Spec);
+}
+
+bool UCrossguardImmutableAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return AIHasInRange(User, Target, SupportAIBuffRange, false);
 }
 
 void UCrossguardImmutableAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

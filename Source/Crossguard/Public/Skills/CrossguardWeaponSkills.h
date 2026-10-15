@@ -106,6 +106,9 @@ class CROSSGUARD_API UCrossguardQuickshotAbility : public UCrossguardSkillAbilit
 public:
 	UCrossguardQuickshotAbility();
 
+	// AI: once a target is within 15 m.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
+
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 };
@@ -119,6 +122,9 @@ class CROSSGUARD_API UCrossguardArcaneArrowsAbility : public UCrossguardSkillAbi
 
 public:
 	UCrossguardArcaneArrowsAbility();
+
+	// AI (Ranged): when about to shoot, not already active.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
@@ -134,6 +140,9 @@ class CROSSGUARD_API UCrossguardCleaveAbility : public UCrossguardSkillAbility
 public:
 	UCrossguardCleaveAbility();
 
+	// AI: a target within the arc's reach.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
+
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 };
@@ -147,6 +156,9 @@ class CROSSGUARD_API UCrossguardTripleThrustAbility : public UCrossguardSkillAbi
 
 public:
 	UCrossguardTripleThrustAbility();
+
+	// AI: a target within the thrusts' reach.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
@@ -173,6 +185,9 @@ class CROSSGUARD_API UCrossguardPartingTheLandAbility : public UCrossguardSkillA
 public:
 	UCrossguardPartingTheLandAbility();
 
+	// AI: a target it can see along the strip.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
+
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 };
@@ -187,6 +202,9 @@ class CROSSGUARD_API UCrossguardLikeALionAbility : public UCrossguardSkillAbilit
 
 public:
 	UCrossguardLikeALionAbility();
+
+	// AI: a target it can see out of its reach but within the leap (the skill picks the nearest enemy itself).
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;

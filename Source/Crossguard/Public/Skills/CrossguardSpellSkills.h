@@ -19,6 +19,9 @@ class CROSSGUARD_API UCrossguardFireballAbility : public UCrossguardSkillAbility
 public:
 	UCrossguardFireballAbility();
 
+	// AI: a target it can see within 25 m.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
+
 	// Set a Blueprint subclass for the visual.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Fireball")
 	TSubclassOf<ACrossguardSpellProjectile> ProjectileClass;
@@ -42,6 +45,10 @@ class CROSSGUARD_API UCrossguardHealAbility : public UCrossguardSkillAbility
 public:
 	UCrossguardHealAbility();
 
+	// AI: on itself, once down to 60% Health (Greater Heal too).
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
+	virtual bool AIAimsAtSelf() const override { return true; }
+
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
@@ -60,6 +67,9 @@ class CROSSGUARD_API UCrossguardMuteAbility : public UCrossguardSkillAbility
 
 public:
 	UCrossguardMuteAbility();
+
+	// AI: a target it can see in range, not already Muted.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
@@ -98,6 +108,9 @@ class CROSSGUARD_API UCrossguardChopDownAbility : public UCrossguardSkillAbility
 public:
 	UCrossguardChopDownAbility();
 
+	// AI (Warriors): when about to hit, not already readied.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
+
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 };
@@ -111,6 +124,9 @@ class CROSSGUARD_API UCrossguardSummonAbility : public UCrossguardSkillAbility
 
 public:
 	UCrossguardSummonAbility();
+
+	// AI: once a target is within 20 m.
+	virtual bool ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const override;
 
 	virtual void OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
 

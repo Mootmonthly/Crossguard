@@ -1,6 +1,7 @@
 #include "Game/CrossguardTeamLibrary.h"
 
 #include "Character/CrossguardMinion.h"
+#include "Character/CrossguardMonster.h"
 #include "Game/CrossguardPlayerState.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/Pawn.h"
@@ -11,6 +12,10 @@ int32 UCrossguardTeamLibrary::GetTeamId(const AActor* Actor)
 	if (const ACrossguardMinion* Minion = Cast<ACrossguardMinion>(Actor))
 	{
 		Actor = Minion->GetSummoner();
+	}
+	if (Actor != nullptr && Actor->IsA<ACrossguardMonster>())
+	{
+		return MonsterTeamId;
 	}
 	const ACrossguardPlayerState* PlayerState = Cast<ACrossguardPlayerState>(Actor);
 	if (PlayerState == nullptr)

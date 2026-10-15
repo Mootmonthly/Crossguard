@@ -23,6 +23,7 @@
 | --- | --- | --- |
 | `kind` | enum | `Weapon`, `Armor`, `Item` (a row of Items.json), `SkillGem`, `Gold`. |
 | `id` | string or null | The weapon / armor / item / skill id. `null` for Gold, and for "any" Weapon, Armor or Skill Gem. |
+| `armorType` | string, optional | Any-armor drops only (`kind` `Armor`, `id` null): `Cloth`, `Leather` or `Plate` limits the pick to that type. Absent or null: every type. Exported as `bHasArmorType` + `ArmorType`. |
 | `weight` | integer ≥ 0 | Chance against the other entries and `nothingWeight`. |
 | `count` | [min, max] | How many, inclusive, at least 1. Weapons, armor and gems are always `[1, 1]`. |
 
@@ -30,8 +31,8 @@
 
 For each drop: pick an entry (or nothing) by weight, then:
 
-- **Weapon / Armor**: a rarity from `rarityWeights`; "any" picks a random weapon / armor piece;
-  affixes roll for the rarity.
+- **Weapon / Armor**: a rarity from `rarityWeights`; "any" picks a random weapon / armor piece
+  (of `armorType`, if set); affixes roll for the rarity.
 - **Item**: a rarity from `rarityWeights`; large counts split into stacks.
 - **Gold**: `count` gold coins.
 - **SkillGem** with an id: that gem, at its skill's rarity (Skills.json `rarity`).

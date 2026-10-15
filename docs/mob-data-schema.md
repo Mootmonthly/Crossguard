@@ -15,6 +15,7 @@ starts (the game mode's **Mob Table** must be set).
 | `name` | string | Display name. |
 | `kind` | enum | `Monster` (killer gets basic monster XP, 5) or `Boss` (boss XP, 50). |
 | `combatRole` | enum | `Warrior` (runs up and hits), `Mage` (keeps its distance, casts Fireball: 50 + 15 splash, as the skill) or `Ranged` (keeps its distance, shoots arrows with a bow: skeleton archers). |
+| `weapon` | string or null | A weapon id from `Data/Items/Weapons.json` it holds, or `null` for natural attacks (no weapon). For skills that care (masteries, Shade Blow); damage stays `attackDamage`. Warrior: not a `Bow`, `Crossbow` or `Sling`. Ranged: `null` (it holds a bow) or a `Bow`, `Crossbow` or `Sling`. Mage: any. No shields (`weaponType` `Shield`). Exported as `bWieldsWeapon`, `WeaponType` (`Sword` when none) and `bTwoHandedWeapon`. |
 | `health` | number > 0 | Max HP. |
 | `attackDamage` | number ≥ 0 | Warrior and Ranged: Attack Damage per hit or arrow, before resistance. |
 | `attackInterval` | number > 0 | Warrior and Ranged: seconds between attacks. |
@@ -33,15 +34,22 @@ starts (the game mode's **Mob Table** must be set).
 ## AI-usable skills
 
 A mob can only have skills the monster AI can use (`Tools/ai_skills.py`, shared by the validator
-and the Mob Forge sync):
+and the Mob Forge sync). That is nearly every skill: in C++ every active skill overrides
+`UCrossguardSkillAbility::ShouldAIUse`, passives are always on, and bundles grant their included
+skills. The exceptions (`NOT_AI_SKILLS`):
 
-- **AI actives**: `slash`, `mortal_strike`, `shade_blow`, `gouge`, `neckbite`, `purge_shot`,
-  `hunters_leap`, `eldritch_shield` (the C++ skills that override `ShouldAIUse`). Next-attack skills
-  ride on one kind of attack, so only one role may have them: the melee ones (`slash`,
-  `mortal_strike`, `shade_blow`, `gouge`, `neckbite`) Warriors, `purge_shot` Ranged.
-- **Data-only passives**: category `Passive`, no `includes`, and no native C++ class (so not
-  `hunters_tracking`, `multiscale` or `splinter_of_winter`). Their stat bonuses come from the
-  skill data.
+| Skill | Why not |
+| --- | --- |
+| `flight` | AI cannot fly. |
+| `hunters_tracking` | A player's screen effect. |
 
-Bundles, other actives, Spells and Arts cannot be given to mobs. When a C++ skill gains AI support
-or a passive gets a native class, update both lists in `Tools/ai_skills.py`.
+Some skills ride on one kind of attack, so only one combat role may have them (`SKILL_ROLES`):
+
+| Roles | Skills |
+| --- | --- |
+| Warrior only | `slash`, `mortal_strike`, `shade_blow`, `gouge`, `neckbite`, `chop_down` |
+| Ranged only | `purge_shot`, `arcane_arrows` |
+| Any role | Every other AI-usable skill. |
+
+When a skill stops (or starts) working for the AI, or gains a role restriction in its
+`ShouldAIUse`, update `Tools/ai_skills.py`.

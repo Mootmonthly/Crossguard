@@ -2,7 +2,8 @@
 """Validate Data/Mobs/Mobs.json against docs/mob-data-schema.md.
 
 Each mob's loot is checked like a loot table (Tools/validate_loot.py): every weapon, armor, item
-and skill it names must exist. Its skills must exist and be AI-usable (Tools/ai_skills.py).
+and skill it names must exist. Its skills must exist and be AI-usable (Tools/ai_skills.py). Its
+weapon, if any, must exist in Data/Items/Weapons.json and suit its combat role.
 """
 import json
 import re
@@ -10,14 +11,17 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from ai_skills import is_ai_usable, load_skills, roles_for  # noqa: E402
+from ai_skills import NOT_AI_SKILLS, is_ai_usable, load_skills, roles_for  # noqa: E402
 from validate_loot import LOOT_FIELDS, ids_by_kind, validate_loot_body  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 SOURCE = REPO / "Data" / "Mobs" / "Mobs.json"
+WEAPONS = REPO / "Data" / "Items" / "Weapons.json"
 ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 KINDS = {"Monster", "Boss"}
 ROLES = {"Warrior", "Mage", "Ranged"}
+# Weapon types a Warrior cannot hold (it attacks in melee).
+RANGED_TYPES = {"Bow", "Crossbow", "Sling"}
 
 
 def is_num(v):
@@ -37,6 +41,7 @@ SPEC = {
     "name": (lambda v: isinstance(v, str) and v.strip() != "", "non-empty string"),
     "kind": (lambda v: v in KINDS, "one of %s" % sorted(KINDS)),
     "combatRole": (lambda v: v in ROLES, "one of %s" % sorted(ROLES)),
+    "weapon": (lambda v: v is None or isinstance(v, str), "weapon id or null"),
     "health": (positive, "number > 0"),
     "attackDamage": (non_negative, "number >= 0"),
     "attackInterval": (positive, "number > 0 (seconds)"),
@@ -54,10 +59,25 @@ SPEC = {
 }
 
 
+def weapon_problem(role, weapon):
+    """Why the weapon (a Weapons.json object, or None for natural attacks) does not suit the role, or None."""
+    if weapon is None:
+        return None
+    if weapon["weaponType"] == "Shield":
+        return "a shield is not a weapon a mob can hold"
+    if role == "Warrior" and weapon["weaponType"] in RANGED_TYPES:
+        return f"a Warrior cannot hold a {weapon['weaponType']}"
+    # Ranged mobs shoot arrows: wands and staves are casting weapons, not theirs.
+    if role == "Ranged" and weapon["weaponType"] not in RANGED_TYPES:
+        return "a Ranged mob holds a bow, crossbow or sling, or none (a bow)"
+    return None
+
+
 def validate(mobs):
     errors = []
     known = ids_by_kind()
     skills = load_skills()
+    weapons = {w["id"]: w for w in json.loads(WEAPONS.read_text(encoding="utf-8"))}
     if not isinstance(mobs, list):
         return ["top level must be an array"]
     ids = []
@@ -94,9 +114,15 @@ def validate(mobs):
                 elif skill_id not in skills:
                     err(f"skills: no skill '{skill_id}' in Skills.json")
                 elif not is_ai_usable(skills[skill_id]):
-                    err(f"skills: '{skill_id}' is not AI-usable (an AI active or a data-only passive)")
+                    err(f"skills: '{skill_id}' is not AI-usable ({NOT_AI_SKILLS[skill_id]})")
                 elif roles_for(skill_id) and mob.get("combatRole") not in roles_for(skill_id):
                     err(f"skills: '{skill_id}' is only used by {' or '.join(roles_for(skill_id))} mobs")
+        weapon_id = mob.get("weapon")
+        if isinstance(weapon_id, str):
+            if weapon_id not in weapons:
+                err(f"weapon: no weapon '{weapon_id}' in Weapons.json")
+            elif mob.get("combatRole") in ROLES and weapon_problem(mob["combatRole"], weapons[weapon_id]):
+                err(f"weapon: '{weapon_id}': {weapon_problem(mob['combatRole'], weapons[weapon_id])}")
         loot = mob.get("loot")
         if isinstance(loot, dict):
             if set(loot) != LOOT_FIELDS:

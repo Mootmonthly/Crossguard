@@ -4,6 +4,7 @@
     "name": "Example Brute",
     "kind": "Monster",
     "combatRole": "Warrior",
+    "weapon": null,
     "health": 80,
     "attackDamage": 12,
     "attackInterval": 1.5,
@@ -85,6 +86,7 @@
     "name": "mithril dragon",
     "kind": "Boss",
     "combatRole": "Mage",
+    "weapon": null,
     "health": 1500,
     "attackDamage": 12,
     "attackInterval": 1.5,
@@ -161,6 +163,7 @@
     "name": "skeleton archer",
     "kind": "Monster",
     "combatRole": "Ranged",
+    "weapon": null,
     "health": 80,
     "attackDamage": 12,
     "attackInterval": 1.5,
@@ -222,6 +225,16 @@
             5,
             20
           ]
+        },
+        {
+          "kind": "Armor",
+          "id": null,
+          "armorType": "Leather",
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
         }
       ]
     },
@@ -233,6 +246,7 @@
     "name": "skeleton mage",
     "kind": "Monster",
     "combatRole": "Mage",
+    "weapon": null,
     "health": 80,
     "attackDamage": 12,
     "attackInterval": 1.5,
@@ -294,6 +308,16 @@
             1,
             1
           ]
+        },
+        {
+          "kind": "Armor",
+          "id": null,
+          "armorType": "Cloth",
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
         }
       ]
     },
@@ -305,6 +329,7 @@
     "name": "skeleton soldier",
     "kind": "Monster",
     "combatRole": "Warrior",
+    "weapon": null,
     "health": 80,
     "attackDamage": 25,
     "attackInterval": 1.5,
@@ -373,6 +398,16 @@
         {
           "kind": "SkillGem",
           "id": "armor_mastery",
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
+        },
+        {
+          "kind": "Armor",
+          "id": null,
+          "armorType": "Plate",
           "weight": 10,
           "count": [
             1,

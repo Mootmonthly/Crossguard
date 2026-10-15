@@ -38,6 +38,11 @@ namespace
 	constexpr float CompanionDistance = 200.0f;
 	// Assumption: an AI raises Eldritch Shield once its target is this close (cm).
 	constexpr float AIShieldRange = 1000.0f;
+	// AI use (assumptions, cm and fractions of Max HP).
+	constexpr float SpellAIFireballRange = 2500.0f;
+	constexpr float SpellAIHealBelow = 0.6f;
+	constexpr float SpellAIChopDownLead = 200.0f;
+	constexpr float SpellAISummonRange = 2000.0f;
 }
 
 // --- Fireball -------------------------------------------------------------------------------------
@@ -85,6 +90,11 @@ void UCrossguardFireballAbility::LaunchFireball(UAbilitySystemComponent* Caster,
 	Fireball->FinishSpawning(SpawnTransform);
 }
 
+bool UCrossguardFireballAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return AIHasInRange(User, Target, SpellAIFireballRange);
+}
+
 void UCrossguardFireballAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -110,6 +120,11 @@ UCrossguardHealAbility::UCrossguardHealAbility()
 	SkillCategory = ECrossguardSkillCategory::Spell;
 	BaseCooldownSeconds = 12.0f;
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_Heal);
+}
+
+bool UCrossguardHealAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return AIIsHurt(User, SpellAIHealBelow);
 }
 
 void UCrossguardHealAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -142,6 +157,12 @@ UCrossguardMuteAbility::UCrossguardMuteAbility()
 	SkillCategory = ECrossguardSkillCategory::Spell;
 	BaseCooldownSeconds = 180.0f;
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_Mute);
+}
+
+bool UCrossguardMuteAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	const UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(&Target);
+	return TargetASC != nullptr && !TargetASC->HasMatchingGameplayTag(CrossguardTags::State_Muted) && AIHasInRange(User, Target, MuteRange);
 }
 
 void UCrossguardMuteAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
@@ -237,6 +258,13 @@ UCrossguardChopDownAbility::UCrossguardChopDownAbility()
 	SetAssetTags(FGameplayTagContainer(CrossguardTags::Skill_Weapon_Melee));
 }
 
+bool UCrossguardChopDownAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	const UAbilitySystemComponent* ASC = User.GetAbilitySystemComponent();
+	return User.CombatRole == ECrossguardCombatRole::Warrior && ASC != nullptr && !ASC->HasMatchingGameplayTag(CrossguardTags::State_ChopDownReady)
+		&& AIHasInRange(User, Target, User.AttackRange + SpellAIChopDownLead, false);
+}
+
 void UCrossguardChopDownAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -258,6 +286,11 @@ UCrossguardSummonAbility::UCrossguardSummonAbility()
 {
 	SkillCategory = ECrossguardSkillCategory::Spell;
 	SetAssetTags(FGameplayTagContainer(CrossguardTags::Skill_Minion));
+}
+
+bool UCrossguardSummonAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
+{
+	return AIHasInRange(User, Target, SpellAISummonRange, false);
 }
 
 void UCrossguardSummonAbility::OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
@@ -375,6 +408,11 @@ void UCrossguardSummonCompanionAbility::ActivateAbility(const FGameplayAbilitySp
 		// The summoner's catalog: data passives (Sword Mastery) are played from its rows.
 		const UCrossguardLoadoutComponent* Loadout = Summoner->GetLoadoutComponent();
 		UCrossguardSkillCatalog* Catalog = Loadout != nullptr ? Loadout->SkillCatalog.Get() : nullptr;
+		// A monster summoning: its own catalog.
+		if (const ACrossguardAICharacter* AISummoner = Cast<ACrossguardAICharacter>(Summoner); Catalog == nullptr && AISummoner != nullptr)
+		{
+			Catalog = AISummoner->SkillCatalog;
+		}
 		const FRotator Facing(0.0f, Summoner->GetActorRotation().Yaw, 0.0f);
 		SpawnMinion(CompanionClass, Summoner->GetActorLocation() + Facing.Vector() * CompanionDistance, Seconds,
 			[this, Catalog](ACrossguardMinion& Minion)

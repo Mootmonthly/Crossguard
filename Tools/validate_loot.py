@@ -17,6 +17,10 @@ WILDCARD_KINDS = {"Weapon", "Armor", "SkillGem"}
 ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 
 
+ENTRY_FIELDS = {"kind", "id", "weight", "count", "armorType"}
+# Armor.json armorType values: an any-armor drop can be limited to one.
+ARMOR_TYPES = {"Cloth", "Leather", "Plate"}
+
 def is_int(v):
     return isinstance(v, int) and not isinstance(v, bool)
 
@@ -59,8 +63,8 @@ def validate_loot_body(table, known, err):
         return
     for j, entry in enumerate(entries):
         where = f"entries[{j}]"
-        if not isinstance(entry, dict) or set(entry) != {"kind", "id", "weight", "count"}:
-            err(f"{where}: needs exactly kind, id, weight, count")
+        if not isinstance(entry, dict) or not {"kind", "id", "weight", "count"} <= set(entry) <= ENTRY_FIELDS:
+            err(f"{where}: needs kind, id, weight, count (and optionally armorType)")
             continue
         kind = entry["kind"]
         if kind not in KINDS:
@@ -78,6 +82,11 @@ def validate_loot_body(table, known, err):
                 err(f"{where}: {kind} needs an id")
         elif entry["id"] not in known[kind]:
             err(f"{where}: no {kind} with id {entry['id']!r}")
+        if "armorType" in entry and entry["armorType"] is not None:
+            if kind != "Armor" or entry["id"] is not None:
+                err(f"{where}: armorType only narrows an any-armor drop (kind Armor, id null)")
+            elif entry["armorType"] not in ARMOR_TYPES:
+                err(f"{where}: armorType must be null or one of {sorted(ARMOR_TYPES)}")
         if kind in {"Weapon", "Armor", "SkillGem"} and entry["count"] != [1, 1]:
             err(f"{where}: {kind} drops one at a time; count must be [1, 1]")
 

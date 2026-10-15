@@ -6,12 +6,18 @@ https://claude.ai/artifact/JPDt46urNPnzMsgZuD7RYW
 `mob-forge.html` is the published page's source. It stores one document per mob in the
 artifact's database (`mobs/<id>`: `{mob, meta: {updatedAt, syncedAt, deleted}}`) and validates
 edits with the same rules as `Tools/validate_mobs.py`. `refs/catalog` holds the weapon, armor,
-item and skill ids (skills with gem rarity, category and `aiUsable`) the drop and skill editors
-offer; Claude refreshes it at each sync with `python3 Tools/sync_mob_forge.py --catalog <file>`.
+item and skill ids (weapons with `weaponType`, `handedness` and `range`; skills with gem rarity,
+category, `aiUsable` and `roles`) the drop, weapon and skill editors offer; Claude refreshes it at each sync with `python3 Tools/sync_mob_forge.py --catalog <file>`.
 Only editors can write.
 
-The Skills section picks the mob's `skills` from the catalog skills with `aiUsable` true: AI
-actives it uses on its target, and data-only passives that are always on (see
+The Combat section's **Weapon** picks the mob's `weapon`: none (natural attacks) or a catalog
+weapon its combat role can hold, with the same rules as the validator (Warriors no bows, crossbows
+or slings; Ranged none, meaning a bow, or a bow, crossbow or sling; no shields). Documents saved before the
+field existed load and sync as `weapon: null`.
+
+The Skills section picks the mob's `skills` from the catalog skills with `aiUsable` true (all
+but a few, like `flight`) whose `roles` include the mob's combat role: actives it uses on its
+target, passives that are always on, bundles that grant their skills (see
 [AI-usable skills](../../docs/mob-data-schema.md#ai-usable-skills)). Documents saved before the
 field existed load and sync as `skills: []`.
 

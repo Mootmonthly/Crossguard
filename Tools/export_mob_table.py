@@ -5,7 +5,8 @@ Usage:
   python3 Tools/export_mob_table.py           # write Data/Mobs/MobTable.json
   python3 Tools/export_mob_table.py --check   # exit 1 if MobTable.json is out of date
 
-Mobs.json is the source of truth. Distances go from meters to centimeters. Each mob's loot is
+Mobs.json is the source of truth. Distances go from meters to centimeters. A mob's weapon id becomes
+bWieldsWeapon, WeaponType ("Sword" when it has none) and bTwoHandedWeapon from Data/Items/Weapons.json. Each mob's loot is
 exported by Tools/export_loot_table.py as the loot table "mob_<id>". Import MobTable.json in the
 editor as a Data Table with row struct CrossguardMobRow.
 """
@@ -17,14 +18,19 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 SOURCE = REPO / "Data" / "Mobs" / "Mobs.json"
 OUTPUT = REPO / "Data" / "Mobs" / "MobTable.json"
+WEAPONS = REPO / "Data" / "Items" / "Weapons.json"
 
 
-def row(mob):
+def row(mob, weapons):
+    weapon = weapons[mob["weapon"]] if mob["weapon"] else None
     return {
         "Name": mob["id"],
         "DisplayName": mob["name"],
         "Kind": mob["kind"],
         "CombatRole": mob["combatRole"],
+        "bWieldsWeapon": weapon is not None,
+        "WeaponType": weapon["weaponType"] if weapon else "Sword",
+        "bTwoHandedWeapon": bool(weapon) and weapon["handedness"] == "TwoHanded",
         "Health": mob["health"],
         "AttackDamage": mob["attackDamage"],
         "AttackInterval": mob["attackInterval"],
@@ -41,7 +47,8 @@ def row(mob):
 
 
 def render(mobs):
-    return json.dumps([row(m) for m in mobs], indent="\t", ensure_ascii=False) + "\n"
+    weapons = {w["id"]: w for w in json.loads(WEAPONS.read_text(encoding="utf-8"))}
+    return json.dumps([row(m, weapons) for m in mobs], indent="\t", ensure_ascii=False) + "\n"
 
 
 def main(argv):

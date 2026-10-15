@@ -16,6 +16,8 @@
 			{
 				"Kind": "Gold",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 30,
 				"CountMin": 5,
 				"CountMax": 25
@@ -23,6 +25,8 @@
 			{
 				"Kind": "Item",
 				"Id": "healing_potion",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 8,
 				"CountMin": 1,
 				"CountMax": 1
@@ -30,6 +34,8 @@
 			{
 				"Kind": "Item",
 				"Id": "bandage",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 8,
 				"CountMin": 1,
 				"CountMax": 2
@@ -37,6 +43,8 @@
 			{
 				"Kind": "Item",
 				"Id": "arrow",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 6,
 				"CountMin": 5,
 				"CountMax": 15
@@ -44,6 +52,8 @@
 			{
 				"Kind": "Weapon",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 5,
 				"CountMin": 1,
 				"CountMax": 1
@@ -51,6 +61,8 @@
 			{
 				"Kind": "Armor",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 5,
 				"CountMin": 1,
 				"CountMax": 1
@@ -58,6 +70,8 @@
 			{
 				"Kind": "SkillGem",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 2,
 				"CountMin": 1,
 				"CountMax": 1
@@ -81,6 +95,8 @@
 			{
 				"Kind": "Gold",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 20,
 				"CountMin": 50,
 				"CountMax": 200
@@ -88,6 +104,8 @@
 			{
 				"Kind": "Weapon",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 20,
 				"CountMin": 1,
 				"CountMax": 1
@@ -95,6 +113,8 @@
 			{
 				"Kind": "Armor",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 20,
 				"CountMin": 1,
 				"CountMax": 1
@@ -102,6 +122,8 @@
 			{
 				"Kind": "SkillGem",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 15,
 				"CountMin": 1,
 				"CountMax": 1
@@ -109,6 +131,8 @@
 			{
 				"Kind": "Item",
 				"Id": "ruby",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 5,
 				"CountMin": 1,
 				"CountMax": 1
@@ -116,6 +140,8 @@
 			{
 				"Kind": "Item",
 				"Id": "emerald",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 5,
 				"CountMin": 1,
 				"CountMax": 1
@@ -123,6 +149,8 @@
 			{
 				"Kind": "Item",
 				"Id": "sapphire",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 5,
 				"CountMin": 1,
 				"CountMax": 1
@@ -146,6 +174,8 @@
 			{
 				"Kind": "Gold",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 30,
 				"CountMin": 10,
 				"CountMax": 50
@@ -153,6 +183,8 @@
 			{
 				"Kind": "Item",
 				"Id": "healing_potion",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 10,
 				"CountMin": 1,
 				"CountMax": 2
@@ -160,6 +192,8 @@
 			{
 				"Kind": "Item",
 				"Id": "bandage",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 10,
 				"CountMin": 1,
 				"CountMax": 3
@@ -167,6 +201,8 @@
 			{
 				"Kind": "Item",
 				"Id": "lockpick",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 6,
 				"CountMin": 1,
 				"CountMax": 2
@@ -174,6 +210,8 @@
 			{
 				"Kind": "Item",
 				"Id": "throwing_knife",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 5,
 				"CountMin": 1,
 				"CountMax": 3
@@ -181,6 +219,8 @@
 			{
 				"Kind": "Weapon",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 8,
 				"CountMin": 1,
 				"CountMax": 1
@@ -188,6 +228,8 @@
 			{
 				"Kind": "Armor",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 8,
 				"CountMin": 1,
 				"CountMax": 1
@@ -195,6 +237,8 @@
 			{
 				"Kind": "SkillGem",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 4,
 				"CountMin": 1,
 				"CountMax": 1
@@ -218,6 +262,8 @@
 			{
 				"Kind": "Gold",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 20,
 				"CountMin": 50,
 				"CountMax": 150
@@ -225,6 +271,8 @@
 			{
 				"Kind": "Weapon",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 15,
 				"CountMin": 1,
 				"CountMax": 1
@@ -232,6 +280,8 @@
 			{
 				"Kind": "Armor",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 15,
 				"CountMin": 1,
 				"CountMax": 1
@@ -239,6 +289,8 @@
 			{
 				"Kind": "SkillGem",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 12,
 				"CountMin": 1,
 				"CountMax": 1
@@ -246,6 +298,8 @@
 			{
 				"Kind": "Item",
 				"Id": "ruby",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 6,
 				"CountMin": 1,
 				"CountMax": 1
@@ -253,6 +307,8 @@
 			{
 				"Kind": "Item",
 				"Id": "emerald",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 6,
 				"CountMin": 1,
 				"CountMax": 1
@@ -260,6 +316,8 @@
 			{
 				"Kind": "Item",
 				"Id": "sapphire",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 6,
 				"CountMin": 1,
 				"CountMax": 1
@@ -267,6 +325,8 @@
 			{
 				"Kind": "Item",
 				"Id": "explosive_bottle",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 5,
 				"CountMin": 1,
 				"CountMax": 2
@@ -290,6 +350,8 @@
 			{
 				"Kind": "Gold",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 30,
 				"CountMin": 5,
 				"CountMax": 25
@@ -297,6 +359,8 @@
 			{
 				"Kind": "Item",
 				"Id": "healing_potion",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 8,
 				"CountMin": 1,
 				"CountMax": 1
@@ -304,6 +368,8 @@
 			{
 				"Kind": "Weapon",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 5,
 				"CountMin": 1,
 				"CountMax": 1
@@ -311,6 +377,8 @@
 			{
 				"Kind": "Armor",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 5,
 				"CountMin": 1,
 				"CountMax": 1
@@ -318,6 +386,8 @@
 			{
 				"Kind": "SkillGem",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 2,
 				"CountMin": 1,
 				"CountMax": 1
@@ -341,6 +411,8 @@
 			{
 				"Kind": "Gold",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 30,
 				"CountMin": 100,
 				"CountMax": 500
@@ -348,6 +420,8 @@
 			{
 				"Kind": "Weapon",
 				"Id": "sword_two_handed",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 10,
 				"CountMin": 1,
 				"CountMax": 1
@@ -355,6 +429,8 @@
 			{
 				"Kind": "SkillGem",
 				"Id": "the_mithril_knight",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 10,
 				"CountMin": 1,
 				"CountMax": 1
@@ -362,6 +438,8 @@
 			{
 				"Kind": "Weapon",
 				"Id": "dagger_one_handed",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 10,
 				"CountMin": 1,
 				"CountMax": 1
@@ -385,6 +463,8 @@
 			{
 				"Kind": "Gold",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 30,
 				"CountMin": 5,
 				"CountMax": 30
@@ -392,6 +472,8 @@
 			{
 				"Kind": "Weapon",
 				"Id": "bow",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 10,
 				"CountMin": 1,
 				"CountMax": 1
@@ -399,6 +481,8 @@
 			{
 				"Kind": "SkillGem",
 				"Id": "bow_mastery",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 10,
 				"CountMin": 1,
 				"CountMax": 1
@@ -406,9 +490,20 @@
 			{
 				"Kind": "Item",
 				"Id": "arrow",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 50,
 				"CountMin": 5,
 				"CountMax": 20
+			},
+			{
+				"Kind": "Armor",
+				"Id": "None",
+				"bHasArmorType": true,
+				"ArmorType": "Leather",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 1
 			}
 		]
 	},
@@ -429,6 +524,8 @@
 			{
 				"Kind": "Gold",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 30,
 				"CountMin": 5,
 				"CountMax": 25
@@ -436,6 +533,8 @@
 			{
 				"Kind": "SkillGem",
 				"Id": "fireball",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 10,
 				"CountMin": 1,
 				"CountMax": 1
@@ -443,6 +542,8 @@
 			{
 				"Kind": "SkillGem",
 				"Id": "eldritch_shield",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 10,
 				"CountMin": 1,
 				"CountMax": 1
@@ -450,6 +551,17 @@
 			{
 				"Kind": "Item",
 				"Id": "healing_potion",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Armor",
+				"Id": "None",
+				"bHasArmorType": true,
+				"ArmorType": "Cloth",
 				"Weight": 10,
 				"CountMin": 1,
 				"CountMax": 1
@@ -473,6 +585,8 @@
 			{
 				"Kind": "Gold",
 				"Id": "None",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 30,
 				"CountMin": 5,
 				"CountMax": 25
@@ -480,6 +594,8 @@
 			{
 				"Kind": "Weapon",
 				"Id": "sword_one_handed",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 10,
 				"CountMin": 1,
 				"CountMax": 1
@@ -487,6 +603,8 @@
 			{
 				"Kind": "Armor",
 				"Id": "leather_boots",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 10,
 				"CountMin": 1,
 				"CountMax": 1
@@ -494,6 +612,8 @@
 			{
 				"Kind": "SkillGem",
 				"Id": "sword_mastery",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
 				"Weight": 10,
 				"CountMin": 1,
 				"CountMax": 1
@@ -501,6 +621,17 @@
 			{
 				"Kind": "SkillGem",
 				"Id": "armor_mastery",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
+				"Weight": 10,
+				"CountMin": 1,
+				"CountMax": 1
+			},
+			{
+				"Kind": "Armor",
+				"Id": "None",
+				"bHasArmorType": true,
+				"ArmorType": "Plate",
 				"Weight": 10,
 				"CountMin": 1,
 				"CountMax": 1

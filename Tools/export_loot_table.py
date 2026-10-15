@@ -32,6 +32,8 @@ def row(table):
             {
                 "Kind": e["kind"],
                 "Id": e["id"] or "None",
+                "bHasArmorType": e.get("armorType") is not None,
+                "ArmorType": e.get("armorType") or "Cloth",
                 "Weight": e["weight"],
                 "CountMin": e["count"][0],
                 "CountMax": e["count"][1],
