@@ -15,6 +15,38 @@ namespace Crossguard
 		int SkillCapacityPerLevel = 1;
 		// Season-start cap; rises during a season.
 		int MaxLevel = 15;
+
+		// XP for level 1 -> 2; each later level costs XpGrowth times the previous one.
+		int FirstLevelXp = 50;
+		double XpGrowth = 1.1;
+
+		// Placeholder fee (in-game currency) to reassign all attribute points.
+		int RespecFee = 3;
+	};
+
+	// XP per source (see docs/design-decisions.md, Experience).
+	struct FXpConfig
+	{
+		int BasicMonster = 5;
+		int BossMonster = 50;
+		int PlayerKill = 25;
+		int GatherNode = 10;
+		// Crafting and enchanting: PerRarityStep × (rarity level + 1).
+		int CraftPerRarityStep = 10;
+		int EnchantPerRarityStep = 10;
+		int MinQuest = 10;
+		int MaxQuest = 100;
+		// Placeholder: listed as a source, no amount given yet.
+		int Extract = 0;
+	};
+
+	struct FInventoryConfig
+	{
+		// Raid inventory: 50 squares. Shape is a placeholder.
+		int MainWidth = 10;
+		int MainHeight = 5;
+		// Backpack / Quiver: Width × (rarity level + 1) squares, i.e. 5..30. Shape is a placeholder.
+		int ContainerWidth = 5;
 	};
 
 	struct FScalingConfig

@@ -1,6 +1,8 @@
 // Unit tests for CrossguardRules. Minimal harness: no exceptions, no dependencies.
 
 #include "CrossguardRules/Combat.h"
+#include "CrossguardRules/Experience.h"
+#include "CrossguardRules/Inventory.h"
 #include "CrossguardRules/Items.h"
 #include "CrossguardRules/Loadout.h"
 #include "CrossguardRules/Progression.h"
@@ -516,6 +518,172 @@ static void TestIncludeCycle()
 	CHECK(Catalog.ProvidedSkills("a").size() == 1);
 }
 
+static void TestExperience()
+{
+	const FXpConfig Xp;
+	CHECK(XpForSource(Xp, EXpSource::BasicMonster) == 5);
+	CHECK(XpForSource(Xp, EXpSource::BossMonster) == 50);
+	CHECK(XpForSource(Xp, EXpSource::PlayerKill) == 25);
+	CHECK(XpForSource(Xp, EXpSource::GatherNode) == 10);
+	CHECK(XpForSource(Xp, EXpSource::Quest, 40) == 40);
+	CHECK(XpForSource(Xp, EXpSource::Quest, 5) == 10);
+	CHECK(XpForSource(Xp, EXpSource::Quest, 500) == 100);
+	CHECK(XpForSource(Xp, EXpSource::Craft, 0, ERarity::Common) == 10);
+	CHECK(XpForSource(Xp, EXpSource::Craft, 0, ERarity::Epic) == 40);
+	CHECK(XpForSource(Xp, EXpSource::Enchant, 0, ERarity::Mystic) == 60);
+	CHECK(XpForSource(Xp, EXpSource::Extract) == 0);
+
+	const FProgressionConfig Config;
+	CHECK(XpToNextLevel(Config, 1) == 50);
+	CHECK(XpToNextLevel(Config, 2) == 55);
+	// 60.5 rounds up.
+	CHECK(XpToNextLevel(Config, 3) == 61);
+	CHECK(XpToNextLevel(Config, 14) == 173);
+	CHECK(XpToNextLevel(Config, 0) == 50);
+
+	CHECK(TotalXpForLevel(Config, 1) == 0);
+	CHECK(TotalXpForLevel(Config, 2) == 50);
+	CHECK(TotalXpForLevel(Config, 3) == 105);
+	CHECK(TotalXpForLevel(Config, 15) == 1401);
+
+	CHECK(LevelForTotalXp(Config, 0) == 1);
+	CHECK(LevelForTotalXp(Config, 49) == 1);
+	CHECK(LevelForTotalXp(Config, 50) == 2);
+	CHECK(LevelForTotalXp(Config, 104) == 2);
+	CHECK(LevelForTotalXp(Config, 105) == 3);
+	CHECK(LevelForTotalXp(Config, 1400) == 14);
+	CHECK(LevelForTotalXp(Config, 1401) == 15);
+	// Capped at MaxLevel; XP past the cap counts once the cap rises.
+	CHECK(LevelForTotalXp(Config, 100000) == 15);
+	FProgressionConfig LateSeason;
+	LateSeason.MaxLevel = 16;
+	CHECK(LevelForTotalXp(LateSeason, 1401 + 190) == 16);
+	CHECK(LevelForTotalXp(LateSeason, 1401 + 189) == 15);
+
+	// Raid XP: held until the raid ends.
+	FRaidXp Raid;
+	Raid.Add(5);
+	Raid.Add(25);
+	Raid.Add(-10);
+	Raid.Add(0);
+	CHECK(Raid.Pending() == 30);
+	CHECK(Raid.Extract(Xp) == 30);
+	CHECK(Raid.Pending() == 0);
+	Raid.Add(50);
+	CHECK(Raid.FailExtract() == 50);
+	CHECK(Raid.Pending() == 0);
+	FXpConfig ExtractReward;
+	ExtractReward.Extract = 20;
+	Raid.Add(5);
+	CHECK(Raid.Extract(ExtractReward) == 25);
+
+	CHECK(CanRespec(Config, false, 3) == ERespecError::None);
+	CHECK(CanRespec(Config, false, 2) == ERespecError::NotEnoughCurrency);
+	CHECK(CanRespec(Config, true, 100) == ERespecError::InRaid);
+}
+
+static void TestInventoryGrid()
+{
+	const FInventoryConfig Config;
+	CHECK(ContainerSize(Config, EContainerKind::Main).Squares() == 50);
+	CHECK(ContainerSize(Config, EContainerKind::Backpack, ERarity::Common).Squares() == 5);
+	CHECK(ContainerSize(Config, EContainerKind::Backpack, ERarity::Rare).Squares() == 15);
+	CHECK(ContainerSize(Config, EContainerKind::Quiver, ERarity::Mystic).Squares() == 30);
+	CHECK(ContainerAccepts(EContainerKind::Quiver, EItemCategory::Ammo));
+	CHECK(!ContainerAccepts(EContainerKind::Quiver, EItemCategory::Weapon));
+	CHECK(ContainerAccepts(EContainerKind::Backpack, EItemCategory::Weapon));
+	CHECK(ContainerAccepts(EContainerKind::Main, EItemCategory::SkillGem));
+
+	FInventoryGrid Grid(ContainerSize(Config, EContainerKind::Main));
+	CHECK(Grid.FreeSquares() == 50);
+
+	// A 1×3 sword at the left edge.
+	CHECK(Grid.Place(1, {1, 3}, {0, 0, false}));
+	CHECK(Grid.ItemAt(0, 2) == 1);
+	CHECK(Grid.ItemAt(1, 0) == 0);
+	CHECK(Grid.FreeSquares() == 47);
+
+	// Ids must be positive and unique; overlaps and out-of-bounds fail.
+	CHECK(!Grid.Place(0, {1, 1}, {5, 0, false}));
+	CHECK(!Grid.Place(1, {1, 1}, {5, 0, false}));
+	CHECK(!Grid.Place(2, {2, 2}, {0, 1, false}));
+	CHECK(!Grid.Place(2, {2, 2}, {9, 0, false}));
+	CHECK(!Grid.Place(2, {2, 2}, {-1, 0, false}));
+	CHECK(!Grid.Place(2, {0, 2}, {4, 0, false}));
+	CHECK(Grid.Find(2) == nullptr);
+
+	// Rotation swaps the footprint: 1×3 lying down fits along the bottom row.
+	CHECK(!Grid.Place(2, {1, 3}, {3, 4, false}));
+	CHECK(Grid.Place(2, {1, 3}, {3, 4, true}));
+	CHECK(Grid.ItemAt(5, 4) == 2);
+	CHECK(Grid.ItemAt(6, 4) == 0);
+
+	// Moving may overlap the item's own squares.
+	CHECK(Grid.Move(1, {0, 1, false}));
+	CHECK(Grid.ItemAt(0, 0) == 0);
+	CHECK(Grid.ItemAt(0, 3) == 1);
+	CHECK(!Grid.Move(1, {3, 2, false}));
+	CHECK(Grid.Find(1)->Placement.Y == 1);
+	CHECK(!Grid.Move(99, {0, 0, false}));
+
+	// First fit: top-left, unrotated before rotated.
+	FGridPlacement Spot;
+	CHECK(Grid.FindFreeSpot({2, 2}, true, Spot));
+	CHECK(Spot.X == 1 && Spot.Y == 0 && !Spot.bRotated);
+
+	// A 1×10 item fits a 10×5 grid only lying down.
+	FInventoryGrid Small({10, 5});
+	CHECK(!Small.FindFreeSpot({1, 10}, false, Spot));
+	CHECK(Small.FindFreeSpot({1, 10}, true, Spot));
+	CHECK(Spot.X == 0 && Spot.Y == 0 && Spot.bRotated);
+
+	CHECK(Grid.Remove(1));
+	CHECK(!Grid.Remove(1));
+	CHECK(Grid.ItemAt(0, 1) == 0);
+	CHECK(Grid.FreeSquares() == 47);
+	CHECK(Grid.Remove(2));
+	CHECK(Grid.IsEmpty());
+
+	// Fill a Common backpack (5×1) and confirm it is full.
+	FInventoryGrid Backpack(ContainerSize(Config, EContainerKind::Backpack, ERarity::Common));
+	for (int I = 1; I <= 5; ++I)
+	{
+		CHECK(Backpack.FindFreeSpot({1, 1}, true, Spot) && Backpack.Place(I, {1, 1}, Spot));
+	}
+	CHECK(!Backpack.FindFreeSpot({1, 1}, true, Spot));
+	CHECK(Backpack.FreeSquares() == 0);
+
+	// A default grid has no squares.
+	const FInventoryGrid Empty;
+	CHECK(!Empty.FindFreeSpot({1, 1}, true, Spot));
+	CHECK(Empty.ItemAt(0, 0) == 0);
+}
+
+static void TestSkillLibrary()
+{
+	const FSkillCatalog Catalog = MakeCatalog();
+	FSkillLibrary Library;
+
+	CHECK(LearnSkillGem(Catalog, Library, "fireball", true) == ELearnError::InRaid);
+	CHECK(!Library.Contains("fireball"));
+	CHECK(LearnSkillGem(Catalog, Library, "fireball", false) == ELearnError::None);
+	CHECK(Library.Contains("fireball"));
+	CHECK(LearnSkillGem(Catalog, Library, "fireball", false) == ELearnError::AlreadyLearned);
+	CHECK(LearnSkillGem(Catalog, Library, "meteor", false) == ELearnError::UnknownSkill);
+	CHECK(LearnSkillGem(Catalog, Library, "splinter_of_winter", false) == ELearnError::None);
+
+	// Only learned skills can be equipped. A learned bundle does not need its components learned.
+	CHECK(ValidateLoadout(Catalog, {"fireball", "splinter_of_winter"}, 20, &Library).IsValid());
+	FLoadoutResult Result = ValidateLoadout(Catalog, {"fireball", "heal"}, 20, &Library);
+	CHECK(Result.Error == ELoadoutError::NotLearned);
+	CHECK(Result.SkillId == "heal");
+	CHECK(Result.TotalCost == 5);
+	// Unknown is still reported first.
+	CHECK(ValidateLoadout(Catalog, {"heal", "meteor"}, 20, &Library).Error == ELoadoutError::UnknownSkill);
+	// No library: not checked.
+	CHECK(ValidateLoadout(Catalog, {"fireball", "heal"}, 20).IsValid());
+}
+
 int main()
 {
 	TestProgression();
@@ -530,6 +698,9 @@ int main()
 	TestTeams();
 	TestArmor();
 	TestAffixRolls();
+	TestExperience();
+	TestInventoryGrid();
+	TestSkillLibrary();
 
 	std::printf("%d checks, %d failures\n", GChecks, GFailures);
 	return GFailures == 0 ? 0 : 1;

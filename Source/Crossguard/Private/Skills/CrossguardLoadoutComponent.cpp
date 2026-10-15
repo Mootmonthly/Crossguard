@@ -20,6 +20,7 @@ namespace
 		{
 		case Crossguard::ELoadoutError::None: return ECrossguardLoadoutError::None;
 		case Crossguard::ELoadoutError::UnknownSkill: return ECrossguardLoadoutError::UnknownSkill;
+		case Crossguard::ELoadoutError::NotLearned: return ECrossguardLoadoutError::NotLearned;
 		case Crossguard::ELoadoutError::DuplicateSkill: return ECrossguardLoadoutError::DuplicateSkill;
 		case Crossguard::ELoadoutError::SupersededSkill: return ECrossguardLoadoutError::SupersededSkill;
 		case Crossguard::ELoadoutError::OverCapacity: return ECrossguardLoadoutError::OverCapacity;

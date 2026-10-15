@@ -52,7 +52,21 @@ namespace Crossguard
 		return Result;
 	}
 
-	FLoadoutResult ValidateLoadout(const FSkillCatalog& Catalog, const std::vector<std::string>& Equipped, int Capacity)
+	ELearnError LearnSkillGem(const FSkillCatalog& Catalog, FSkillLibrary& Library, const std::string& SkillId, bool bInRaid)
+	{
+		if (bInRaid)
+		{
+			return ELearnError::InRaid;
+		}
+		if (Catalog.Find(SkillId) == nullptr)
+		{
+			return ELearnError::UnknownSkill;
+		}
+		return Library.Add(SkillId) ? ELearnError::None : ELearnError::AlreadyLearned;
+	}
+
+	FLoadoutResult ValidateLoadout(
+		const FSkillCatalog& Catalog, const std::vector<std::string>& Equipped, int Capacity, const FSkillLibrary* Library)
 	{
 		FLoadoutResult Result;
 
@@ -67,6 +81,19 @@ namespace Crossguard
 				return Result;
 			}
 			Result.TotalCost += Skill->CapacityCost;
+		}
+
+		if (Library != nullptr)
+		{
+			for (const std::string& Id : Equipped)
+			{
+				if (!Library->Contains(Id))
+				{
+					Result.Error = ELoadoutError::NotLearned;
+					Result.SkillId = Id;
+					return Result;
+				}
+			}
 		}
 
 		for (size_t I = 0; I < Equipped.size(); ++I)

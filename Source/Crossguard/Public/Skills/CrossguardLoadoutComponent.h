@@ -15,6 +15,8 @@ enum class ECrossguardLoadoutError : uint8
 {
 	None,
 	UnknownSkill,
+	// Not in the character's Skill Library.
+	NotLearned,
 	DuplicateSkill,
 	// SkillId is already provided by OtherSkillId (bundle component or granted-while-active skill).
 	SupersededSkill,

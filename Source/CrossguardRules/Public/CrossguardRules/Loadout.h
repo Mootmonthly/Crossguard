@@ -42,10 +42,40 @@ namespace Crossguard
 		std::unordered_map<std::string, FSkillDefinition> Skills;
 	};
 
+	// Skills a character has learned from Skill Gems. Only these can be equipped.
+	class CROSSGUARDRULES_API FSkillLibrary
+	{
+	public:
+		bool Contains(const std::string& Id) const { return Skills.count(Id) != 0; }
+		// Returns false if already present.
+		bool Add(const std::string& Id) { return !Id.empty() && Skills.insert(Id).second; }
+		const std::unordered_set<std::string>& All() const { return Skills; }
+
+	private:
+		std::unordered_set<std::string> Skills;
+	};
+
+	enum class ELearnError
+	{
+		None,
+		// Gems are learned only between raids.
+		InRaid,
+		UnknownSkill,
+		// The skill is already in the library; the gem is kept.
+		AlreadyLearned,
+	};
+
+	// Learns a Skill Gem's skill into the library. On None the caller consumes the gem; on any
+	// error the gem is kept and the library is unchanged.
+	CROSSGUARDRULES_API ELearnError LearnSkillGem(
+		const FSkillCatalog& Catalog, FSkillLibrary& Library, const std::string& SkillId, bool bInRaid);
+
 	enum class ELoadoutError
 	{
 		None,
 		UnknownSkill,
+		// Not in the character's Skill Library.
+		NotLearned,
 		DuplicateSkill,
 		// An equipped skill is already provided by another equipped skill (a bundle and one
 		// of its components, or Dragonification and Flight). Two bundles sharing a component
@@ -65,10 +95,12 @@ namespace Crossguard
 		bool IsValid() const { return Error == ELoadoutError::None; }
 	};
 
-	// Reports the first error found, checking in this order: unknown, duplicate,
+	// Reports the first error found, checking in this order: unknown, not learned, duplicate,
 	// superseded, over capacity. TotalCost is filled in whenever every skill is known.
+	// Library null skips the not-learned check (tests, editor debug loadouts).
 	CROSSGUARDRULES_API FLoadoutResult ValidateLoadout(
-		const FSkillCatalog& Catalog, const std::vector<std::string>& Equipped, int Capacity);
+		const FSkillCatalog& Catalog, const std::vector<std::string>& Equipped, int Capacity,
+		const FSkillLibrary* Library = nullptr);
 
 	// The permanent skill effects a loadout applies, each once.
 	CROSSGUARDRULES_API std::unordered_set<std::string> ResolveLoadoutEffects(
