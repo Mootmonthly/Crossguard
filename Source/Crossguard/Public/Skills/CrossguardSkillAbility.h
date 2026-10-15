@@ -80,6 +80,9 @@ protected:
 	// Health at or below Fraction of its Max HP.
 	static bool AIHasInRange(const ACrossguardAICharacter& User, const AActor& Target, float Range, bool bNeedsSight = true);
 	static bool AIIsHurt(const ACrossguardAICharacter& User, float Fraction);
+	// Whether the AI's weapon is one this skill needs (RequiredWeapons), so the attack carrying it
+	// will use it.
+	bool AIWeaponFits(const ACrossguardAICharacter& User) const;
 
 	// Instant skills: commit (cooldown) and end. False if the commit failed (the ability has ended).
 	bool CommitOrCancel(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

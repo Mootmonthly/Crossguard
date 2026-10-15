@@ -136,6 +136,10 @@ protected:
 
 private:
 	void ClearSkills();
+	// Ends its Stealth (it attacked).
+	void BreakOwnStealth();
+	// Seconds between attacks after Action Speed.
+	float ActionSpeedInterval(float Seconds) const;
 	void ShootArrow(AActor* Target, const FGameplayEffectSpecHandle& Spec, const FCrossguardAttackRiders& Riders);
 
 	double NextAttackTime = 0.0;

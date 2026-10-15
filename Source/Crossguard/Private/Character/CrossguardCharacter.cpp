@@ -616,7 +616,8 @@ void ACrossguardCharacter::ClientLaunch_Implementation(FVector Velocity)
 void ACrossguardCharacter::UpdateStealthVisibility()
 {
 	bool bHideFromViewer = false;
-	if (AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Stealthed) && !IsLocallyControlled())
+	// Not your own character (an AI on the server counts as locally controlled, yet hides too).
+	if (AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Stealthed) && !(IsPlayerControlled() && IsLocallyControlled()))
 	{
 		// The local viewer: its pawn, or its player state while spectating. No local player
 		// (dedicated server): nothing to draw anyway.

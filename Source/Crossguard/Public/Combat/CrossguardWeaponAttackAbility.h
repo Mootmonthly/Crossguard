@@ -44,8 +44,8 @@ struct FCrossguardRiderAttack
 	static FCrossguardRiderAttack ForWeapon(const FCrossguardWeaponRow& Weapon);
 	// AI basic attacks (ACrossguardAICharacter): melee, with WeaponType if it wields one.
 	static FCrossguardRiderAttack ForAIMelee(const TOptional<ECrossguardWeaponType>& WeaponType);
-	// Ranged AI: a bow shot.
-	static FCrossguardRiderAttack ForAIRanged();
+	// Ranged AI: a shot with its weapon (a bow when unset).
+	static FCrossguardRiderAttack ForAIRanged(const TOptional<ECrossguardWeaponType>& WeaponType);
 };
 
 // Basic attack with the weapon in Slot (left click: main hand; right click when dual wielding:

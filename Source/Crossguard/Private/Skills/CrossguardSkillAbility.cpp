@@ -208,7 +208,9 @@ void UCrossguardSkillAbility::GetAim(FVector& OutLocation, FVector& OutDirection
 	// AI: straight at the target its skill was used on (TryUseSkills), not where its view lags.
 	const ACrossguardAICharacter* AI = Cast<ACrossguardAICharacter>(Avatar);
 	const AActor* AimTarget = AI != nullptr ? AI->GetSkillAimTarget() : nullptr;
-	if (AimTarget != nullptr && AimTarget != Avatar)
+	const UAbilitySystemComponent* AimASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(AimTarget);
+	// Not at a body: a breath that outlives its target keeps the view's direction.
+	if (AimTarget != nullptr && AimTarget != Avatar && AimASC != nullptr && !AimASC->HasMatchingGameplayTag(CrossguardTags::State_Dead))
 	{
 		OutDirection = (AimTarget->GetActorLocation() - OutLocation).GetSafeNormal();
 	}
@@ -278,4 +280,11 @@ bool UCrossguardSkillAbility::AIIsHurt(const ACrossguardAICharacter& User, float
 	}
 	const float MaxHealth = ASC->GetNumericAttribute(UCrossguardAttributeSet::GetMaxHealthAttribute());
 	return MaxHealth > 0.0f && ASC->GetNumericAttribute(UCrossguardAttributeSet::GetHealthAttribute()) <= MaxHealth * Fraction;
+}
+
+bool UCrossguardSkillAbility::AIWeaponFits(const ACrossguardAICharacter& User) const
+{
+	// Natural attacks count as every weapon; otherwise the skill's own weapon (a sword's attack never
+	// carries Chop Down).
+	return !User.GetWieldedWeapon().IsSet() || RequiredWeapons.IsEmpty() || User.WieldsAnyOf(RequiredWeapons);
 }

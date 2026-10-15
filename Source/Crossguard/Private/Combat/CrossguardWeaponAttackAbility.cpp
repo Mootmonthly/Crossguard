@@ -177,11 +177,11 @@ FCrossguardRiderAttack FCrossguardRiderAttack::ForAIMelee(const TOptional<ECross
 	return Attack;
 }
 
-FCrossguardRiderAttack FCrossguardRiderAttack::ForAIRanged()
+FCrossguardRiderAttack FCrossguardRiderAttack::ForAIRanged(const TOptional<ECrossguardWeaponType>& WeaponType)
 {
 	FCrossguardRiderAttack Attack;
 	Attack.bRanged = true;
-	Attack.WeaponType = ECrossguardWeaponType::Bow;
+	Attack.WeaponType = WeaponType.IsSet() ? WeaponType.GetValue() : ECrossguardWeaponType::Bow;
 	return Attack;
 }
 

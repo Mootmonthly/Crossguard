@@ -123,13 +123,14 @@ public:
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
+	// Ends stealth now, from the server (also an AI's basic attack: ACrossguardAICharacter).
+	void BreakStealth();
+
 private:
 	UFUNCTION()
 	void OnStealthExpired();
 	void OnOtherAbilityActivated(UGameplayAbility* Ability);
 	void OnHealthChanged(const FOnAttributeChangeData& Data);
-	// Ends stealth now, from the server.
-	void BreakStealth();
 
 	FActiveGameplayEffectHandle StealthHandle;
 	FDelegateHandle ActivatedHandle;

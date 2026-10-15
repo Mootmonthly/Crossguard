@@ -130,7 +130,8 @@ bool UCrossguardNextAttackAbility::ShouldAIUse(const ACrossguardAICharacter& Use
 	const UAbilitySystemComponent* ASC = User.GetAbilitySystemComponent();
 	// Only the attack that would use it: melee riders for Warriors, bow riders for Ranged (a Mage's
 	// attack is its Fireball).
-	const bool bUsable = bMeleeRider ? User.CombatRole == ECrossguardCombatRole::Warrior : User.CombatRole == ECrossguardCombatRole::Ranged;
+	const bool bUsable = (bMeleeRider ? User.CombatRole == ECrossguardCombatRole::Warrior : User.CombatRole == ECrossguardCombatRole::Ranged)
+		&& AIWeaponFits(User);
 	return bUsable && ASC != nullptr && !ASC->HasMatchingGameplayTag(ReadyTag)
 		&& FVector::Dist(User.GetActorLocation(), Target.GetActorLocation()) <= User.AttackRange + AINextAttackLead;
 }
@@ -532,6 +533,15 @@ AActor* UCrossguardLikeALionAbility::FindLeapTarget() const
 	if (Avatar == nullptr)
 	{
 		return nullptr;
+	}
+	// An AI leaps at the target it chose (never its summoner), or not at all.
+	if (const ACrossguardAICharacter* AI = Cast<ACrossguardAICharacter>(Avatar))
+	{
+		AActor* Aimed = const_cast<AActor*>(AI->GetSkillAimTarget());
+		const UAbilitySystemComponent* AimedASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Aimed);
+		const bool bValid = Aimed != nullptr && Aimed != Avatar && AimedASC != nullptr && !AimedASC->HasMatchingGameplayTag(CrossguardTags::State_Dead)
+			&& FVector::Dist(Avatar->GetActorLocation(), Aimed->GetActorLocation()) <= LionRange;
+		return bValid ? Aimed : nullptr;
 	}
 	FVector Eyes;
 	FRotator Unused;

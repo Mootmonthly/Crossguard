@@ -261,7 +261,8 @@ UCrossguardChopDownAbility::UCrossguardChopDownAbility()
 bool UCrossguardChopDownAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const
 {
 	const UAbilitySystemComponent* ASC = User.GetAbilitySystemComponent();
-	return User.CombatRole == ECrossguardCombatRole::Warrior && ASC != nullptr && !ASC->HasMatchingGameplayTag(CrossguardTags::State_ChopDownReady)
+	return User.CombatRole == ECrossguardCombatRole::Warrior && AIWeaponFits(User) && ASC != nullptr
+		&& !ASC->HasMatchingGameplayTag(CrossguardTags::State_ChopDownReady)
 		&& AIHasInRange(User, Target, User.AttackRange + SpellAIChopDownLead, false);
 }
 

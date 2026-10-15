@@ -20,6 +20,7 @@
 #include "Skills/CrossguardSkillAbility.h"
 #include "Skills/CrossguardSkillCatalog.h"
 #include "Skills/CrossguardSpellSkills.h"
+#include "Skills/CrossguardSupportSkills.h"
 #include "UObject/ConstructorHelpers.h"
 
 #include <algorithm>
@@ -95,18 +96,29 @@ void ACrossguardAICharacter::GrantSkills()
 	TArray<FName> Effective = SkillIds;
 	if (SkillCatalog != nullptr)
 	{
+		// Rules ids are lowercase (as the loadout's). Ids the rules catalog does not know stay as they
+		// are, so native skills still work (and unknown ones still warn below).
+		const Crossguard::FSkillCatalog Rules = SkillCatalog->BuildRulesCatalog();
 		std::vector<std::string> Ids;
+		Effective.Reset();
 		for (const FName& SkillId : SkillIds)
 		{
-			Ids.push_back(std::string(TCHAR_TO_UTF8(*SkillId.ToString())));
+			const std::string Id(TCHAR_TO_UTF8(*SkillId.ToString().ToLower()));
+			if (Rules.Find(Id) != nullptr)
+			{
+				Ids.push_back(Id);
+			}
+			else
+			{
+				Effective.AddUnique(SkillId);
+			}
 		}
-		const std::unordered_set<std::string> Resolved = Crossguard::ResolveLoadoutEffects(SkillCatalog->BuildRulesCatalog(), Ids);
+		const std::unordered_set<std::string> Resolved = Crossguard::ResolveLoadoutEffects(Rules, Ids);
 		std::vector<std::string> Sorted(Resolved.begin(), Resolved.end());
 		std::sort(Sorted.begin(), Sorted.end());
-		Effective.Reset();
 		for (const std::string& Id : Sorted)
 		{
-			Effective.Add(FName(UTF8_TO_TCHAR(Id.c_str())));
+			Effective.AddUnique(FName(UTF8_TO_TCHAR(Id.c_str())));
 		}
 	}
 	for (const FName& SkillId : Effective)
@@ -163,14 +175,21 @@ bool ACrossguardAICharacter::TryUseSkills(AActor* Target)
 			continue;
 		}
 		// Skills aim at Target (or itself), and dashes and leaps go where the character faces. Timed
-		// skills (a breath) keep aiming there.
+		// skills (a breath) keep aiming there; a failed try leaves the previous aim alone.
+		const TWeakObjectPtr<AActor> PreviousAim = SkillAimTarget;
 		SkillAimTarget = Skill->AIAimsAtSelf() ? static_cast<AActor*>(this) : Target;
 		const FVector ToTarget = Target->GetActorLocation() - GetActorLocation();
 		SetActorRotation(FRotator(0.0f, ToTarget.Rotation().Yaw, 0.0f));
-		if (ASC->TryActivateAbility(Handle))
+		const bool bActivated = ASC->TryActivateAbility(Handle);
+		// Used: still running, or its cooldown started. A skill that gave up without committing (Mute
+		// with nobody in the line) must not starve the others.
+		const FGameplayTagContainer* CooldownTags = Skill->GetCooldownTags();
+		const FGameplayAbilitySpec* After = ASC->FindAbilitySpecFromHandle(Handle);
+		if (bActivated && ((After != nullptr && After->IsActive()) || (CooldownTags != nullptr && ASC->HasAnyMatchingGameplayTags(*CooldownTags))))
 		{
 			return true;
 		}
+		SkillAimTarget = PreviousAim;
 	}
 	return false;
 }
@@ -208,9 +227,9 @@ bool ACrossguardAICharacter::WieldsAnyOf(const TArray<ECrossguardWeaponType>& An
 		&& Type != ECrossguardWeaponType::Wand && Type != ECrossguardWeaponType::MagicStaff;
 	Equipment.MainHand = Weapon;
 	std::vector<Crossguard::EWeaponType> Required;
-	for (const ECrossguardWeaponType Type : AnyOf)
+	for (const ECrossguardWeaponType RequiredType : AnyOf)
 	{
-		Required.push_back(static_cast<Crossguard::EWeaponType>(Type));
+		Required.push_back(static_cast<Crossguard::EWeaponType>(RequiredType));
 	}
 	return Crossguard::SatisfiesWeaponRequirement(Required, Equipment);
 }
@@ -252,6 +271,7 @@ bool ACrossguardAICharacter::TryAttack(AActor* Target)
 		FRotator Unused;
 		GetActorEyesViewPoint(Eyes, Unused);
 		const FVector Direction = (Target->GetActorLocation() - Eyes).GetSafeNormal();
+		BreakOwnStealth();
 		UCrossguardFireballAbility::LaunchFireball(ASC, FireballClass, Eyes, Direction);
 		NextAttackTime = Now + FireballInterval;
 		return true;
@@ -264,7 +284,10 @@ bool ACrossguardAICharacter::TryAttack(AActor* Target)
 	// Readied next-attack skills ride on the attack, as on a weapon attack; AttackDamage stands in
 	// for the weapon's damage.
 	const bool bRanged = CombatRole == ECrossguardCombatRole::Ranged;
-	const FCrossguardRiderAttack Attack = bRanged ? FCrossguardRiderAttack::ForAIRanged() : FCrossguardRiderAttack::ForAIMelee(GetWieldedWeapon());
+	const FCrossguardRiderAttack Attack = bRanged ? FCrossguardRiderAttack::ForAIRanged(GetWieldedWeapon())
+		: FCrossguardRiderAttack::ForAIMelee(GetWieldedWeapon());
+	// Attacking gives it away, as a player's attack does.
+	BreakOwnStealth();
 	const FCrossguardAttackRiders Riders = UCrossguardWeaponAttackAbility::GatherRiders(Attack, ASC);
 	const FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(UCrossguardDamageEffect::StaticClass(), 1.0f, ASC->MakeEffectContext());
 	if (Spec.IsValid())
@@ -283,7 +306,7 @@ bool ACrossguardAICharacter::TryAttack(AActor* Target)
 			UCrossguardWeaponAttackAbility::FinishMeleeHits(Riders, ASC, {Target});
 		}
 	}
-	NextAttackTime = Now + AttackInterval;
+	NextAttackTime = Now + ActionSpeedInterval(AttackInterval);
 	return true;
 }
 
@@ -309,4 +332,31 @@ void ACrossguardAICharacter::ShootArrow(AActor* Target, const FGameplayEffectSpe
 		Arrow->bCancelSkillsOnHit = Riders.bCancelSkills;
 		Arrow->FinishSpawning(SpawnTransform);
 	}
+}
+
+void ACrossguardAICharacter::BreakOwnStealth()
+{
+	UCrossguardAbilitySystemComponent* ASC = GetCrossguardAbilitySystemComponent();
+	if (ASC == nullptr || !ASC->HasMatchingGameplayTag(CrossguardTags::State_Stealthed))
+	{
+		return;
+	}
+	for (FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+	{
+		if (Spec.IsActive())
+		{
+			if (UCrossguardStealthAbility* Stealth = Cast<UCrossguardStealthAbility>(Spec.GetPrimaryInstance()))
+			{
+				Stealth->BreakStealth();
+			}
+		}
+	}
+}
+
+float ACrossguardAICharacter::ActionSpeedInterval(float Seconds) const
+{
+	// Action Speed (Quickshot, Unleash's Agility) shortens it as it does a weapon's.
+	const UCrossguardAbilitySystemComponent* ASC = GetCrossguardAbilitySystemComponent();
+	const float ActionSpeed = ASC != nullptr ? ASC->GetNumericAttribute(UCrossguardAttributeSet::GetActionSpeedAttribute()) : 0.0f;
+	return static_cast<float>(Crossguard::AttackInterval(Crossguard::FItemConfig(), 1.0, Seconds, ActionSpeed));
 }

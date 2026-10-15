@@ -15,6 +15,8 @@ namespace
 	// Data/Skills/Skills.json.
 	constexpr float MultiscaleResistance = 0.15f;
 	constexpr float MultiscaleRefreshSeconds = 1.0f;
+	// Assumption: a monster's aura reaches monsters this close (cm), not every monster in the world.
+	constexpr float MonsterAuraRange = 3000.0f;
 }
 
 // --- Multiscale -----------------------------------------------------------------------------------
@@ -66,7 +68,10 @@ void UCrossguardMultiscaleAbility::RefreshAura()
 	for (TActorIterator<ACrossguardCharacter> It(Avatar->GetWorld()); It; ++It)
 	{
 		ACrossguardCharacter* Candidate = *It;
-		if (Candidate == Avatar || UCrossguardTeamLibrary::AreAllies(Avatar, Candidate))
+		// Monsters are all one team: theirs reaches only those near them.
+		const bool bInReach = UCrossguardTeamLibrary::GetTeamId(Avatar) != UCrossguardTeamLibrary::MonsterTeamId
+			|| FVector::Dist(Avatar->GetActorLocation(), Candidate->GetActorLocation()) <= MonsterAuraRange;
+		if (Candidate == Avatar || (UCrossguardTeamLibrary::AreAllies(Avatar, Candidate) && bInReach))
 		{
 			Wanted.Add(Candidate->GetAbilitySystemComponent());
 		}
