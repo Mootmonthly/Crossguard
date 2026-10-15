@@ -49,4 +49,12 @@ namespace Crossguard
 		// Cap on the summed CDR from all sources. Cast time reduction is uncapped.
 		double CdrCap = 0.50;
 	};
+
+	struct FItemConfig
+	{
+		// Affix slots by rarity level (Common..Mystic). PLACEHOLDER, following Dark and Darker.
+		int AffixSlotsByRarity[6] = {0, 1, 2, 3, 4, 5};
+		// Floor on (1 + ActionSpeed) so very low AGI cannot stall attacks.
+		double MinActionSpeedFactor = 0.1;
+	};
 }

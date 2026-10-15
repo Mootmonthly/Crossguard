@@ -1,6 +1,7 @@
 // Unit tests for CrossguardRules. Minimal harness: no exceptions, no dependencies.
 
 #include "CrossguardRules/Combat.h"
+#include "CrossguardRules/Items.h"
 #include "CrossguardRules/Loadout.h"
 #include "CrossguardRules/Progression.h"
 #include "CrossguardRules/Stats.h"
@@ -224,6 +225,146 @@ static void TestLoadout()
 	CHECK(ValidateLoadout(Catalog, {"spear_of_liscor", "antimagic_garb"}, 1).Error == ELoadoutError::SupersededSkill);
 }
 
+static void TestRarityAndWeapons()
+{
+	const FItemConfig Config;
+
+	CHECK(RarityLevel(ERarity::Common) == 0);
+	CHECK(RarityLevel(ERarity::Mystic) == 5);
+
+	// One-Handed Sword: 30 AD, +2 per rarity level.
+	CHECK_NEAR(ValueAtRarity(30.0, 2.0, ERarity::Common), 30.0);
+	CHECK_NEAR(ValueAtRarity(30.0, 2.0, ERarity::Epic), 36.0);
+	CHECK_NEAR(ValueAtRarity(30.0, 2.0, ERarity::Mystic), 40.0);
+	// One-Handed Shield: 8% AR, +2% per rarity level.
+	CHECK_NEAR(ValueAtRarity(0.08, 0.02, ERarity::Legendary), 0.16);
+
+	CHECK(AffixSlots(Config, ERarity::Common) == 0);
+	CHECK(AffixSlots(Config, ERarity::Mystic) == 5);
+
+	// Dagger: 3 attacks per second. Two-Handed Sword: once every 1.4 s. Axe: 1.2 per second.
+	CHECK_NEAR(AttackInterval(Config, 3.0, 1.0, 0.0), 1.0 / 3.0);
+	CHECK_NEAR(AttackInterval(Config, 1.0, 1.4, 0.0), 1.4);
+	CHECK_NEAR(AttackInterval(Config, 1.2, 1.0, 0.0), 1.0 / 1.2);
+	// +25% Action Speed (Quickshot) speeds attacks up.
+	CHECK_NEAR(AttackInterval(Config, 1.0, 1.0, 0.25), 0.8);
+	// Negative Action Speed slows them, floored.
+	CHECK_NEAR(AttackInterval(Config, 1.0, 1.0, -0.2), 1.25);
+	CHECK_NEAR(AttackInterval(Config, 1.0, 1.0, -5.0), 10.0);
+	// Shields do not attack.
+	CHECK_NEAR(AttackInterval(Config, 0.0, 0.0, 0.0), 0.0);
+}
+
+static void TestEquipment()
+{
+	const FEquippedWeapon Sword{EWeaponType::Sword, EHandedness::OneHanded, true};
+	const FEquippedWeapon GreatSword{EWeaponType::Sword, EHandedness::TwoHanded, true};
+	const FEquippedWeapon GreatAxe{EWeaponType::Axe, EHandedness::TwoHanded, true};
+	const FEquippedWeapon Shield{EWeaponType::Shield, EHandedness::OneHanded, true};
+	const FEquippedWeapon Dagger{EWeaponType::Dagger, EHandedness::OneHanded, true};
+	const FEquippedWeapon Bow{EWeaponType::Bow, EHandedness::TwoHanded, false};
+	const FEquippedWeapon Staff{EWeaponType::Staff, EHandedness::TwoHanded, false};
+	const FEquippedWeapon Wildcard{EWeaponType::AnyMelee, EHandedness::OneHanded, true};
+
+	CHECK(ValidateEquipment({}) == EEquipError::None);
+	CHECK(ValidateEquipment({Sword, Shield}) == EEquipError::None);
+	CHECK(ValidateEquipment({GreatSword, std::nullopt}) == EEquipError::None);
+	CHECK(ValidateEquipment({std::nullopt, Shield}) == EEquipError::None);
+	CHECK(ValidateEquipment({GreatSword, Shield}) == EEquipError::TwoHandedWithOffHand);
+	CHECK(ValidateEquipment({Sword, Dagger}) == EEquipError::OffHandNotShield);
+	CHECK(ValidateEquipment({Shield, std::nullopt}) == EEquipError::ShieldInMainHand);
+	CHECK(ValidateEquipment({Wildcard, std::nullopt}) == EEquipError::WildcardType);
+
+	const FEquipment SwordAndBoard{Sword, Shield};
+	CHECK(SatisfiesWeaponRequirement({}, FEquipment{}));
+	CHECK(SatisfiesWeaponRequirement({EWeaponType::Sword}, SwordAndBoard));
+	CHECK(SatisfiesWeaponRequirement({EWeaponType::Shield}, SwordAndBoard));
+	CHECK(!SatisfiesWeaponRequirement({EWeaponType::Axe}, SwordAndBoard));
+	// Shade Blow: Swords or Axes.
+	CHECK(SatisfiesWeaponRequirement({EWeaponType::Sword, EWeaponType::Axe}, {GreatAxe, std::nullopt}));
+	// A two-handed sword is still a Sword (Sword Mastery, Shooting Star).
+	CHECK(SatisfiesWeaponRequirement({EWeaponType::Sword}, {GreatSword, std::nullopt}));
+
+	// Cleave: any melee weapon. The shield counts.
+	CHECK(SatisfiesWeaponRequirement({EWeaponType::AnyMelee}, SwordAndBoard));
+	CHECK(SatisfiesWeaponRequirement({EWeaponType::AnyMelee}, {std::nullopt, Shield}));
+	CHECK(!SatisfiesWeaponRequirement({EWeaponType::AnyMelee}, {Bow, std::nullopt}));
+	CHECK(!SatisfiesWeaponRequirement({EWeaponType::AnyMelee}, FEquipment{}));
+
+	// Parting The Land: two-handed melee only.
+	CHECK(SatisfiesWeaponRequirement({EWeaponType::TwoHandedMelee}, {GreatAxe, std::nullopt}));
+	CHECK(!SatisfiesWeaponRequirement({EWeaponType::TwoHandedMelee}, SwordAndBoard));
+	CHECK(!SatisfiesWeaponRequirement({EWeaponType::TwoHandedMelee}, {Bow, std::nullopt}));
+	CHECK(!SatisfiesWeaponRequirement({EWeaponType::TwoHandedMelee}, {Staff, std::nullopt}));
+}
+
+static void TestAffixRolls()
+{
+	const std::vector<FAffixDefinition> Pool{
+		{"strength", 1.0, 3.0, 1.0},
+		{"adb", 0.01, 0.05, 0.01},
+		{"move_speed", 0.02, 0.04, 0.0},
+		{"ar", 0.05, 0.05, 0.0},
+	};
+
+	// Same seed, same result.
+	const std::vector<FRolledAffix> A = RollAffixes(Pool, 3, 42);
+	const std::vector<FRolledAffix> B = RollAffixes(Pool, 3, 42);
+	CHECK(A.size() == 3);
+	bool bSame = A.size() == B.size();
+	for (size_t I = 0; bSame && I < A.size(); ++I)
+	{
+		bSame = A[I].Id == B[I].Id && A[I].Value == B[I].Value;
+	}
+	CHECK(bSame);
+
+	// Never more than the pool; never duplicates.
+	CHECK(RollAffixes(Pool, 10, 7).size() == 4);
+	CHECK(RollAffixes(Pool, 0, 7).empty());
+	CHECK(RollAffixes({}, 3, 7).empty());
+
+	// Values stay in range and on the step grid; both ends of a stepped range are reachable.
+	bool bInRange = true;
+	bool bOnGrid = true;
+	bool bSawMin = false;
+	bool bSawMax = false;
+	bool bDistinct = true;
+	for (uint64_t Seed = 0; Seed < 2000; ++Seed)
+	{
+		const std::vector<FRolledAffix> Rolled = RollAffixes(Pool, 4, Seed);
+		for (size_t I = 0; I < Rolled.size(); ++I)
+		{
+			for (size_t J = 0; J < I; ++J)
+			{
+				bDistinct = bDistinct && Rolled[I].Id != Rolled[J].Id;
+			}
+			for (const FAffixDefinition& Def : Pool)
+			{
+				if (Def.Id != Rolled[I].Id)
+				{
+					continue;
+				}
+				bInRange = bInRange && Rolled[I].Value >= Def.Min - 1e-12 && Rolled[I].Value <= Def.Max + 1e-12;
+				if (Def.Step > 0.0)
+				{
+					const double Steps = (Rolled[I].Value - Def.Min) / Def.Step;
+					bOnGrid = bOnGrid && std::fabs(Steps - std::round(Steps)) < 1e-9;
+				}
+				if (Def.Id == "strength")
+				{
+					bSawMin = bSawMin || Rolled[I].Value == 1.0;
+					bSawMax = bSawMax || Rolled[I].Value == 3.0;
+				}
+			}
+		}
+	}
+	CHECK(bInRange);
+	CHECK(bOnGrid);
+	CHECK(bDistinct);
+	CHECK(bSawMin);
+	CHECK(bSawMax);
+}
+
 static void TestIncludeCycle()
 {
 	FSkillCatalog Catalog;
@@ -241,6 +382,9 @@ int main()
 	TestReductions();
 	TestLoadout();
 	TestIncludeCycle();
+	TestRarityAndWeapons();
+	TestEquipment();
+	TestAffixRolls();
 
 	std::printf("%d checks, %d failures\n", GChecks, GFailures);
 	return GFailures == 0 ? 0 : 1;
