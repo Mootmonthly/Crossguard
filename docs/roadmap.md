@@ -45,7 +45,8 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | --- | --- | --- |
 | Extraction points | Code, Editor | A volume that ends the raid for a player (`EndRaid(true)`, +35 XP). Placement in levels is editor work. |
 | Raid end on failure | Code, Decision | When does a raid end for a dead player: when they leave, after a timer, when the match ends? |
-| Stash | Code, Decision | Between-raid storage; Skill Gems can be learned from it. Size and per account / per character not ruled. |
+| Stash | Code | Per character, 10 × 30 per tab; extra tabs bought with in-game currency. Skill Gems can be learned from it. |
+| Shared stash tabs | Code, Decision | Subscription benefit: tabs shared by all of an account's characters. Needs accounts and the backend. |
 | Hub / lobby map | Editor | Where players manage stash, Skill Library, attributes, loadout; game mode with `bIsRaid` off. |
 | Inventory and loot UI | Editor | Grid widgets for inventory, Backpack, Quiver, equipment, bodies. The C++ API is ready. |
 | Hotbar for consumables | Code, Decision | Replaces the Q placeholder. How many slots and which keys? |
@@ -87,6 +88,8 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Auction house | Code, Decision | Needs the backend and a currency. |
 | Guilds and guild bank | Code | Members deposit; officers withdraw, manage, redistribute. |
 | Respec store purchase | Code | Grants respec tokens after a verified purchase; price not set. |
+| Subscription | Decision, Code | Shared stash tabs; other benefits not set. |
+| In-game currency | Decision, Code | Buys stash tabs; the auction house needs it too. |
 | Cosmetics | Decision, Editor | |
 
 ## Milestone 5: Online
@@ -105,7 +108,8 @@ Decisions that block items above. Answers go into design-decisions.md.
 
 | Question | Blocks |
 | --- | --- |
-| Stash size; one per account or per character? | Stash |
+| Stash tab price, and the in-game currency itself | Buying stash tabs |
+| Subscription price and other benefits | Shared stash tabs |
 | When does the raid end for a player who died and was not revived? | Raid end |
 | Hotbar: how many slots, which keys? | Hotbar |
 | Can the loadout change during a raid? | Loadout timing |

@@ -159,6 +159,9 @@ Independent of category, a skill is:
   in the library cannot be learned again (the gem is kept). Gems can also be sold on the auction
   house, deposited in a guild bank, or traded.
 - The loadout can only equip skills in the Skill Library.
+- Stash: between-raid storage, per character. One tab is 10 × 30 squares. More tabs are bought with
+  in-game currency (price not set). A planned subscription adds shared stash tabs that every
+  character on the account can use.
 - Guild banks: a shared stash per guild; every member deposits, only officers withdraw, manage or
   redistribute.
 
