@@ -100,14 +100,18 @@
     "skills": [
       "heroic_might",
       "divine_alacrity",
-      "antimagic_garb"
+      "arcane_intellect",
+      "the_mithril_knight",
+      "flare_breath",
+      "summon_skeletons",
+      "summon_greater_demon"
     ],
     "loot": {
       "rolls": [
-        0,
-        2
+        5,
+        12
       ],
-      "nothingWeight": 40,
+      "nothingWeight": 0,
       "rarityWeights": {
         "Common": 0,
         "Uncommon": 0,
@@ -128,7 +132,7 @@
         },
         {
           "kind": "Weapon",
-          "id": "sword_two_handed",
+          "id": null,
           "weight": 10,
           "count": [
             1,
@@ -152,6 +156,15 @@
             1,
             1
           ]
+        },
+        {
+          "kind": "Armor",
+          "id": null,
+          "weight": 10,
+          "count": [
+            1,
+            1
+          ]
         }
       ]
     },
@@ -163,10 +176,10 @@
     "name": "skeleton archer",
     "kind": "Monster",
     "combatRole": "Ranged",
-    "weapon": null,
+    "weapon": "bow",
     "health": 80,
-    "attackDamage": 12,
-    "attackInterval": 1.5,
+    "attackDamage": 25,
+    "attackInterval": 1,
     "attackRange": 20,
     "fireballInterval": 8,
     "keepDistance": 8,
@@ -174,7 +187,10 @@
     "leashRange": 30,
     "moveSpeed": 4.5,
     "scale": 1,
-    "skills": [],
+    "skills": [
+      "bow_mastery",
+      "antimagic_garb"
+    ],
     "loot": {
       "rolls": [
         1,
@@ -246,7 +262,7 @@
     "name": "skeleton mage",
     "kind": "Monster",
     "combatRole": "Mage",
-    "weapon": null,
+    "weapon": "staff_two_handed",
     "health": 80,
     "attackDamage": 12,
     "attackInterval": 1.5,
@@ -257,13 +273,18 @@
     "leashRange": 30,
     "moveSpeed": 4.5,
     "scale": 1,
-    "skills": [],
+    "skills": [
+      "fireball",
+      "eldritch_shield",
+      "heal",
+      "wall"
+    ],
     "loot": {
       "rolls": [
         1,
         4
       ],
-      "nothingWeight": 40,
+      "nothingWeight": 10,
       "rarityWeights": {
         "Common": 60,
         "Uncommon": 25,
@@ -329,9 +350,9 @@
     "name": "skeleton soldier",
     "kind": "Monster",
     "combatRole": "Warrior",
-    "weapon": null,
-    "health": 80,
-    "attackDamage": 25,
+    "weapon": "sword_two_handed",
+    "health": 120,
+    "attackDamage": 30,
     "attackInterval": 1.5,
     "attackRange": 2,
     "fireballInterval": 8,
@@ -342,7 +363,9 @@
     "scale": 1,
     "skills": [
       "sword_mastery",
-      "antimagic_garb"
+      "antimagic_garb",
+      "cleave",
+      "heroic_might"
     ],
     "loot": {
       "rolls": [
@@ -371,15 +394,6 @@
         {
           "kind": "Weapon",
           "id": "sword_one_handed",
-          "weight": 10,
-          "count": [
-            1,
-            1
-          ]
-        },
-        {
-          "kind": "Armor",
-          "id": "leather_boots",
           "weight": 10,
           "count": [
             1,
