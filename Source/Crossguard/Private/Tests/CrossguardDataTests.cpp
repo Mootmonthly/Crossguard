@@ -39,13 +39,13 @@ namespace CrossguardDataTestLocal
 	// Indices into Tables().
 	enum ETable : int32
 	{
-		Skills,
-		Weapons,
-		Affixes,
-		Armor,
-		Items,
-		Loot,
-		Mobs,
+		TableSkills,
+		TableWeapons,
+		TableAffixes,
+		TableArmor,
+		TableItems,
+		TableLoot,
+		TableMobs,
 		Count
 	};
 
@@ -116,16 +116,16 @@ bool FCrossguardRepoTablesTest::RunTest(const FString& Parameters)
 			return false;
 		}
 	}
-	const UDataTable* SkillTable = Imported[ETable::Skills].Get();
-	const UDataTable* WeaponTable = Imported[ETable::Weapons].Get();
-	const UDataTable* ArmorTable = Imported[ETable::Armor].Get();
-	const UDataTable* ItemTable = Imported[ETable::Items].Get();
-	const UDataTable* LootTable = Imported[ETable::Loot].Get();
-	const UDataTable* MobTable = Imported[ETable::Mobs].Get();
+	const UDataTable* SkillTable = Imported[ETable::TableSkills].Get();
+	const UDataTable* WeaponTable = Imported[ETable::TableWeapons].Get();
+	const UDataTable* ArmorTable = Imported[ETable::TableArmor].Get();
+	const UDataTable* ItemTable = Imported[ETable::TableItems].Get();
+	const UDataTable* LootTable = Imported[ETable::TableLoot].Get();
+	const UDataTable* MobTable = Imported[ETable::TableMobs].Get();
 
 	// A catalog over the imported skill table, as DA_SkillCatalog is set up (no AbilityClasses).
 	TStrongObjectPtr<UCrossguardSkillCatalog> Catalog(NewObject<UCrossguardSkillCatalog>(GetTransientPackage(), NAME_None, RF_Transient));
-	Catalog->SkillTable = Imported[ETable::Skills].Get();
+	Catalog->SkillTable = Imported[ETable::TableSkills].Get();
 
 	// Native skills match their data rows (what the catalog's data validation checks for AbilityClasses).
 	for (const TPair<FName, TSubclassOf<UCrossguardGameplayAbility>>& Pair : CrossguardNativeSkills::All())
@@ -183,11 +183,11 @@ bool FCrossguardRepoTablesTest::RunTest(const FString& Parameters)
 
 	// Every table rolls, with every drop resolvable (RollLoot logs a warning for each one it drops).
 	FCrossguardLootSources Sources;
-	Sources.LootTables = Imported[ETable::Loot].Get();
-	Sources.WeaponTable = Imported[ETable::Weapons].Get();
-	Sources.ArmorTable = Imported[ETable::Armor].Get();
-	Sources.AffixTable = Imported[ETable::Affixes].Get();
-	Sources.ItemTable = Imported[ETable::Items].Get();
+	Sources.LootTables = Imported[ETable::TableLoot].Get();
+	Sources.WeaponTable = Imported[ETable::TableWeapons].Get();
+	Sources.ArmorTable = Imported[ETable::TableArmor].Get();
+	Sources.AffixTable = Imported[ETable::TableAffixes].Get();
+	Sources.ItemTable = Imported[ETable::TableItems].Get();
 	Sources.SkillCatalog = Catalog.Get();
 	int32 Dropped = 0;
 	for (const FName& TableId : LootTable->GetRowNames())
@@ -246,7 +246,7 @@ bool FCrossguardEditorAssetsTest::RunTest(const FString& Parameters)
 			continue;
 		}
 		++Found;
-		if (Index == ETable::Skills)
+		if (Index == ETable::TableSkills)
 		{
 			SkillsAsset = Asset;
 		}

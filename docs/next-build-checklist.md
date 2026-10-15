@@ -3,6 +3,10 @@
 Everything written since the last editor build, in the order to set up and test it. Tick items off
 as you go; anything that fails, paste the error or describe what happened.
 
+**Automated check first:** with the editor closed, run `Tools\run_editor_tests.bat` in the project
+folder. It builds, runs the `Crossguard.*` editor tests headlessly and writes
+`Saved\EditorTests\summary.txt` (paste that if anything fails). See [editor-tests.md](editor-tests.md).
+
 ## 1. Pull and build
 
 1. Close the editor. In the project folder: `git pull origin foundation/core-rules`.
