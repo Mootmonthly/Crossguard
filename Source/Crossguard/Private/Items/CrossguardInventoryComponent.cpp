@@ -239,7 +239,7 @@ bool UCrossguardInventoryComponent::FindPlacement(FCrossguardInventoryItem& Item
 {
 	const Crossguard::FGridSize Size{Item.Size.X, Item.Size.Y};
 	const ECrossguardInventoryContainer* Order = Item.Category == ECrossguardItemCategory::Ammo ? AmmoOrder : AllContainers;
-	for (int32 OrderIndex = 0; OrderIndex < UE_ARRAY_COUNT(AllContainers); ++OrderIndex)
+	for (int32 OrderIndex = 0; OrderIndex < static_cast<int32>(UE_ARRAY_COUNT(AllContainers)); ++OrderIndex)
 	{
 		const ECrossguardInventoryContainer Container = Order[OrderIndex];
 		Crossguard::FGridPlacement Spot;
