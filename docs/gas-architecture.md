@@ -55,6 +55,13 @@ subclass with visuals) wins. Catalog data validation also flags cooldowns that d
 | Flight | `UCrossguardFlightAbility` | `MOVE_Flying` on server and owner; asset tag `Ability.Flight`, owned tag `State.Flying`. |
 | Summon Skeletons | `UCrossguardSummonSkeletonsAbility` | `ACrossguardMinion` + `ACrossguardMinionController`. Minions need a NavMesh to path; without one they walk straight. |
 
+| Next-attack skills | `UCrossguardNextAttackAbility` subclasses | Add a `State.NextAttack.*` tag; `UCrossguardWeaponAttackAbility::GatherRiders` turns readied tags (and Arcane Arrows / Splinter of Winter) into `FCrossguardAttackRiders`: extra damage and on-hit specs, also carried by projectiles. |
+| Quickshot, Arcane Arrows, Cleave, Triple Thrust, Parting the Land, Hunter's Leap | `CrossguardWeaponSkills` | Hunter's Leap: root motion jump (predicted). |
+| Greater Heal, Benediction, Unleash, Light, Wall, Stealth, Immutable, Splinter of Winter | `CrossguardSupportSkills` | `ACrossguardWall`, `ACrossguardLightOrb` (replicated placeholders). Stealth: `State.Stealthed`; each machine hides the body unless the local player is an ally. |
+
+Crowd control goes through `ApplyStatus` / `ApplySlow` / `ApplyOnHitSpec`, which skip it on targets
+with `State.CCImmune` or the Immutable passive (`IsCrowdControl`, `IsCrowdControlImmune`).
+
 Shared helpers are on `UCrossguardSkillAbility`: damage / healing specs, `ApplyStatus` (timed state
 tag), `ApplySlow`, `GetAim`, `FindAimedTarget`.
 

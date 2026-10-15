@@ -20,7 +20,7 @@ order changes.
 | Character | First-person camera, Enhanced Input built in code, GAS stats derived from STR/AGI/INT. |
 | Combat | Weapon attacks (melee sweep, hitscan wand, projectiles), damage and healing formulas, dual wield, cooldowns with CDR cap. Bows use arrows. |
 | Equipment | Main hand / off hand, six armor slots, rolled affixes, equipment stats and tags. |
-| Skills | Loadout validation (Capacity, bundles, superseded skills), Skill Library gating. Passive stat bonuses play from the skill data. 10 skills playable from C++: Fireball, Heal, Mute, Eldritch Shield, Chop Down, Shooting Star, Dragonification (Flare Breath, Flight), Summon Skeletons. |
+| Skills | Loadout validation (Capacity, bundles, superseded skills), Skill Library gating. Passive stat bonuses play from the skill data. 42 of 49 skills playable: 29 in C++ (including the next-attack system, Stealth, walls, CC immunity) and the stat passives from data. |
 | Progression | XP sources, level curve, raid XP banked on extraction, attribute allocation, paid respec tokens. Session only, not saved. |
 | Stash | Per-character tabs of 10 × 30, between raids only. Not saved yet. |
 | Inventory | Server-authoritative 10 × 5 grid, Backpack and Quiver, stacking by type and rarity, equip through the inventory, Skill Gems, hotbar keys 3–7 for potions, bandages and throwables, two weapon sets on 1 and 2. |
@@ -63,7 +63,8 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 
 | Item | Needs | Notes |
 | --- | --- | --- |
-| Implement skills | Code | 10 of 49 playable (first batch). Next batch: pick from the data. |
+| Remaining skills | Code, Decision | Summon Tiger and Summon Greater Demon (minions that use skills), Neckbite (needs a Beastial form), Hunter's Tracking (footsteps, hearing), Multiscale / Mithril Knight party auras, Triple Thrust piercing (needs blocking), Arcane Arrows dropoff (needs arrow dropoff). |
+| Stealth teammate indicator | Editor | Teammates should see when an ally is stealthed (outline or translucency). |
 | Skill visuals | Editor | Fireball, breath, shield, Blind screen effect, dragon form, skeleton meshes. |
 | Passives on others and free-text mechanics | Code | Data-driven passives cover Self stat modifiers (masteries, Heroic Might, Cor Leonis, ...); party auras, on-hit slows and mechanics like Hunter's Tracking still need code. |
 | Block (shields) and parry | Code | Right-click actions already chosen by the rules; not built. |

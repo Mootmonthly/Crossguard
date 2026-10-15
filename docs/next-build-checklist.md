@@ -73,6 +73,18 @@ Skills: put them in `DebugSkills` (Skill Capacity permitting; raise `Level` with
 | `shooting_star` with a sword, facing the second client | You dash 10 m through them; they take 50 and get `State.Blinded` for 2 s. |
 | `dragonification` | Max HP +50%, 1 / 2 and other skills refused; Flare Breath and Flight appear on Q; all gone after 45 s. |
 | `flight`: Space / Left Ctrl | You rise and descend; you fall after 20 s. |
+| Next-attack: `slash`, `mortal_strike`, `shade_blow` (sword in hand), then left click the dummy | States shows each ready tag; one hit uses them all: +7, +20 Attack, +20 Magic. Kill with Mortal Strike: it is castable again at once. |
+| `gouge` (dagger) then hit | The dummy takes 5 per second for 5 s. |
+| `shade_blow` hit, then `heal` the dummy | No healing for 5 s (no "healed" log line). |
+| `purge_shot` (bow) then shoot the second client | They are Muted 3 s and +10 damage. |
+| `cleave` with a sword next to the dummy | About 85% of a normal hit. |
+| `parting_the_land` with `sword_two_handed` | The dummy takes 65 and pops up; two walls (boxes) appear for 15 s. |
+| `hunters_leap` | You leap forward (5 m at 10 AGI). |
+| `wall`, `light` | A box wall 3 m ahead for 15 s; a light over your head. |
+| `stealth` with a second client watching | You vanish on their screen for 12 s or until you attack; then +10% speed (`showdebug abilitysystem`). |
+| `immutable` equipped, then hit by `chop_down` | No slow. |
+| `unleash` | STR / AGI / INT double for 15 s, Max HP follows. |
+| `benediction` aimed at a dead body (DebugReviveDelay 0) | It stands up at full HP with its gear. |
 | `summon_skeletons` (needs a NavMesh Bounds Volume) | 6 cylinders appear, attack the dummy, follow you otherwise, vanish after 60 s; casting again replaces them. |
 
 Passive skills: put `heroic_might` (or a mastery) in `DebugSkills` and check

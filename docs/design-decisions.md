@@ -123,6 +123,20 @@ Rulings for the first skills built in C++ (defaults proposed and accepted, plus 
 | Flight | 20 s. Space rises, Left Ctrl descends, fly speed = walk speed. You fall when it ends, when Dragonification ends, or when Grounded. |
 | Summon Skeletons | 5 Warriors (40 HP, 10 Attack Damage per second in melee) and 1 Mage (30 HP, Fireball every 8 s, stops 8 m from its target) for 60 s. Recasting dismisses the old ones. Targets: nearest enemy player within 30 m, else nearest enemy non-player, else follow you. On your team; their kills give you the XP; killing them gives none. |
 
+| Slash, Mortal Strike, Shade Blow, Gouge, Purge Shot | "Next attack" skills: ready for 10 s, used up by the next qualifying attack hit or miss (melee; Purge Shot: bow or crossbow). Several readied at once all apply to that attack. Mortal Strike's cooldown comes back on a kill. Shade Blow blocks all healing (potions too) for 5 s. Gouge: 5 Attack Damage per second for 5 s and -5% speed. Purge Shot: +10 Magic Damage and a 3 s Mute. |
+| Greater Heal | As Heal, 55. |
+| Benediction | Target under the crosshair within 15 m is healed to full, ally or enemy. Aimed at a body still in its revive window: a full revive (unlooted gear back). Nobody: yourself. |
+| Quickshot, Arcane Arrows, Unleash | Self buffs. Unleash doubles STR / AGI / INT (gear and buffs included) for 15 s. Arcane Arrows' dropoff part waits until arrows have damage dropoff. |
+| Cleave | 85% of the main-hand weapon's damage to everyone in a 3 m, 120° arc in front, allies too. |
+| Triple Thrust | Three thrusts 0.15 s apart, each spear damage +15, 2.5 m reach. Piercing waits for blocking. |
+| Parting the Land | 8 m × 2 m strip ahead: 65 Attack Damage and a knock-up to everyone in it; a 15 s Wall along each side. |
+| Hunter's Leap | 0.5 m per AGI point forward, 1.5 m high, 0.6 s. |
+| Light | A light over your head for 120 s; recasting replaces it. |
+| Wall | 4 m wide, 3 m tall, 0.5 m thick, 3 m in front, across your view. Indestructible, 15 s. |
+| Stealth | Invisible to everyone outside your party (and to minions) for 12 s. Attacking, casting or taking damage ends it early. The exit bonus (+10% speed, +25% Attack Bonus for 3 s) applies however it ends, except death or Mute. Later: an indicator so teammates can tell you are stealthed. |
+| Immutable | Crowd control = Slow, Blind, knock-up, Grounding (later Silence, Stun, Root). **Mute is not crowd control.** Equipped (and not Muted): permanently immune. Activated: you and party members within 10 m immune for 5 s. Existing crowd control is not removed. |
+| Splinter of Winter | Dagger attacks: +5 Magic Damage and -10% speed for 3 s. |
+
 All skills end on death.
 
 ### Skill categories
