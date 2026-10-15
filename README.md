@@ -17,7 +17,7 @@ Fantasy extraction game. Unreal Engine 5 with the Gameplay Ability System.
 
 ## Setup
 
-1. Install Unreal Engine 5.7 (or right-click `Crossguard.uproject` → *Switch Unreal Engine version*).
+1. Install Unreal Engine 5.8 (or right-click `Crossguard.uproject` → *Switch Unreal Engine version*).
 2. Install Git LFS and run `git lfs install` once.
 3. Right-click `Crossguard.uproject` → *Generate Visual Studio project files*, then build the
    `CrossguardEditor` target.
