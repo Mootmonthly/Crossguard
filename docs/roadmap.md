@@ -69,7 +69,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Passives on others and free-text mechanics | Code | Data-driven passives cover Self stat modifiers (masteries, Heroic Might, Cor Leonis, ...); party auras, on-hit slows and mechanics like Hunter's Tracking still need code. |
 | Block (shields) and parry | Code | Right-click actions already chosen by the rules; not built. |
 | Status effects | Code | Stun, Root. (Slow, Mute, Silence, Blind and Attack Damage shields exist.) |
-| Minions | Code, Editor | Minion CDR; meshes for skeletons, tiger and demon. All three summons exist; minions and monsters use their skills. |
+| Minion meshes | Editor | Meshes for skeletons, tiger and demon (cylinders now). All three summons exist, Minion CDR applies to them, and minions and monsters use their skills. |
 | Animations, first-person arms | Editor | Melee hits are sphere sweeps until weapon collision exists. |
 | Weapon-on-weapon collision (fencing) | Code, Editor | |
 
