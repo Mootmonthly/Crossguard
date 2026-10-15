@@ -111,6 +111,9 @@ namespace CrossguardScenarioSupportSkills
 	constexpr float HealthMissing = 50.0f;
 	// Game-time speed-up for long cooldowns and durations (the engine caps it at 20).
 	constexpr float FastForward = 10.0f;
+	// Aimed skills look along the player's view, which a PlayerController reads from its camera
+	// manager, updated once a frame: wait this long after Aim / Face before casting.
+	constexpr float ViewCatchUp = 0.2f;
 
 	UAbilitySystemComponent* AbilitySystemOf(const AActor* Actor)
 	{
@@ -313,6 +316,21 @@ bool FCrossguardScenarioSupportHeal::RunTest(const FString& Parameters)
 
 	Scenario.Wait(0.5f);
 
+	Scenario.Step(TEXT("Hurt the dummy; the healer aims at it"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Healer = Character(C, TEXT("Healer"));
+		ACrossguardCharacter* Dummy = Character(C, TEXT("Dummy"));
+		if (Healer == nullptr || Dummy == nullptr)
+		{
+			C.Fail(TEXT("healer or dummy gone"));
+			return;
+		}
+		SetHealth(Dummy, FMath::Max(1.0f, C.MaxHealth(Dummy) - HealthMissing));
+		C.Aim(Healer, Dummy);
+	});
+
+	Scenario.Wait(ViewCatchUp);
+
 	Scenario.Step(TEXT("Heal the damaged dummy"), [](FScenarioContext& C)
 	{
 		ACrossguardCharacter* Healer = Character(C, TEXT("Healer"));
@@ -323,11 +341,9 @@ bool FCrossguardScenarioSupportHeal::RunTest(const FString& Parameters)
 			return;
 		}
 		const float Max = C.MaxHealth(Dummy);
-		SetHealth(Dummy, FMath::Max(1.0f, Max - HealthMissing));
 		const float Before = C.Health(Dummy);
 		const float Expected = FMath::Min(ExpectedHealing(C, Healer, HealAmount), Max - Before);
 		const float HealerBefore = C.Health(Healer);
-		C.Aim(Healer, Dummy);
 		if (!C.Require(C.ActivateSkill(Healer, TEXT("heal")), TEXT("Heal activates")))
 		{
 			return;
@@ -348,9 +364,20 @@ bool FCrossguardScenarioSupportHeal::RunTest(const FString& Parameters)
 		return Healer != nullptr && !C.IsOnCooldown(Healer, TEXT("heal"));
 	});
 
-	Scenario.Step(TEXT("Hurt, the healer casts Heal at nothing: it heals itself"), [](FScenarioContext& C)
+	Scenario.Step(TEXT("The healer turns to face nothing"), [](FScenarioContext& C)
 	{
 		C.SetTimeDilation(1.0f);
+		// Nobody along +Y within 15 m.
+		if (ACrossguardCharacter* Healer = Character(C, TEXT("Healer")))
+		{
+			C.Face(Healer, 90.0f);
+		}
+	});
+
+	Scenario.Wait(ViewCatchUp);
+
+	Scenario.Step(TEXT("Hurt, the healer casts Heal at nothing: it heals itself"), [](FScenarioContext& C)
+	{
 		ACrossguardCharacter* Healer = Character(C, TEXT("Healer"));
 		ACrossguardCharacter* Dummy = Character(C, TEXT("Dummy"));
 		if (Healer == nullptr || Dummy == nullptr)
@@ -358,8 +385,6 @@ bool FCrossguardScenarioSupportHeal::RunTest(const FString& Parameters)
 			C.Fail(TEXT("healer or dummy gone"));
 			return;
 		}
-		// Nobody along +Y within 15 m.
-		C.Face(Healer, 90.0f);
 		const float Max = C.MaxHealth(Healer);
 		SetHealth(Healer, FMath::Max(1.0f, Max - HealthMissing));
 		const float Before = C.Health(Healer);
@@ -412,6 +437,17 @@ bool FCrossguardScenarioSupportMute::RunTest(const FString& Parameters)
 
 	Scenario.Wait(0.5f);
 
+	Scenario.Step(TEXT("The caster turns to face nothing"), [](FScenarioContext& C)
+	{
+		// Nobody along +Y within 20 m.
+		if (ACrossguardCharacter* Caster = Character(C, TEXT("Caster")))
+		{
+			C.Face(Caster, 90.0f);
+		}
+	});
+
+	Scenario.Wait(ViewCatchUp);
+
 	Scenario.Step(TEXT("Mute at nothing: it fails and no cooldown starts"), [](FScenarioContext& C)
 	{
 		ACrossguardCharacter* Caster = Character(C, TEXT("Caster"));
@@ -421,12 +457,13 @@ bool FCrossguardScenarioSupportMute::RunTest(const FString& Parameters)
 			C.Fail(TEXT("caster or target gone"));
 			return;
 		}
-		// Nobody along +Y within 20 m.
-		C.Face(Caster, 90.0f);
 		C.ActivateSkill(Caster, TEXT("mute"));
 		C.Test.TestFalse(TEXT("Mute at nothing starts no cooldown"), C.IsOnCooldown(Caster, TEXT("mute")));
 		C.Test.TestFalse(TEXT("Nobody is Muted"), C.HasTag(Target, CrossguardTags::State_Muted));
+		C.Aim(Caster, Target);
 	});
+
+	Scenario.Wait(ViewCatchUp);
 
 	Scenario.Step(TEXT("Mute the target"), [](FScenarioContext& C)
 	{
@@ -437,7 +474,6 @@ bool FCrossguardScenarioSupportMute::RunTest(const FString& Parameters)
 			C.Fail(TEXT("caster or target gone"));
 			return;
 		}
-		C.Aim(Caster, Target);
 		C.SetNumber(TEXT("TargetBefore"), C.Health(Target));
 		// One tick of the Mute's damage over time: 5 Magic Damage, coefficient 1, from the caster.
 		C.SetNumber(TEXT("Tick"), C.ExpectedDamage(Caster, Target, 0.0f, MuteDamagePerSecond, 1.0f));
@@ -1616,7 +1652,7 @@ bool FCrossguardScenarioSupportBenediction::RunTest(const FString& Parameters)
 
 	Scenario.Wait(1.0f);
 
-	Scenario.Step(TEXT("Benediction aimed at the body revives it with its gear"), [](FScenarioContext& C)
+	Scenario.Step(TEXT("The priest aims at the body"), [](FScenarioContext& C)
 	{
 		ACrossguardCharacter* Priest = Character(C, TEXT("Priest"));
 		ACrossguardCharacter* Fallen = Character(C, TEXT("Fallen"));
@@ -1633,6 +1669,19 @@ bool FCrossguardScenarioSupportBenediction::RunTest(const FString& Parameters)
 			Fallen->GetEquipmentComponent()->GetItem(ECrossguardEquipmentSlot::MainHand).WeaponId.IsNone());
 		// The body is the ragdolled mesh.
 		C.AimAt(Priest, Fallen->GetMesh()->GetComponentLocation());
+	});
+
+	Scenario.Wait(ViewCatchUp);
+
+	Scenario.Step(TEXT("Benediction aimed at the body revives it with its gear"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Priest = Character(C, TEXT("Priest"));
+		ACrossguardCharacter* Fallen = Character(C, TEXT("Fallen"));
+		if (Priest == nullptr || Fallen == nullptr)
+		{
+			C.Fail(TEXT("priest or body gone"));
+			return;
+		}
 		if (!C.Require(C.ActivateSkill(Priest, TEXT("benediction")), TEXT("Benediction activates")))
 		{
 			return;
@@ -1653,9 +1702,20 @@ bool FCrossguardScenarioSupportBenediction::RunTest(const FString& Parameters)
 		return Priest != nullptr && !C.IsOnCooldown(Priest, TEXT("benediction"));
 	});
 
-	Scenario.Step(TEXT("Hurt, the priest casts Benediction at nothing: full HP"), [](FScenarioContext& C)
+	Scenario.Step(TEXT("The priest turns to face nothing"), [](FScenarioContext& C)
 	{
 		C.SetTimeDilation(1.0f);
+		// Nobody along +Y within 15 m.
+		if (ACrossguardCharacter* Priest = Character(C, TEXT("Priest")))
+		{
+			C.Face(Priest, 90.0f);
+		}
+	});
+
+	Scenario.Wait(ViewCatchUp);
+
+	Scenario.Step(TEXT("Hurt, the priest casts Benediction at nothing: full HP"), [](FScenarioContext& C)
+	{
 		ACrossguardCharacter* Priest = Character(C, TEXT("Priest"));
 		ACrossguardCharacter* Fallen = Character(C, TEXT("Fallen"));
 		if (Priest == nullptr || Fallen == nullptr)
@@ -1663,8 +1723,6 @@ bool FCrossguardScenarioSupportBenediction::RunTest(const FString& Parameters)
 			C.Fail(TEXT("priest or swordsman gone"));
 			return;
 		}
-		// Nobody along +Y within 15 m.
-		C.Face(Priest, 90.0f);
 		SetHealth(Priest, C.MaxHealth(Priest) * 0.5f);
 		SetHealth(Fallen, C.MaxHealth(Fallen) * 0.5f);
 		const float FallenBefore = C.Health(Fallen);
