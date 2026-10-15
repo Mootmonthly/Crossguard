@@ -219,6 +219,13 @@ namespace CrossguardScenario
 		// Returns success; failures add errors.
 		bool GrantSkills(ACrossguardCharacter* Character, const TArray<FName>& SkillIds);
 
+		// Sets Health directly (e.g. one hit from death).
+		void SetHealth(AActor* Actor, float Value);
+
+		// A timed state tag on Actor (State.Silenced, State.NextAttack.Riposte, ...), as skills apply it
+		// (crowd control skipped on the immune).
+		void ApplyStatus(AActor* Actor, FGameplayTag State, float Seconds);
+
 		// --- Acting -------------------------------------------------------------------------------
 
 		// Turns body and controller to Yaw, level (pitch 0). Melee swings use the body's facing at once.

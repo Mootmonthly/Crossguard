@@ -48,6 +48,7 @@
 #include "Settings/LevelEditorPlaySettings.h"
 #include "Skills/CrossguardLoadoutComponent.h"
 #include "Skills/CrossguardNativeSkills.h"
+#include "Skills/CrossguardSkillAbility.h"
 #include "Tests/AutomationEditorCommon.h"
 #include "UObject/Package.h"
 #include "UObject/StrongObjectPtr.h"
@@ -63,6 +64,9 @@ namespace CrossguardScenarioLocal
 	constexpr double PIEEndTimeout = 30.0;
 	// Gap between a capsule's bottom and the floor when a character is spawned (cm).
 	constexpr float SpawnClearance = 2.0f;
+	// GrantSkills raises a character's level up to this when a loadout needs more Skill Capacity
+	// (the default MaxLevel in CrossguardRules/Config.h).
+	constexpr int32 MaxTestLevel = 15;
 
 	const TCHAR* const PreferredGameMode = TEXT("BP_CrossguardGameMode");
 	const TCHAR* const PreferredCharacter = TEXT("BP_CrossguardCharacter");
@@ -529,7 +533,15 @@ namespace CrossguardScenario
 					Progression->LearnSkillForTesting(Skill);
 				}
 			}
-			const FCrossguardLoadoutResult Result = Loadout->ValidateLoadout(SkillIds);
+			FCrossguardLoadoutResult Result = Loadout->ValidateLoadout(SkillIds);
+			// Not enough Skill Capacity at this level: raise the level (debug progression) until it fits,
+			// up to the cap. Attributes are left as they are; ExpectedDamage reads the current stats.
+			while (Result.Error == ECrossguardLoadoutError::OverCapacity && Character->Level < MaxTestLevel)
+			{
+				Character->bUseDebugProgression = true;
+				++Character->Level;
+				Result = Loadout->ValidateLoadout(SkillIds);
+			}
 			if (!Result.IsValid())
 			{
 				Test.AddError(FString::Printf(TEXT("GrantSkills on %s: the loadout refuses it: %s (skill %s, other %s, cost %d of %d)"),
@@ -1340,3 +1352,30 @@ namespace CrossguardScenario
 }
 
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
+
+#if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
+namespace CrossguardScenario
+{
+	void FScenarioContext::SetHealth(AActor* Actor, float Value)
+	{
+		UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Actor);
+		if (ASC == nullptr)
+		{
+			Fail(TEXT("SetHealth: no ability system"));
+			return;
+		}
+		ASC->SetNumericAttributeBase(UCrossguardAttributeSet::GetHealthAttribute(), Value);
+	}
+
+	void FScenarioContext::ApplyStatus(AActor* Actor, FGameplayTag State, float Seconds)
+	{
+		UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Actor);
+		if (ASC == nullptr)
+		{
+			Fail(TEXT("ApplyStatus: no ability system"));
+			return;
+		}
+		UCrossguardSkillAbility::ApplyStatus(ASC, ASC, State, Seconds);
+	}
+}
+#endif
