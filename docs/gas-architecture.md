@@ -107,8 +107,8 @@ exist.
 
 - 1 / 2: `UCrossguardEquipmentComponent::RequestSwitchWeaponSet` draws that set (1 s ÷ (1 +
   Dexterity); `AreWeaponsReady()` is false meanwhile and weapon attacks refuse). Taking an item in
-  hand holsters the weapons. Each set is a main hand and an off hand; only the active set counts for
-  stats, tags and skill requirements. Equip into
+  hand holsters the weapons. Each set is a main hand and an off hand; only the set drawn and in hand
+  (`AreWeaponsReady()`) counts for stats, affixes, tags, masteries and skill requirements. Equip into
   either set with `RequestEquipItem(ItemId, Slot, WeaponSet)`.
 - Hold Q: `UCrossguardLoadoutComponent::SetSkillWheelOpen` broadcasts `OnSkillWheelOpened` /
   `OnSkillWheelClosed` for the wheel widget, which lists `GetActivatableSkills()` and calls

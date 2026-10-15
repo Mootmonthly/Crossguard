@@ -39,8 +39,9 @@ enum class ECrossguardSecondaryAction : uint8
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCrossguardEquipmentChanged);
 
 // Two weapon sets (keys 1 and 2), each a main hand and an off hand, and the six armor slots
-// (docs/item-data-schema.md). Only the active set is in hand: its weapons attack and count for
-// stats, tags and skill requirements. Dual wielding: any one-handed weapon fits the off hand.
+// (docs/item-data-schema.md). Weapons attack and count for stats, affixes, Wielding tags, masteries
+// and skill requirements only while their set is drawn and in hand: not while stowed, put away for
+// an item, or still being drawn. Armor always counts. Dual wielding: any one-handed weapon fits the off hand.
 //
 // Changes are server only: players equip through UCrossguardInventoryComponent, which moves the item
 // between the inventory and the slot. The server validates every change, then re-applies one UCrossguardEquipmentEffect holding the

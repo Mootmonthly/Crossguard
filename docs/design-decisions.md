@@ -241,8 +241,9 @@ point of interest instead of only using fixed extraction points. Ruled details:
 - All are 1 × 3 and stack to 3. Friendly fire applies, the thrower included.
 - "Counts as a Dagger / Axe" while in hand: mastery bonuses apply to the throw, on-hit skill
   effects of that weapon type trigger on its hits, and skills requiring that weapon can be used.
-- Assumed until ruled otherwise: weapons put away (an item in hand, or empty hands) still give their
-  stats and count for masteries; only attacking needs them drawn.
+- Weapon stats, affixes, masteries and weapon requirements count only for the weapon set that is
+  drawn and in hand (from the end of the draw). Put-away and stowed weapons give nothing. Throwables
+  are not in weapon sets and count only while in hand. Armor always counts.
 
 ## Camera
 

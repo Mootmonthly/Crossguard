@@ -118,7 +118,6 @@ Decisions that block items above. Answers go into design-decisions.md.
 | Extraction time | Extraction (currently: 5 s) |
 | Final subscription price | Subscription |
 | Can the loadout change during a raid? | Loadout timing |
-| Do put-away weapons still give their stats and count for masteries? | Controls (currently: yes) |
 | Materials stack size? | Gathering |
 | Which arrows does a bow use first when several rarities are carried? | Ammo (currently: first found) |
 | Is drinking a potion instant? Does bandaging slow movement? | Consumables (currently: instant, full speed) |

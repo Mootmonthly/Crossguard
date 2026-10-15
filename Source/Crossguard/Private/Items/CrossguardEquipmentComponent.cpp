@@ -233,6 +233,8 @@ void UCrossguardEquipmentComponent::ServerSwitchWeaponSet_Implementation(int32 S
 void UCrossguardEquipmentComponent::FinishDrawing()
 {
 	bDrawingWeapons = false;
+	// The set is in hand: its stats and tags start counting.
+	RefreshEquipmentEffect();
 	OnEquipmentChanged.Broadcast();
 }
 
@@ -245,6 +247,7 @@ void UCrossguardEquipmentComponent::HolsterWeapons()
 	GetOwner()->GetWorldTimerManager().ClearTimer(DrawTimer);
 	bWeaponsDrawn = false;
 	bDrawingWeapons = false;
+	RefreshEquipmentEffect();
 	OnEquipmentChanged.Broadcast();
 }
 
@@ -312,7 +315,8 @@ bool UCrossguardEquipmentComponent::SatisfiesWeaponRequirement(const TArray<ECro
 			return true;
 		}
 	}
-	return Crossguard::SatisfiesWeaponRequirement(Required, BuildRulesEquipment(MainHand, OffHand));
+	// Weapons count only while their set is drawn and in hand.
+	return AreWeaponsReady() && Crossguard::SatisfiesWeaponRequirement(Required, BuildRulesEquipment(MainHand, OffHand));
 }
 
 ECrossguardSecondaryAction UCrossguardEquipmentComponent::GetSecondaryAction() const
@@ -495,9 +499,14 @@ void UCrossguardEquipmentComponent::RefreshEquipmentEffect()
 		}
 	};
 
-	const Crossguard::FEquipment Equipment = BuildRulesEquipment(MainHand, OffHand);
+	// Weapon stats, affixes and Wielding tags count only while the set is drawn and in hand.
+	const Crossguard::FEquipment Equipment = AreWeaponsReady() ? BuildRulesEquipment(MainHand, OffHand) : Crossguard::FEquipment();
 	for (const FCrossguardWeaponItem* Item : {&MainHand, &OffHand})
 	{
+		if (!AreWeaponsReady())
+		{
+			break;
+		}
 		const FCrossguardWeaponRow* Row = FindWeapon(Item->WeaponId);
 		if (Row == nullptr)
 		{
