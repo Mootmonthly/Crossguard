@@ -28,15 +28,14 @@ order changes.
 | Economy | Gold coins carried in raids, banked on extraction; banked gold; selling gemstones to vendors; buying stash tabs. |
 | World | Extract portals (points of interest, 60 s channel, 30 s open), extraction zones, doors, locks and lockpicking. |
 | Teams | Parties up to 8 via `?Party=`, friendly fire always on. |
+| Build and tests | Builds on UE 5.8; 103/103 editor tests pass (unit, data and scenario tests run headless with `Tools\run_editor_tests.bat`). `Tools\editor_setup.bat` imports every data table and sets the references. First-build notes: [first-compile-triage.md](first-compile-triage.md). |
 
 ## Milestone 0: Verify what is written
 
-Several systems were written without an editor build. Do this before building more on top. Step by step: [next-build-checklist.md](next-build-checklist.md).
+The code builds and the automated tests pass; what is left needs hands-on play. Step by step: [next-build-checklist.md](next-build-checklist.md).
 
 | Item | Needs | Notes |
 | --- | --- | --- |
-| Build and fix compile errors | Done | Built on UE 5.8 on the owner's PC; 103/103 editor tests pass (all first-run failures were test-side). Notes in [first-compile-triage.md](first-compile-triage.md). |
-| Import new tables | Done | `Tools\editor_setup.bat` imports every `DT_` table into `/Game/Data` and sets the references (rerun after data changes). |
 | Playtest each system | Editor | Debug options on the character: `DebugInventory`, `bDebugLootTakesAll`, `DebugReviveDelay`, `bUseDebugProgression`; turn off the game mode's `bIsRaid` to test the stash and vendors. |
 | Two-client PIE check | Editor | `Equipment.Wielding.*` tags reach other clients; bodies ragdoll on every client; stealth hidden from enemy clients (time the possible ~5 s leak, dedicated server + 3 clients). |
 | Crowd avoidance | Editor, Code | Without a nav mesh a minion walks into its summoner's back and stops (seen in tests). Check on a real map; turn on RVO/detour avoidance for monsters and minions if they bunch up. |
