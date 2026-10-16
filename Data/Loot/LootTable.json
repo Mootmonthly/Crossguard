@@ -334,6 +334,74 @@
 		]
 	},
 	{
+		"Name": "gather_herb",
+		"RollsMin": 1,
+		"RollsMax": 1,
+		"NothingWeight": 0,
+		"RarityWeights": [
+			100,
+			0,
+			0,
+			0,
+			0,
+			0
+		],
+		"Entries": [
+			{
+				"Kind": "Item",
+				"Id": "herb_silverleaf",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
+				"Weight": 3,
+				"CountMin": 1,
+				"CountMax": 3
+			},
+			{
+				"Kind": "Item",
+				"Id": "herb_bloodroot",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
+				"Weight": 1,
+				"CountMin": 1,
+				"CountMax": 2
+			}
+		]
+	},
+	{
+		"Name": "gather_ore",
+		"RollsMin": 1,
+		"RollsMax": 1,
+		"NothingWeight": 0,
+		"RarityWeights": [
+			100,
+			0,
+			0,
+			0,
+			0,
+			0
+		],
+		"Entries": [
+			{
+				"Kind": "Item",
+				"Id": "ore_iron",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
+				"Weight": 3,
+				"CountMin": 1,
+				"CountMax": 3
+			},
+			{
+				"Kind": "Item",
+				"Id": "ore_mithril",
+				"bHasArmorType": false,
+				"ArmorType": "Cloth",
+				"Weight": 1,
+				"CountMin": 1,
+				"CountMax": 1
+			}
+		]
+	},
+	{
 		"Name": "mob_example_brute",
 		"RollsMin": 0,
 		"RollsMax": 2,

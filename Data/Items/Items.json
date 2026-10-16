@@ -86,6 +86,26 @@
     "useTime": 0
   },
   {
+    "id": "herb_bloodroot",
+    "name": "Bloodroot",
+    "category": "Material",
+    "gridWidth": 1,
+    "gridHeight": 1,
+    "maxStack": 20,
+    "sellValue": 10,
+    "sellPerRarity": 0
+  },
+  {
+    "id": "herb_silverleaf",
+    "name": "Silverleaf",
+    "category": "Material",
+    "gridWidth": 1,
+    "gridHeight": 1,
+    "maxStack": 20,
+    "sellValue": 5,
+    "sellPerRarity": 0
+  },
+  {
     "id": "lockpick",
     "name": "Lockpick",
     "category": "Tool",
@@ -93,6 +113,26 @@
     "gridHeight": 1,
     "maxStack": 3,
     "sellValue": 0,
+    "sellPerRarity": 0
+  },
+  {
+    "id": "ore_iron",
+    "name": "Iron Ore",
+    "category": "Material",
+    "gridWidth": 1,
+    "gridHeight": 1,
+    "maxStack": 20,
+    "sellValue": 5,
+    "sellPerRarity": 0
+  },
+  {
+    "id": "ore_mithril",
+    "name": "Mithril Ore",
+    "category": "Material",
+    "gridWidth": 1,
+    "gridHeight": 1,
+    "maxStack": 20,
+    "sellValue": 15,
     "sellPerRarity": 0
   },
   {

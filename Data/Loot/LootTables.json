@@ -60,5 +60,25 @@
       {"kind": "Item", "id": "sapphire", "weight": 6, "count": [1, 1]},
       {"kind": "Item", "id": "explosive_bottle", "weight": 5, "count": [1, 2]}
     ]
+  },
+  {
+    "id": "gather_herb",
+    "rolls": [1, 1],
+    "nothingWeight": 0,
+    "rarityWeights": {"Common": 100, "Uncommon": 0, "Rare": 0, "Epic": 0, "Legendary": 0, "Mystic": 0},
+    "entries": [
+      {"kind": "Item", "id": "herb_silverleaf", "weight": 3, "count": [1, 3]},
+      {"kind": "Item", "id": "herb_bloodroot", "weight": 1, "count": [1, 2]}
+    ]
+  },
+  {
+    "id": "gather_ore",
+    "rolls": [1, 1],
+    "nothingWeight": 0,
+    "rarityWeights": {"Common": 100, "Uncommon": 0, "Rare": 0, "Epic": 0, "Legendary": 0, "Mystic": 0},
+    "entries": [
+      {"kind": "Item", "id": "ore_iron", "weight": 3, "count": [1, 3]},
+      {"kind": "Item", "id": "ore_mithril", "weight": 1, "count": [1, 1]}
+    ]
   }
 ]
