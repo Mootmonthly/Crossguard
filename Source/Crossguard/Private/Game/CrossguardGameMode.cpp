@@ -11,6 +11,8 @@
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 #include "Game/CrossguardGuildSubsystem.h"
+#include "Game/CrossguardHubMarker.h"
+#include "Game/CrossguardMenuGameMode.h"
 #include "Game/CrossguardPartySubsystem.h"
 #include "Game/CrossguardPlayerController.h"
 #include "Game/CrossguardPlayerState.h"
@@ -22,6 +24,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "UI/CrossguardHUD.h"
 #include "Misc/CommandLine.h"
+#include "Misc/PackageName.h"
 #include "Misc/Parse.h"
 #include "TimerManager.h"
 
@@ -57,10 +60,32 @@ std::string ACrossguardGameMode::PartyKey(const FString& Options)
 void ACrossguardGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
 	Super::InitGame(MapName, Options, ErrorMessage);
-	if (UGameplayStatics::HasOption(Options, HubOption))
+	if (IsHubMap(Options))
 	{
 		bIsRaid = false;
 	}
+}
+
+bool ACrossguardGameMode::IsHubMap(const FString& Options) const
+{
+	return UGameplayStatics::HasOption(Options, HubOption) || ACrossguardHubMarker::IsHubWorld(GetWorld());
+}
+
+void ACrossguardGameMode::ReturnToMenu(APlayerController* Player, const FString& ReasonKey)
+{
+	if (Player == nullptr)
+	{
+		return;
+	}
+	// The server checks the map exists (same build as the client): a client travelling to a missing
+	// map would fail and fall back to the default map anyway, with a travel error first.
+	const FString Url = ACrossguardMenuGameMode::BuildMenuUrl(MenuMapName, ReasonKey);
+	if (!Url.IsEmpty() && FPackageName::DoesPackageExist(MenuMapName))
+	{
+		Player->ClientTravel(Url, TRAVEL_Absolute);
+		return;
+	}
+	Player->ClientReturnToMainMenuWithTextReason(FText::FromString(ACrossguardMenuGameMode::ReasonMessage(ReasonKey)));
 }
 
 APlayerController* ACrossguardGameMode::Login(UPlayer* NewPlayer, ENetRole InRemoteRole, const FString& Portal, const FString& Options,
@@ -678,6 +703,6 @@ void ACrossguardGameMode::UpdateSpectators()
 			// watching its body instead.
 			continue;
 		}
-		Player->ClientReturnToMainMenuWithTextReason(FText::FromString(TEXT("Your raid is over.")));
+		ReturnToMenu(Player, ACrossguardMenuGameMode::RaidOverReason);
 	}
 }

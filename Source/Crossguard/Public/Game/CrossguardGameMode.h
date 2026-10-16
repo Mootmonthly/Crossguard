@@ -37,7 +37,7 @@ class CROSSGUARD_API ACrossguardGameMode : public AGameModeBase
 public:
 	ACrossguardGameMode();
 
-	// A "?Hub" option on the server's map URL turns bIsRaid off (a dev hub on any map).
+	// A hub map (IsHubMap: a "?Hub" URL option or a placed ACrossguardHubMarker) turns bIsRaid off.
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 	// Notes whether the login is this process's own player (for the development player id).
 	virtual APlayerController* Login(UPlayer* NewPlayer, ENetRole InRemoteRole, const FString& Portal, const FString& Options,
@@ -93,7 +93,8 @@ public:
 	// tests): it is the client's word.
 	static const TCHAR* DevPlayerIdOption;
 
-	// After a successful extraction. Hook the trip to the hub here once it exists.
+	// After a successful extraction. Hook the trip back to the hub here (not built:
+	// docs/hub-and-menu.md).
 	UPROPERTY(BlueprintAssignable, Category = "Crossguard")
 	FCrossguardPlayerExtracted OnPlayerExtracted;
 
@@ -132,8 +133,24 @@ public:
 	TArray<FCrossguardInventoryItem> RollLoot(FName TableId);
 
 	static const TCHAR* PartyOption;
-	// Placeholder until a hub map exists: open any map with ?Hub to play it as the hub.
+	// Open any map with ?Hub to play it as the hub (the main menu's Play adds it too).
 	static const TCHAR* HubOption;
+
+	// Server. This map plays as the hub (bIsRaid off): the URL Options carry ?Hub, or the world holds
+	// an ACrossguardHubMarker (L_Hub does: docs/hub-and-menu.md).
+	bool IsHubMap(const FString& Options) const;
+
+	// --- Main menu (docs/hub-and-menu.md) ---
+
+	// Where a player whose raid is over goes (no teammate left to spectate): the main menu map
+	// (ACrossguardMenuGameMode). Empty, or a map that does not exist: the engine's own "return to
+	// main menu" (the project's Game Default Map).
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Menu")
+	FString MenuMapName = TEXT("/Game/Maps/L_MainMenu");
+
+	// Server. Sends Player's client to the main menu (MenuMapName); the menu shows the message for
+	// ReasonKey (ACrossguardMenuGameMode::ReasonMessage, e.g. RaidOverReason).
+	void ReturnToMenu(APlayerController* Player, const FString& ReasonKey);
 
 	// Server. Moves the player onto the team of party key Party (empty: a team of their own), as if
 	// they had logged in with ?Party=<Party>. No-op if that is their key already.
@@ -143,8 +160,9 @@ public:
 
 	// The raid map a party that is the whole server travels to (ServerTravel), e.g.
 	// "/Game/Maps/L_Raid". The -RaidMap=<path> command line option overrides it. Empty: none.
+	// Placeholder default: the dev sandbox (monsters, chests, gather nodes) until a raid map exists.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Raid Launch")
-	FString RaidMapName;
+	FString RaidMapName = TEXT("/Game/Maps/Dev/L_DevSandbox");
 
 	// A separate raid server ("203.0.113.5:7777") the party's clients travel to while the rest of the
 	// hub stays. The -RaidServer=<address> command line option overrides it. Empty: none.

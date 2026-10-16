@@ -38,10 +38,15 @@ summary):
    Missing Blueprints are skipped (SKIP line), not created, unless CG_SETUP_CREATE_BLUEPRINTS=1.
 5. Optional (CG_SETUP_CREATE_MAP=1 or --create-map): /Game/Maps/Dev/L_DevSandbox with a floor,
    light, player start, nav mesh bounds, two gather nodes, a chest_common loot container, a mob
-   spawner and a dummy. Skipped if the map exists.
+   spawner, a dummy, a stash chest and a vendor NPC. Skipped if the map exists.
+6. Optional (CG_SETUP_ADD_HUB_ACTORS=1 or --add-hub-actors): opens the existing L_DevSandbox and adds
+   the stash chest (CrossguardStashChest) and vendor NPC (CrossguardVendorNPC) if it has none, then
+   saves it. Skipped if the classes are missing (editor not rebuilt) or both are already there.
+   They only open in the hub: play the map with ?Hub (game mode bIsRaid off).
 
 Options (environment variables, or arguments after the script path when the runner passes them):
     CG_SETUP_CREATE_MAP=1            / --create-map
+    CG_SETUP_ADD_HUB_ACTORS=1        / --add-hub-actors
     CG_SETUP_CREATE_BLUEPRINTS=1     / --create-blueprints   (BP_CrossguardGameMode + BP_CrossguardCharacter
                                                               in /Game/Blueprints, native parents)
     CG_SETUP_KEEP_MAPPING_CONTEXT=1  / --keep-mapping-context
@@ -57,6 +62,8 @@ ENGINE-API UNCERTAINTY (written without an engine to run against; check the log 
 - AssetImportData.scripted_add_filename (records the JSON as the reimport source; warning only).
 - Editing a native default subobject (EquipmentComponent, ...) through the Blueprint CDO: values are
   set after compiling, then saved and read back to verify.
+- Adding hub actors: LevelEditorSubsystem.load_level on an existing map inside the commandlet
+  (falls back to EditorLoadingAndSavingUtils.load_map); EditorActorSubsystem.get_all_level_actors.
 - Map creation: LevelEditorSubsystem.new_level / save_current_level inside the pythonscript
   commandlet; NavMeshBoundsVolume spawned by EditorActorSubsystem.spawn_actor_from_class getting a
   box brush (UActorFactoryBoxVolume). The nav mesh itself is built when the map is opened in the
@@ -110,6 +117,7 @@ def _flag(env_name, arg_name):
 
 
 CREATE_MAP = _flag("CG_SETUP_CREATE_MAP", "--create-map")
+ADD_HUB_ACTORS = _flag("CG_SETUP_ADD_HUB_ACTORS", "--add-hub-actors")
 CREATE_BLUEPRINTS = _flag("CG_SETUP_CREATE_BLUEPRINTS", "--create-blueprints")
 KEEP_MAPPING_CONTEXT = _flag("CG_SETUP_KEEP_MAPPING_CONTEXT", "--keep-mapping-context")
 QUIT_AT_END = _flag("CG_SETUP_QUIT", "--quit")
@@ -802,6 +810,75 @@ def spawn_mesh(actor_subsystem, mesh_path, location, scale, label, collision=Tru
     return actor
 
 
+# Where the stash chest and vendor NPC stand: beside the player start (-1500, 0), facing it.
+HUB_ACTORS = [
+    ("CrossguardStashChest", (-1300, 300, 0), 0.0, "StashChest"),
+    ("CrossguardVendorNPC", (-1300, -300, 0), 180.0, "VendorNPC"),
+]
+
+
+def place_hub_actors(actor_subsystem, existing=None):
+    """Spawns each HUB_ACTORS class not already in the level (existing: its actors). Returns
+    (placed, skipped) labels."""
+    placed = []
+    skipped = []
+    for class_name, (x, y, z), yaw, label in HUB_ACTORS:
+        cls = native_class(class_name)
+        if cls is None:
+            skipped.append("{} (class missing: rebuild the editor)".format(class_name))
+            continue
+        if existing is not None and any(isinstance(actor, cls) for actor in existing):
+            skipped.append("{} (already placed)".format(class_name))
+            continue
+        actor = spawn(actor_subsystem, cls, unreal.Vector(x, y, z), unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw), label)
+        if actor:
+            placed.append(label)
+        else:
+            skipped.append("{} (spawn failed)".format(class_name))
+    return placed, skipped
+
+
+def add_hub_actors():
+    step = "Hub actors in " + MAP_PATH
+    if not asset_exists(MAP_PATH):
+        record("SKIP", step, "no map (run with --create-map; it places them too)")
+        return
+    if all(native_class(class_name) is None for class_name, _, _, _ in HUB_ACTORS):
+        record("SKIP", step, "CrossguardStashChest / CrossguardVendorNPC missing: rebuild the editor")
+        return
+    level_subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+    actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    loaded = False
+    try:
+        loaded = bool(level_subsystem.load_level(MAP_PATH))  # UNCERTAIN inside the commandlet.
+    except Exception as error:  # noqa: BLE001
+        warn("LevelEditorSubsystem.load_level: {}".format(error))
+    if not loaded:
+        try:
+            loaded = unreal.EditorLoadingAndSavingUtils.load_map(MAP_PATH) is not None
+        except Exception as error:  # noqa: BLE001
+            warn("EditorLoadingAndSavingUtils.load_map: {}".format(error))
+    if not loaded:
+        record("FAIL", step, "could not open the map (see the log)")
+        return
+    placed, skipped = place_hub_actors(actor_subsystem, actor_subsystem.get_all_level_actors())
+    if not placed:
+        record("SKIP", step, "nothing to add: " + ", ".join(skipped))
+        return
+    saved = False
+    try:
+        saved = bool(level_subsystem.save_current_level())
+    except Exception as error:  # noqa: BLE001
+        warn("save_current_level: {}".format(error))
+    if not saved:
+        record("FAIL", step, "placed {} but saving failed".format(", ".join(placed)))
+        return
+    detail = "placed " + ", ".join(placed)
+    if skipped:
+        detail += "; skipped " + ", ".join(skipped)
+    record("PASS", step, detail)
+
+
 def create_dev_map(game_mode_cls):
     step = "Dev map " + MAP_PATH
     if asset_exists(MAP_PATH):
@@ -914,6 +991,10 @@ def create_dev_map(game_mode_cls):
     else:
         skipped.append("dummy (class missing)")
 
+    hub_placed, hub_skipped = place_hub_actors(actor_subsystem)
+    placed.extend(hub_placed)
+    skipped.extend(hub_skipped)
+
     if game_mode_cls is not None:
         try:
             world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
@@ -946,7 +1027,8 @@ def create_dev_map(game_mode_cls):
 # ------------------------------------------------------------------------------------------------
 
 def main():
-    log("project {}; create map: {}, create blueprints: {}".format(PROJECT_DIR, CREATE_MAP, CREATE_BLUEPRINTS))
+    log("project {}; create map: {}, add hub actors: {}, create blueprints: {}".format(PROJECT_DIR, CREATE_MAP, ADD_HUB_ACTORS,
+                                                                                    CREATE_BLUEPRINTS))
 
     if native_class("CrossguardGameMode") is None:
         record("FAIL", "Crossguard C++ classes", "unreal.CrossguardGameMode missing: the Crossguard module is not "
@@ -993,6 +1075,13 @@ def main():
             create_dev_map(game_mode_cls)
         except Exception:  # noqa: BLE001
             record("FAIL", "Dev map " + MAP_PATH, traceback.format_exc().strip().splitlines()[-1])
+            unreal.log_error(traceback.format_exc())
+
+    if ADD_HUB_ACTORS:
+        try:
+            add_hub_actors()
+        except Exception:  # noqa: BLE001
+            record("FAIL", "Hub actors in " + MAP_PATH, traceback.format_exc().strip().splitlines()[-1])
             unreal.log_error(traceback.format_exc())
 
 

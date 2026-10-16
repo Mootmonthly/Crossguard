@@ -8,13 +8,21 @@
 #include "CrossguardHUD.generated.h"
 
 class ACrossguardCharacter;
+class UCrossguardAttributesWidget;
 class UCrossguardGuildWidget;
 class UCrossguardHudWidget;
 class UCrossguardInventoryWidget;
 class UCrossguardLoadoutComponent;
+class UCrossguardPartyWidget;
+class UCrossguardTeamListWidget;
 class UCrossguardSkillWheelWidget;
+class UCrossguardStashComponent;
+class UCrossguardStashWidget;
 class UCrossguardTradeWidget;
+class UCrossguardVendorComponent;
+class UCrossguardVendorWidget;
 class UCrossguardWindowWidget;
+class UEnhancedInputComponent;
 class UInputAction;
 class UInputMappingContext;
 
@@ -53,6 +61,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|UI")
 	TSubclassOf<UCrossguardGuildWidget> GuildWidgetClass;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|UI")
+	TSubclassOf<UCrossguardStashWidget> StashWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|UI")
+	TSubclassOf<UCrossguardVendorWidget> VendorWidgetClass;
+
 	// Turns off the character's on-screen debug text (bDebugHud): this HUD shows the same and more.
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|UI")
 	bool bReplaceDebugHud = true;
@@ -73,6 +87,41 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
 	TObjectPtr<UInputAction> CloseWindowsAction;
+
+	// --- Attributes and party windows, team list (CrossguardHUDSocialWindows.cpp) ---
+	// Keys (placeholders, docs/design-decisions.md, Controls): K attributes, P party. Empty classes
+	// use the built-in widgets.
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|UI")
+	TSubclassOf<UCrossguardAttributesWidget> AttributesWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|UI")
+	TSubclassOf<UCrossguardPartyWidget> PartyWidgetClass;
+
+	// The always-on teammate list (top right), with "(disconnected)" for teammates who are away.
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|UI")
+	TSubclassOf<UCrossguardTeamListWidget> TeamListWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> ToggleAttributesAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> TogglePartyAction;
+
+	UFUNCTION(BlueprintCallable, Category = "Crossguard|UI")
+	void ToggleAttributes();
+
+	UFUNCTION(BlueprintCallable, Category = "Crossguard|UI")
+	void ToggleParty();
+
+	UFUNCTION(BlueprintPure, Category = "Crossguard|UI")
+	UCrossguardAttributesWidget* GetAttributesWidget() const { return AttributesWidget; }
+
+	UFUNCTION(BlueprintPure, Category = "Crossguard|UI")
+	UCrossguardPartyWidget* GetPartyWidget() const { return PartyWidget; }
+
+	UFUNCTION(BlueprintPure, Category = "Crossguard|UI")
+	UCrossguardTeamListWidget* GetTeamListWidget() const { return TeamListWidget; }
 
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|UI")
 	void ToggleInventory();
@@ -111,6 +160,32 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Crossguard|UI")
 	UCrossguardSkillWheelWidget* GetSkillWheel() const { return SkillWheel; }
 
+	// --- Stash and vendor screens (CrossguardHUDHubWindows.cpp) ---
+
+	// Shows the stash / vendor screen in place of any other window. F on a stash chest or vendor NPC
+	// does it once the server agrees (UCrossguardStashComponent::OnStashOpened,
+	// UCrossguardVendorComponent::OnVendorOpened). Source: that chest or NPC; the screen closes when
+	// the character walks away from it, and in a raid. Null: no distance check (console commands).
+	UFUNCTION(BlueprintCallable, Category = "Crossguard|UI")
+	void ShowStashWindow(AActor* Source);
+
+	UFUNCTION(BlueprintCallable, Category = "Crossguard|UI")
+	void ShowVendorWindow(AActor* Source);
+
+	// Console (debug, placeholder): the stash / vendor screen without a chest or NPC. The server still
+	// refuses every request in a raid.
+	UFUNCTION(Exec)
+	void OpenStash();
+
+	UFUNCTION(Exec)
+	void OpenVendor();
+
+	UFUNCTION(BlueprintPure, Category = "Crossguard|UI")
+	UCrossguardStashWidget* GetStashWidget() const { return StashWidget; }
+
+	UFUNCTION(BlueprintPure, Category = "Crossguard|UI")
+	UCrossguardVendorWidget* GetVendorWidget() const { return VendorWidget; }
+
 protected:
 	UFUNCTION()
 	void HandleSkillWheelOpened();
@@ -127,9 +202,30 @@ protected:
 	UFUNCTION()
 	void HandleGuildRefused(ECrossguardGuildResult Result);
 
+	UFUNCTION()
+	void HandleStashOpened(AActor* Source);
+
+	UFUNCTION()
+	void HandleStashRejected(const FCrossguardInventoryResult& Result);
+
+	UFUNCTION()
+	void HandleVendorOpened(AActor* Vendor);
+
+	UFUNCTION()
+	void HandleSellRejected(const FCrossguardInventoryResult& Result);
+
+	UFUNCTION()
+	void HandleSold(int32 Gold);
+
 private:
 	// True for a local player with a viewport: the only case that gets widgets.
 	bool CanShowUI() const;
+	// Attributes and party windows, team list (CrossguardHUDSocialWindows.cpp).
+	void CreateSocialWindows();
+	void RemoveSocialWindows();
+	void MakeSocialInputActions();
+	void MapSocialKeys(UInputMappingContext* Context);
+	void BindSocialInput(UEnhancedInputComponent& Input);
 	void CreateWidgets();
 	void EnsureDefaultInput();
 	void BindInput();
@@ -139,12 +235,27 @@ private:
 	// Cursor and mouse look follow whether any window or the wheel is open.
 	void UpdateInputMode();
 	void ShowHudMessage(const FString& Message, const FLinearColor& Color) const;
+	// Stash and vendor screens (CrossguardHUDHubWindows.cpp): made with the other widgets, bound to
+	// the player state's stash and vendor components, closed in a raid or away from their source.
+	void CreateHubWindows();
+	void TickHubWindows();
+	void RemoveHubWindows();
+	void BindHubComponents(UCrossguardStashComponent* Stash, UCrossguardVendorComponent* Vendor);
 
 	UPROPERTY(Transient)
 	TObjectPtr<UCrossguardHudWidget> HudWidget;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UCrossguardSkillWheelWidget> SkillWheel;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UCrossguardAttributesWidget> AttributesWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UCrossguardPartyWidget> PartyWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UCrossguardTeamListWidget> TeamListWidget;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UCrossguardInventoryWidget> InventoryWidget;
@@ -156,10 +267,23 @@ private:
 	TObjectPtr<UCrossguardGuildWidget> GuildWidget;
 
 	UPROPERTY(Transient)
+	TObjectPtr<UCrossguardStashWidget> StashWidget;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UCrossguardVendorWidget> VendorWidget;
+
+	UPROPERTY(Transient)
 	TArray<TObjectPtr<UCrossguardWindowWidget>> OpenWindows;
 
 	TWeakObjectPtr<ACrossguardCharacter> BoundCharacter;
 	TWeakObjectPtr<UCrossguardGuildComponent> BoundGuild;
+	TWeakObjectPtr<UCrossguardStashComponent> BoundStash;
+	TWeakObjectPtr<UCrossguardVendorComponent> BoundVendor;
+	// The chest / NPC the open stash / vendor screen belongs to (null: opened from the console).
+	TWeakObjectPtr<AActor> StashSource;
+	TWeakObjectPtr<AActor> VendorSource;
+	bool bStashHasSource = false;
+	bool bVendorHasSource = false;
 	bool bWidgetsCreated = false;
 	bool bWheelOpen = false;
 	// Whether this HUD currently holds the controller's look-input ignore (a counter in the engine).

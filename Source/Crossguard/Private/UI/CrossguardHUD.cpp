@@ -17,6 +17,7 @@
 #include "UI/CrossguardHudWidget.h"
 #include "UI/CrossguardInventoryWidget.h"
 #include "UI/CrossguardSkillWheelWidget.h"
+#include "UI/CrossguardStashWidget.h"
 #include "UI/CrossguardTradeWidget.h"
 #include "UI/CrossguardUIHelpers.h"
 
@@ -85,6 +86,8 @@ void ACrossguardHUD::BeginPlay()
 void ACrossguardHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UnbindFromPawn();
+	RemoveHubWindows();
+	RemoveSocialWindows();
 	if (bWidgetsCreated)
 	{
 		CloseAllWindows();
@@ -116,6 +119,8 @@ void ACrossguardHUD::CreateWidgets()
 	InventoryWidget = CreateUIWidget(PlayerOwner, InventoryWidgetClass, CrossguardHUDLocal::WindowZOrder, false);
 	TradeWidget = CreateUIWidget(PlayerOwner, TradeWidgetClass, CrossguardHUDLocal::WindowZOrder, false);
 	GuildWidget = CreateUIWidget(PlayerOwner, GuildWidgetClass, CrossguardHUDLocal::WindowZOrder, false);
+	CreateHubWindows();
+	CreateSocialWindows();
 	bWidgetsCreated = true;
 }
 
@@ -133,6 +138,7 @@ void ACrossguardHUD::EnsureDefaultInput()
 	MakeAction(ToggleTradeAction, TEXT("IA_ToggleTrade"));
 	MakeAction(ToggleGuildAction, TEXT("IA_ToggleGuild"));
 	MakeAction(CloseWindowsAction, TEXT("IA_CloseWindows"));
+	MakeSocialInputActions();
 	if (UIMappingContext != nullptr)
 	{
 		return;
@@ -144,6 +150,7 @@ void ACrossguardHUD::EnsureDefaultInput()
 	Context->MapKey(ToggleTradeAction, EKeys::T);
 	Context->MapKey(ToggleGuildAction, EKeys::U);
 	Context->MapKey(CloseWindowsAction, EKeys::Escape);
+	MapSocialKeys(Context);
 	UIMappingContext = Context;
 }
 
@@ -158,6 +165,7 @@ void ACrossguardHUD::BindInput()
 		Input->BindAction(ToggleTradeAction, ETriggerEvent::Started, this, &ACrossguardHUD::ToggleTrade);
 		Input->BindAction(ToggleGuildAction, ETriggerEvent::Started, this, &ACrossguardHUD::ToggleGuild);
 		Input->BindAction(CloseWindowsAction, ETriggerEvent::Started, this, &ACrossguardHUD::CloseAllWindows);
+		BindSocialInput(*Input);
 	}
 	else
 	{
@@ -198,6 +206,7 @@ void ACrossguardHUD::Tick(float DeltaSeconds)
 		}
 		BoundGuild = Guild;
 	}
+	TickHubWindows();
 	if (Character == nullptr)
 	{
 		bHadOpenContainer = false;
@@ -336,6 +345,10 @@ void ACrossguardHUD::HandleInventoryRejected(const FCrossguardInventoryResult& R
 	if (InventoryWidget != nullptr)
 	{
 		InventoryWidget->ShowStatus(Message, CrossguardHUDLocal::Refusal);
+	}
+	if (StashWidget != nullptr)
+	{
+		StashWidget->ShowStatus(Message, CrossguardHUDLocal::Refusal);
 	}
 }
 

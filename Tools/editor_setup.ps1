@@ -27,7 +27,11 @@
 
 .PARAMETER CreateMap
     Also create /Game/Maps/Dev/L_DevSandbox (floor, light, player start, nav bounds, gather nodes,
-    chest_common, mob spawner, dummy) if it does not exist.
+    chest_common, mob spawner, dummy, stash chest, vendor NPC) if it does not exist.
+
+.PARAMETER AddHubActors
+    Add a stash chest and a vendor NPC to the existing L_DevSandbox if it has none (-CreateMap
+    places them in a new map). Play the map with ?Hub to use them.
 
 .PARAMETER CreateBlueprints
     Create BP_CrossguardGameMode / BP_CrossguardCharacter in /Game/Blueprints (native parents) when
@@ -54,6 +58,7 @@ param(
     [string]$EngineDir = "",
     [switch]$SkipBuild,
     [switch]$CreateMap,
+    [switch]$AddHubActors,
     [switch]$CreateBlueprints,
     [switch]$KeepMappingContext,
     [ValidateSet("Commandlet", "Editor")]
@@ -129,6 +134,7 @@ foreach ($stale in @($SummaryFile, $EditorLog, $EditorErrLog)) { Remove-Item -Pa
 
 # Options go through the environment (quoting arguments through -script= is fragile).
 $env:CG_SETUP_CREATE_MAP = if ($CreateMap) { "1" } else { "" }
+$env:CG_SETUP_ADD_HUB_ACTORS = if ($AddHubActors) { "1" } else { "" }
 $env:CG_SETUP_CREATE_BLUEPRINTS = if ($CreateBlueprints) { "1" } else { "" }
 $env:CG_SETUP_KEEP_MAPPING_CONTEXT = if ($KeepMappingContext) { "1" } else { "" }
 $env:CG_SETUP_QUIT = if ($Mode -eq "Editor") { "1" } else { "" }
