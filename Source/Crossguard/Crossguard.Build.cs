@@ -26,6 +26,9 @@ public class Crossguard : ModuleRules
 			"SlateCore",
 		});
 
+		// Art hooks (Combat/CrossguardCosmetics): trails, impacts and hit sparks are Niagara systems.
+		PrivateDependencyModuleNames.Add("Niagara");
+
 		// Editor builds only: the scenario tests (Private/Tests/CrossguardScenario.*) create a map,
 		// find the game mode / character Blueprints and run Play-In-Editor. That code is compiled only
 		// with WITH_EDITOR, so game and server builds do not need these modules.
