@@ -305,6 +305,10 @@ Everything else is a placeholder until ruled; the numbers live in `Crossguard::F
 | X | Summon an extract portal (placeholder key) |
 | Space / Left Ctrl | Rise / descend while flying ([Flight]) |
 | G | Drop the stack in hand (placeholder until the inventory UI has drag-to-drop) |
+| I or Tab | Inventory screen (placeholder key) |
+| T | Trade: ask the nearest player, or open the trade window (placeholder key) |
+| U | Guild window (placeholder key) |
+| Esc | Close the open windows (placeholder key) |
 
 - Drawing a weapon set (1 / 2) takes 1 s, faster with Dexterity (`1 s ÷ (1 + Dexterity)`); an
   animation will play here. Nothing attacks while drawing.
@@ -313,6 +317,11 @@ Everything else is a placeholder until ruled; the numbers live in `Crossguard::F
   after a miss or bandage repeatedly; when it runs out the hands are empty until a weapon set is
   drawn. Pressing the item's key again empties the hands.
 - Hotbar slots remember the item type and rarity, so a new stack of the same item fills the slot.
+- Assumed until ruled otherwise (placeholder UI, [ui.md](ui.md)): while a window (inventory, trade,
+  guild) or the skill wheel is open, the mouse cursor shows and mouse look stops; the keys still work
+  (walking, hotbar, casting). Hovering a skill on the wheel selects it at once. Opening a body or
+  chest opens the inventory beside it; closing the inventory closes the body or chest. Moving items
+  is click an item, then click a square (no drag-and-drop yet).
 
 ## Throwables
 

@@ -39,8 +39,9 @@ the request runs out. Both sides are told why (`ECrossguardTradeEnd`).
 | Trading in raids | Allowed (items only; banked gold between raids only) | `FTradeSession::SetOffer` |
 | Received items | Placed anywhere they fit (stacks top up first), like a pickup | `ExchangeItems` |
 
-## Testing without a UI
+## Testing
 
-Console commands on the character (the ` key; results in the Output Log): `TradeItems` lists your
+The placeholder trade window (T; [ui.md](ui.md)) drives the same requests. Console commands on the
+character (the ` key; results in the Output Log): `TradeItems` lists your
 item ids, `TradeNearest`, `TradeRespond 1`, `TradeOffer "3,7" 0`, `TradeLock 1`, `TradeAccept`,
 `TradeCancel`. See [next-build-checklist.md](next-build-checklist.md).

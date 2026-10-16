@@ -342,6 +342,12 @@ game mode's Mob Table is unset.
 | `Crossguard.Scenario.Hub.BuyStashTabs` | No gold: refused; with gold, three tabs; the fourth refused AtCap, no gold taken. |
 | `Crossguard.Scenario.Hub.LoweringAttributeNeedsRespecToken` | Lowering Strength refused without a token (nothing changes), done with one (token used). |
 
+**`CrossguardScenarioUITests.cpp`** (the placeholder UI, [ui.md](ui.md); nothing is drawn under `-nullrhi`)
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.UI.WidgetsBind` | Every widget class built for the PIE player's controller (C++ tree, no assets) shows the game state: the HUD's Health and hotbar lines; one inventory cell per stack, click selects and deselects; a dead dummy's body shows its ruby, Take all moves it; one wheel entry per castable skill and picking one selects it; the trade window says no trade; the guild window shows the founder after `RequestCreate`. The player's HUD is `ACrossguardHUD` (a warning if a game mode Blueprint overrides it). |
+
 **`CrossguardScenarioNetworkTests.cpp`** (networked: a server and real PIE clients, see
 [Networked scenarios](#networked-scenarios))
 
@@ -454,7 +460,8 @@ rows: `Combat.ArrowBlockedNoStun`, `SwingClash`, `AIIgnoresAllySwings`, `StunBlo
 
 - `Crossguard.Scenario.*`: one standalone PIE, server side: players are server-spawned controllers
   with no input, HUD or client. Replication and prediction are the networked tests' job
-  (`Crossguard.Net.*`); keys and UI are untested.
+  (`Crossguard.Net.*`); keys are untested, and the UI only to the point that its widgets build and
+  show the right state (`Scenario.UI.WidgetsBind`): nothing is drawn or clicked by a mouse.
 - Networked tests drive clients from C++ (`ActivateSkill` on the client pawn, inventory requests on
   the client component): the real path from a key press to the request is not covered.
 - Clanks: there is no native event to bind to, so the clank (`MulticastWeaponClank` →

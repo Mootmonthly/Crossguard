@@ -129,6 +129,7 @@ Ranks: **Leader** (exactly one), **Officer**, **Member**.
   - The last member leaving takes the bank: between raids only (if the bank holds anything), and
     refused if its items or gold would not fit.
   - Banked gold is an int32 per player: withdrawals and gifts that would overflow it are refused.
+- The placeholder guild window (U; [ui.md](ui.md)) drives the same requests.
 - Console commands for testing: see `ACrossguardCharacter` (`GuildCreate`, `GuildInviteNearest`,
   `GuildAccept`, `GuildInfo`, `GuildGold`, `GuildDeposit`, `GuildWithdraw`, `GuildGive`, `GuildRank`,
   `GuildKick`, `GuildLeave`).

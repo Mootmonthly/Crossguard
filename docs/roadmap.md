@@ -48,12 +48,12 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | --- | --- | --- |
 | Extract portals | Editor | Built in code: summon with X inside a point of interest after 10 min, 60 s channel, open 30 s for anyone. Needs points of interest placed and beam/portal visuals. |
 | Extraction points | Editor | Built in code (`ACrossguardExtractionZone`, 5 s placeholder). Needs placing in maps; the trip to the hub needs the hub and saving. |
-| Spectating and menu | Editor | Built in code: 120 s revive window, then spectate teammates or return to the menu. Needs a main menu map and a spectator HUD. |
+| Spectating and menu | Editor | Built in code: 120 s revive window, then spectate teammates or return to the menu. Placeholder UI in code ([ui.md](ui.md)): the HUD shows the downed timer and whom you spectate; needs art. Needs a main menu map. |
 | Stash | Editor | Built in code: per character, 10 × 30 tabs (up to 3 more at 3000 gold), Skill Gems learnable from it. Needs the stash UI in the hub. |
 | Shared stash tabs | Code, Decision | Subscription benefit: tabs shared by all of an account's characters. Needs accounts and the backend. |
 | Hub / lobby map | Editor | Where players manage stash, Skill Library, attributes, loadout; game mode with `bIsRaid` off. |
-| Inventory and loot UI | Editor | Grid widgets for inventory, Backpack, Quiver, equipment, bodies. The C++ API is ready. |
-| Hotbar, weapon sets and skill wheel UI | Editor | Built in code (keys 1–7, hold Q, E). Needs the hotbar bar, the radial skill wheel and a weapon set indicator. |
+| Inventory and loot UI | Editor | Placeholder UI in code ([ui.md](ui.md)), I or Tab: grids for the inventory, Backpack and Quiver, equipment slots, bodies and chests side by side; click to move, equip, take, take all. Needs art (Widget Blueprints) and drag-and-drop. |
+| Hotbar, weapon sets and skill wheel UI | Editor | Built in code (keys 1–7, hold Q, E). Placeholder UI in code ([ui.md](ui.md)): hotbar with counts, weapon set line, cooldowns, a ring of skills while Q is held. Needs art: the radial wheel and icons. |
 | Drop and pick up single items | Editor | Built in code (G drops the stack in hand, F picks up). Needs drag-to-drop in the inventory UI and item meshes. |
 | Revive spell | Decision, Code | Calls the existing `Revive`. Comes from the skills you add in the Skill Forge. |
 | Saving progression | Code, Decision | XP, level, attributes, Skill Library, stash, respec tokens. Needs a choice of backend. |
@@ -93,9 +93,9 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Item | Needs | Notes |
 | --- | --- | --- |
 | Crafting and enchanting | Decision, Code | XP is ruled (10–60 by rarity); recipes are not. |
-| Trading | Editor | Built in code ([trading.md](trading.md)): ask, offer, lock, accept, all-or-nothing swap. Needs a trade window UI (console commands for now). |
+| Trading | Editor | Built in code ([trading.md](trading.md)): ask, offer, lock, accept, all-or-nothing swap. Placeholder trade window in code (T, [ui.md](ui.md)); needs art. |
 | Auction house | Code, Decision | Needs the backend and a currency. |
-| Guilds and guild bank | Code, Editor, Decision | Built in code ([guild-rules.md](guild-rules.md)): ranks, invites, kicks, bank (gold and items) with permissions and a log; rules unit tested. In server memory only: needs accounts (Steam ids) and a backend to save guilds. Needs a guild window (console commands for now). |
+| Guilds and guild bank | Code, Editor, Decision | Built in code ([guild-rules.md](guild-rules.md)): ranks, invites, kicks, bank (gold and items) with permissions and a log; rules unit tested. In server memory only: needs accounts (Steam ids) and a backend to save guilds. Placeholder guild window in code (U, [ui.md](ui.md)); needs art. |
 | Respec store purchase | Code | Grants respec tokens after a verified purchase; price not set. |
 | Subscription | Decision, Code | About $10 per season: five respec tokens, a shared stash tab, common healing items, throwables, lockpicks. |
 | NPC vendors in the hub | Editor | Selling is built (`UCrossguardVendorComponent`); needs the NPC and a sell screen. |
