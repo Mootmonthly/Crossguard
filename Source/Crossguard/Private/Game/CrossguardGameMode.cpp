@@ -209,18 +209,9 @@ FString ACrossguardGameMode::InitNewPlayer(APlayerController* NewPlayerControlle
 																						 : UCrossguardGuildSubsystem::PlayerIdOf(NewPlayerController->PlayerState));
 		}
 	}
-	const FString TeamError = JoinTeam(NewPlayerController, PlayerKey(UniqueId, NewPlayerController), Party);
-	// A team back from the raid early, on the hub its leader hosts: the party comes back under its key
-	// (the host founds it, the others join; docs/parties.md "Back from the raid early").
-	if (TeamError.IsEmpty() && !bIsRaid && UGameplayStatics::HasOption(Options, PartyOption))
-	{
-		UGameInstance* GameInstance = GetGameInstance();
-		if (UCrossguardPartySubsystem* Parties = GameInstance != nullptr ? GameInstance->GetSubsystem<UCrossguardPartySubsystem>() : nullptr)
-		{
-			Parties->JoinReturningParty(NewPlayerController->GetPlayerState<ACrossguardPlayerState>(), Party, bLoggingInLocalPlayer);
-		}
-	}
-	return TeamError;
+	// A team arriving from a match server (?Party=<key>) gets the key's team only: the party itself comes
+	// back from the backend (not built yet; docs/parties.md "Back from the raid").
+	return JoinTeam(NewPlayerController, PlayerKey(UniqueId, NewPlayerController), Party);
 }
 
 void ACrossguardGameMode::SetPlayerParty(AController* Controller, const FString& Party)

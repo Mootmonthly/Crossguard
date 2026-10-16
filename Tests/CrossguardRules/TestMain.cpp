@@ -1502,6 +1502,7 @@ static void TestParty()
 
 	// Travel choice.
 	FRaidTravelSituation Situation;
+	Situation.bDevListenMode = true;
 	CHECK(PickRaidTravel(Situation) == ERaidTravel::NoDestination);
 	Situation.bWholeServerInParty = true;
 	CHECK(PickRaidTravel(Situation) == ERaidTravel::NoDestination);
@@ -1518,6 +1519,13 @@ static void TestParty()
 	Situation.bHasRaidMap = false;
 	Situation.bWholeServerInParty = true;
 	CHECK(PickRaidTravel(Situation) == ERaidTravel::ClientTravel);
+	// Not development mode (dedicated, Shipping): never a whole-server travel, only the match server.
+	FRaidTravelSituation Dedicated;
+	Dedicated.bWholeServerInParty = true;
+	Dedicated.bHasRaidMap = true;
+	CHECK(PickRaidTravel(Dedicated) == ERaidTravel::NoDestination);
+	Dedicated.bHasRaidServer = true;
+	CHECK(PickRaidTravel(Dedicated) == ERaidTravel::ClientTravel);
 
 	// Create.
 	FPartyRegistry Parties;
@@ -1673,21 +1681,6 @@ static void TestParty()
 	CHECK(Full.Accept("full", "m8", 0.0) == EPartyError::None);
 	CHECK(Full.Accept("full", "m9", 0.0) == EPartyError::PartyFull);
 	CHECK(Full.PartyOf("m9") == nullptr);
-	CHECK(Full.Join("full", "m9") == EPartyError::PartyFull);
-
-	// Join by key (a team back from the raid early rebuilds its party on its leader's hub): no
-	// invite needed, the founder stays leader, other invites go.
-	FPartyRegistry Rebuilt;
-	CHECK(Rebuilt.Create("team", "leader") == EPartyError::None);
-	CHECK(Rebuilt.Create("other", "x") == EPartyError::None);
-	CHECK(Rebuilt.Invite("x", "member", 0.0) == EPartyError::None);
-	CHECK(Rebuilt.Join("team", "member") == EPartyError::None);
-	CHECK(Rebuilt.Find("team")->Members.size() == 2 && Rebuilt.Find("team")->LeaderId == "leader");
-	CHECK(Rebuilt.Find("other")->Invites.empty());
-	CHECK(Rebuilt.Join("team", "member") == EPartyError::AlreadyInParty);
-	CHECK(Rebuilt.Join("other", "member") == EPartyError::AlreadyInParty);
-	CHECK(Rebuilt.Join("nope", "y") == EPartyError::UnknownParty);
-	CHECK(Rebuilt.Join("team", "") == EPartyError::InvalidPlayer);
 
 	// The cap is configurable; a cap of 1 refuses every invite (and founds nothing).
 	FPartyConfig Solo;

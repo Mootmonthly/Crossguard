@@ -63,11 +63,14 @@ namespace Crossguard
 	// How a hub sends a party to a raid (docs/parties.md, "Raid launch").
 	enum class ERaidTravel
 	{
-		// Everyone on this server goes: the server itself loads the raid map (ServerTravel).
+		// DEV-ONLY (listen server): everyone on this server goes: the server itself loads the raid map
+		// (ServerTravel). Only in the single-PC development mode (bDevListenMode).
 		ServerTravel,
-		// Only the party goes: each member's client travels to a separate raid server.
+		// The real path: only the party goes: each member's client travels to the match server
+		// matchmaking assigned (a dedicated server many teams join).
 		ClientTravel,
-		// Neither is possible: no raid map for a whole-server party, and no raid server address.
+		// Neither is possible: no match server assigned (matchmaking not available), and not the
+		// development whole-server launch.
 		NoDestination,
 		// A listen server's host is in the party but the hub cannot travel as a whole: the host
 		// leaving would close the hub for everyone else.
@@ -76,16 +79,21 @@ namespace Crossguard
 
 	struct FRaidTravelSituation
 	{
+		// DEV-ONLY (listen server): the single-PC development mode is on (Crossguard::IsDevListenMode in
+		// the game). Only then may the whole server travel.
+		bool bDevListenMode = false;
 		// Every player on this server is in the launching party (or the launcher is alone).
 		bool bWholeServerInParty = false;
 		bool bHasRaidMap = false;
+		// Matchmaking assigned a match server (development: -RaidServer=).
 		bool bHasRaidServer = false;
 		// A listen server whose own (host) player is in the party.
 		bool bListenHostInParty = false;
 	};
 
-	// ServerTravel when the whole server is the party and a raid map is set; else ClientTravel to the
-	// raid server when one is set (refused if the listen host is in the party); else NoDestination.
+	// ServerTravel in development mode when the whole server is the party and a raid map is set; else
+	// ClientTravel to the assigned match server (refused if the listen host is in the party); else
+	// NoDestination.
 	CROSSGUARDRULES_API ERaidTravel PickRaidTravel(const FRaidTravelSituation& Situation);
 
 	struct FPartyInvite
@@ -138,10 +146,6 @@ namespace Crossguard
 		EPartyError Invite(const std::string& ActorId, const std::string& InviteeId, double Now, const std::string& NewPartyId = std::string());
 		// Joins as a member. The player's invites from other parties are dropped.
 		EPartyError Accept(const std::string& PartyId, const std::string& PlayerId, double Now);
-		// Joins as a member without an invite: a party rebuilt from its key on another server (a team
-		// back from the raid early joins its leader's hub, docs/parties.md "Back from the raid early").
-		// The caller decides who may (anyone knowing the key can claim it). The player's invites go.
-		EPartyError Join(const std::string& PartyId, const std::string& PlayerId);
 		// Removes the invite, expired or not.
 		EPartyError Decline(const std::string& PartyId, const std::string& PlayerId);
 		// Removes every invite to the player, expired or not (clears their inbox). Returns how many.

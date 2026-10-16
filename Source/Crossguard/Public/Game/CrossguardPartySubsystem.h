@@ -67,14 +67,6 @@ public:
 	// their party as PlayerLeftServer would. Assumed: they left the server during the raid.
 	void DropAbsentMembers(const UWorld* World, const TSet<FString>& Leaving);
 
-	// A team back from the raid early (ACrossguardGameMode::ReturnTeamToHub) on the hub its leader
-	// hosts (docs/parties.md, "Back from the raid early"): the party comes back under its ?Party= key.
-	// The hub's own player (bServerOwnPlayer: the leader, whose own travel URL carried the key) founds
-	// it and leads; a later login with the same key joins it (no invite). A key not founded this way
-	// gives no party (the login still gets the key's team). Hub only. True if the player is now in that
-	// party. Anyone who knows the key can join (docs/anti-cheat.md): accepted for the listen-server era.
-	bool JoinReturningParty(ACrossguardPlayerState* PlayerState, const FString& PartyKey, bool bServerOwnPlayer);
-
 	// Read-only view of every party (tests, a future backend).
 	const Crossguard::FPartyRegistry& GetRegistry() const { return Registry; }
 
@@ -92,8 +84,6 @@ private:
 	TArray<ACrossguardPlayerState*> TravellersFor(ACrossguardPlayerState* Actor) const;
 
 	Crossguard::FPartyRegistry Registry;
-	// Parties founded by JoinReturningParty: the only ones a login may join by key.
-	TSet<FString> ReturningPartyKeys;
 	// Last seen names, for rosters and invites.
 	TMap<FString, FString> DisplayNames;
 };
