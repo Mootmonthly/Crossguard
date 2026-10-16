@@ -1,5 +1,7 @@
 # Task: build, test and fix batch 3, then start placeholder art (local PC session)
 
+> Superseded by [next-pc-session.md](next-pc-session.md), which includes these steps.
+
 Run in a Claude Code session on the owner's Windows PC, environment **Local**, in the Crossguard
 folder. Read `CLAUDE.md` and `docs/pc-session.md` first. Working rules: commit and push to
 `foundation/core-rules` after each green step, flag every assumption, keep reports short and plain.
