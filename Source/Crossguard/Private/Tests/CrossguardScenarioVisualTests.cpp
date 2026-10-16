@@ -606,6 +606,13 @@ bool FCrossguardVisualMobArt::RunTest(const FString& Parameters)
 	Scenario.Step(TEXT("lineup.png; then a player at the left end"), [](FScenarioContext& C)
 	{
 		C.Screenshot(TEXT("lineup"));
+		for (const FName MobId : C.GameMode()->MobTable->GetRowNames())
+		{
+			if (const ACrossguardMonster* Mob = C.Get<ACrossguardMonster>(MobId))
+			{
+				C.Test.AddInfo(FString::Printf(TEXT("Lineup %s yaw %.0f"), *MobId.ToString(), Mob->GetActorRotation().Yaw));
+			}
+		}
 		C.SpawnPlayer(TEXT("Player"), RowStart, 180.0f);
 		// Sword and shield in hand, out of the monsters' reach: how the weapon meshes sit (third person).
 		if (ACrossguardCharacter* Armed = C.SpawnPlayer(TEXT("Armed"), ArmedSpot, 180.0f))
@@ -627,7 +634,23 @@ bool FCrossguardVisualMobArt::RunTest(const FString& Parameters)
 		C.LookFrom(ArmedSpot + FVector(-220.0f, 120.0f, 140.0f), ArmedSpot + FVector(0.0f, 0.0f, 100.0f));
 	});
 	Scenario.Wait(SettleSeconds + 0.5f);
-	Scenario.Step(TEXT("weapons.png"), [](FScenarioContext& C) { C.Screenshot(TEXT("weapons")); });
+	Scenario.Step(TEXT("weapons.png; then a skeleton soldier 8 m off walks to the armed player"), [](FScenarioContext& C)
+	{
+		C.Screenshot(TEXT("weapons"));
+		C.SpawnMonster(TEXT("Walker"), FName(TEXT("skeleton_soldier")), ArmedSpot + FVector(0.0f, 800.0f, 0.0f), 0.0f);
+		// From the side: it walks from the right of the picture to the left.
+		C.LookFrom(ArmedSpot + FVector(-900.0f, 400.0f, 160.0f), ArmedSpot + FVector(0.0f, 400.0f, 90.0f));
+	});
+	Scenario.Wait(1.2f);
+	Scenario.Step(TEXT("walking.png (facing its way: left)"), [](FScenarioContext& C)
+	{
+		C.Screenshot(TEXT("walking"));
+		if (const ACrossguardMonster* Walker = C.Get<ACrossguardMonster>(TEXT("Walker")))
+		{
+			C.Test.AddInfo(FString::Printf(TEXT("Walker yaw %.0f, velocity %s, mesh yaw %.0f"), Walker->GetActorRotation().Yaw,
+				*Walker->GetVelocity().ToCompactString(), Walker->GetMesh()->GetRelativeRotation().Yaw));
+		}
+	});
 	Scenario.Run();
 	return true;
 }

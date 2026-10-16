@@ -85,4 +85,7 @@ void ACrossguardCharacter::SetBodyMeshRelativeTransform(const FTransform& Transf
 {
 	MeshRelativeTransform = Transform;
 	GetMesh()->SetRelativeTransform(Transform);
+	// Network smoothing on clients puts the mesh back to the offset cached at spawn every frame:
+	// without this a mesh's yaw from data is lost on other players' machines (they walk sideways).
+	CacheInitialMeshOffset(Transform.GetLocation(), Transform.Rotator());
 }

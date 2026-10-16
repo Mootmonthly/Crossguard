@@ -10,6 +10,7 @@
 
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "Character/CrossguardCharacter.h"
+#include "Character/CrossguardMonster.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
@@ -110,6 +111,58 @@ bool FCrossguardNetWieldingTags::RunTest(const FString& Parameters)
 	{
 		const AActor* HostCopy = C.OnClient(C.ServerPawnOf(0), 1);
 		return HostCopy != nullptr && !C.HasTag(HostCopy, CrossguardTags::Equipment_Wielding_Sword);
+	});
+
+	Scenario.Run();
+	return true;
+}
+
+// A monster's mesh yaw from data (Mobs.json meshYaw) holds on a client while it walks: the client's
+// movement smoothing must not put the mesh back to its spawn rotation (it walked sideways there).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardNetMobMeshYaw, "Crossguard.Net.MobMeshYawOnClient", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardNetMobMeshYaw::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioNet;
+
+	FScenario Scenario(*this);
+	Scenario.Clients(2);
+
+	Scenario.Step(TEXT("A skeleton soldier from data 12 m from the clients"), [](FScenarioContext& C)
+	{
+		if (!PlaceClients(C))
+		{
+			return;
+		}
+		ACrossguardMonster* Monster = C.SpawnMonster(TEXT("Monster"), FName(TEXT("skeleton_soldier")), FVector(1200.0f, SceneY + 600.0f, 0.0f), 90.0f);
+		if (!C.Require(Monster != nullptr, TEXT("monster spawned")))
+		{
+			return;
+		}
+		if (!Monster->BodyVisual.HasMesh())
+		{
+			C.Skip(TEXT("skeleton_soldier has no mesh in the data"));
+		}
+	});
+
+	Scenario.WaitUntilOnClient(1, TEXT("client 1's copy walks with the data's mesh yaw"), 8.0f, [](FScenarioContext& C, UWorld&)
+	{
+		const ACrossguardMonster* Server = C.Get<ACrossguardMonster>(TEXT("Monster"));
+		const ACrossguardMonster* Copy = Cast<ACrossguardMonster>(C.OnClient(Server, 1));
+		return Copy != nullptr && Copy->GetVelocity().Size2D() > 50.0f
+			&& FMath::IsNearlyEqual(Copy->GetMesh()->GetRelativeRotation().Yaw, Server->BodyVisual.MeshYaw, 1.0f);
+	});
+
+	Scenario.Wait(0.5f);
+	Scenario.Step(TEXT("Still the data's yaw half a second later"), [](FScenarioContext& C)
+	{
+		const ACrossguardMonster* Server = C.Get<ACrossguardMonster>(TEXT("Monster"));
+		const ACrossguardMonster* Copy = Cast<ACrossguardMonster>(C.OnClient(Server, 1));
+		if (C.Require(Server != nullptr && Copy != nullptr, TEXT("the monster and its copy on client 1")))
+		{
+			C.Test.TestEqual(TEXT("client 1: mesh yaw"), static_cast<float>(Copy->GetMesh()->GetRelativeRotation().Yaw), Server->BodyVisual.MeshYaw, 1.0f);
+		}
 	});
 
 	Scenario.Run();
