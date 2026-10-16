@@ -24,7 +24,7 @@ and why); blocked = cannot be done until another system exists.
 | Axe Mastery | Passive | Data | done (wielding axe, melee CDR) | none of its own (as SwordMastery) |
 | Benediction | Spell | C++ | done (full heal, revives a body) | Benediction |
 | Bow Mastery | Passive | Data | done (wielding bow, ranged CDR) | none of its own (as SwordMastery) |
-| Chop Down | Active | C++ + rider | done (110%, slow, Grounds fliers) | ChopDown |
+| Chop Down | Active | C++ + rider | done (110%, slow, Grounds fliers; a thrown throwing axe uses it up) | ChopDown, ThrownAxeChopDown |
 | Cleave | Art | C++ | done | Cleave |
 | Cor Leonis | Passive | Data | done (per empty armor slot) | CorLeonisEmptySlots |
 | Dagger Mastery | Passive | Data | done | none of its own (as SwordMastery) |
@@ -44,21 +44,21 @@ and why); blocked = cannot be done until another system exists.
 | Immutable | Active | C++ | done (permanent and party CC immunity; both off with The Mithril Knight's requirement) | Immutable, MithrilKnightNeedsFullPlate |
 | Light | Spell | C++ | done | Light |
 | Like A Lion, He Leapt | Art | C++ | done | LikeALion |
-| Mortal Strike | Active | C++ + rider | done (cooldown back on a kill) | NextAttackStack, MortalStrikeKillRefresh |
+| Mortal Strike | Active | C++ + rider | done (cooldown back on a kill; thrown knives and axes use it up, untested) | NextAttackStack, MortalStrikeKillRefresh |
 | Multiscale | Passive | C++ (party aura) | done (off with The Mithril Knight's requirement) | Multiscale, MithrilKnightNeedsFullPlate |
 | Mute | Spell | C++ | done (passives off too) | Mute |
 | Neckbite | Active | C++ + rider | blocked for players: needs Beastial forms; the tiger has it | NeckbiteSilence, SummonTigerLeapAndRiders |
 | Parting the Land | Active | C++ | done | PartingTheLand |
 | Purge Shot | Active | C++ + rider | done | PurgeShot |
 | Quickshot | Active | C++ | done | Quickshot |
-| Shade Blow | Active | C++ + rider | done (heal block) | NextAttackStack, ShadeBlowHealBlock |
+| Shade Blow | Active | C++ + rider | done (heal block; a thrown throwing axe uses it up, untested) | NextAttackStack, ShadeBlowHealBlock |
 | Shooting Star | Art | C++ | done (Blind screen effect is Editor work) | ShootingStar |
-| Slash | Active | C++ + rider | done | NextAttackStack |
+| Slash | Active | C++ + rider | done (a thrown throwing knife uses it up) | NextAttackStack, ThrownKnifeSlash |
 | Spear Mastery | Passive | Data | done | none of its own (as SwordMastery) |
 | Spear of Liscor | Passive | Data (bundle) | done (Spear requirement enforced since this audit; it also switches off its components) | SpearOfLiscorNeedsSpear |
 | Splinter of Winter | Passive | C++ + rider (Dagger Mastery from data) | done (thrown throwing knives too) | SplinterOfWinter, ThrownKnifeSplinterOfWinter |
 | Stealth | Active | C++ | done (enemy position leak: roadmap decision) | Stealth, StealthNetRelevancy |
-| Summon Greater Demon | Spell | C++ | done | SummonGreaterDemon, SummonGreaterDemonFights |
+| Summon Greater Demon | Spell | C++ | done (reach scales with its 3x size: 6 m) | SummonGreaterDemon, SummonGreaterDemonFights |
 | Summon Skeletons | Spell | C++ | done (Mage Fireball every 8 s) | SummonSkeletons, SummonSkeletonsFollow |
 | Summon Tiger | Spell | C++ | done (Pet Gem needed, kept) | SummonTiger, SummonTigerLeapAndRiders |
 | Sword Mastery | Passive | Data | done | SwordMastery |
@@ -79,7 +79,9 @@ players (Neckbite).
   skills).
 - Ruled since: a bundle's requirement also switches off the skills it includes
   (UCrossguardLoadoutComponent::IsSkillSwitchedOn, rechecked on equipment changes), and a thrown
-  throwing knife is a dagger attack for Splinter of Winter and Gouge.
+  throwing knife is a dagger attack for Splinter of Winter and Gouge. Then: every next-attack skill
+  whose weapon requirement accepts the throw's weapon (knife: Dagger, axe: Axe) rides on it as on a
+  melee attack with that weapon; a throw never uses up a parry's riposte (ThrownKnifeSlash checks).
 
 ## Open questions
 

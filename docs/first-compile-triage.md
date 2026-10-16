@@ -271,3 +271,20 @@ A raider whose connection drops is held for a reconnect: new `ACrossguardPlayerC
 | RC8 | `ResumeHeldCharacter` | `UAbilitySystemComponent::SetNumericAttributeBase` after `Possess` (possession sets Health to full); `APlayerController::ClientSetRotation(FRotator, bool = false)` | 5.x. Runtime: if Health comes back full, `PossessedBy` ran later than assumed. | Restore Health on the next tick (`SetTimerForNextTick`). |
 | RC9 | `FCrossguardHeldPlayer` | A plain (non-`USTRUCT`) struct in `CrossguardGameMode.h` holding `TWeakObjectPtr`s, used in a non-`UPROPERTY` `TMap` | Fine for UHT (not reflected). | — |
 | RC10 | Blueprint game mode | `PlayerControllerClass = ACrossguardPlayerController` in the C++ constructor | If `BP_CrossguardGameMode` saved its own Player Controller Class, the C++ default does not reach it: no hold (the pawn is destroyed on disconnect, as before) and `Reconnect.*` skip with a message. | Set Player Controller Class to `CrossguardPlayerController` on the Blueprint. |
+
+### Demon reach and next-attack skills on throws (rulings)
+
+The Greater Demon's reach is its base 2 m times its scale (`UCrossguardSummonCompanionAbility::ActivateAbility`:
+`Minion.AttackRange = AttackRange * Scale`, 6 m). Every next-attack skill whose weapon accepts a thrown
+knife (Dagger) or axe (Axe) rides on the throw (`GatherRiders`: a throw with a weapon type counts as a
+melee attack with it; riposte excluded); `UCrossguardInventoryComponent::Throw` applies the weapon
+multiplier and flat bonus to the throw's damage and hands the Silence, Grounding and Mortal Strike flags
+to the projectile; `ACrossguardProjectile::HandleImpact` now applies on-hit riders through
+`UCrossguardWeaponAttackAbility::ApplyRiders` / `FinishMeleeHits` (arrows behave as before). New tests
+`Skills.ThrownKnifeSlash`, `Skills.ThrownAxeChopDown`. Reviewed by reading; nothing built.
+
+| # | Where | What | Why it may fail | Suggested fix |
+| --- | --- | --- | --- | --- |
+| T1 | `Private/Combat/CrossguardProjectile.cpp` | Includes `Combat/CrossguardWeaponAttackAbility.h`; `FinishMeleeHits(Landed, ShooterASC, {OtherActor})` builds a `TArray<AActor*>` from a braced list | Same call shape as `ACrossguardAICharacter::TryAttack` (`{Target}`). | `TArray<AActor*>{OtherActor}` or a named local. |
+| T2 | `Skills.ThrownAxeChopDown` (runtime) | `chop_down` activates with a throwing axe in hand (held throwable counts as an Axe for `SatisfiesWeaponRequirement`) | If the held-throwable check does not reach Chop Down's `RequiredWeapons`, the test stops at "Chop Down activates". | Check `UCrossguardEquipmentComponent::SetHeldThrowable` ran (key 3 readied the axes). |
+| T3 | Greater Demon (runtime) | 6 m reach: it swings from farther away; `MoveToward(..., AttackRange * 0.5)` stops it 3 m from its target | `SummonGreaterDemonFights` expects hits on a dummy 4 m from the warlock; should still pass (more reach, not less). | — |
