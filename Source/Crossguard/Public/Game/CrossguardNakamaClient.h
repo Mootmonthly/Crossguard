@@ -39,8 +39,11 @@ class CROSSGUARD_API FCrossguardNakamaClient
 public:
 	using FCallback = TFunction<void(const FCrossguardNakamaResponse& Response)>;
 
-	// gRPC status code for a refused save write (stale version): HTTP 409.
+	// gRPC status code for a refused save write (stale version), a held save lease, a party or queue
+	// race: HTTP 409.
 	static constexpr int32 CodeAborted = 10;
+	// The caller does not hold the player's save lease any more (expired, released, taken): HTTP 400.
+	static constexpr int32 CodeFailedPrecondition = 9;
 
 	FCrossguardNakamaClient(const FString& InBaseUrl, float InTimeoutSeconds);
 
@@ -48,6 +51,10 @@ public:
 
 	// POST <url>/v2/rpc/<RpcId>?unwrap with the raw JSON payload, authorized with the runtime HTTP key.
 	void CallServerRpc(const FString& HttpKey, const FString& RpcId, const FString& PayloadJson, FCallback OnDone) const;
+
+	// POST <url>/v2/rpc/<RpcId>?unwrap as a logged-in player (Bearer <session token>). The one client RPC
+	// is crossguard_hub_find_mine (the menu's Play).
+	void CallClientRpc(const FString& SessionToken, const FString& RpcId, const FString& PayloadJson, FCallback OnDone) const;
 
 	// POST <url>/v2/account/authenticate/device?create=true, authorized with the server key. The answer
 	// holds "token" and "refresh_token".

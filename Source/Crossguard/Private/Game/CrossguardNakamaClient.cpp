@@ -40,6 +40,11 @@ void FCrossguardNakamaClient::CallServerRpc(const FString& HttpKey, const FStrin
 	Post(FString::Printf(TEXT("%s/v2/rpc/%s?unwrap"), *BaseUrl, *RpcId), BasicAuth(HttpKey), PayloadJson, MoveTemp(OnDone));
 }
 
+void FCrossguardNakamaClient::CallClientRpc(const FString& SessionToken, const FString& RpcId, const FString& PayloadJson, FCallback OnDone) const
+{
+	Post(FString::Printf(TEXT("%s/v2/rpc/%s?unwrap"), *BaseUrl, *RpcId), TEXT("Bearer ") + SessionToken, PayloadJson, MoveTemp(OnDone));
+}
+
 void FCrossguardNakamaClient::AuthenticateDevice(const FString& ServerKey, const FString& DeviceId, FCallback OnDone) const
 {
 	Post(FString::Printf(TEXT("%s/v2/account/authenticate/device?create=true"), *BaseUrl), BasicAuth(ServerKey),

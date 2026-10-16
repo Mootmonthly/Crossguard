@@ -17,6 +17,9 @@ namespace CrossguardNakamaSaveLocal
 	const TCHAR* LoadRpc = TEXT("crossguard_save_load");
 	const TCHAR* WriteRpc = TEXT("crossguard_save_write");
 	const TCHAR* QuarantineRpc = TEXT("crossguard_save_quarantine");
+	const TCHAR* LeaseAcquireRpc = TEXT("crossguard_lease_acquire");
+	const TCHAR* LeaseRenewRpc = TEXT("crossguard_lease_renew");
+	const TCHAR* LeaseReleaseRpc = TEXT("crossguard_lease_release");
 
 	void Report(TArray<ICrossguardSaveBackend::FSaveCallback>& Callbacks, bool bSaved, const FString& Error)
 	{
@@ -34,19 +37,24 @@ namespace CrossguardNakamaSaveLocal
 
 const TCHAR* UCrossguardNakamaSaveBackend::DefaultCharacterId = TEXT("main");
 
-void UCrossguardNakamaSaveBackend::Configure(const FString& Url, const FString& InHttpKey, float TimeoutSeconds)
+void UCrossguardNakamaSaveBackend::Configure(const FString& Url, const FString& InHttpKey, float TimeoutSeconds, const FString& InServerId)
 {
 	Client = Url.IsEmpty() ? nullptr : MakeShared<FCrossguardNakamaClient>(Url, TimeoutSeconds);
 	HttpKey = InHttpKey;
+	ServerId = InServerId;
 	CharacterId = DefaultCharacterId;
+	if (!RenewHandle.IsValid())
+	{
+		RenewHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateUObject(this, &UCrossguardNakamaSaveBackend::RenewTick), LeaseRenewSeconds);
+	}
 	Fallback = NewObject<UCrossguardLocalSaveBackend>(this);
 	Fallback->SetDirectory(FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Crossguard"), TEXT("NakamaUnsaved")));
 }
 
 FString UCrossguardNakamaSaveBackend::DescribeBackend() const
 {
-	return FString::Printf(TEXT("Nakama at %s (character \"%s\"; unsaved documents kept in %s)"), Client.IsValid() ? *Client->GetBaseUrl() : TEXT("<no url>"),
-		*CharacterId, *GetFallbackDirectory());
+	return FString::Printf(TEXT("Nakama at %s (character \"%s\", save leases as %s; unsaved documents kept in %s)"),
+		Client.IsValid() ? *Client->GetBaseUrl() : TEXT("<no url>"), *CharacterId, *ServerId, *GetFallbackDirectory());
 }
 
 FString UCrossguardNakamaSaveBackend::GetFallbackDirectory() const
@@ -60,9 +68,15 @@ FString UCrossguardNakamaSaveBackend::GetKnownVersion(const FString& PlayerId) c
 	return Entry != nullptr ? Entry->Version : FString();
 }
 
+bool UCrossguardNakamaSaveBackend::HoldsLease(const FString& PlayerId) const
+{
+	const FPlayerSaves* Entry = Players.Find(PlayerId);
+	return Entry != nullptr && !Entry->LeaseToken.IsEmpty();
+}
+
 bool UCrossguardNakamaSaveBackend::CanCall(FString& OutError) const
 {
-	if (!Client.IsValid() || HttpKey.IsEmpty())
+	if (!Client.IsValid() || HttpKey.IsEmpty() || ServerId.IsEmpty())
 	{
 		OutError = TEXT("Nakama is not configured (-NakamaUrl= and -NakamaHttpKey= / CROSSGUARD_NAKAMA_HTTP_KEY)");
 		return false;
@@ -73,11 +87,25 @@ bool UCrossguardNakamaSaveBackend::CanCall(FString& OutError) const
 // --- Helpers -------------------------------------------------------------------------------------
 
 FString UCrossguardNakamaSaveBackend::BuildWritePayload(const FString& UserId, const FString& InCharacterId, const FString& Document,
-	const FString& ExpectedVersion)
+	const FString& ExpectedVersion, const FString& LeaseToken)
 {
 	// "record" last and verbatim: the document is already JSON, and re-encoding it could change numbers.
-	return FString::Printf(TEXT("{\"user_id\":%s,\"character_id\":%s,\"expected_version\":%s,\"record\":%s}"), *FCrossguardNakamaClient::Quote(UserId),
-		*FCrossguardNakamaClient::Quote(InCharacterId), *FCrossguardNakamaClient::Quote(ExpectedVersion), *Document);
+	return FString::Printf(TEXT("{\"user_id\":%s,\"character_id\":%s,\"expected_version\":%s,\"lease_token\":%s,\"record\":%s}"),
+		*FCrossguardNakamaClient::Quote(UserId), *FCrossguardNakamaClient::Quote(InCharacterId), *FCrossguardNakamaClient::Quote(ExpectedVersion),
+		*FCrossguardNakamaClient::Quote(LeaseToken), *Document);
+}
+
+FString UCrossguardNakamaSaveBackend::BuildLeasePayload(const FString& UserId, const FString& InCharacterId, const FString& InServerId,
+	const FString& LeaseToken, int32 TtlSeconds)
+{
+	return FString::Printf(TEXT("{\"user_id\":%s,\"character_id\":%s,\"server_id\":%s,\"lease_token\":%s,\"ttl_sec\":%d}"),
+		*FCrossguardNakamaClient::Quote(UserId), *FCrossguardNakamaClient::Quote(InCharacterId), *FCrossguardNakamaClient::Quote(InServerId),
+		*FCrossguardNakamaClient::Quote(LeaseToken), TtlSeconds);
+}
+
+bool UCrossguardNakamaSaveBackend::IsLeaseLost(const FCrossguardNakamaResponse& Response)
+{
+	return Response.bConnected && Response.ErrorCode == FCrossguardNakamaClient::CodeFailedPrecondition && Response.ErrorMessage.Contains(TEXT("lease"));
 }
 
 bool UCrossguardNakamaSaveBackend::ParseLoadResponse(const FString& Body, bool& bOutFound, FString& OutVersion, FString& OutRecord)
@@ -151,13 +179,74 @@ void UCrossguardNakamaSaveBackend::LoadCharacter(const FString& PlayerId, FLoadC
 		return;
 	}
 	FPlayerSaves& Entry = Players.FindOrAdd(PlayerId);
+	// Back on this server: keep the lease.
+	Entry.bReleaseWhenIdle = false;
 	if (Entry.IsBusy())
 	{
-		// Writes for this player are still going out (they left and came back quickly): load after them.
+		// Writes (or the lease release) for this player are still going out (they left and came back
+		// quickly): load after them.
 		Entry.DeferredLoads.Add(MoveTemp(OnLoaded));
 		return;
 	}
-	StartLoad(PlayerId, 1, MoveTemp(OnLoaded));
+	StartAcquire(PlayerId, FPlatformTime::Seconds() + LeaseWaitSeconds, MoveTemp(OnLoaded));
+}
+
+void UCrossguardNakamaSaveBackend::StartAcquire(const FString& PlayerId, double WaitUntil, FLoadCallback OnLoaded)
+{
+	TWeakObjectPtr<UCrossguardNakamaSaveBackend> WeakThis(this);
+	Client->CallServerRpc(HttpKey, CrossguardNakamaSaveLocal::LeaseAcquireRpc, BuildLeasePayload(PlayerId, CharacterId, ServerId, FString(), LeaseTtlSeconds),
+		[WeakThis, PlayerId, WaitUntil, OnLoaded = MoveTemp(OnLoaded)](const FCrossguardNakamaResponse& Response)
+		{
+			if (UCrossguardNakamaSaveBackend* Self = WeakThis.Get())
+			{
+				Self->HandleAcquire(PlayerId, WaitUntil, OnLoaded, Response);
+			}
+			else
+			{
+				FCrossguardSaveLoadResult Result;
+				Result.Error = TEXT("save backend gone");
+				OnLoaded(Result);
+			}
+		});
+}
+
+void UCrossguardNakamaSaveBackend::HandleAcquire(const FString& PlayerId, double WaitUntil, FLoadCallback OnLoaded, const FCrossguardNakamaResponse& Response)
+{
+	FString Token;
+	TSharedPtr<FJsonObject> Object;
+	if (Response.IsOk() && FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Response.Body), Object) && Object.IsValid())
+	{
+		Object->TryGetStringField(TEXT("lease_token"), Token);
+	}
+	if (!Token.IsEmpty())
+	{
+		FPlayerSaves& Entry = Players.FindOrAdd(PlayerId);
+		Entry.LeaseToken = Token;
+		StartLoad(PlayerId, 1, MoveTemp(OnLoaded));
+		return;
+	}
+	// Held by the server the player just left (still writing), or no answer: wait and try again.
+	const bool bHeld = Response.bConnected && Response.ErrorCode == FCrossguardNakamaClient::CodeAborted;
+	if ((bHeld || Response.IsRetryable()) && FPlatformTime::Seconds() < WaitUntil && !bFlushing)
+	{
+		UE_LOG(LogCrossguard, Log, TEXT("Nakama: save lease of %s not free yet (%s); trying again"), *PlayerId, *Response.Describe());
+		TWeakObjectPtr<UCrossguardNakamaSaveBackend> WeakThis(this);
+		FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([WeakThis, PlayerId, WaitUntil, OnLoaded](float)
+		{
+			if (UCrossguardNakamaSaveBackend* Self = WeakThis.Get())
+			{
+				Self->StartAcquire(PlayerId, WaitUntil, OnLoaded);
+			}
+			return false;
+		}), LeaseRetrySeconds);
+		return;
+	}
+	// The player plays unsaved this session (the subsystem keeps their stored save).
+	FCrossguardSaveLoadResult Result;
+	Result.Status = ECrossguardSaveLoadStatus::Failed;
+	Result.Error = FString::Printf(TEXT("no save lease: %s"), *Response.Describe());
+	UE_LOG(LogCrossguard, Error, TEXT("Nakama: could not get the save lease of %s: %s"), *PlayerId, *Response.Describe());
+	OnLoaded(Result);
 }
 
 void UCrossguardNakamaSaveBackend::StartLoad(const FString& PlayerId, int32 Attempt, FLoadCallback OnLoaded)
@@ -260,7 +349,11 @@ void UCrossguardNakamaSaveBackend::SaveCharacter(const FString& PlayerId, const 
 	}
 	else if (Entry->bConflict)
 	{
-		Error = TEXT("another server changed this save (version conflict); not written until the player loads again");
+		Error = TEXT("another server changed this save or holds its lease; not written until the player loads again");
+	}
+	else if (Entry->LeaseToken.IsEmpty())
+	{
+		Error = TEXT("this server holds no save lease for the player");
 	}
 	if (!Error.IsEmpty())
 	{
@@ -317,22 +410,34 @@ void UCrossguardNakamaSaveBackend::Pump(const FString& PlayerId)
 		Send(PlayerId, *Entry);
 		return;
 	}
-	// Idle: loads that waited for the writes go now.
+	if (Entry->bReleaseInFlight)
+	{
+		return;
+	}
+	// Idle: loads that waited for the writes go now (acquiring the lease again).
 	if (Entry->DeferredLoads.Num() > 0)
 	{
 		TArray<FLoadCallback> Loads = MoveTemp(Entry->DeferredLoads);
 		Entry->DeferredLoads.Reset();
+		Entry->bReleaseWhenIdle = false;
+		const double WaitUntil = FPlatformTime::Seconds() + LeaseWaitSeconds;
 		for (FLoadCallback& Load : Loads)
 		{
-			StartLoad(PlayerId, 1, MoveTemp(Load));
+			StartAcquire(PlayerId, WaitUntil, MoveTemp(Load));
 		}
+		return;
+	}
+	// Idle and gone (logout, travel): the next server may take the save over.
+	if (Entry->bReleaseWhenIdle && !Entry->LeaseToken.IsEmpty())
+	{
+		SendRelease(PlayerId, *Entry);
 	}
 }
 
 void UCrossguardNakamaSaveBackend::Send(const FString& PlayerId, FPlayerSaves& Entry)
 {
 	Entry.bInFlight = true;
-	const FString Payload = BuildWritePayload(PlayerId, CharacterId, Entry.InFlightDocument, Entry.Version);
+	const FString Payload = BuildWritePayload(PlayerId, CharacterId, Entry.InFlightDocument, Entry.Version, Entry.LeaseToken);
 	TWeakObjectPtr<UCrossguardNakamaSaveBackend> WeakThis(this);
 	Client->CallServerRpc(HttpKey, CrossguardNakamaSaveLocal::WriteRpc, Payload, [WeakThis, PlayerId](const FCrossguardNakamaResponse& Response)
 	{
@@ -380,20 +485,27 @@ void UCrossguardNakamaSaveBackend::HandleWrite(const FString& PlayerId, const FC
 		return;
 	}
 
-	if (Response.HttpStatus == 409 || Response.ErrorCode == FCrossguardNakamaClient::CodeAborted)
+	const bool bLeaseLost = IsLeaseLost(Response);
+	if (bLeaseLost || Response.HttpStatus == 409 || Response.ErrorCode == FCrossguardNakamaClient::CodeAborted)
 	{
-		// Another server wrote since our load. Nakama kept the refused record (characters_conflicts);
-		// keep it here too, and stop writing this player: what we hold is out of date.
+		// Another server wrote since our load (Nakama kept the refused record in characters_conflicts), or
+		// holds the player's save lease now. Keep the document here too, and stop writing this player: what
+		// we hold is out of date.
+		const TCHAR* Reason = bLeaseLost ? TEXT("save lease lost") : TEXT("version conflict");
+		if (bLeaseLost)
+		{
+			LoseLease(PlayerId, *Entry, Response.Describe());
+		}
 		Entry->bConflict = true;
 		UE_LOG(LogCrossguard, Error, TEXT("Nakama: save of %s refused: %s. No more writes for this player until they load again."), *PlayerId,
 			*Response.Describe());
-		GiveUpInFlight(PlayerId, *Entry, TEXT("version conflict"));
+		GiveUpInFlight(PlayerId, *Entry, Reason);
 		if (Entry->bHasQueued)
 		{
-			const FString File = KeepLocally(PlayerId, Entry->QueuedDocument, TEXT("version conflict"));
+			const FString File = KeepLocally(PlayerId, Entry->QueuedDocument, Reason);
 			Entry->QueuedDocument.Reset();
 			Entry->bHasQueued = false;
-			CrossguardNakamaSaveLocal::Report(Entry->QueuedCallbacks, false, FString::Printf(TEXT("version conflict; kept in %s"), *File));
+			CrossguardNakamaSaveLocal::Report(Entry->QueuedCallbacks, false, FString::Printf(TEXT("%s; kept in %s"), Reason, *File));
 		}
 		Pump(PlayerId);
 		return;
@@ -457,6 +569,92 @@ FString UCrossguardNakamaSaveBackend::KeepLocally(const FString& PlayerId, const
 	});
 	UE_LOG(LogCrossguard, Error, TEXT("Nakama: save of %s not stored in Nakama (%s); kept in %s"), *PlayerId, *Reason, *File);
 	return File;
+}
+
+// --- Leases ----------------------------------------------------------------------------------------
+
+void UCrossguardNakamaSaveBackend::LoseLease(const FString& PlayerId, FPlayerSaves& Entry, const FString& Why)
+{
+	Entry.LeaseToken.Reset();
+	Entry.bConflict = true;
+	UE_LOG(LogCrossguard, Error, TEXT("Nakama: save lease of %s lost (%s): another server owns the save now; no more writes here until they load again"),
+		*PlayerId, *Why);
+}
+
+void UCrossguardNakamaSaveBackend::ReleaseCharacter(const FString& PlayerId)
+{
+	FPlayerSaves* Entry = Players.Find(PlayerId);
+	if (Entry == nullptr || Entry->LeaseToken.IsEmpty())
+	{
+		return;
+	}
+	// After the writes still going out (the logout save among them).
+	Entry->bReleaseWhenIdle = true;
+	Pump(PlayerId);
+}
+
+void UCrossguardNakamaSaveBackend::SendRelease(const FString& PlayerId, FPlayerSaves& Entry)
+{
+	const FString Token = Entry.LeaseToken;
+	Entry.LeaseToken.Reset();
+	Entry.bReleaseWhenIdle = false;
+	Entry.bReleaseInFlight = true;
+	TWeakObjectPtr<UCrossguardNakamaSaveBackend> WeakThis(this);
+	Client->CallServerRpc(HttpKey, CrossguardNakamaSaveLocal::LeaseReleaseRpc, BuildLeasePayload(PlayerId, CharacterId, ServerId, Token, 0),
+		[WeakThis, PlayerId](const FCrossguardNakamaResponse& Response)
+		{
+			if (!Response.IsOk())
+			{
+				// It runs out after its TTL anyway; the next server waits until then.
+				UE_LOG(LogCrossguard, Warning, TEXT("Nakama: save lease of %s not released (%s); it expires on its own"), *PlayerId, *Response.Describe());
+			}
+			UCrossguardNakamaSaveBackend* Self = WeakThis.Get();
+			FPlayerSaves* Released = Self != nullptr ? Self->Players.Find(PlayerId) : nullptr;
+			if (Released != nullptr)
+			{
+				Released->bReleaseInFlight = false;
+				// A load that came meanwhile acquires again.
+				Self->Pump(PlayerId);
+			}
+		});
+}
+
+bool UCrossguardNakamaSaveBackend::RenewTick(float DeltaSeconds)
+{
+	if (bFlushing || !Client.IsValid())
+	{
+		return true;
+	}
+	for (TPair<FString, FPlayerSaves>& Pair : Players)
+	{
+		if (Pair.Value.LeaseToken.IsEmpty() || Pair.Value.bReleaseInFlight)
+		{
+			continue;
+		}
+		const FString PlayerId = Pair.Key;
+		const FString Token = Pair.Value.LeaseToken;
+		TWeakObjectPtr<UCrossguardNakamaSaveBackend> WeakThis(this);
+		Client->CallServerRpc(HttpKey, CrossguardNakamaSaveLocal::LeaseRenewRpc, BuildLeasePayload(PlayerId, CharacterId, ServerId, Token, LeaseTtlSeconds),
+			[WeakThis, PlayerId, Token](const FCrossguardNakamaResponse& Response)
+			{
+				UCrossguardNakamaSaveBackend* Self = WeakThis.Get();
+				FPlayerSaves* Renewed = Self != nullptr ? Self->Players.Find(PlayerId) : nullptr;
+				if (Renewed == nullptr || Renewed->LeaseToken != Token || Response.IsOk())
+				{
+					return;
+				}
+				if (IsLeaseLost(Response))
+				{
+					Self->LoseLease(PlayerId, *Renewed, Response.Describe());
+				}
+				else
+				{
+					// No answer: the next tick tries again (the TTL is three renewals long).
+					UE_LOG(LogCrossguard, Warning, TEXT("Nakama: save lease of %s not renewed (%s)"), *PlayerId, *Response.Describe());
+				}
+			});
+	}
+	return true;
 }
 
 // --- Quarantine, shutdown ------------------------------------------------------------------------
@@ -542,5 +740,36 @@ void UCrossguardNakamaSaveBackend::FlushWrites(float TimeoutSeconds)
 			Entry.bHasQueued = false;
 			CrossguardNakamaSaveLocal::Report(Entry.QueuedCallbacks, false, FString::Printf(TEXT("not sent before shutdown; kept in %s"), *File));
 		}
+	}
+
+	// Every lease goes back, so the players' next server does not wait for them to expire.
+	if (RenewHandle.IsValid())
+	{
+		FTSTicker::GetCoreTicker().RemoveTicker(RenewHandle);
+		RenewHandle.Reset();
+	}
+	for (TPair<FString, FPlayerSaves>& Pair : Players)
+	{
+		if (!Pair.Value.LeaseToken.IsEmpty() && !Pair.Value.bReleaseInFlight && Client.IsValid())
+		{
+			SendRelease(Pair.Key, Pair.Value);
+		}
+	}
+	const auto AnyReleasing = [this]()
+	{
+		for (const TPair<FString, FPlayerSaves>& Pair : Players)
+		{
+			if (Pair.Value.bReleaseInFlight)
+			{
+				return true;
+			}
+		}
+		return false;
+	};
+	const double ReleaseDeadline = FPlatformTime::Seconds() + FMath::Min(2.0f, TimeoutSeconds);
+	while (AnyReleasing() && FPlatformTime::Seconds() < ReleaseDeadline)
+	{
+		FHttpModule::Get().GetHttpManager().Tick(0.05f);
+		FPlatformProcess::Sleep(0.05f);
 	}
 }

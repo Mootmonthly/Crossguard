@@ -359,6 +359,8 @@ UCrossguardSaveSubsystem* UCrossguardSaveSubsystem::Get(const UObject* WorldCont
 void UCrossguardSaveSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+	// The Nakama backend needs the server id (save leases).
+	Collection.InitializeDependency<UCrossguardNakamaSubsystem>();
 	BackendObject = NewObject<UCrossguardLocalSaveBackend>(this);
 	FString BackendName = SaveBackend;
 	FParse::Value(FCommandLine::Get(), TEXT("SaveBackend="), BackendName);
@@ -375,7 +377,9 @@ void UCrossguardSaveSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		else
 		{
 			UCrossguardNakamaSaveBackend* Nakama = NewObject<UCrossguardNakamaSaveBackend>(this);
-			Nakama->Configure(Url, HttpKey, GetDefault<UCrossguardNakamaSubsystem>()->RequestTimeoutSeconds);
+			const UCrossguardNakamaSubsystem* NakamaLink = GetGameInstance()->GetSubsystem<UCrossguardNakamaSubsystem>();
+			Nakama->Configure(Url, HttpKey, GetDefault<UCrossguardNakamaSubsystem>()->RequestTimeoutSeconds,
+				NakamaLink != nullptr ? NakamaLink->GetServerId() : FString());
 			BackendObject = Nakama;
 		}
 	}
@@ -964,7 +968,12 @@ void UCrossguardSaveSubsystem::PlayerLeaving(ACrossguardPlayerState* PlayerState
 		return;
 	}
 	SaveNow(PlayerState);
-	// Forgotten: another server may change the save before this player comes back here.
+	// Forgotten: another server may change the save before this player comes back here. Once the last
+	// write is stored the backend lets that server take over (Nakama: releases the save lease).
+	if (ICrossguardSaveBackend* Backend = GetBackend())
+	{
+		Backend->ReleaseCharacter(PlayerId);
+	}
 	Players.Remove(PlayerId);
 	Watchers.Remove(PlayerId);
 }

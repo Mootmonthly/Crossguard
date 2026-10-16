@@ -30,7 +30,15 @@ struct FCrossguardNakamaResponse;
 // - Retries: no answer, 5xx or 429 are retried with backoff (1, 2, 4, 8, 16 s); then, and on any other
 //   refusal, the document is kept in Saved/Crossguard/NakamaUnsaved/<id>.json and logged as an error.
 //   A save is never dropped silently.
-// - Shutdown: FlushWrites sends what is waiting and blocks (bounded) until Nakama answers.
+// - Shutdown: FlushWrites sends what is waiting and blocks (bounded) until Nakama answers, then releases
+//   every lease.
+// - Save leases (Backend/nakama/modules/leases.go): only one server owns a player's save at a time. A
+//   load first acquires the player's lease for this server (GetServerId); held by another server (the
+//   one the player just left, still writing), it retries every LeaseRetrySeconds for up to
+//   LeaseWaitSeconds (a crashed server's lease expires after LeaseTtlSeconds and is taken over). Every
+//   write carries the token; leases are renewed every LeaseRenewSeconds; ReleaseCharacter (logout, travel)
+//   releases once the player's writes are done. A lease lost (expired and taken, refused renewal or
+//   write) stops writes for that player like a version conflict (kept on disk).
 UCLASS()
 class CROSSGUARD_API UCrossguardNakamaSaveBackend : public UObject, public ICrossguardSaveBackend
 {
@@ -44,26 +52,42 @@ public:
 	static constexpr int32 MaxLoadAttempts = 3;
 	// One character per account until character select exists (placeholder).
 	static const TCHAR* DefaultCharacterId;
+	// Save lease timing (placeholders): TTL asked for, renew interval, how long a load waits for another
+	// server's lease (a clean hand-off takes about a second; a crashed server's lease runs out after the
+	// TTL), and the pause between tries.
+	static constexpr int32 LeaseTtlSeconds = 60;
+	static constexpr float LeaseRenewSeconds = 20.0f;
+	static constexpr float LeaseWaitSeconds = 75.0f;
+	static constexpr float LeaseRetrySeconds = 1.0f;
 
-	// Required before use. Empty Url or HttpKey: every call fails (logged).
-	void Configure(const FString& Url, const FString& InHttpKey, float TimeoutSeconds);
+	// Required before use. Empty Url or HttpKey: every call fails (logged). ServerId: this process's id
+	// (UCrossguardNakamaSubsystem::GetServerId), the lease holder.
+	void Configure(const FString& Url, const FString& InHttpKey, float TimeoutSeconds, const FString& InServerId);
 
 	// ICrossguardSaveBackend
 	virtual void LoadCharacter(const FString& PlayerId, FLoadCallback OnLoaded) override;
 	virtual void SaveCharacter(const FString& PlayerId, const FString& Document, FSaveCallback OnSaved) override;
 	virtual void QuarantineCharacter(const FString& PlayerId, const FString& Reason) override;
+	virtual void ReleaseCharacter(const FString& PlayerId) override;
 	virtual FString DescribeBackend() const override;
 	virtual void FlushWrites(float TimeoutSeconds) override;
 
 	// The storage version known for a player ("*": no save stored yet; empty: not loaded here).
 	FString GetKnownVersion(const FString& PlayerId) const;
+	// This server holds the player's save lease.
+	bool HoldsLease(const FString& PlayerId) const;
 	// Where documents Nakama did not take are kept.
 	FString GetFallbackDirectory() const;
 
 	// --- Pure helpers (tested in CrossguardNakamaTests.cpp) ---
 
 	// The crossguard_save_write payload; Document (a JSON object) is embedded as is, not re-encoded.
-	static FString BuildWritePayload(const FString& UserId, const FString& CharacterId, const FString& Document, const FString& ExpectedVersion);
+	static FString BuildWritePayload(const FString& UserId, const FString& CharacterId, const FString& Document, const FString& ExpectedVersion,
+		const FString& LeaseToken);
+	// The crossguard_lease_acquire / _renew / _release payload (LeaseToken empty for acquire).
+	static FString BuildLeasePayload(const FString& UserId, const FString& CharacterId, const FString& InServerId, const FString& LeaseToken, int32 TtlSeconds);
+	// A refusal that means the lease is gone (FAILED_PRECONDITION, "save lease not held").
+	static bool IsLeaseLost(const FCrossguardNakamaResponse& Response);
 	// Reads a crossguard_save_load answer: {"found":bool,"version":"...","record":<object or null>}, record
 	// last (the module's field order). OutRecord is the record's exact text (numbers untouched).
 	static bool ParseLoadResponse(const FString& Body, bool& bOutFound, FString& OutVersion, FString& OutRecord);
@@ -94,10 +118,18 @@ private:
 		FTSTicker::FDelegateHandle RetryHandle;
 		// Loads asked for while writes were pending: run once they are done (a load must see them).
 		TArray<FLoadCallback> DeferredLoads;
+		// The save lease: token from crossguard_lease_acquire (empty: none held).
+		FString LeaseToken;
+		// Released once idle (ReleaseCharacter), and the release on its way.
+		bool bReleaseWhenIdle = false;
+		bool bReleaseInFlight = false;
 
-		bool IsBusy() const { return bInFlight || bHasQueued || RetryHandle.IsValid(); }
+		bool IsBusy() const { return bInFlight || bHasQueued || RetryHandle.IsValid() || bReleaseInFlight; }
 	};
 
+	// Acquires the lease (retrying while another server holds it), then loads.
+	void StartAcquire(const FString& PlayerId, double WaitUntil, FLoadCallback OnLoaded);
+	void HandleAcquire(const FString& PlayerId, double WaitUntil, FLoadCallback OnLoaded, const FCrossguardNakamaResponse& Response);
 	void StartLoad(const FString& PlayerId, int32 Attempt, FLoadCallback OnLoaded);
 	void HandleLoad(const FString& PlayerId, int32 Attempt, FLoadCallback OnLoaded, const FCrossguardNakamaResponse& Response);
 	// Sends the queued write if nothing is in flight; runs deferred loads when idle.
@@ -109,11 +141,17 @@ private:
 	// Writes Document to the fallback folder. Returns the file (empty if even that failed).
 	FString KeepLocally(const FString& PlayerId, const FString& Document, const FString& Reason);
 	bool CanCall(FString& OutError) const;
+	// The player lost the lease: no more writes until they load again (logged).
+	void LoseLease(const FString& PlayerId, FPlayerSaves& Entry, const FString& Why);
+	void SendRelease(const FString& PlayerId, FPlayerSaves& Entry);
+	bool RenewTick(float DeltaSeconds);
 
 	TSharedPtr<FCrossguardNakamaClient> Client;
 	FString HttpKey;
 	FString CharacterId;
+	FString ServerId;
 	TMap<FString, FPlayerSaves> Players;
+	FTSTicker::FDelegateHandle RenewHandle;
 	// Shutting down: no backoff waits, failures go to disk at once.
 	bool bFlushing = false;
 

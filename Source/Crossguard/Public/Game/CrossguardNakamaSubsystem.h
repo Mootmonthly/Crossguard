@@ -1,12 +1,12 @@
 #pragma once
 
+#include "Containers/Ticker.h"
 #include "CoreMinimal.h"
+#include "Game/CrossguardNakamaClient.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Templates/Function.h"
 
 #include "CrossguardNakamaSubsystem.generated.h"
-
-class FCrossguardNakamaClient;
 
 UENUM(BlueprintType)
 enum class ECrossguardNakamaLoginState : uint8
@@ -26,6 +26,11 @@ enum class ECrossguardNakamaLoginState : uint8
 // CROSSGUARD_NAKAMA_HTTP_KEY environment variable) and verifies the session tokens of connecting players
 // (crossguard_verify_session) for ACrossguardGameMode::PreLoginAsync. The verified Nakama user id becomes
 // the player id (UCrossguardGuildSubsystem::PlayerIdOf), ahead of Steam, development and session ids.
+//
+// With the backend on (IsBackendEnabled: the HTTP key and -SaveBackend=Nakama) a dedicated server also
+// registers itself with the backend's server registry (hub or match server, address, capacity; heartbeat;
+// deregister at shutdown) and match servers check the match tickets players bring (?MatchTicket=,
+// crossguard_ticket_verify). Docs: docs/backend-setup.md "Step 3".
 UCLASS(Config = Game)
 class CROSSGUARD_API UCrossguardNakamaSubsystem : public UGameInstanceSubsystem
 {
@@ -36,6 +41,7 @@ public:
 	static UCrossguardNakamaSubsystem* Get(const UObject* WorldContextObject);
 
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize() override;
 
 	// Login URL option carrying the client's session token.
 	static const TCHAR* TokenOption;
@@ -77,6 +83,54 @@ public:
 
 	TSharedPtr<FCrossguardNakamaClient> GetClient() const { return Client; }
 
+	// --- Backend switch, server identity ------------------------------------------------------------
+
+	// The backend runs this server's online side: it has the HTTP key and saves go to Nakama
+	// (-SaveBackend=Nakama or SaveBackend=Nakama in config). Then saves are under a lease, parties live in
+	// Nakama (UCrossguardPartySubsystem), matchmaking is Nakama's (FCrossguardNakamaMatchmaking), match
+	// servers take only verified match tickets and the server registers itself. Off: everything stays
+	// in this process (development, PIE, tests).
+	bool IsBackendEnabled() const { return bBackendEnabled; }
+	// This process's id for leases, the server registry and tickets: -ServerId=, else MakeServerId.
+	const FString& GetServerId() const { return ServerId; }
+	// "<computer>-<process id>-<suffix>", only letters, digits, '.', '-', '_' (others dropped), 128 at most.
+	static FString MakeServerId(const FString& ComputerName, uint32 ProcessId, const FString& Suffix);
+
+	// A server-to-server RPC with this server's HTTP key. Without the key it answers at once (no
+	// connection). Callback on the game thread.
+	void CallServerRpc(const FString& RpcId, const FString& PayloadJson, FCrossguardNakamaClient::FCallback OnDone) const;
+
+	// --- Game server registry (Backend/nakama/modules/fleet.go) --------------------------------------
+
+	// Registers this server (crossguard_server_register) and reports CountPlayers() every heartbeat; a
+	// heartbeat answered "unknown" (Nakama restarted) registers again. Kind: "hub" or "match". Calling it
+	// again replaces the registration. Only with the backend on.
+	void RegisterServer(const FString& Kind, const FString& Address, int32 Capacity, TFunction<int32()> CountPlayers);
+	// crossguard_server_deregister; waits up to TimeoutSeconds for the answer (shutdown).
+	void DeregisterServer(float TimeoutSeconds);
+	// The match on this match server is over (crossguard_match_over): free for the next match
+	// (-KeepMatchServer; a server that exits deregisters instead).
+	void ReportMatchOver();
+	bool IsRegistered() const { return bRegistered; }
+	// The address players connect to: -PublicAddress=<host:port>, else 127.0.0.1:<Port> (one PC).
+	static FString GetPublicAddress(int32 Port);
+	// The crossguard_server_register payload.
+	static FString BuildRegisterPayload(const FString& InServerId, const FString& Kind, const FString& Address, int32 Capacity);
+
+	// --- Match tickets (match servers; Backend/nakama/modules/matchmaking.go) ------------------------
+
+	using FTicketCallback = TFunction<void(bool bValid, const FString& PartyId, const FString& Error)>;
+	// Asks Nakama whether Ticket lets UserId (their verified session's) into this match server. On
+	// success the ticket's party is kept for TakeVerifiedTicket.
+	void VerifyMatchTicket(const FString& Ticket, const FString& InUserId, FTicketCallback OnDone);
+	// The verified ticket's party (empty: solo) and forgets it; false if Ticket was not verified for
+	// InUserId. ACrossguardGameMode::InitNewPlayer.
+	bool TakeVerifiedTicket(const FString& Ticket, const FString& InUserId, FString& OutPartyId);
+	// Tests: marks Ticket as verified for InUserId and PartyId.
+	void AddVerifiedTicketForTesting(const FString& Ticket, const FString& InUserId, const FString& PartyId);
+	// Reads a crossguard_ticket_verify answer. False if it is not one.
+	static bool ParseTicketAnswer(const FString& Body, FString& OutUserId, FString& OutPartyId, FString& OutMatchId);
+
 	// --- Client login -----------------------------------------------------------------------------
 
 	using FLoginCallback = TFunction<void(bool bLoggedIn, const FString& Error)>;
@@ -111,7 +165,29 @@ private:
 		FString UserId;
 		double VerifiedAt = 0.0;
 	};
+	struct FVerifiedTicket
+	{
+		FString UserId;
+		FString PartyId;
+		double VerifiedAt = 0.0;
+	};
 	void PruneVerified();
+	void SendRegistration();
+	bool HeartbeatTick(float DeltaSeconds);
+	// Ticks the HTTP module until bDone or the deadline (shutdown only).
+	static void WaitForHttp(const TSharedRef<bool>& bDone, float TimeoutSeconds);
+
+	bool bBackendEnabled = false;
+	FString ServerId;
+	// Registration (dedicated servers).
+	bool bRegistered = false;
+	FString RegisteredKind;
+	FString RegisteredAddress;
+	int32 RegisteredCapacity = 0;
+	TFunction<int32()> PlayerCounter;
+	FString LastMatchId;
+	FTSTicker::FDelegateHandle HeartbeatHandle;
+	TMap<FString, FVerifiedTicket> VerifiedTickets;
 
 	FString HttpKey;
 	TSharedPtr<FCrossguardNakamaClient> Client;

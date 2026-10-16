@@ -59,6 +59,9 @@ public:
 	// The stored document was refused on load: keep it aside for support (never delete it); the
 	// next SaveCharacter writes a fresh one.
 	virtual void QuarantineCharacter(const FString& PlayerId, const FString& Reason) = 0;
+	// The player left this server (logout, travel): once their last save is stored, another server may
+	// take over their save (Nakama: the save lease is released). Backends without leases: nothing to do.
+	virtual void ReleaseCharacter(const FString& PlayerId) {}
 	// For logs: "local files in <dir>".
 	virtual FString DescribeBackend() const = 0;
 	// Shutdown: sends every waiting write and blocks until answered or TimeoutSeconds pass. Writes that
