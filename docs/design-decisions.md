@@ -248,6 +248,13 @@ Independent of category, a skill is:
   richer formula later.
 - Assumed until ruled otherwise: vendors are used between raids only; a whole stack sells at once
   (a stack of 3 Common rubies: 150 gold).
+- Stash and vendor screens (placeholder, assumed 2026-10-16): the stash is opened with F at a stash
+  chest in the hub, vendors with F at a vendor NPC in the hub (both refused in a raid; anyone's
+  chest opens their own stash). Vendors only buy: nothing is sold to players until ruled.
+  "Sell all gemstones" sells every Trinket stack (rubies, sapphires, emeralds) at once. No sale
+  confirmation and no buy-back. Taking a stack out of the stash puts it wherever it fits (stacking
+  first), not on a chosen square. A screen closes when its player walks 1.5 m past the chest's or
+  NPC's interact range, or when a raid begins.
 - Lockpicking: the best chests and doors need it, through a skill or a lockpick item. It takes 5 s,
   faster with Dexterity, and cannot fail. The lockpicking skill comes from the Skill Forge.
 - Assumed until ruled otherwise: time = 5 s ÷ (1 + Dexterity) (30% Dexterity: 3.8 s); a lockpick

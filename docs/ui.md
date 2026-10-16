@@ -4,8 +4,10 @@ A working UI built entirely in C++ (UMG widgets whose trees are made in code), s
 played without console commands and without any `.uasset`. It is ugly on purpose: boxes and text.
 Artists replace it piece by piece with Widget Blueprints (see [Replacing it](#replacing-it)).
 
-Code: `Source/Crossguard/Public/UI`, `Source/Crossguard/Private/UI`. Test:
-`Crossguard.Scenario.UI.WidgetsBind` (`Private/Tests/CrossguardScenarioUITests.cpp`).
+Code: `Source/Crossguard/Public/UI`, `Source/Crossguard/Private/UI`. Tests:
+`Crossguard.Scenario.UI.WidgetsBind` (`Private/Tests/CrossguardScenarioUITests.cpp`),
+`Crossguard.Scenario.UI.StashAndVendor` and `Crossguard.Visual.HubUI`
+(`Private/Tests/CrossguardScenarioHubUITests.cpp`).
 
 ## Rules it follows
 
@@ -26,6 +28,8 @@ Code: `Source/Crossguard/Public/UI`, `Source/Crossguard/Private/UI`. Test:
 | I or Tab | Inventory screen (opens by itself when F opens a body or chest) | Ruled (Controls) |
 | T | Trade: asks the nearest player within 5 m and opens the trade window; with a trade or request, opens / closes it | Ruled (Controls) |
 | U | Guild window | Ruled (Controls) |
+| F at a stash chest / vendor NPC | Stash screen / vendor screen (hub only; the server agrees first) | Ruled (Controls: F interacts) |
+| `OpenStash`, `OpenVendor` (console) | The same screens without a chest or NPC, for testing (refused in a raid) | Placeholder (debug) |
 | Esc | Closes every window (in the editor, Esc also ends Play-In-Editor: use the X button there) | Ruled (Controls) |
 | Hold Q | Skill wheel: hover a skill to select it, release; E casts it | Ruled (Controls) |
 | 1–7, E, F, G, X | Unchanged (the character's bindings) | Ruled |
@@ -43,6 +47,8 @@ not attack.
 | Inventory | `UCrossguardInventoryWidget` | Equipment (two weapon sets, six armor slots, Backpack, Quiver), the 10 × 5 grid and the Backpack / Quiver grids (cells over each item's footprint, rarity colours, short names in one-square cells, stack counts, tooltips with name, count and rarity; items drag and drop), selected item actions (equip main / off hand, equip, take in hand, hotbar keys 3–7, learn a gem, split 1 or half off a stack, rotate, drop, put in the open body), hotbar keys (click to clear), and the open body or chest beside it (click a stack to take it, Take all, Close). |
 | Trade window | `UCrossguardTradeWidget` | Ask the nearest player; answer a request; your items, your offer and theirs; banked gold; lock / unlock; accept; cancel; state line (who has locked or accepted, stacks n / 12). |
 | Guild window | `UCrossguardGuildWidget` | Create a guild (name field) and answer invites; name, your rank and what it allows; roster with rank and online state, promote / demote / make leader / kick (greyed when your rank cannot); invite nearest player; leave; bank gold with deposit / withdraw; bank stacks with withdraw; your stacks with deposit. |
+| Stash screen | `UCrossguardStashWidget` | The inventory grids beside one stash tab (10 × 30, 32 px squares, scrolls), tab buttons, "Buy tab: 3000 gold (n / 3 bought)" (greyed without the gold, in a raid or at the cap; tooltip says why), banked gold, the selected item's actions (take to inventory, store, learn a Skill Gem). Opened by F on a stash chest (`ACrossguardStashChest`) or `OpenStash`. |
+| Vendor screen | `UCrossguardVendorWidget` | The inventory grids, a sell box to drop stacks on, banked gold, "Sell all gemstones: n gold", and one row per inventory stack with its price and a Sell button (greyed, "not bought", for what vendors do not take). Opened by F on a vendor NPC (`ACrossguardVendorNPC`) or `OpenVendor`. Selling only: buying from vendors is not ruled. |
 | Building blocks | `UCrossguardWidgetBase`, `UCrossguardWindowWidget`, `UCrossguardUIButton`, `UCrossguardItemGridWidget`, `UCrossguardItemDragOperation`, `CrossguardUI::*` helpers | Tree built in code, periodic refresh, a full-screen window frame that swallows stray clicks, a click/right-click/hover box that can start a drag and take a drop, the item grid (its cells drag; a drop anywhere on it reports the square the item's top-left lands on), the drag payload (item, source, grabbed square). |
 
 ### How to use the inventory
@@ -61,6 +67,32 @@ not attack.
 - With nothing selected, click a worn item in the equipment list to take it off (a Backpack or
   Quiver must be empty first).
 - Closing the inventory closes the open body or chest.
+
+### How to use the stash and the vendor
+
+- Hub only: play a map as the hub (`open /Game/Maps/Dev/L_DevSandbox?Hub` in the console, or a game
+  mode with `bIsRaid` off). In a raid, F on a chest or vendor is refused by the server (the HUD says
+  "Stash: BetweenRaidsOnly"), `OpenStash` / `OpenVendor` say "between raids only", and an open screen
+  closes when a raid begins.
+- Placing them: `Tools\editor_setup.bat -SkipBuild -AddHubActors` adds a stash chest and a vendor NPC
+  beside `L_DevSandbox`'s player start (a new map from `-CreateMap` gets them too); or drag
+  `CrossguardStashChest` and `CrossguardVendorNPC` in from Place Actors and save the map.
+- The stash screen closes when you walk more than 1.5 m past the chest's interact range (the vendor
+  screen likewise); opened from the console it stays.
+- Stash: drag an inventory stack onto a stash square to store it there, a stash stack onto your
+  grids to take it (it goes wherever it fits, stacking first: the server has no "take to this
+  square"), or a stash stack to another stash square (onto a stack of the same kind merges). Click to
+  select, then click a square, works too. Right click: a stash stack comes to your inventory, an
+  inventory stack goes to the first free stash square; a Skill Gem in either is learned (between
+  raids, ruled). Tabs: click "Tab n"; buy one with "Buy tab".
+- Vendor: drag a stack onto the sell box or click its Sell button; the whole stack sells at once
+  (assumed until ruled, `design-decisions.md`). "Sell all gemstones" sells every Trinket stack
+  (rubies, sapphires, emeralds). No confirmation and no buy-back (placeholder). Stash stacks can be
+  sold by the component (`RequestSell(Stash, id)`) but the screen lists the inventory only.
+- Refusals (no room, not enough gold, not bought) show at the bottom of the screen and on the HUD;
+  a sale shows "Sold for n gold".
+- Placeholder (no ruling): the stash chest is a 1 m box, the vendor a 1.8 m cylinder; the screens'
+  layout, the close distance and square sizes.
 
 ### Item cells
 
@@ -99,7 +131,8 @@ Each widget is a normal `UUserWidget` subclass.
    Blueprint-readable) and the `On Refreshed` event, which fires every `Refresh Interval` seconds.
    An empty Blueprint keeps the C++ tree, so you can also only restyle by subclassing.
 2. Make a Blueprint subclass of `CrossguardHUD`, set its widget classes (`Hud Widget Class`,
-   `Skill Wheel Class`, `Inventory Widget Class`, `Trade Widget Class`, `Guild Widget Class`), and set
+   `Skill Wheel Class`, `Inventory Widget Class`, `Trade Widget Class`, `Guild Widget Class`,
+   `Stash Widget Class`, `Vendor Widget Class`), and set
    it as the game mode Blueprint's **HUD Class**.
 3. Rebind the UI keys with your own input assets on the HUD (`UI Mapping Context` and the four
    actions); empty uses the built-in defaults above.
@@ -110,7 +143,7 @@ for the next skill" fallback for the HUD's player. Turn it off on the HUD to get
 
 ## Not built
 
-- Drag and drop (click-to-select-then-click works), splitting stacks, the stash, vendors, the
+- Drag and drop (click-to-select-then-click works), splitting stacks, the
   Skill Library / loadout editor, attributes, party UI, guild redistribution ("Give" to a member)
   and the guild bank log, rearranging the guild bank, a chat.
 - A main menu and a spectator camera switcher (spectating shows the name only).
@@ -155,4 +188,7 @@ Written without an engine; these are the calls most likely to need a fix
 | `UWidget::SetClipping(EWidgetClipping::ClipToBounds)`, `UBorder::SetPadding`, `UTextBlock::SetAutoWrapText` on item cells | `Private/UI/CrossguardItemGridWidget.cpp:76`, `Private/UI/CrossguardUIButton.cpp:47` |
 | `USizeBox::SetMaxDesiredHeight` | `Private/UI/CrossguardInventoryWidget.cpp:146` |
 | `CreateWidget` + `TakeWidget` under `-nullrhi` (the test) | `Private/Tests/CrossguardScenarioUITests.cpp:127` |
+| `UFUNCTION(Exec)` on the HUD (`OpenStash`, `OpenVendor`) reached from the console (as `AHUD::ShowHUD`) | `Public/UI/CrossguardHUD.h` |
+| A drag's source grid read as the operation's outer (`NewObject<UCrossguardItemDragOperation>(this)` in the grid) | `Private/UI/CrossguardStashWidget.cpp` (`IsFromStash`) |
+| `UCrossguardUIButton` with no click callback (`MakeButton(..., nullptr)`) as a drop target (the sell box) | `Private/UI/CrossguardVendorWidget.cpp` |
 | Tab may be taken by Slate focus navigation while a text field has focus; I always works | — |

@@ -308,3 +308,23 @@ follows it). Reviewed by reading; nothing built or run.
 | ST6 | Runtime: engine order in seamless travel | `APlayerState::CopyProperties` copies the engine `PlayerId` before `SetUniqueId` (S5) | Client 1 has no `DevPlayerId` (a remote PIE client), so its save id is `session-<PlayerId>`; the test is the check for S5. If "player id (save and party key)" or "save still tracked" fails for client 1 only: | S5's fix: call `Saves->PlayerJoined(Next)` and the party refresh again at the end of `ACrossguardPlayerState::CopyProperties`. |
 | ST7 | Runtime: the raid map | `L_DevSandbox`'s game mode must be a `CrossguardGameMode` with `bIsRaid` on (the C++ default; `editor_setup` does not change it) | If the Blueprint's `bIsRaid` is off, no raid begins on arrival and the arrival wait times out. | Leave `bIsRaid` on in `BP_CrossguardGameMode` (test maps use `?Hub` or `SetRaid`). |
 | ST8 | Runtime: carried gear | The hub record is taken by `MarkDirty` when the inventory / equipment changes (the watcher) and by `PlayerReady` | The test does not call `SaveNow` before the launch on purpose: if "carried items" or "weapon in hand" fail, the watcher missed a change and the real launch would lose it too. | Save the travellers (`SaveNow`) in `UCrossguardPartySubsystem::StartRaid` before `ServerTravel`. |
+
+### Stash and vendor screens (`Crossguard.Scenario.UI.StashAndVendor`, `Crossguard.Visual.HubUI`)
+
+New `UI/CrossguardStashWidget`, `UI/CrossguardVendorWidget`, `Private/UI/CrossguardHUDHubWindows.cpp`
+(more `ACrossguardHUD` members; namespace `CrossguardHUDHubLocal`), `Interaction/CrossguardStashChest`,
+`Interaction/CrossguardVendorNPC`, `Tests/CrossguardScenarioHubUITests.cpp` (namespace
+`CrossguardScenarioHubUI`, helpers prefixed `Hub`); `OpenStashScreen` / `OpenVendorScreen` client RPCs
+on the stash and vendor components; `ICrossguardInteractable::GetInteractPrompt`. Reviewed by
+reading; nothing built or run.
+
+| # | Where | Call | Why it may fail | Suggested fix |
+| --- | --- | --- | --- | --- |
+| SV1 | `Public/UI/CrossguardHUD.h` | `UFUNCTION(Exec) void OpenStash()` / `OpenVendor()` on the HUD | Assumed the console reaches the HUD's exec functions (as `AHUD::ShowHUD`). If `OpenStash` says "Command not recognized": | Move the two exec functions to `ACrossguardCharacter` (calling the HUD's `ShowStashWindow(nullptr)`). |
+| SV2 | `Private/UI/CrossguardStashWidget.cpp` `IsFromStash` | `Drag.GetOuter() == StashGrid` | Relies on `UCrossguardItemGridWidget::StartDrag` creating the operation with the grid as outer. If drags from the stash are stored again instead of moved / taken: | Add a `SourceGrid` (weak) property to `UCrossguardItemDragOperation`, set in `StartDrag`, and compare that. |
+| SV3 | `Private/UI/CrossguardVendorWidget.cpp` | `MakeButton(Label, nullptr, 13)` (`TFunction<void()>` from `nullptr`) | `TFunction` has a null constructor; if the overload is ambiguous: | `TFunction<void()>()`. |
+| SV4 | `Private/UI/CrossguardHUDHubWindows.cpp`, `Private/UI/CrossguardHudWidget.cpp` | `Cast<ICrossguardInteractable>(const AActor*)` returning `const ICrossguardInteractable*` | Same shape as the HUD widget's interact search. | `Cast<const ICrossguardInteractable>` or a `const_cast` of the actor. |
+| SV5 | `Private/Interaction/CrossguardStashChest.cpp`, `...VendorNPC.cpp` | `ConstructorHelpers::FObjectFinder<UStaticMesh>` for `/Engine/BasicShapes/Cube.Cube`, `Cylinder.Cylinder` | As the gather node's sphere. | — |
+| SV6 | `Private/Tests/CrossguardScenarioHubUITests.cpp` | `if (ACrossguardHUD* Hud = ...; Hud != nullptr && ...)` (C++17 if with initializer) | UE 5.8 builds C++20; only an older toolchain setting would refuse it. | Split into a declaration and an `if`. |
+| SV7 | Runtime: `Scenario.UI.StashAndVendor` | `ClientOpenStash` / `ClientOpenVendor` on the PIE player's (standalone) player state run locally | Assumed a client RPC on a standalone server runs at once (as `ClientStashRejected`). If "the HUD shows the vendor screen" fails while "Log: the vendor opened" passes: | Check the HUD bound the components (`TickHubWindows` ran); broadcast `OnVendorOpened` directly when `GetNetMode() == NM_Standalone`. |
+| SV8 | `Tools/editor_setup.py` `add_hub_actors` | `LevelEditorSubsystem.load_level` on an existing map inside the commandlet; `EditorActorSubsystem.get_all_level_actors`; `isinstance(actor, unreal.CrossguardStashChest)` | Python API from memory. | Run with `-Mode Editor`, or place them by hand: drag `CrossguardStashChest` and `CrossguardVendorNPC` from Place Actors (search) next to the player start and save. |

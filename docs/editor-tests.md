@@ -154,8 +154,8 @@ damage is computed from the characters' actual stats, so they work at any level.
 
 ### The scenarios
 
-144 tests in 21 files (128 `Crossguard.Scenario.*`, 9 `Crossguard.Net.*`, 7 `Crossguard.Visual.*`;
-2026-10-16; `Net.SeamlessTravelHubToRaid` not yet built). Grouped by file; the name is the full test name.
+146 tests in 22 files (129 `Crossguard.Scenario.*`, 9 `Crossguard.Net.*`, 8 `Crossguard.Visual.*`;
+2026-10-16; `Net.SeamlessTravelHubToRaid`, `Scenario.UI.StashAndVendor` and `Visual.HubUI` not yet built). Grouped by file; the name is the full test name.
 
 **`CrossguardScenarioRaidTests.cpp`**
 
@@ -354,6 +354,12 @@ game mode's Mob Table is unset.
 | --- | --- |
 | `Crossguard.Scenario.UI.WidgetsBind` | Every widget class built for the PIE player's controller (C++ tree, no assets) shows the game state: the HUD's Health and hotbar lines; one inventory cell per stack, click selects and deselects; a dead dummy's body shows its ruby, Take all moves it; one wheel entry per castable skill and picking one selects it; the trade window says no trade; the guild window shows the founder after `RequestCreate`. The player's HUD is `ACrossguardHUD` (a warning if a game mode Blueprint overrides it). |
 
+**`CrossguardScenarioHubUITests.cpp`** (the stash and vendor screens, [ui.md](ui.md); hub, no raid)
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.UI.StashAndVendor` | The PIE player in the hub with potions and three Common rubies; a native stash chest and vendor NPC. F (their `Interact`) opens each screen ("Stash opened" / "Vendor opened"; with a game viewport the HUD shows the vendor screen in place of the stash). Stash screen: one tab button per tab, a 10 × 30 grid, one cell per stack in the tab and in the inventory; dropping the potions on a free stash square stores them there, dropping them on the inventory takes them back; "Buy tab" greyed at 2999 gold and naming 3000, active at 3000, buying adds a tab (and its button) and costs 3000, the new tab shows empty. Vendor screen: one sell row per stack, the rubies listed at 150 gold; dropping them on the sell box pays 150 and removes them; "Sell all gemstones" is worth 100 for a sapphire and an emerald and sells both, not the potions. In a raid both refuse (logged) and `OpenStash` opens nothing. |
+
 **`CrossguardScenarioPartyTests.cpp`** (parties in the hub, [parties.md](parties.md); the travel itself is never started here: `Net.SeamlessTravelHubToRaid` does it)
 
 | Test | Checks |
@@ -409,6 +415,7 @@ each asserts just the state behind the picture)
 | `Crossguard.Visual.Dragonification` | `before.png` a player; `dragon.png` the same player in `State.Dragonified` (no form art yet, so alike). |
 | `Crossguard.Visual.StealthViews` | Listen server + 2 clients: from the enemy client's and the ally host's screen, `*_before.png`, `*_stealth.png` 1 s into Stealth (gone from the enemy's, still on the ally's), `*_after.png` when it ends. |
 | `Crossguard.Visual.UI` | The PIE player's own screen with the placeholder UI ([ui.md](ui.md)): `hud.png` (Health, level, gold, weapon sets, hotbar, skills, "F: Loot body"), `inventory_body.png` (the inventory window with a Rare Backpack and a Common Quiver worn, so their grids show under the main one, arrows in the Quiver, and a dead dummy's body open beside it), `trade.png` (after asking a partner 2 m away), `guild.png`. Asserts each window is open. |
+| `Crossguard.Visual.HubUI` | The same, in the hub ([ui.md](ui.md)): `stash.png` (the stash screen, `OpenStash`: potions stored, 3500 banked gold so "Buy tab" is active, the inventory with rubies and a Rare sapphire), `vendor.png` (the vendor screen, `OpenVendor`: the sell list with prices, "Sell all gemstones"). Asserts each screen is open. |
 
 ### Checklist coverage
 

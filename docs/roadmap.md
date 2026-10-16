@@ -48,7 +48,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Extract portals | Editor | Built in code: summon with X inside a point of interest after 10 min, 60 s channel, open 30 s for anyone. Needs points of interest placed and beam/portal visuals. |
 | Extraction points | Editor | Built in code (`ACrossguardExtractionZone`, 5 s placeholder). Needs placing in maps; the trip to the hub needs the hub and saving. |
 | Spectating and menu | Editor | Built in code: 120 s revive window, then spectate teammates or return to the menu. Placeholder UI in code ([ui.md](ui.md)): the HUD shows the downed timer and whom you spectate; needs art. Needs a main menu map. |
-| Stash | Editor | Built in code: per character, 10 × 30 tabs (up to 3 more at 3000 gold), Skill Gems learnable from it. Needs the stash UI in the hub. |
+| Stash | Editor | Built in code: per character, 10 × 30 tabs (up to 3 more at 3000 gold), Skill Gems learnable from it. Placeholder stash screen in code ([ui.md](ui.md)): tabs, drag-and-drop both ways, buy tab, learn gems; F on a stash chest (`ACrossguardStashChest`, a box) in the hub, or `OpenStash`. Needs a local build + `Crossguard.Scenario.UI.StashAndVendor`, the chest placed in the hub map (`editor_setup -AddHubActors` for `L_DevSandbox`) and art. |
 | Shared stash tabs | Code, Decision | Subscription benefit: tabs shared by all of an account's characters. Needs accounts and the backend. |
 | Hub / lobby map | Editor | Where players manage stash, Skill Library, attributes, loadout, and form parties; game mode with `bIsRaid` off and `RaidMapName` / `RaidServerAddress` set for the raid launch ([parties.md](parties.md)). |
 | Inventory and loot UI | Editor | Placeholder UI in code ([ui.md](ui.md)), I or Tab: grids for the inventory, Backpack and Quiver, equipment slots, bodies and chests side by side; click to move, equip, take, take all. Needs art (Widget Blueprints) and drag-and-drop. |
@@ -98,7 +98,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Guilds and guild bank | Code, Editor, Decision | Built in code ([guild-rules.md](guild-rules.md)): ranks, invites, kicks, bank (gold and items) with permissions and a log; rules unit tested. In server memory only: needs accounts (Steam ids) and a backend to save guilds. Placeholder guild window in code (U, [ui.md](ui.md)); needs art. |
 | Respec store purchase | Code | Price set: a respec costs 1000 banked gold or 1 respec token (gold payment built: `RequestAttributeAllocation(…, bPayWithGold)`). The store purchase of tokens (real money) still needs the backend: grant tokens after a verified purchase. |
 | Subscription | Decision, Code | About $10 per season: five respec tokens, a shared stash tab, common healing items, throwables, lockpicks. |
-| NPC vendors in the hub | Editor | Selling is built (`UCrossguardVendorComponent`); needs the NPC and a sell screen. |
+| NPC vendors in the hub | Editor | Selling is built (`UCrossguardVendorComponent`). Placeholder vendor NPC (`ACrossguardVendorNPC`, a cylinder; F) and sell screen in code ([ui.md](ui.md)): prices, drag to sell, Sell, sell all gemstones; selling only (buying is not ruled). Needs a local build + `Crossguard.Scenario.UI.StashAndVendor`, the NPC placed in the hub map (`editor_setup -AddHubActors`) and a character model. |
 | Cosmetics | Decision, Editor | |
 
 ## Milestone 5: Online
