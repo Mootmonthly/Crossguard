@@ -3,6 +3,7 @@
 #include "CrossguardRules/Combat.h"
 #include "CrossguardRules/Economy.h"
 #include "CrossguardRules/Experience.h"
+#include "CrossguardRules/Gathering.h"
 #include "CrossguardRules/Inventory.h"
 #include "CrossguardRules/Portal.h"
 #include "CrossguardRules/Items.h"
@@ -1359,6 +1360,40 @@ static void TestGuard()
 	CHECK(!HitMeetsGuard(Config, 0, 0, 0, 1, 0, 0));
 }
 
+static void TestGathering()
+{
+	const FGatherConfig Config;
+	// Placeholders (docs/design-decisions.md, Gathering); the XP is ruled.
+	CHECK_NEAR(Config.GatherSeconds, 2.0);
+	CHECK_NEAR(Config.RespawnSeconds, 0.0);
+	CHECK(XpForSource(FXpConfig(), EXpSource::GatherNode) == 10);
+
+	CHECK(CanStartGather(false, false, false) == EGatherStartError::None);
+	CHECK(CanStartGather(true, false, false) == EGatherStartError::Depleted);
+	CHECK(CanStartGather(false, true, false) == EGatherStartError::Busy);
+	CHECK(CanStartGather(true, true, true) == EGatherStartError::GathererDead);
+
+	// Standing still (within the slack) keeps the channel.
+	CHECK(CheckGatherInterrupt(Config, false, 0.0, 0.0, false, true) == EGatherInterrupt::None);
+	CHECK(CheckGatherInterrupt(Config, false, Config.MoveTolerance, 0.0, false, true) == EGatherInterrupt::None);
+	CHECK(CheckGatherInterrupt(Config, false, Config.MoveTolerance + 1.0, 0.0, false, true) == EGatherInterrupt::Moved);
+	CHECK(CheckGatherInterrupt(Config, false, 0.0, 0.5, false, true) == EGatherInterrupt::Damaged);
+	// Healing is not damage.
+	CHECK(CheckGatherInterrupt(Config, false, 0.0, -5.0, false, true) == EGatherInterrupt::None);
+	CHECK(CheckGatherInterrupt(Config, false, 0.0, 0.0, true, true) == EGatherInterrupt::Attacked);
+	CHECK(CheckGatherInterrupt(Config, false, 0.0, 0.0, false, false) == EGatherInterrupt::OutOfRange);
+	CHECK(CheckGatherInterrupt(Config, true, 500.0, 10.0, true, false) == EGatherInterrupt::Died);
+	CHECK(CheckGatherInterrupt(Config, false, 500.0, 10.0, true, false) == EGatherInterrupt::Moved);
+
+	// RespawnSeconds 0: once per raid.
+	CHECK(!HasGatherNodeRespawned(Config, 0.0));
+	CHECK(!HasGatherNodeRespawned(Config, 1.0e9));
+	FGatherConfig Respawning;
+	Respawning.RespawnSeconds = 300.0;
+	CHECK(!HasGatherNodeRespawned(Respawning, 299.0));
+	CHECK(HasGatherNodeRespawned(Respawning, 300.0));
+}
+
 int main()
 {
 	TestProgression();
@@ -1378,6 +1413,7 @@ int main()
 	TestSkillLibrary();
 	TestEconomy();
 	TestPortal();
+	TestGathering();
 	TestLoot();
 	TestGuild();
 	TestTrade();
