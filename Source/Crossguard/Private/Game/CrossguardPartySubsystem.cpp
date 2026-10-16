@@ -40,7 +40,7 @@ namespace CrossguardPartyLocal
 
 double UCrossguardPartySubsystem::Now()
 {
-	// Monotonic seconds: invites live a minute and parties never outlive the process.
+	// Monotonic seconds: invites live minutes and parties never outlive the process.
 	return FPlatformTime::Seconds();
 }
 
@@ -150,6 +150,18 @@ ECrossguardPartyResult UCrossguardPartySubsystem::Decline(ACrossguardPlayerState
 	return ToResult(Error);
 }
 
+ECrossguardPartyResult UCrossguardPartySubsystem::DeclineAll(ACrossguardPlayerState* Actor)
+{
+	// Allowed anywhere, like Decline.
+	if (Actor == nullptr)
+	{
+		return ECrossguardPartyResult::NoPlayer;
+	}
+	const int Dropped = Registry.DeclineAll(CrossguardPartyLocal::StdOf(CrossguardPartyLocal::IdOf(Actor)));
+	RefreshPlayer(Actor);
+	return Dropped > 0 ? ECrossguardPartyResult::None : ECrossguardPartyResult::NoInvite;
+}
+
 ECrossguardPartyResult UCrossguardPartySubsystem::Leave(ACrossguardPlayerState* Actor)
 {
 	if (Actor == nullptr)
@@ -219,15 +231,7 @@ void UCrossguardPartySubsystem::PlayerLeftServer(ACrossguardPlayerState* PlayerS
 	}
 	const std::string PlayerId = CrossguardPartyLocal::StdOf(CrossguardPartyLocal::IdOf(PlayerState));
 	// Their open invites go too.
-	TArray<FString> InvitingParties;
-	for (const Crossguard::FParty* Party : Registry.InvitesFor(PlayerId, Now()))
-	{
-		InvitingParties.Add(CrossguardPartyLocal::TextOf(Party->Id));
-	}
-	for (const FString& PartyId : InvitingParties)
-	{
-		Registry.Decline(CrossguardPartyLocal::StdOf(PartyId), PlayerId);
-	}
+	Registry.DeclineAll(PlayerId);
 	const Crossguard::FPartyLeaveResult Left = Registry.Leave(PlayerId);
 	if (Left.IsValid() && !Left.bDisbanded)
 	{
@@ -429,6 +433,7 @@ void UCrossguardPartySubsystem::RefreshPlayer(ACrossguardPlayerState* PlayerStat
 			if (Pending.PlayerId == Id)
 			{
 				Out.InvitedBy = NameOf(Pending.InvitedBy);
+				Out.InvitedById = CrossguardPartyLocal::TextOf(Pending.InvitedBy);
 			}
 		}
 	}

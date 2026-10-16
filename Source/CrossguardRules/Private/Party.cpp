@@ -257,6 +257,18 @@ namespace Crossguard
 		return EPartyError::None;
 	}
 
+	int FPartyRegistry::DeclineAll(const std::string& PlayerId)
+	{
+		int Dropped = 0;
+		for (auto& Entry : Parties)
+		{
+			const size_t Before = Entry.second.Invites.size();
+			PartyRulesDetail::RemovePartyInvite(Entry.second, PlayerId);
+			Dropped += static_cast<int>(Before - Entry.second.Invites.size());
+		}
+		return Dropped;
+	}
+
 	int FPartyRegistry::PruneExpiredInvites(double Now)
 	{
 		int Dropped = 0;

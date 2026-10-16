@@ -67,6 +67,10 @@ struct CROSSGUARD_API FCrossguardPartyInviteView
 	UPROPERTY(BlueprintReadOnly, Category = "Party")
 	FString InvitedBy;
 
+	// The inviter's player id (UCrossguardGuildSubsystem::PlayerIdOf).
+	UPROPERTY(BlueprintReadOnly, Category = "Party")
+	FString InvitedById;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Party")
 	int32 MemberCount = 0;
 };
@@ -110,7 +114,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Party")
 	const TArray<FCrossguardPartyMemberView>& GetMembers() const { return Members; }
 
-	// Open invites to you.
+	// Your invite inbox: open invites to you, one per inviting party. Refreshed on every change to
+	// them; one can expire while listed (accepting it is then refused with InviteExpired and it drops
+	// off).
 	UFUNCTION(BlueprintPure, Category = "Party")
 	const TArray<FCrossguardPartyInviteView>& GetInvites() const { return Invites; }
 
@@ -127,8 +133,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Party")
 	void RequestAccept(const FString& InPartyId) { ServerAccept(InPartyId); }
 
+	// Deletes one invite from your inbox (expired or not). Works in a raid too.
 	UFUNCTION(BlueprintCallable, Category = "Party")
 	void RequestDecline(const FString& InPartyId) { ServerDecline(InPartyId); }
+
+	// Deletes every invite in your inbox. Works in a raid too.
+	UFUNCTION(BlueprintCallable, Category = "Party")
+	void RequestDeclineAll() { ServerDeclineAll(); }
 
 	UFUNCTION(BlueprintCallable, Category = "Party")
 	void RequestLeave() { ServerLeave(); }
@@ -159,6 +170,8 @@ protected:
 	void ServerAccept(const FString& InPartyId);
 	UFUNCTION(Server, Reliable)
 	void ServerDecline(const FString& InPartyId);
+	UFUNCTION(Server, Reliable)
+	void ServerDeclineAll();
 	UFUNCTION(Server, Reliable)
 	void ServerLeave();
 	UFUNCTION(Server, Reliable)

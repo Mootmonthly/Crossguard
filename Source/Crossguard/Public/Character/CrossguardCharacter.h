@@ -140,8 +140,9 @@ public:
 	void GuildGive(const FString& PlayerId, int32 SlotId);
 
 	// Parties until a party panel exists (console; Output Log; docs/parties.md): PartyInvite <player
-	// name>; PartyAccept (your first invite); PartyDecline; PartyLeave; PartyKick <name or id>;
-	// PartyPromote <name or id>; PartyInfo; PartyStartRaid (leader, hub only).
+	// name>; PartyAccept (your first invite); PartyInvites (your invite inbox, numbered); PartyDecline
+	// <number, inviter's name or party id> (empty: the first); PartyDeclineAll; PartyLeave; PartyKick
+	// <name or id>; PartyPromote <name or id>; PartyInfo; PartyStartRaid (leader, hub only).
 	UFUNCTION(Exec)
 	void PartyInvite(const FString& PlayerName);
 
@@ -149,7 +150,13 @@ public:
 	void PartyAccept();
 
 	UFUNCTION(Exec)
-	void PartyDecline();
+	void PartyInvites();
+
+	UFUNCTION(Exec)
+	void PartyDecline(const FString& Which);
+
+	UFUNCTION(Exec)
+	void PartyDeclineAll();
 
 	UFUNCTION(Exec)
 	void PartyLeave();

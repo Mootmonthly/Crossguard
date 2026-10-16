@@ -126,8 +126,8 @@ namespace Crossguard
 	{
 		// Ruled: up to 8, the largest premade team a match takes (FMatchConfig::MaxTeamSize).
 		int MaxMembers = FMatchConfig().MaxTeamSize;
-		// Placeholder: an invite can be accepted until this many seconds after it was sent.
-		double InviteExpirySeconds = 60.0;
+		// Ruled: an invite can be accepted until this many seconds after it was sent.
+		double InviteExpirySeconds = 180.0;
 	};
 
 	// Guilds (docs/guild-rules.md). The ruling covers bank permissions only; every number here is

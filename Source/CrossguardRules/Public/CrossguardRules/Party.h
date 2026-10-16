@@ -1,7 +1,8 @@
 // Parties: in-game groups that play as one team and enter a raid together (docs/parties.md).
 //
-// Ruled: up to 8 players (the match's team cap). Everything else here is a placeholder or an
-// assumption (listed in the doc, numbers in FPartyConfig). Player and party ids are opaque strings
+// Ruled: up to 8 players (the match's team cap), invites last 180 s, only the leader invites, kicks
+// and promotes, and a solo player may launch alone. The rest is listed in the doc (numbers in
+// FPartyConfig). Player and party ids are opaque strings
 // chosen by the caller; the party id is also the ?Party=<key> travel option, so it must be
 // URL-safe (IsValidPartyKey). Time is passed in as Now; the library reads no clocks.
 //
@@ -139,6 +140,8 @@ namespace Crossguard
 		EPartyError Accept(const std::string& PartyId, const std::string& PlayerId, double Now);
 		// Removes the invite, expired or not.
 		EPartyError Decline(const std::string& PartyId, const std::string& PlayerId);
+		// Removes every invite to the player, expired or not (clears their inbox). Returns how many.
+		int DeclineAll(const std::string& PlayerId);
 		// Drops expired invites from every party. Returns how many were dropped.
 		int PruneExpiredInvites(double Now);
 

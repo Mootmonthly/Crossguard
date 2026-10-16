@@ -36,6 +36,8 @@ public:
 	ECrossguardPartyResult Invite(ACrossguardPlayerState* Actor, ACrossguardPlayerState* Invitee);
 	ECrossguardPartyResult Accept(ACrossguardPlayerState* Actor, const FString& PartyId);
 	ECrossguardPartyResult Decline(ACrossguardPlayerState* Actor, const FString& PartyId);
+	// Clears the actor's invite inbox (every party's invite, expired or not). NoInvite if it was empty.
+	ECrossguardPartyResult DeclineAll(ACrossguardPlayerState* Actor);
 	ECrossguardPartyResult Leave(ACrossguardPlayerState* Actor);
 	ECrossguardPartyResult Kick(ACrossguardPlayerState* Actor, const FString& TargetId);
 	ECrossguardPartyResult Promote(ACrossguardPlayerState* Actor, const FString& TargetId);

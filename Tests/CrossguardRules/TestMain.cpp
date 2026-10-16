@@ -1411,6 +1411,8 @@ static void TestParty()
 	const FPartyConfig Config;
 	CHECK(Config.MaxMembers == FMatchConfig().MaxTeamSize);
 	CHECK(Config.MaxMembers == 8);
+	// Ruled: invites last 180 s.
+	CHECK(Config.InviteExpirySeconds == 180.0);
 	const double Expiry = Config.InviteExpirySeconds;
 
 	// Keys and travel URLs.
@@ -1502,6 +1504,29 @@ static void TestParty()
 	CHECK(Parties.Decline("p1", "d") == EPartyError::NoInvite);
 	CHECK(Parties.Decline("nope", "d") == EPartyError::UnknownParty);
 	CHECK(Parties.Accept("p1", "d", 200.0) == EPartyError::NoInvite);
+
+	// The invite inbox: two parties invite "x"; declining one keeps the other; DeclineAll clears the
+	// rest (expired ones too) and leaves other players' invites alone.
+	{
+		FPartyRegistry Inbox;
+		CHECK(Inbox.Create("i1", "l1") == EPartyError::None);
+		CHECK(Inbox.Create("i2", "l2") == EPartyError::None);
+		CHECK(Inbox.Invite("l1", "x", 0.0) == EPartyError::None);
+		CHECK(Inbox.Invite("l2", "x", 0.0) == EPartyError::None);
+		CHECK(Inbox.Invite("l1", "y", 0.0) == EPartyError::None);
+		CHECK(Inbox.InvitesFor("x", 1.0).size() == 2);
+		CHECK(Inbox.Decline("i1", "x") == EPartyError::None);
+		CHECK(Inbox.InvitesFor("x", 1.0).size() == 1 && Inbox.InvitesFor("x", 1.0)[0]->Id == "i2");
+		CHECK(Inbox.Invite("l1", "x", 1.0) == EPartyError::None);
+		// Both open invites go (DeclineAll ignores expiry).
+		CHECK(Inbox.DeclineAll("x") == 2);
+		CHECK(Inbox.InvitesFor("x", 0.0).empty());
+		CHECK(Inbox.DeclineAll("x") == 0);
+		CHECK(Inbox.InvitesFor("y", 1.0).size() == 1);
+		CHECK(Inbox.Accept("i2", "x", 1.0) == EPartyError::NoInvite);
+		// Declining changes no party.
+		CHECK(Inbox.Find("i1")->Members.size() == 1 && Inbox.Find("i2")->Members.size() == 1);
+	}
 
 	// A solo player's invite founds a party, only if the invite succeeds.
 	CHECK(Parties.Invite("solo", "b", 300.0) == EPartyError::NotInParty);

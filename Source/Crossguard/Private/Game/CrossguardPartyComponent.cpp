@@ -109,6 +109,11 @@ void UCrossguardPartyComponent::ServerDecline_Implementation(const FString& InPa
 	CROSSGUARD_PARTY_REQUEST(Decline(Cast<ACrossguardPlayerState>(GetOwner()), InPartyId))
 }
 
+void UCrossguardPartyComponent::ServerDeclineAll_Implementation()
+{
+	CROSSGUARD_PARTY_REQUEST(DeclineAll(Cast<ACrossguardPlayerState>(GetOwner())))
+}
+
 void UCrossguardPartyComponent::ServerLeave_Implementation()
 {
 	CROSSGUARD_PARTY_REQUEST(Leave(Cast<ACrossguardPlayerState>(GetOwner())))

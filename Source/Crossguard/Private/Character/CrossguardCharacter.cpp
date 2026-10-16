@@ -1344,6 +1344,31 @@ namespace CrossguardCharacterPartyConsole
 		}
 		return FString();
 	}
+
+	// An inbox entry by 1-based number (as PartyInvites lists them), inviter's name (any case) or
+	// party id; empty picks the first. INDEX_NONE if none matches.
+	int32 InviteIndexOf(const UCrossguardPartyComponent& Party, const FString& Which)
+	{
+		const TArray<FCrossguardPartyInviteView>& Invites = Party.GetInvites();
+		const FString Key = Which.TrimStartAndEnd();
+		if (Key.IsEmpty())
+		{
+			return Invites.IsEmpty() ? INDEX_NONE : 0;
+		}
+		for (int32 Index = 0; Index < Invites.Num(); ++Index)
+		{
+			if (Invites[Index].PartyId == Key || Invites[Index].InvitedBy.Equals(Key, ESearchCase::IgnoreCase))
+			{
+				return Index;
+			}
+		}
+		if (Key.IsNumeric())
+		{
+			const int32 Number = FCString::Atoi(*Key);
+			return Number >= 1 && Number <= Invites.Num() ? Number - 1 : INDEX_NONE;
+		}
+		return INDEX_NONE;
+	}
 }
 
 void ACrossguardCharacter::PartyInvite(const FString& PlayerName)
@@ -1375,12 +1400,44 @@ void ACrossguardCharacter::PartyAccept()
 	}
 }
 
-void ACrossguardCharacter::PartyDecline()
+void ACrossguardCharacter::PartyInvites()
+{
+	const UCrossguardPartyComponent* Party = CrossguardCharacterPartyConsole::PartyComponentOf(*this);
+	if (Party == nullptr)
+	{
+		return;
+	}
+	const TArray<FCrossguardPartyInviteView>& Invites = Party->GetInvites();
+	UE_LOG(LogCrossguard, Display, TEXT("Party invites: %d"), Invites.Num());
+	for (int32 Index = 0; Index < Invites.Num(); ++Index)
+	{
+		UE_LOG(LogCrossguard, Display, TEXT("  %d. from %s (%d members, party %s)"), Index + 1, *Invites[Index].InvitedBy,
+			Invites[Index].MemberCount, *Invites[Index].PartyId);
+	}
+}
+
+void ACrossguardCharacter::PartyDecline(const FString& Which)
 {
 	UCrossguardPartyComponent* Party = CrossguardCharacterPartyConsole::PartyComponentOf(*this);
-	if (Party != nullptr && !Party->GetInvites().IsEmpty())
+	if (Party == nullptr)
 	{
-		Party->RequestDecline(Party->GetInvites()[0].PartyId);
+		return;
+	}
+	const int32 Index = CrossguardCharacterPartyConsole::InviteIndexOf(*Party, Which);
+	if (Index == INDEX_NONE)
+	{
+		UE_LOG(LogCrossguard, Display, TEXT("Party: no invite '%s' (PartyInvites lists them)"), *Which);
+		return;
+	}
+	UE_LOG(LogCrossguard, Display, TEXT("Party: declining the invite from %s"), *Party->GetInvites()[Index].InvitedBy);
+	Party->RequestDecline(Party->GetInvites()[Index].PartyId);
+}
+
+void ACrossguardCharacter::PartyDeclineAll()
+{
+	if (UCrossguardPartyComponent* Party = CrossguardCharacterPartyConsole::PartyComponentOf(*this))
+	{
+		Party->RequestDeclineAll();
 	}
 }
 
