@@ -433,7 +433,8 @@ void UCrossguardSummonCompanionAbility::ActivateAbility(const FGameplayAbilitySp
 				Minion.FixedHealth = Health;
 				Minion.AttackDamage = AttackDamage;
 				Minion.AttackInterval = AttackInterval;
-				Minion.AttackRange = AttackRange;
+				// Ruled: the reach grows with the body (the 3x demon reaches 3x as far).
+				Minion.AttackRange = AttackRange * Scale;
 				Minion.bWieldsWeapon = bWieldsWeapon;
 				Minion.WeaponType = WeaponType;
 				Minion.bTwoHandedWeapon = bTwoHandedWeapon;
@@ -485,9 +486,9 @@ UCrossguardSummonGreaterDemonAbility::UCrossguardSummonGreaterDemonAbility()
 	AttackDamage = 40.0f;
 	// The two-handed sword's speed (Data/Items/Weapons.json: once every 1.4 s).
 	AttackInterval = 1.4f;
-	// Ruled: 3x the player's size (minions and players share the character capsule). Assumption: the
-	// reach stays 3 m (centre to centre), as set for the old 1.5x size.
-	AttackRange = 300.0f;
+	// Ruled: 3x the player's size (minions and players share the character capsule), and the reach
+	// scales with it: a player-size minion's 2 m (centre to centre) becomes 6 m.
+	AttackRange = 200.0f;
 	Scale = 3.0f;
 	Seconds = 60.0f;
 	bWieldsWeapon = true;

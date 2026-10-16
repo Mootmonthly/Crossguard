@@ -30,6 +30,11 @@ public:
 	TArray<FGameplayEffectSpecHandle> OnHitSpecs;
 	// The hit stops the target's running skills (a Mute in OnHitSpecs).
 	bool bCancelSkillsOnHit = false;
+	// Thrown weapons' next-attack skills (FCrossguardAttackRiders): [Neckbite]'s Silence stops running
+	// skills, [Chop Down] ends Flight, a kill gives [Mortal Strike] back.
+	bool bSilenceOnHit = false;
+	bool bGroundFlyingOnHit = false;
+	bool bMortalStrikeOnHit = false;
 
 protected:
 	virtual void BeginPlay() override;

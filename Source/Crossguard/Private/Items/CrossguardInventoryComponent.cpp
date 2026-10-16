@@ -1622,21 +1622,32 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::Throw(int32 Index, con
 	{
 		return Fail(ECrossguardInventoryError::NotReady);
 	}
-	Projectile->DamageSpec = MakeDamageSpec(Row.ThrowDamage + Row.ThrowDamagePerRarity * RarityLevel);
 	Projectile->ExplosionRadius = Row.ThrowRadiusMeters * 100.0f;
-	// A thrown weapon is an attack with its type (owner ruling: a throwing knife is a dagger attack):
-	// [Splinter of Winter] rides on it and a readied [Gouge] is used up, hit or miss.
-	if (Row.bHasCountsAsWeapon && Projectile->ExplosionRadius <= 0.0f && Projectile->DamageSpec.IsValid())
+	// A thrown weapon is an attack with its type (owner rulings: a throwing knife is a dagger attack, a
+	// throwing axe an axe attack): every readied next-attack skill a melee attack with that weapon would
+	// use is used up, hit or miss (Slash, Gouge, Chop Down, Shade Blow, Mortal Strike; not a parry's
+	// riposte), and [Splinter of Winter] rides on a knife. The throw's damage is the weapon damage that
+	// Slash and Chop Down raise. Bombs carry none.
+	FCrossguardAttackRiders Riders;
+	const bool bWeaponThrow = Row.bHasCountsAsWeapon && Projectile->ExplosionRadius <= 0.0f;
+	if (bWeaponThrow)
 	{
-		const FCrossguardAttackRiders Riders = UCrossguardWeaponAttackAbility::GatherRiders(FCrossguardRiderAttack::ForThrown(Row.CountsAsWeapon), ASC);
+		Riders = UCrossguardWeaponAttackAbility::GatherRiders(FCrossguardRiderAttack::ForThrown(Row.CountsAsWeapon), ASC);
+	}
+	Projectile->DamageSpec = MakeDamageSpec((Row.ThrowDamage + Row.ThrowDamagePerRarity * RarityLevel) * Riders.WeaponMultiplier + Riders.WeaponFlat);
+	if (bWeaponThrow && Projectile->DamageSpec.IsValid())
+	{
 		FGameplayEffectSpec& Damage = *Projectile->DamageSpec.Data;
 		Damage.SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack,
 			Damage.GetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, false, 0.0f) + Riders.AttackAdd);
 		Damage.SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic,
 			Damage.GetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, false, 0.0f) + Riders.MagicAdd);
-		Projectile->OnHitSpecs = Riders.OnHitSpecs;
-		Projectile->bCancelSkillsOnHit = Riders.bCancelSkills;
 	}
+	Projectile->OnHitSpecs = Riders.OnHitSpecs;
+	Projectile->bCancelSkillsOnHit = Riders.bCancelSkills;
+	Projectile->bSilenceOnHit = Riders.bSilence;
+	Projectile->bGroundFlyingOnHit = Riders.bGroundFlying;
+	Projectile->bMortalStrikeOnHit = Riders.bMortalStrike;
 	// Guards (block and parry) stop a thrown weapon by its Impact Power; never an explosion.
 	Projectile->ImpactPower = Projectile->ExplosionRadius > 0.0f ? 0 : Row.ImpactPower;
 	if (Row.ThrowDotPerSecond > 0.0f && Row.ThrowDotSeconds > 0.0f)

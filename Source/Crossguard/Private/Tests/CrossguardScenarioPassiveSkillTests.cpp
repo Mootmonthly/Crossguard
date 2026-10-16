@@ -4,8 +4,9 @@
 //
 // Expected numbers come from Data/Skills/Skills.json and docs/design-decisions.md. Requirement rows
 // (Armor Mastery: Plate, The Mithril Knight: Plate in every slot, Spear of Liscor: a Spear) gate the
-// skill's own bonuses and, for a bundle, the skills it includes. A thrown throwing knife is a dagger
-// attack (Splinter of Winter, Gouge).
+// skill's own bonuses and, for a bundle, the skills it includes. A thrown throwing knife (axe) is a
+// dagger (axe) attack: Splinter of Winter and every readied next-attack skill for that weapon ride on
+// it (Gouge, Slash, Chop Down); a parry's riposte stays readied.
 
 #include "Tests/CrossguardScenario.h"
 
@@ -13,6 +14,7 @@
 
 #include "AbilitySystem/CrossguardAttributeSet.h"
 #include "AbilitySystem/CrossguardGameplayTags.h"
+#include "AbilitySystemGlobals.h"
 #include "Character/CrossguardCharacter.h"
 #include "Engine/DataTable.h"
 #include "Engine/World.h"
@@ -20,6 +22,7 @@
 #include "Items/CrossguardInventoryComponent.h"
 #include "Items/CrossguardItemTypes.h"
 #include "Skills/CrossguardLoadoutComponent.h"
+#include "Skills/CrossguardSkillAbility.h"
 
 namespace CrossguardScenarioPassiveSkills
 {
@@ -57,6 +60,12 @@ namespace CrossguardScenarioPassiveSkills
 	constexpr float PassiveViewSettle = 0.3f;
 	constexpr float PassiveGougeDamagePerSecond = 5.0f;
 	constexpr float PassiveGougeSlow = 0.05f;
+	// throwing_axe counts as an Axe. Slash: +7 weapon damage; Chop Down: 110% weapon damage, -50%
+	// speed for 2 s.
+	const FName PassiveThrowingAxe(TEXT("throwing_axe"));
+	constexpr float PassiveSlashWeaponDamage = 7.0f;
+	constexpr float PassiveChopDownMultiplier = 1.1f;
+	constexpr float PassiveChopDownSlow = 0.5f;
 
 	// Melee targets stand this far ahead (reach 220 cm + 60 cm radius).
 	constexpr float PassiveMeleeGap = 150.0f;
@@ -137,18 +146,19 @@ namespace CrossguardScenarioPassiveSkills
 		return C.Stat(Actor, UCrossguardAttributeSet::GetAgilityAttribute());
 	}
 
-	// Throwing knives in hand (key 3), as a player readies them. Fails the scenario if they do not fit.
-	bool PassiveReadyKnives(FScenarioContext& C, ACrossguardCharacter* Player, int32 Count)
+	// Throwing knives (or ThrowableId) in hand (key 3), as a player readies them. Fails the scenario if
+	// they do not fit.
+	bool PassiveReadyKnives(FScenarioContext& C, ACrossguardCharacter* Player, int32 Count, FName ThrowableId = PassiveThrowingKnife)
 	{
 		UCrossguardInventoryComponent* Inventory = Player != nullptr ? Player->GetInventoryComponent() : nullptr;
-		if (!C.Require(Inventory != nullptr && C.GiveItem(Player, PassiveThrowingKnife, Count) == 0, TEXT("throwing knives fit in the inventory")))
+		if (!C.Require(Inventory != nullptr && C.GiveItem(Player, ThrowableId, Count) == 0, TEXT("the throwables fit in the inventory")))
 		{
 			return false;
 		}
 		int32 StackId = 0;
 		for (const FCrossguardInventoryItem& Item : Inventory->GetItems())
 		{
-			if (Item.Category == ECrossguardItemCategory::Throwable && Item.ItemId == PassiveThrowingKnife)
+			if (Item.Category == ECrossguardItemCategory::Throwable && Item.ItemId == ThrowableId)
 			{
 				StackId = Item.Id;
 				break;
@@ -187,16 +197,17 @@ namespace CrossguardScenarioPassiveSkills
 		}
 	}
 
-	// A common throwing knife's Attack Damage (item data); -1 with a failure without the Item Table.
-	float PassiveKnifeDamage(FScenarioContext& C, const ACrossguardCharacter* Thrower)
+	// A common throwing knife's (or ThrowableId's) Attack Damage (item data); -1 with a failure without
+	// the Item Table.
+	float PassiveKnifeDamage(FScenarioContext& C, const ACrossguardCharacter* Thrower, FName ThrowableId = PassiveThrowingKnife)
 	{
 		const UCrossguardInventoryComponent* Inventory = Thrower != nullptr ? Thrower->GetInventoryComponent() : nullptr;
 		const FCrossguardItemRow* Row = Inventory != nullptr && Inventory->ItemTable != nullptr
-			? Inventory->ItemTable->FindRow<FCrossguardItemRow>(PassiveThrowingKnife, TEXT("Scenario"), false)
+			? Inventory->ItemTable->FindRow<FCrossguardItemRow>(ThrowableId, TEXT("Scenario"), false)
 			: nullptr;
 		if (Row == nullptr)
 		{
-			C.Fail(TEXT("No throwing_knife row in the Item Table (InventoryComponent Item Table: DT_Items)"));
+			C.Fail(FString::Printf(TEXT("No %s row in the Item Table (InventoryComponent Item Table: DT_Items)"), *ThrowableId.ToString()));
 			return -1.0f;
 		}
 		return Row->ThrowDamage + Row->ThrowDamagePerRarity * UCrossguardItemLibrary::GetRarityLevel(ECrossguardRarity::Common);
@@ -782,6 +793,173 @@ bool FCrossguardScenarioPassiveThrownKnifeGouge::RunTest(const FString& Paramete
 		const float Tick = FMath::Min(static_cast<float>(C.Number(TEXT("Tick"))), AfterHit);
 		C.Test.AddInfo(FString::Printf(TEXT("Gouge after 1.5 s: %.2f taken (one tick %.2f)"), AfterHit - C.Health(Dummy), Tick));
 		C.Test.TestEqual(TEXT("One Gouge tick after 1.5 s"), AfterHit - C.Health(Dummy), Tick, PassiveDamageTolerance);
+	});
+
+	Scenario.Run();
+	return true;
+}
+
+// =====================================================================================================
+// A thrown throwing knife uses up a readied Slash (owner ruling: next-attack skills ride on throws
+// whose weapon type they accept) and hits for its damage +7. A readied riposte stays (owner ruling: a
+// throw does not use it up) and adds nothing to the knife.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioPassiveThrownKnifeSlash, "Crossguard.Scenario.Skills.ThrownKnifeSlash", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioPassiveThrownKnifeSlash::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioPassiveSkills;
+
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("A player with Slash readies throwing knives, a dummy 4 m away"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = C.SpawnPlayer(TEXT("Thrower"), FVector(-1500.0f, 7600.0f, 0.0f), 0.0f);
+		ACrossguardCharacter* Dummy = C.SpawnDummy(TEXT("Dummy"), FVector(-1500.0f + PassiveThrowGap, 7600.0f, 0.0f), 180.0f);
+		if (!C.Require(Player != nullptr && Dummy != nullptr, TEXT("thrower and dummy spawned"))
+			|| !C.Require(C.GrantSkills(Player, {TEXT("slash")}), TEXT("Slash granted")))
+		{
+			return;
+		}
+		if (PassiveReadyKnives(C, Player, 2))
+		{
+			PassiveAimThrow(C, Player, Dummy);
+		}
+	});
+
+	Scenario.Wait(PassiveViewSettle);
+
+	Scenario.Step(TEXT("Slash and a readied riposte, then throw"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = C.Get<ACrossguardCharacter>(TEXT("Thrower"));
+		ACrossguardCharacter* Dummy = C.Get<ACrossguardCharacter>(TEXT("Dummy"));
+		const float Base = PassiveKnifeDamage(C, Player);
+		UAbilitySystemComponent* ASC = Player != nullptr ? UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Player) : nullptr;
+		if (Player == nullptr || Dummy == nullptr || ASC == nullptr || Base < 0.0f)
+		{
+			C.Fail(TEXT("thrower or dummy gone"));
+			return;
+		}
+		if (!C.Require(C.ActivateSkill(Player, TEXT("slash")), TEXT("Slash activates with a throwing knife in hand")))
+		{
+			return;
+		}
+		C.Test.TestTrue(TEXT("State.NextAttack.Slash is on"), C.HasTag(Player, CrossguardTags::State_NextAttack_Slash));
+		// As a won parry does.
+		UCrossguardSkillAbility::ApplyStatus(ASC, ASC, CrossguardTags::State_NextAttack_Riposte, 3.0f);
+		if (!C.Require(C.HasTag(Player, CrossguardTags::State_NextAttack_Riposte), TEXT("State.NextAttack.Riposte is on")))
+		{
+			return;
+		}
+		PassiveAimThrow(C, Player, Dummy);
+		const float Before = C.Health(Dummy);
+		C.SetNumber(TEXT("Before"), Before);
+		C.SetNumber(TEXT("Expected"), FMath::Min(C.ExpectedDamage(Player, Dummy, Base + PassiveSlashWeaponDamage), Before));
+		C.SetNumber(TEXT("Plain"), FMath::Min(C.ExpectedDamage(Player, Dummy, Base), Before));
+		PassiveThrow(Player);
+		C.Test.TestFalse(TEXT("The throw uses Slash up"), C.HasTag(Player, CrossguardTags::State_NextAttack_Slash));
+		C.Test.TestTrue(TEXT("The throw leaves the riposte readied"), C.HasTag(Player, CrossguardTags::State_NextAttack_Riposte));
+	});
+
+	Scenario.WaitUntil(TEXT("the knife hits the dummy"), 3.0f, [](FScenarioContext& C)
+	{
+		const ACrossguardCharacter* Dummy = C.Get<ACrossguardCharacter>(TEXT("Dummy"));
+		return Dummy == nullptr || C.Health(Dummy) < static_cast<float>(C.Number(TEXT("Before")));
+	});
+
+	Scenario.Step(TEXT("The knife hits for its damage +7 (Slash), no riposte bonus"), [](FScenarioContext& C)
+	{
+		const ACrossguardCharacter* Player = C.Get<ACrossguardCharacter>(TEXT("Thrower"));
+		const ACrossguardCharacter* Dummy = C.Get<ACrossguardCharacter>(TEXT("Dummy"));
+		if (Player == nullptr || Dummy == nullptr)
+		{
+			C.Fail(TEXT("thrower or dummy gone"));
+			return;
+		}
+		const float Taken = static_cast<float>(C.Number(TEXT("Before"))) - C.Health(Dummy);
+		C.Test.AddInfo(FString::Printf(TEXT("Thrown knife with Slash: took %.2f (expected %.2f; plain %.2f)"), Taken, C.Number(TEXT("Expected")),
+			C.Number(TEXT("Plain"))));
+		C.Test.TestEqual(TEXT("The thrown knife carries Slash's +7 weapon damage"), Taken, static_cast<float>(C.Number(TEXT("Expected"))),
+			PassiveDamageTolerance);
+		C.Test.TestTrue(TEXT("The riposte is still readied after the hit"), C.HasTag(Player, CrossguardTags::State_NextAttack_Riposte));
+	});
+
+	Scenario.Run();
+	return true;
+}
+
+// =====================================================================================================
+// A thrown throwing axe is an axe attack: it uses up a readied Chop Down (110% damage, -50% speed 2 s).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioPassiveThrownAxeChopDown, "Crossguard.Scenario.Skills.ThrownAxeChopDown", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioPassiveThrownAxeChopDown::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioPassiveSkills;
+
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("A player with Chop Down readies throwing axes, a dummy 4 m away"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = C.SpawnPlayer(TEXT("Thrower"), FVector(-1500.0f, 8200.0f, 0.0f), 0.0f);
+		ACrossguardCharacter* Dummy = C.SpawnDummy(TEXT("Dummy"), FVector(-1500.0f + PassiveThrowGap, 8200.0f, 0.0f), 180.0f);
+		if (!C.Require(Player != nullptr && Dummy != nullptr, TEXT("thrower and dummy spawned"))
+			|| !C.Require(C.GrantSkills(Player, {TEXT("chop_down")}), TEXT("Chop Down granted")))
+		{
+			return;
+		}
+		if (PassiveReadyKnives(C, Player, 2, PassiveThrowingAxe))
+		{
+			PassiveAimThrow(C, Player, Dummy);
+		}
+	});
+
+	Scenario.Wait(PassiveViewSettle);
+
+	Scenario.Step(TEXT("Chop Down (an axe in hand counts as an axe), then throw"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = C.Get<ACrossguardCharacter>(TEXT("Thrower"));
+		ACrossguardCharacter* Dummy = C.Get<ACrossguardCharacter>(TEXT("Dummy"));
+		const float Base = PassiveKnifeDamage(C, Player, PassiveThrowingAxe);
+		if (Player == nullptr || Dummy == nullptr || Base < 0.0f)
+		{
+			C.Fail(TEXT("thrower or dummy gone"));
+			return;
+		}
+		if (!C.Require(C.ActivateSkill(Player, TEXT("chop_down")), TEXT("Chop Down activates with a throwing axe in hand")))
+		{
+			return;
+		}
+		C.Test.TestTrue(TEXT("State.ChopDownReady is on"), C.HasTag(Player, CrossguardTags::State_ChopDownReady));
+		PassiveAimThrow(C, Player, Dummy);
+		const float Before = C.Health(Dummy);
+		C.SetNumber(TEXT("Before"), Before);
+		C.SetNumber(TEXT("Speed"), C.Stat(Dummy, UCrossguardAttributeSet::GetMoveSpeedAttribute()));
+		C.SetNumber(TEXT("Expected"), FMath::Min(C.ExpectedDamage(Player, Dummy, Base * PassiveChopDownMultiplier), Before));
+		PassiveThrow(Player);
+		C.Test.TestFalse(TEXT("The throw uses Chop Down up"), C.HasTag(Player, CrossguardTags::State_ChopDownReady));
+	});
+
+	Scenario.WaitUntil(TEXT("the axe hits the dummy"), 3.0f, [](FScenarioContext& C)
+	{
+		const ACrossguardCharacter* Dummy = C.Get<ACrossguardCharacter>(TEXT("Dummy"));
+		return Dummy == nullptr || C.Health(Dummy) < static_cast<float>(C.Number(TEXT("Before")));
+	});
+
+	Scenario.Step(TEXT("110% of the axe's damage, the dummy slowed 50%"), [](FScenarioContext& C)
+	{
+		const ACrossguardCharacter* Dummy = C.Get<ACrossguardCharacter>(TEXT("Dummy"));
+		if (Dummy == nullptr)
+		{
+			C.Fail(TEXT("dummy gone"));
+			return;
+		}
+		const float Taken = static_cast<float>(C.Number(TEXT("Before"))) - C.Health(Dummy);
+		C.Test.AddInfo(FString::Printf(TEXT("Thrown axe with Chop Down: took %.2f (expected %.2f)"), Taken, C.Number(TEXT("Expected"))));
+		C.Test.TestEqual(TEXT("The thrown axe hits for 110%"), Taken, static_cast<float>(C.Number(TEXT("Expected"))), PassiveDamageTolerance);
+		C.Test.TestTrue(TEXT("The dummy is Slowed"), C.HasTag(Dummy, CrossguardTags::State_Slowed));
+		C.Test.TestEqual(TEXT("The dummy's Movement Speed is 50% lower"), C.Stat(Dummy, UCrossguardAttributeSet::GetMoveSpeedAttribute()),
+			static_cast<float>(C.Number(TEXT("Speed"))) - PassiveChopDownSlow, PassiveStatTolerance);
 	});
 
 	Scenario.Run();

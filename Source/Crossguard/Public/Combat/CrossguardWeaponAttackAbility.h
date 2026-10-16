@@ -42,9 +42,10 @@ struct FCrossguardRiderAttack
 	// Unset: an unarmed AI's natural attack (a tiger's claws), which counts as every melee weapon for
 	// next-attack skills but as no weapon for always-on effects (Splinter of Winter, Arcane Arrows).
 	TOptional<ECrossguardWeaponType> WeaponType;
-	// A thrown weapon (UCrossguardInventoryComponent's throw). A thrown throwing knife is a dagger
-	// attack (owner ruling): [Splinter of Winter] and a readied [Gouge] ride on it. Other next-attack
-	// skills want a melee attack or a bow shot, and a parry's riposte waits for a weapon attack.
+	// A thrown weapon (UCrossguardInventoryComponent's throw). Owner rulings: a thrown throwing knife is
+	// a dagger attack, a thrown throwing axe an axe attack. Next-attack skills take it as a melee attack
+	// with that weapon (Slash, Gouge, Chop Down, Shade Blow, Mortal Strike; not Purge Shot), and
+	// [Splinter of Winter] rides on a knife. A parry's riposte stays readied for a weapon attack.
 	bool bThrown = false;
 
 	static FCrossguardRiderAttack ForWeapon(const FCrossguardWeaponRow& Weapon);
@@ -76,14 +77,15 @@ struct FCrossguardRiderAttack
 //   cooldown), [Shade Blow] +20 Magic Damage and no healing 5 s, [Gouge] 25 Attack Damage over 5 s
 //   and -5% speed, [Chop Down] (axe) 110%, -50% speed 2 s, ends Flight, [Neckbite] (AI only for
 //   now) +10 Magic Damage and a 2 s Silence (running skills stop).
-// - Any attack: a parry's riposte, +50% Attack Damage Bonus.
+// - Any weapon attack (not a throw): a parry's riposte, +50% Attack Damage Bonus.
 // Guards: every hit goes through CrossguardGuard::ApplyHit (block and parry by Impact Power); a hit a
 // guard stops carries no on-hit effects.
 // - Bow / crossbow: [Purge Shot] +10 Magic Damage and a 3 s Mute.
 // Always on: [Arcane Arrows] +5 Magic Damage on bow attacks while active; [Splinter of Winter]
 // +5 Magic Damage and -10% speed 3 s on dagger attacks.
-// A thrown throwing knife is a dagger attack too: it uses up a readied [Gouge] and carries
-// [Splinter of Winter] (FCrossguardRiderAttack::ForThrown).
+// A thrown throwing knife (axe) is a melee dagger (axe) attack for next-attack skills: it uses up
+// every readied skill a melee attack with that weapon would, riposte excepted, and a knife carries
+// [Splinter of Winter] (FCrossguardRiderAttack::ForThrown). Bombs (explosive bottles) carry none.
 //
 // Hit detection runs on the server. Placeholder until animations and weapon collision exist.
 UCLASS()

@@ -107,6 +107,9 @@ namespace CrossguardScenarioSupportSkills
 	constexpr float DemonAttackDamage = 40.0f;
 	// Ruled: 3x the player's size.
 	constexpr float DemonScale = 3.0f;
+	// Ruled: the reach scales with the size. A player-size companion (the tiger) reaches 2 m centre to
+	// centre; the 3x demon 6 m.
+	constexpr float CompanionBaseReach = 200.0f;
 	constexpr float DemonSeconds = 60.0f;
 	constexpr float SilenceSeconds = 2.0f;
 
@@ -2154,6 +2157,7 @@ bool FCrossguardScenarioSupportSummonTiger::RunTest(const FString& Parameters)
 		C.Test.TestEqual(TEXT("The tiger's claws deal 20 Attack Damage"), Tiger->AttackDamage, TigerAttackDamage, 0.001f);
 		C.Test.TestEqual(TEXT("The tiger attacks 1.3 times a second"), Tiger->AttackInterval, TigerAttackInterval, 0.001f);
 		C.Test.TestEqual(TEXT("The tiger lives 180 s"), Tiger->GetLifeSpan(), TigerSeconds, 0.2f);
+		C.Test.TestEqual(TEXT("The tiger reaches 2 m"), Tiger->AttackRange, CompanionBaseReach, 0.001f);
 		C.Test.TestTrue(TEXT("The tiger has Hunter's Leap"), HasSkill(Tiger, TEXT("hunters_leap")));
 		C.Test.TestTrue(TEXT("The tiger has Neckbite"), HasSkill(Tiger, TEXT("neckbite")));
 		C.Test.TestTrue(TEXT("The tiger has Slash"), HasSkill(Tiger, TEXT("slash")));
@@ -2243,6 +2247,8 @@ bool FCrossguardScenarioSupportSummonGreaterDemon::RunTest(const FString& Parame
 		const float WarlockFeet = static_cast<float>(Warlock->GetActorLocation().Z) - Warlock->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 		C.Test.TestEqual(TEXT("The demon stands on the warlock's floor"), DemonFeet, WarlockFeet, 10.0f);
 		C.Test.TestEqual(TEXT("The demon's sword deals 40 Attack Damage"), Demon->AttackDamage, DemonAttackDamage, 0.001f);
+		C.Test.TestEqual(TEXT("The demon's reach is 3x a player-size companion's (6 m)"), Demon->AttackRange,
+			DemonScale * CompanionBaseReach, 0.001f);
 		C.Test.TestTrue(TEXT("The demon wields a two-handed sword"), Demon->bWieldsWeapon && Demon->bTwoHandedWeapon
 			&& Demon->WeaponType == ECrossguardWeaponType::Sword);
 		C.Test.TestEqual(TEXT("The demon lives 60 s"), Demon->GetLifeSpan(), DemonSeconds, 0.2f);

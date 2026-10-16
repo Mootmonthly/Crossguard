@@ -186,7 +186,7 @@ protected:
 	float Health = 100.0f;
 	float AttackDamage = 10.0f;
 	float AttackInterval = 1.0f;
-	// cm.
+	// cm, centre to centre, at player size: the companion's reach is this times Scale.
 	float AttackRange = 200.0f;
 	float Seconds = 60.0f;
 	float Scale = 1.0f;

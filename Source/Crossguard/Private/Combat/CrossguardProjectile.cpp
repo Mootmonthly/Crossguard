@@ -3,6 +3,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Combat/CrossguardGuard.h"
+#include "Combat/CrossguardWeaponAttackAbility.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Skills/CrossguardSkillAbility.h"
 #include "Components/SphereComponent.h"
@@ -58,21 +59,22 @@ void ACrossguardProjectile::HandleImpact(AActor* OtherActor, const FHitResult& H
 			GuardHit.ImpactPower = ImpactPower;
 			GuardHit.bRanged = true;
 			GuardHit.Origin = GetActorLocation() - Movement->Velocity.GetSafeNormal() * 1000.0f;
-			const float Through = CrossguardGuard::ApplyHit(UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetInstigator()), OtherActor,
-				DamageSpec, GuardHit);
+			UAbilitySystemComponent* ShooterASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetInstigator());
+			const float Through = CrossguardGuard::ApplyHit(ShooterASC, OtherActor, DamageSpec, GuardHit);
 			if (Through <= 0.0f)
 			{
 				Destroy();
 				return;
 			}
-			for (const FGameplayEffectSpecHandle& OnHit : OnHitSpecs)
-			{
-				UCrossguardSkillAbility::ApplyOnHitSpec(OnHit, TargetASC);
-			}
-			if (bCancelSkillsOnHit)
-			{
-				UCrossguardSkillAbility::CancelActiveSkills(TargetASC);
-			}
+			// The attack's riders, as on a swing.
+			FCrossguardAttackRiders Landed;
+			Landed.OnHitSpecs = OnHitSpecs;
+			Landed.bCancelSkills = bCancelSkillsOnHit;
+			Landed.bSilence = bSilenceOnHit;
+			Landed.bGroundFlying = bGroundFlyingOnHit;
+			Landed.bMortalStrike = bMortalStrikeOnHit;
+			UCrossguardWeaponAttackAbility::ApplyRiders(Landed, TargetASC);
+			UCrossguardWeaponAttackAbility::FinishMeleeHits(Landed, ShooterASC, {OtherActor});
 		}
 	}
 	Destroy();

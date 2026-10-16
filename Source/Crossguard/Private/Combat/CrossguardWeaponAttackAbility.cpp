@@ -212,7 +212,9 @@ FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCros
 	{
 		return Riders;
 	}
-	const bool bMelee = Attack.bMelee;
+	// A thrown weapon (a throwing knife: Dagger, a throwing axe: Axe) is, for next-attack skills, a melee
+	// attack with that weapon (owner ruling): Slash, Gouge, Chop Down, Shade Blow, Mortal Strike ride on it.
+	const bool bMelee = Attack.bMelee || (Attack.bThrown && Attack.WeaponType.IsSet());
 	const auto Wields = [&Attack](ECrossguardWeaponType Type)
 	{
 		return Attack.WeaponType.IsSet() && Attack.WeaponType.GetValue() == Type;
@@ -271,9 +273,7 @@ FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCros
 		Riders.MagicAdd += ShadeBlowMagicDamage;
 		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeStatusSpec(ASC, CrossguardTags::State_HealBlocked, ShadeBlowHealBlockSeconds));
 	}
-	// [Gouge]: a dagger attack, a thrown throwing knife included (owner ruling).
-	if (Ready(CrossguardTags::State_NextAttack_Gouge,
-			MeleeWith({ECrossguardWeaponType::Dagger}) || (Attack.bThrown && Wields(ECrossguardWeaponType::Dagger))))
+	if (Ready(CrossguardTags::State_NextAttack_Gouge, MeleeWith({ECrossguardWeaponType::Dagger})))
 	{
 		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeDamageOverTimeSpec(ASC, GougeDamagePerSecond, 0.0f, GougeSeconds));
 		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeSlowSpec(ASC, GougeSlow, GougeSeconds));
@@ -290,7 +290,7 @@ FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCros
 		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeStatusSpec(ASC, CrossguardTags::State_Silenced, NeckbiteSilenceSeconds));
 		Riders.bSilence = true;
 	}
-	// A parry's riposte: any weapon attack (assumed: not a throw).
+	// A parry's riposte: any weapon attack, not a throw (owner ruling: a throw leaves it readied).
 	if (Ready(CrossguardTags::State_NextAttack_Riposte, !Attack.bThrown))
 	{
 		Riders.AttackBonusAdd += static_cast<float>(CrossguardGuard::Config().ParryAttackDamageBonus);
