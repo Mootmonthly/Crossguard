@@ -45,6 +45,12 @@ void UCrossguardConnectionErrorSubsystem::HandleNetworkFailure(UWorld* World, UN
 	{
 		return;
 	}
+	// A refusal comes as FailureReceived (the server's reason) and is followed at once by the engine's
+	// generic ConnectionLost: keep the reason.
+	if (FailureType == ENetworkFailure::ConnectionLost && !LastError.IsEmpty())
+	{
+		return;
+	}
 	Remember(World, ErrorString.IsEmpty() ? FString(ENetworkFailure::ToString(FailureType)) : ErrorString);
 }
 
