@@ -435,6 +435,175 @@ void ACrossguardGameMode::HandlePermanentDeath(ACrossguardCharacter* Character)
 	UpdateSpectators();
 }
 
+// --- Reconnecting ----------------------------------------------------------------------------------
+
+bool ACrossguardGameMode::HoldForReconnect(APlayerController* Leaving)
+{
+	const UWorld* World = GetWorld();
+	ACrossguardPlayerState* PlayerState = Leaving != nullptr ? Leaving->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	ACrossguardCharacter* Character = Leaving != nullptr ? Cast<ACrossguardCharacter>(Leaving->GetPawn()) : nullptr;
+	// Not when the map is closing, nor for a player whose raid here is over (dead for the raid,
+	// extracted): their pawn goes as usual.
+	if (!bIsRaid || World == nullptr || World->bIsTearingDown || PlayerState == nullptr || Character == nullptr || !PlayerState->IsInRaid()
+		|| PlayerState->HasFinishedRaid() || Character->HasLeftRaid())
+	{
+		return false;
+	}
+	const FString PlayerId = UCrossguardGuildSubsystem::PlayerIdOf(PlayerState);
+	if (PlayerId.IsEmpty() || HeldPlayers.Contains(PlayerId))
+	{
+		return false;
+	}
+	FCrossguardHeldPlayer& Held = HeldPlayers.Add(PlayerId);
+	Held.PlayerState = PlayerState;
+	Held.Character = Character;
+	Held.TeamKey = PlayerKeys.FindRef(TWeakObjectPtr<const AController>(Leaving));
+
+	// The character stays where it is, unpossessed: it can be hit, killed and looted. It stays this
+	// player's (unpossessing clears the link, so it is set again): their team, a player kill for whoever
+	// kills it, their save's watcher, and HandlePermanentDeath finds them.
+	Leaving->UnPossess();
+	Character->SetPlayerState(PlayerState);
+	UE_LOG(LogCrossguard, Log, TEXT("%s (%s) disconnected mid-raid: character held for a reconnect"), *Character->GetName(), *PlayerId);
+	return true;
+}
+
+ACrossguardPlayerState* ACrossguardGameMode::FindHeldPlayer(const FString& PlayerId) const
+{
+	const FCrossguardHeldPlayer* Held = HeldPlayers.Find(PlayerId);
+	return Held != nullptr ? Held->PlayerState.Get() : nullptr;
+}
+
+FString ACrossguardGameMode::HeldIdOf(const ACrossguardPlayerState* PlayerState) const
+{
+	for (const TPair<FString, FCrossguardHeldPlayer>& Pair : HeldPlayers)
+	{
+		if (PlayerState != nullptr && Pair.Value.PlayerState.Get() == PlayerState)
+		{
+			return Pair.Key;
+		}
+	}
+	return FString();
+}
+
+const ACrossguardPlayerState* ACrossguardGameMode::FindOnlinePlayer(const FString& PlayerId, const APlayerState* Except) const
+{
+	if (GameState == nullptr)
+	{
+		return nullptr;
+	}
+	for (const APlayerState* Other : GameState->PlayerArray)
+	{
+		const ACrossguardPlayerState* OtherState = Cast<ACrossguardPlayerState>(Other);
+		if (OtherState != nullptr && OtherState != Except && UCrossguardGuildSubsystem::PlayerIdOf(OtherState) == PlayerId
+			&& HeldIdOf(OtherState).IsEmpty())
+		{
+			return OtherState;
+		}
+	}
+	return nullptr;
+}
+
+FString ACrossguardGameMode::RestoreHeldPlayer(APlayerController* Controller, const FString& PlayerId, const FUniqueNetIdRepl& UniqueId,
+	const FString& Options, const FString& Portal)
+{
+	FCrossguardHeldPlayer Held;
+	HeldPlayers.RemoveAndCopyValue(PlayerId, Held);
+	ACrossguardPlayerState* HeldState = Held.PlayerState.Get();
+	ACrossguardCharacter* HeldCharacter = Held.Character.Get();
+	if (HeldState == nullptr || HeldCharacter == nullptr || Controller == nullptr)
+	{
+		// Nothing left to take back (should not happen: a death releases the player).
+		return TEXT("Your raid is over.");
+	}
+
+	// The engine's own way (AGameMode::FindInactivePlayer): the held player state replaces the fresh one.
+	// Matched by player id only (an online id, or a development id), never by name.
+	APlayerState* Fresh = Controller->PlayerState;
+	Controller->PlayerState = HeldState;
+	HeldState->SetOwner(Controller);
+	if (Fresh != nullptr && Fresh != HeldState)
+	{
+		Fresh->Destroy();
+	}
+	// Registers the player, sets the unique id again (the save subsystem already has this player state)
+	// and the name.
+	const FString Error = Super::InitNewPlayer(Controller, UniqueId, Options, Portal);
+	if (!Error.IsEmpty())
+	{
+		// Refused after all: held again; the controller leaves without a player state.
+		Controller->PlayerState = nullptr;
+		HeldState->SetOwner(nullptr);
+		HeldPlayers.Add(PlayerId, Held);
+		return Error;
+	}
+	HeldState->ForceNetUpdate();
+	// Same team slot (the registry key is just a string).
+	PlayerKeys.Add(TWeakObjectPtr<const AController>(Controller), Held.TeamKey);
+	Reconnecting.Add(TWeakObjectPtr<APlayerController>(Controller), HeldCharacter);
+	UE_LOG(LogCrossguard, Log, TEXT("%s reconnected to the raid"), *PlayerId);
+	return FString();
+}
+
+void ACrossguardGameMode::ResumeHeldCharacter(APlayerController* Player, ACrossguardCharacter* Character)
+{
+	const ACrossguardPlayerState* PlayerState = Player != nullptr ? Player->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	if (PlayerState == nullptr || Character == nullptr || Character->GetPlayerState() != PlayerState || !PlayerState->IsInRaid())
+	{
+		// The character is gone meanwhile: nothing to take back; they watch, like after a death.
+		if (Player != nullptr)
+		{
+			Spectators.AddUnique(Player);
+			UpdateSpectators();
+		}
+		return;
+	}
+	// Possession sets the attributes up again with full Health: the character keeps what it had (no
+	// healing by reconnecting; a downed character stays at 0).
+	UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent();
+	const float Health = ASC != nullptr ? ASC->GetNumericAttribute(UCrossguardAttributeSet::GetHealthAttribute()) : 0.0f;
+	Player->Possess(Character);
+	if (ASC != nullptr)
+	{
+		ASC->SetNumericAttributeBase(UCrossguardAttributeSet::GetHealthAttribute(), Health);
+	}
+	Player->SetControlRotation(Character->GetActorRotation());
+	Player->ClientSetRotation(Character->GetActorRotation());
+}
+
+void ACrossguardGameMode::ReleaseHeldPlayer(const FString& PlayerId)
+{
+	FCrossguardHeldPlayer Held;
+	if (!HeldPlayers.RemoveAndCopyValue(PlayerId, Held))
+	{
+		return;
+	}
+	ACrossguardPlayerState* PlayerState = Held.PlayerState.Get();
+	ACrossguardCharacter* Character = Held.Character.Get();
+	// The body stays, lootable, but is no longer theirs: the failure's save takes no gear from it (it
+	// keeps the raid start's record: none).
+	if (Character != nullptr && Character->GetPlayerState() == PlayerState)
+	{
+		Character->SetPlayerState(nullptr);
+	}
+	FinishedPlayerIds.Add(PlayerId);
+	if (!Held.TeamKey.IsEmpty())
+	{
+		Teams.Leave(std::string(TCHAR_TO_UTF8(*Held.TeamKey)));
+	}
+	if (PlayerState != nullptr)
+	{
+		PlayerState->EndRaid(false);
+		if (UCrossguardSaveSubsystem* Saves = UCrossguardSaveSubsystem::Get(this))
+		{
+			Saves->PlayerLeaving(PlayerState);
+		}
+		PlayerState->Destroy();
+	}
+	UE_LOG(LogCrossguard, Log, TEXT("%s died for the raid while away: raid failed"), *PlayerId);
+	UpdateSpectators();
+}
+
 APawn* ACrossguardGameMode::FindSpectateTarget(const APlayerController* Player) const
 {
 	const int32 Team = UCrossguardTeamLibrary::GetTeamId(Player);

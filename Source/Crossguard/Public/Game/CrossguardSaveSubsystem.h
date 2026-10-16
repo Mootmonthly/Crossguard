@@ -54,8 +54,11 @@ enum class ECrossguardSaveState : uint8
 //   through the components' server functions, after validation (CrossguardRules ValidateCharacterSave).
 // - Save: when a raid starts and ends (extraction or failure), on logout, and a short while after any
 //   change between raids (debounced, SaveDebounceSeconds). Never during a raid: a raid save records
-//   no carried gear, because that gear is lost unless the player extracts.
-// - The player id is UCrossguardGuildSubsystem::PlayerIdOf: the online id (Steam), else
+//   no carried gear, because that gear is lost unless the player extracts. A raider whose connection
+//   drops is held for a reconnect (ACrossguardGameMode::HoldForReconnect): no logout save and the
+//   entry is kept; the raid's end (extraction or failure) saves as usual.
+// - The player id is UCrossguardGuildSubsystem::PlayerIdOf: the online id (Steam), else in
+//   development builds a server-set stand-in ("pie-<n>", "dev-<name>"), else
 //   "session-<PlayerId>", which is NOT stable across server runs (docs/steam-setup.md).
 //
 // Off while automation tests run, so tests never read or write real saves; a test turns it on with
