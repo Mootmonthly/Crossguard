@@ -202,3 +202,23 @@ func TestQuarantineCopiesAndKeepsOriginal(t *testing.T) {
 		t.Fatal("quarantine removed the original")
 	}
 }
+
+// The game server reads the load answer by position (UCrossguardNakamaSaveBackend::ParseLoadResponse):
+// "found", then "version", then "record" last (compacted by encoding/json; numbers kept as written).
+func TestLoadResponseFieldOrder(t *testing.T) {
+	nk := newFakeNakama(alice)
+	write(t, nk, alice, record(alice, 5), "*")
+	out, err := RpcSaveLoadFn(serverCtx(), &fakeLogger{}, nil, nk, `{"user_id": "`+alice+`", "character_id": "main"}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	compact := `{"version":1,"playerId":"` + alice + `","gold":5,"stash":{"tabs":[]}}`
+	if !strings.HasPrefix(out, `{"found":true,"version":"`) || !strings.HasSuffix(out, `,"record":`+compact+`}`) {
+		t.Fatalf("load answer shape changed: %s", out)
+	}
+	nk.users[bob] = nk.users[alice]
+	out, _ = RpcSaveLoadFn(serverCtx(), &fakeLogger{}, nil, nk, `{"user_id": "`+bob+`", "character_id": "main"}`)
+	if out != `{"found":false,"version":"*","record":null}` {
+		t.Fatalf("new character answer shape changed: %s", out)
+	}
+}
