@@ -154,7 +154,7 @@ damage is computed from the characters' actual stats, so they work at any level.
 
 ### The scenarios
 
-120 tests in 16 files (107 `Crossguard.Scenario.*`, 7 `Crossguard.Net.*`, 6 `Crossguard.Visual.*`;
+138 tests in 20 files (123 `Crossguard.Scenario.*`, 8 `Crossguard.Net.*`, 7 `Crossguard.Visual.*`;
 2026-10-16). Grouped by file; the name is the full test name.
 
 **`CrossguardScenarioRaidTests.cpp`**
@@ -368,6 +368,13 @@ game mode's Mob Table is unset.
 | `Crossguard.Scenario.Save.CorruptFileRefused` | A save cut in half is refused ("refused (InvalidJson"), nothing of the character changes, the file is kept aside as `.corrupt-*`, the next save writes the live state and loads. A hand-edited save with gold -50 and an unknown item loads repaired: gold 0 (`GoldOutOfRange`), the item quarantined (`UnknownItem`) and kept in the file. A save whose `playerId` is someone else's is refused (`WrongPlayer`). |
 | `Crossguard.Scenario.Save.ExtractedPlayerLeavesRaid` | A ruby carried in, a sapphire picked up in the raid (F), a potion in the stash. Extracting saves both gems as carried out; the character then leaves the raid: F on a second sapphire is refused ("interact refused: extracted"), taking the potion from the stash is refused (no character), the record does not change, the character is gone a tick later, and a later save still lists the gems. |
 
+**`CrossguardScenarioReconnectTests.cpp`** (reconnecting mid-raid, [persistence.md](persistence.md) "Reconnecting". A disconnect destroys the raider's PlayerController, as the net driver does when a connection closes; a reconnect is `InitNewPlayer` + `HandleStartingNewPlayer` with a `?DevPlayerId=` development id, honoured during automation tests. Skipped if the game mode's Player Controller Class is not `ACrossguardPlayerController`)
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Reconnect.RetakesCharacter` | A raider with a potion, raid XP and 60 % Health. A second login with the same id while connected is refused ("You are already in this match."). The connection closes: the character stays, unpossessed, with its player state (in the raid, same raid XP, potion, Health), held under its id. Another id logs in: a player state and pawn of its own, the raider still held. The same id logs in: the held player state is back on the new controller, the same character is possessed (no new pawn), same raid XP, team, potion and Health. |
+| `Crossguard.Scenario.Reconnect.DiedWhileAway` | A raider disconnects; its waiting character is killed and its revive window ends (`HandlePermanentDeath` called directly): no longer held, the raid is over for that id, the body is not the player's any more and a body container lies there; logging in again with the id is refused ("Your raid is over."). |
+
 **`CrossguardScenarioNetworkTests.cpp`** (networked: a server and real PIE clients, see
 [Networked scenarios](#networked-scenarios))
 
@@ -470,6 +477,7 @@ use server-side players in one standalone PIE; `Crossguard.Net.*` use real PIE c
 | 6 `showdebug` shows the other's `Equipment.Wielding.*` | auto | `Net.WieldingTagsReplicate` | The debug HUD itself. |
 | 6 Concurrent loot never duplicates | auto | `Social.ConcurrentLootNeverDuplicates`, `Net.ConcurrentLootFromTwoClients` | — |
 | 6 Parties and the raid launch | part | `Net.PartyInviteAcceptMakesAllies`, `Net.PartyKickPromoteLeave`, `Hub.PartyRaidLaunchPlan` | The travel itself (two PCs): both arrive on the raid map, still allies. |
+| 6 Reconnecting mid-raid | part | `Reconnect.RetakesCharacter`, `Reconnect.DiedWhileAway` | A real crash and relaunch (two processes): the connection timeout, the client getting its pawn and HUD back. |
 
 Totals: 69 rows: 65 auto, 3 script, 1 part (the party raid launch's travel), none manual (2026-10-16). What the "By hand" column
 still leaves to a person is feel, art and real internet play: looks (frames from the visual run),

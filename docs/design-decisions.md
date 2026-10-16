@@ -529,8 +529,9 @@ Characters are saved by the server behind a backend interface; the backend itsel
   player extracts.
 - Assumed until ruled otherwise:
   - (placeholder) The gear carried into a raid is at risk from the moment the raid starts: a save
-    made during a raid lists none, so a server crash or the player **logging out during a raid
-    loses it like a failed extraction**, and the next load has no carried gear.
+    made during a raid lists none, so a server crash, or a raid that ends while its player is
+    disconnected (see Reconnecting), **loses it like a failed extraction**, and the next load has
+    no carried gear.
   - (placeholder) The hotbar and the active weapon set are not saved (the hotbar refills from the
     keys' remembered items).
   - (placeholder) A corrupt save is refused whole and kept aside; the player starts fresh. Values
@@ -540,6 +541,38 @@ Characters are saved by the server behind a backend interface; the backend itsel
     when the data does.
   - (placeholder) Player ids without Steam (`session-<n>`) are saved too, for development; they
     are not stable across server restarts (turn `bSaveSessionIds` off once Steam is in).
+  - Assumed: development builds (never Shipping) give a player without an online id a stable
+    stand-in id set by the server: `pie-<PIE instance>` (or `dev-<name>` from `-CrossguardPlayerId=`)
+    for the server's own player, and `dev-<name>` from a client's `?DevPlayerId=<name>` only on a
+    server started with `-AllowDevPlayerIds` (it is the client's word). Details: persistence.md.
+
+## Reconnecting
+
+Ruled: if a player crashes or logs out mid-raid, they can reopen their client and reconnect to the
+match, as long as their character has not died yet. How it works: [persistence.md](persistence.md),
+"Reconnecting".
+
+- Assumed: the character stays in the world where it was, unpossessed: it can be hit, killed and
+  looted by monsters and players (no protection, no despawn timer). It stands still but still
+  falls and takes knockback.
+- Assumed: a downed character (revive window running) is held too; teammates can still revive it.
+- Assumed: if it dies for the raid while away (revive window over), it is an ordinary death: the
+  body is lootable, the raid counts as a failed extraction for that player (raid XP and gear lost),
+  and logging in to that raid again is refused ("Your raid is over."): they go back to the menu /
+  hub path. The same refusal applies to a player who extracted or died for the raid and then logged
+  out.
+- Assumed: if the raid ends or the server shuts down while the player is away, their character was
+  still in the raid: a failed extraction (gear lost). The stored save is the raid start's (no carried
+  gear, `inRaid`), which loads as exactly that.
+- Assumed: the save is not written at the disconnect (the raid's record stays pending); the raid's
+  end for that player saves as usual (extraction after reconnecting, or failure).
+- Assumed: the party is kept (it is the raid team), and the team slot stays taken while away.
+- Assumed: Health is kept across the reconnect (no healing by reconnecting).
+- A reconnect is matched by player id only (the online id; a development id in development builds),
+  never by name. It needs a stable id: Steam ([steam-setup.md](steam-setup.md)); `session-<n>` ids
+  cannot reconnect. A login while the server still has the old connection open (before it times out)
+  is refused as "already in this match"; retry once it has timed out.
+- Open: no "disconnected" marker on the character or in the party UI yet.
 
 ## Open questions
 

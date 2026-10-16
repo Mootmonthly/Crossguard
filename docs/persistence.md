@@ -28,7 +28,8 @@ One record per character, keyed by player id:
 
 Never saved: raid XP, anything picked up during a raid, the hotbar, the active weapon set, team and
 party. **A save made during a raid lists no carried gear** (`"inRaid": true`): the gear is at risk
-until the player extracts, so a crash or a disconnect in a raid loses it like a failed extraction.
+until the player extracts, so a server crash, or a raid that ends while its player is disconnected,
+loses it like a failed extraction. A player whose own client crashes can reconnect (see Reconnecting).
 
 ## When
 
@@ -38,7 +39,7 @@ until the player extracts, so a crash or a disconnect in a raid loses it like a 
 | Apply | `ACrossguardGameMode::HandleStartingNewPlayer` → `PlayerReady`, after the pawn is possessed and before a raid begins; then the result is saved at once |
 | Raid starts | `ACrossguardPlayerState::BeginRaid` → `SaveNow` (no carried gear from now on) |
 | Raid ends (extraction or failure) | `ACrossguardPlayerState::EndRaid` → `SaveNow` |
-| Logout | `ACrossguardGameMode::Logout` → `PlayerLeaving` (save, then forget the player) |
+| Logout | `ACrossguardGameMode::Logout` → `PlayerLeaving` (save, then forget the player). Not for a raider held for a reconnect: no save, the record is kept |
 | Changes between raids | Progression, stash, inventory, equipment and loadout changes → `MarkDirty`; written after `SaveDebounceSeconds` (2 s); several changes share one write |
 | Map change, shutdown | Pending writes are flushed (`FWorldDelegates::OnWorldCleanup`, `Deinitialize`) |
 
@@ -59,14 +60,49 @@ else the quarantine) and `UCrossguardLoadoutComponent::RequestLoadout` (checks t
 Capacity again). Carried items are placed again by the inventory, so their squares may differ from
 the save.
 
+## Reconnecting
+
+Ruled (design-decisions.md, "Reconnecting"): a player whose client crashes or who logs out mid-raid
+can log in again and continue, as long as their character has not died for the raid.
+
+| Step | Where |
+| --- | --- |
+| Connection closes | The net driver destroys the controller. `ACrossguardPlayerController::PawnLeavingGame` (instead of destroying the pawn) asks `ACrossguardGameMode::HoldForReconnect`: on a raid map, a character still in the raid (alive or downed, not extracted, raid not over) is unpossessed and left where it is, still linked to its player state; the game mode keeps both under the player id (`HeldPlayers`). `CleanupPlayerState` then lets go of the player state without destroying it. |
+| Logout | For a held player: no `PlayerLeaving` (no save; the save entry, its record and watcher stay), the team slot stays taken (`FTeamRegistry` key kept), the party is untouched (a raid never changes parties). |
+| Away | The character can be hit, killed and looted. It is still the player's: team, player-kill XP for its killer, `HandlePermanentDeath` finds it. Its player state stays in `GameState->PlayerArray` without an owner. |
+| Death while away | `HandlePermanentDeath` → `ReleaseHeldPlayer`: the body is unlinked from the player state (the failure's save takes no gear from it), `EndRaid(false)` (raid XP lost, saved), `PlayerLeaving`, team slot freed, player state destroyed; the id joins `FinishedPlayerIds`. |
+| Login again | `InitNewPlayer`: same player id (online id, or development id) held → `RestoreHeldPlayer`: the held player state replaces the fresh one on the new controller (as the engine's `AGameMode::FindInactivePlayer` does), then the engine's `InitNewPlayer` registers it again; same team key. `HandleStartingNewPlayer` → `ResumeHeldCharacter`: possesses the same character (no `RestartPlayer`, no new raid, no save applied), Health kept. |
+| Refused logins | A player id in `FinishedPlayerIds` (extracted or dead for this raid, also while away): "Your raid is over." A player id already playing here (also a reconnect before the server has noticed the old connection drop; it times out after the net driver's connection timeout): "You are already in this match." |
+| Raid end / shutdown while away | Nothing runs: the stored record is the raid start's (`inRaid`, no carried gear), which loads as a failed extraction. |
+
+Only the player id matches a reconnect, never the name: another account cannot take over. The id must
+be stable: Steam ids are; `session-<n>` ids are new on every login, so without Steam only the
+development ids below can reconnect. `PlayerCanRestart` still refuses a respawn to a player whose raid
+here is over. The game mode's Player Controller Class must be `ACrossguardPlayerController` (the C++
+default; a Blueprint game mode that sets its own must use a child of it).
+
 ## Player id
 
-`UCrossguardGuildSubsystem::PlayerIdOf`: the online id (a Steam id with Steam), else
-`session-<PlayerId>`. **Session ids are not stable**: they count from the server's start, so after a
-restart another player can get the same id and load someone else's character. Fine for development;
-set `bSaveSessionIds=False` once Steam is in ([steam-setup.md](steam-setup.md)). The id is the
-server's own (from the login), never a client's word. A file whose `playerId` does not match the id
-it was loaded for is refused.
+`UCrossguardGuildSubsystem::PlayerIdOf`: the online id (a Steam id with Steam), else in development
+builds the server-set `ACrossguardPlayerState::DevPlayerId` (below), else `session-<PlayerId>`.
+**Session ids are not stable**: they count from the server's start, so after a restart another
+player can get the same id and load someone else's character. Fine for development; set
+`bSaveSessionIds=False` once Steam is in ([steam-setup.md](steam-setup.md)). The id is the server's
+own (from the login), never a client's word (except the opt-in development ids below). A file whose
+`playerId` does not match the id it was loaded for is refused.
+
+**Development ids** (compiled out of Shipping; `ACrossguardGameMode::DevPlayerIdFor`, set at login
+before the save loads, carried across seamless travel, never over an online id):
+
+- The server's own player (standalone, PIE, listen-server host): `dev-<name>` from the server's
+  `-CrossguardPlayerId=<name>` command line, else in PIE `pie-<PIE instance>`. So "stash an item, stop
+  PIE, play again" finds the same save.
+- A remote client: `dev-<name>` from its login URL option `?DevPlayerId=<name>` (e.g.
+  `open 127.0.0.1?DevPlayerId=alice`), only if the server was started with `-AllowDevPlayerIds` (and
+  during automation tests). It is the client's word: never on a real server. PIE clients in one
+  process send no option, so they keep `session-<n>` ids.
+- Names keep letters, digits, `-` and `_` (32 at most). A login claiming an id already playing is
+  refused.
 
 ## Format
 

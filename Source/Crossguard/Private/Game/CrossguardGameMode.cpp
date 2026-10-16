@@ -16,6 +16,7 @@
 #include "Game/CrossguardPlayerState.h"
 #include "Game/CrossguardSaveSubsystem.h"
 #include "Game/CrossguardTeamLibrary.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
@@ -464,6 +465,11 @@ bool ACrossguardGameMode::HoldForReconnect(APlayerController* Leaving)
 	// kills it, their save's watcher, and HandlePermanentDeath finds them.
 	Leaving->UnPossess();
 	Character->SetPlayerState(PlayerState);
+	// Without a controller the movement component would freeze it (no falling, no knockback).
+	if (UCharacterMovementComponent* Movement = Character->GetCharacterMovement())
+	{
+		Movement->bRunPhysicsWithNoController = true;
+	}
 	UE_LOG(LogCrossguard, Log, TEXT("%s (%s) disconnected mid-raid: character held for a reconnect"), *Character->GetName(), *PlayerId);
 	return true;
 }

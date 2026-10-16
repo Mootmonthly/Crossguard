@@ -38,7 +38,9 @@ NetConnectionClassName="OnlineSubsystemSteam.SteamNetConnection"
 ## 3. Testing
 
 - PIE still uses the NULL online subsystem: players get stand-in ids (`session-<n>`), fine for
-  testing guilds within one session.
+  testing guilds within one session. Saves and reconnecting to a raid need an id that outlives the
+  session: until Steam is in, development builds give stand-ins (`pie-<n>`, `dev-<name>`;
+  [persistence.md](persistence.md), "Player id").
 - To see real Steam ids: run **Standalone Game** (or a packaged build) with the Steam client
   running and logged in; the Steam overlay (Shift+Tab) shows it worked. Two real players need two
   Steam accounts on two machines.

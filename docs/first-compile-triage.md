@@ -249,3 +249,25 @@ rules part unit tested.
 | B2 | `Private/Skills/CrossguardLoadoutComponent.cpp` `RebuildSkillSources` | `TMap<FName, TArray<TArray<FName>>>` (not a `UPROPERTY`), range-for over the returned `std::unordered_map` | Nested containers are fine outside reflection. | — |
 | B3 | `Private/Items/CrossguardInventoryComponent.cpp` `Throw` | `FGameplayEffectSpec::GetSetByCallerMagnitude(FGameplayTag, bool, float)` then `SetSetByCallerMagnitude` | Same calls as `CrossguardGuard.cpp`. | — |
 | B4 | `Private/Skills/CrossguardAuraSkills.cpp`, `CrossguardSupportSkills.cpp` | `AddUniqueDynamic` / `RemoveDynamic` on `OnEquipmentChanged` with new `UFUNCTION()`s (`OnOwnerEquipmentChanged`, `UpdatePassiveImmunity`) | UHT needs the `UFUNCTION()` (present). | — |
+
+### Reconnecting mid-raid (ruling)
+
+A raider whose connection drops is held for a reconnect: new `ACrossguardPlayerController`
+(`PawnLeavingGame`, `CleanupPlayerState` overrides; set as the game mode's `PlayerControllerClass`),
+`ACrossguardGameMode` `Login` override, `HoldForReconnect` / `RestoreHeldPlayer` / `ResumeHeldCharacter`
+/ `ReleaseHeldPlayer`, development player ids (`ACrossguardPlayerState::DevPlayerId`, replicated;
+`DevPlayerIdFor`), tests `Tests/CrossguardScenarioReconnectTests.cpp`. Docs: persistence.md
+"Reconnecting". Reviewed by reading; nothing built.
+
+| # | Where | What | Why it may fail | Suggested fix |
+| --- | --- | --- | --- | --- |
+| RC1 | `Public/Game/CrossguardPlayerController.h` | Overrides `APlayerController::PawnLeavingGame()` and `CleanupPlayerState()` (declared public here) | Both virtual in 5.x (`PawnLeavingGame` destroys the pawn; `APlayerController::CleanupPlayerState` calls `PlayerState->OnDeactivated()`, which destroys it). If C3668 (not virtual / renamed): | Hold in an `OnNetCleanup(UNetConnection*)` override instead (before `Super`), and keep the player state by overriding `ACrossguardPlayerState::OnDeactivated()` (skip `Destroy` when held). |
+| RC2 | Disconnect order (runtime) | Assumed 5.x order in `APlayerController::Destroyed`: pawn handled first (`PawnLeavingGame` when `Player == nullptr` on the server, which a closed connection and the tests' controllers both are), then `AController::Destroyed` → `GameMode->Logout` → `CleanupPlayerState` | If `Logout` runs first, or `PawnLeavingGame` is not called for a closed connection, the pawn is destroyed and `Reconnect.*` fail at "the raider's character was not destroyed". | Call `HoldForReconnect` from an `OnNetCleanup` override (and from `Destroyed` before `Super` for the tests). |
+| RC3 | `ACrossguardGameMode::Login` | Override of `AGameModeBase::Login(UPlayer*, ENetRole, const FString& Portal, const FString& Options, const FUniqueNetIdRepl&, FString& ErrorMessage)` | Signature as of 5.0-5.5. If C3668: | Copy the 5.8 signature from `GameModeBase.h`. Only used to tell this process's own player (a `ULocalPlayer`) for `pie-<n>` ids. |
+| RC4 | `HoldForReconnect`, `ReleaseHeldPlayer` | `APawn::SetPlayerState(APlayerState*)` called from the game mode | Believed public in 5.x. If C2248 (protected): | Give `ACrossguardCharacter` a public wrapper `void SetHeldPlayerState(APlayerState* State) { SetPlayerState(State); }`. |
+| RC5 | `RestoreHeldPlayer` | `Controller->PlayerState = HeldState` (public `TObjectPtr` member), `SetOwner`, `ForceNetUpdate`, fresh player state `Destroy()` | What `AGameMode::FindInactivePlayer` does in 5.x. If the member went private: | `Controller->SetPlayerState(HeldState)` if 5.8 has it. |
+| RC6 | `DevPlayerIdFor` | `UEngine::GetWorldContextFromWorld(const UWorld*)` → `FWorldContext::WorldType`, `PIEInstance`; `FParse::Param` / `FParse::Value`; `FChar::IsAlnum`; range-for over a temporary `FString` | 5.x APIs. | `GetWorld()->GetOutermost()->GetPIEInstanceID()` for the instance; `TChar<TCHAR>::IsAlnum`; index loop. |
+| RC7 | `HoldForReconnect` | `UWorld::bIsTearingDown`, `UCharacterMovementComponent::bRunPhysicsWithNoController` (public members) | 5.x. | Drop the teardown check (`HasLeftRaid` / map end does not destroy controllers one by one); `SetRunPhysicsWithNoController` if a setter replaced the flag. |
+| RC8 | `ResumeHeldCharacter` | `UAbilitySystemComponent::SetNumericAttributeBase` after `Possess` (possession sets Health to full); `APlayerController::ClientSetRotation(FRotator, bool = false)` | 5.x. Runtime: if Health comes back full, `PossessedBy` ran later than assumed. | Restore Health on the next tick (`SetTimerForNextTick`). |
+| RC9 | `FCrossguardHeldPlayer` | A plain (non-`USTRUCT`) struct in `CrossguardGameMode.h` holding `TWeakObjectPtr`s, used in a non-`UPROPERTY` `TMap` | Fine for UHT (not reflected). | — |
+| RC10 | Blueprint game mode | `PlayerControllerClass = ACrossguardPlayerController` in the C++ constructor | If `BP_CrossguardGameMode` saved its own Player Controller Class, the C++ default does not reach it: no hold (the pawn is destroyed on disconnect, as before) and `Reconnect.*` skip with a message. | Set Player Controller Class to `CrossguardPlayerController` on the Blueprint. |

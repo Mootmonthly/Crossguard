@@ -57,7 +57,8 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Drop and pick up single items | Editor | Built in code (G drops the stack in hand, F picks up). Needs drag-to-drop in the inventory UI and item meshes. |
 | Revive spell | Decision, Code | Calls the existing `Revive`. Comes from the skills you add in the Skill Forge. |
 | Saving progression | Decision, Editor | Built in code ([persistence.md](persistence.md)): XP, attributes, Skill Library, loadout, respec tokens, gold, stash and gear carried between raids, saved on raid start / end, logout and changes between raids; versioned JSON, validated on load, corrupt saves kept aside. Local JSON files on the server for now (`Saved/Crossguard/Characters`). Needs the backend choice (one class: `ICrossguardSaveBackend`) and a local build + `Crossguard.Scenario.Save.*` run. Player ids are only stable with Steam. |
-| Steam accounts | Editor | Lasting player ids for guilds and saves: plugin + config steps in [steam-setup.md](steam-setup.md). |
+| Reconnect to a raid | Editor | Built in code (ruled): a raider who crashes or logs out mid-raid leaves their character waiting (killable, lootable) and can log in again to take it back, unless it died meanwhile ([persistence.md](persistence.md), "Reconnecting"). Needs a local build + `Crossguard.Scenario.Reconnect.*` and the manual check (kill the client mid-raid, relaunch, rejoin). Needs stable ids: Steam, or the development ids. No "disconnected" marker yet. |
+| Steam accounts | Editor | Lasting player ids for guilds, saves and reconnecting: plugin + config steps in [steam-setup.md](steam-setup.md). Development builds have stand-in ids (`pie-<n>`, `dev-<name>`). |
 | Loadout timing | Decision | Can the loadout change during a raid, or only between raids? |
 
 ## Milestone 2: Combat depth

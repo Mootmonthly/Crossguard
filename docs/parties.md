@@ -57,7 +57,11 @@ players can delete invites from their inbox (one at a time or all). Everything e
   refused with `OnlyInHub` while the game mode's `bIsRaid` is on, because the party is the raid
   team. Decline, decline all and promote work anywhere (they change no team).
 - **Leaving the server** (logout from the hub) leaves the party; the rest get a new leader if need
-  be, and the player's open invites are dropped. In a raid nothing changes on logout. A player who
+  be, and the player's open invites are dropped. In a raid nothing changes on logout: a raider who
+  disconnects mid-raid stays in the party and keeps their team slot while their character waits for
+  a reconnect ([persistence.md](persistence.md), "Reconnecting"); after reconnecting they are on the
+  same team. Even if their character dies while away, the party is unchanged (a raid never changes
+  parties); only their team slot on the raid map is freed. A player who
   logs in without `?Party=` to a server whose subsystem still has them in a party (same process,
   e.g. after a non-seamless travel) gets that party's team.
 - **What replicates**: everything on `UCrossguardPartyComponent` (party id, leader id, members with

@@ -141,7 +141,7 @@ Passive skills: put `heroic_might` (or a mastery) in `DebugSkills` and check
 | Vendor: `RequestSell(Inventory, ruby id)` | +150 gold for a Rare ruby. |
 | `RequestBuyStashTab` with 3000+ gold | A second tab appears; a fourth purchase is refused. |
 | `RequestAttributeAllocation` lowering a stat | Refused without a respec token. |
-| Saving ([persistence.md](persistence.md)): stash something, stop PIE, start again | `Saved/Crossguard/Characters/<id>.json` exists; the stash, gold, XP and carried gear come back ("Loaded the save" in the log). Automated: `Crossguard.Scenario.Save.*`. |
+| Saving ([persistence.md](persistence.md)): stash something, stop PIE, start again | `Saved/Crossguard/Characters/pie-0.json` exists (the PIE window's development id; `-CrossguardPlayerId=<name>` on the editor command line gives `dev-<name>.json`); the stash, gold, XP and carried gear come back ("Loaded the save" in the log). Automated: `Crossguard.Scenario.Save.*`. |
 
 These are called from Blueprint (e.g. a debug widget or the Level Blueprint) until the UI exists.
 
@@ -169,3 +169,15 @@ These are called from Blueprint (e.g. a debug widget or the Level Blueprint) unt
   keep their stash and XP) and paste the Output Log lines with "starts the raid". Optional, with a
   separate raid server: set **Raid Server Address** instead of the map and add a third player not in
   the party: only the party's clients leave.
+- Reconnecting mid-raid ([persistence.md](persistence.md), "Reconnecting"). Two separate game
+  processes (not PIE: a PIE client cannot be killed on its own), Development build. Server:
+  `Crossguard.exe /Game/L_Test?listen -game -log -AllowDevPlayerIds` (raid map, `bIsRaid` on). Client:
+  `Crossguard.exe 127.0.0.1?DevPlayerId=alice -game -log`. On the client pick up an item, take some
+  damage and kill a dummy (raid XP). Kill the client process (Task Manager → End task). Expected on
+  the server: the client's character stays standing where it was ("disconnected mid-raid: character
+  held for a reconnect" in the log); you can hit it. After the server notices the drop (up to about a
+  minute; "already in this match" until then), relaunch the client with the same command: it gets the
+  same character back (same spot, item, Health, raid XP on the HUD; "reconnected to the raid").
+  Then: kill the client again, kill its waiting character from the server and wait out the 120 s
+  revive window ("died for the raid while away"); relaunching is refused ("Your raid is over.").
+  Paste the log lines. Automated: `Crossguard.Scenario.Reconnect.*`.
