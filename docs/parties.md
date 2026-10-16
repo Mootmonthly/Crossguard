@@ -43,9 +43,10 @@ players can delete invites from their inbox (one at a time or all). Everything e
 ## In the game
 
 - `UCrossguardPartySubsystem` (game instance subsystem, server) owns the `FPartyRegistry`. It
-  survives map travel on that server, but lives **in memory only**: parties are gone when the server
-  stops. Players are known by `UCrossguardGuildSubsystem::PlayerIdOf` (online id, else a
-  per-session stand-in), the same ids as guilds.
+  survives map travel on that server. Without the backend it lives **in memory only**: parties are
+  gone when the server stops. With the backend the parties live in Nakama and the registry is a mirror
+  (section "On Nakama"). Players are known by `UCrossguardGuildSubsystem::PlayerIdOf` (the verified
+  Nakama user id, else online id, else a per-session stand-in), the same ids as guilds.
 - **Party id = `?Party=` key = team.** A new party gets a fresh GUID (32 hex digits, URL-safe). After
   every change the subsystem calls `ACrossguardGameMode::SetPlayerParty` for each affected player:
   the player state's `PartyKey` becomes the party id and the player moves onto that key's team in
@@ -69,8 +70,38 @@ players can delete invites from their inbox (one at a time or all). Everything e
   through their own component; nobody else sees any of it, not even the party id (it is the raid's
   join key). Who is allied shows to everyone through the public team id, as before.
 - Refusals come back as `ECrossguardPartyResult` (the rules' errors, then `OnlyInHub`, `NoPlayer`,
-  `NoRaidDestination`, `HostInParty`, `TravelFailed`) through `OnPartyRefused`, and are logged as
-  "Party request from <player> refused: <result>".
+  `NoRaidDestination`, `HostInParty`, `TravelFailed`, `AlreadySearching`, `SearchCancelled`,
+  `BackendUnavailable`) through `OnPartyRefused`, and are logged as "Party request from <player>
+  refused: <result>". With the backend a request answers `None` ("sent") and a refusal arrives later
+  the same way.
+
+## On Nakama
+
+With the backend on (a dedicated server with the HTTP key and `-SaveBackend=Nakama`,
+`UCrossguardNakamaSubsystem::IsBackendEnabled`; [backend-setup.md](backend-setup.md) "Step 3"):
+
+- **Decision (recommended, built): storage/RPC parties driven by the hub servers**, not Nakama's
+  realtime parties. Realtime parties need every client on a Nakama socket (the game has no websocket
+  client yet) and would put the client, not our server, in charge of membership; ours keeps the hub
+  server authoritative and needs only HTTP. Invites reach the invitee through their hub server (they
+  are on it: an invite needs their player state), not Nakama notifications.
+- The rules run in the Go module (`Backend/nakama/modules/parties.go`), mirroring `FPartyRegistry`:
+  same checks, same order, same error names (`EPartyError`), 8 members, 180 s invites. **Change both
+  together.** Each operation is one transaction over the party record, the members' membership
+  objects and the invitee's inbox (retried on a concurrent change).
+- The hub server checks its own rules (hub only, a player state, Nakama user ids), calls
+  `crossguard_party` and returns `None`; the answer updates the registry here (a mirror of the parties
+  of players on this server: `PutParty`, `DropMember`, `PutInvite`), moves the affected players onto
+  their teams and refreshes their views. Refusals come back through `OnPartyRefused`.
+- The mirror is read again when a player arrives (`PlayerArrived`: a team back from a raid gets its
+  party; a player who logs in again finds theirs) and every 5 s for everyone on the server (changes
+  made on another hub shard). On a match server the mirror only feeds the party window: a raid never
+  changes teams.
+- Leaving the hub server: a player leaving for a raid stays in the party; any other logout from the
+  hub (menu, quit) leaves it in Nakama (`logout`: leave plus clear the inbox). A member on no game
+  server (no live save lease) for 120 s (placeholder) leaves their party when it is next read, with the
+  usual leader hand-over: a leader who quits during a raid does not block the rest.
+- Players without a Nakama login (development ids) cannot use parties on such a server (`NoPlayer`).
 
 ### API for a party panel (the P window, [ui.md](ui.md))
 
@@ -107,18 +138,25 @@ is decided by `PlanRaidTravel` (the same checks, no travel; the tests use it) wi
 
 1. It asks matchmaking (`UCrossguardMatchmakingSubsystem::GetMatchmaking()`, an
    `ICrossguardMatchmaking`, `Game/CrossguardMatchmaking.h`) for a match server for the party
-   (`FCrossguardMatchRequest`: party key, player ids). Implementations:
-   - `FCrossguardNoMatchmaking`: the backend stub, always "not available" (the Shipping default
-     until the backend module exists and registers its own with `SetMatchmaking`).
+   (`FCrossguardMatchRequest`: party key, player ids). **Asynchronous**: the answer comes through a
+   callback. Implementations:
+   - `FCrossguardNakamaMatchmaking` (installed when the backend is on): queues the party
+     (`crossguard_match_request`), polls every 2 s, gives up after 300 s; the answer is a match server
+     and **one ticket per player**. The party sees "Looking for a raid..." meanwhile; a second launch is
+     refused (`AlreadySearching`); a membership change (accept, leave, kick) calls the search off
+     (`SearchCancelled`). Queue rules: [backend-setup.md](backend-setup.md) "Step 3".
+   - `FCrossguardNoMatchmaking`: always "not available" (the Shipping default without the backend).
    - `FCrossguardDevMatchmaking` (development builds, never Shipping; the default there): a fake
      assignment, the hub game mode's `RaidServerAddress` (`-RaidServer=<address>`), no ticket.
-   **Assumed**: the request is synchronous for now; the backend's will answer later (a queue).
+   The stub and the development one answer at once, so the launch (or its refusal) happens before
+   `StartRaid` returns, as before. `PlanRaidTravel` (tests, the portal's plan-only mode) only plans
+   answers that come at once (a backend search is called off).
 2. The plan:
 
 | Situation | What happens |
 | --- | --- |
 | DEV-ONLY: development listen mode (`Crossguard::IsDevListenMode`: `-DevListenHub` or PIE, never Shipping), every player on this server is in the party (or the launcher is alone on it) and `RaidMapName` (`-RaidMap=`) is set | **ServerTravel**: the server loads `<RaidMapName>?Party=<id>` (plus `?listen` on a listen server). Seamless travel (`bUseSeamlessTravel`) brings the player states and their `PartyKey`; the raid map's game mode puts the party on one team again (`HandleSeamlessTravelPlayer`) and begins the raid. |
-| Otherwise, matchmaking assigned a match server | **ClientTravel**: each member's client travels to `<address>?MatchTicket=<ticket>` (`UCrossguardMatchmakingSubsystem::BuildMatchTravelUrl`, `TRAVEL_Absolute`); the match server will check the ticket with the backend and take the team from it (not built). A development assignment travels with `<address>?Party=<id>` instead (no option for a solo player): the match server reads `?Party=` at login (`InitNewPlayer`). DEV-ONLY: refused (`HostInParty`) if the listen server's own player is in the party. |
+| Otherwise, matchmaking assigned a match server | **ClientTravel**: each member's client travels to `<address>?MatchTicket=<their ticket>` (`UCrossguardMatchmakingSubsystem::BuildMatchTravelUrl`, `TRAVEL_Absolute`); a member without a ticket (joined during the search) stays, with a message. The match server checks the ticket with the backend at `PreLoginAsync` (this player, this server, not expired) and takes the team from the ticket's party; `?Party=` is ignored there. A development assignment travels with `<address>?Party=<id>` instead (no option for a solo player): the match server reads `?Party=` at login (`InitNewPlayer`). DEV-ONLY: refused (`HostInParty`) if the listen server's own player is in the party. |
 | Neither | Refused: `NoRaidDestination` ("No raid server available right now"). |
 
 Each traveller's save is written first (`SaveNow`). `?Party=` URLs are built by
@@ -166,11 +204,13 @@ party's clients travel to the match server and the hub stays.
 
 A team that finishes goes back to the hub on its own while other teams play on (ruled, owner;
 [hub-and-menu.md](hub-and-menu.md) "A team goes back"; `ACrossguardGameMode::ReturnTeamToHub`). The
-team is the party: one `?Party=` key (a solo player is a team of one, no key). Each member's client
-travels to the hub destination (`GetHubDestination`: the backend's hub server, else
-`HubServerAddress` / `-HubServer=`) with `?Party=<key>`; the hub server puts them on one team from
-the key (`InitNewPlayer`). The party itself is not rebuilt there: that needs the backend's party
-roster (not built). Joining a party by key (the old leader-hosted hub) is removed.
+team is the party: one `?Party=` key (a solo player is a team of one, no key). The match server asks
+the backend once for the team's hub (`FindHubServer`: the hub the party launched from, if it has room,
+else the hub with the most room); each member's client travels to the hub destination
+(`GetHubDestination`: that hub server, else `HubServerAddress` / `-HubServer=`) with `?Party=<key>`;
+the hub server puts them on one team from the key (`InitNewPlayer`) and, with the backend, reads their
+party from Nakama as they arrive (`PlayerArrived`): the party is back, leader and all. Joining a party
+by key (the old leader-hosted hub) is removed.
 
 ## Assumptions and placeholders
 
@@ -189,21 +229,26 @@ Still assumed:
    back to the hub after a raid (`ACrossguardGameMode::ReturnToHub`), every party member who is not
    on the server any more (sent to the menu, released while away, logged out) leaves their party
    then (`UCrossguardPartySubsystem::DropAbsentMembers`); the rest keep their party in the hub.
-6. Raid launch: ClientTravel to the match server matchmaking assigns (stub until the backend
-   exists; development builds fake it with `RaidServerAddress` / `-RaidServer=` and `?Party=`, never
-   in Shipping); in development listen mode only, ServerTravel when the whole server is the party and
+6. Raid launch: ClientTravel to the match server matchmaking assigns (Nakama with the backend;
+   development builds fake it with `RaidServerAddress` / `-RaidServer=` and `?Party=`, never in
+   Shipping); in development listen mode only, ServerTravel when the whole server is the party and
    `RaidMapName` is set; refused when the listen host is in a party that is not the whole server.
+   With the backend: a party change during the search calls it off; a member who joined during the
+   search has no ticket and stays (placeholders).
 7. Seamless travel is on for the game mode (needed to carry `PartyKey` through a ServerTravel).
 8. Party ids are 32-hex-digit GUIDs; the party view (id included) replicates to its owner only.
 9. `?Hub` on a server's map URL, or an `ACrossguardHubMarker` placed in the map (L_Hub), makes that
    map the hub (`bIsRaid` off). `RaidMapName` defaults to `/Game/Maps/Dev/L_DevSandbox` (placeholder).
-10. A team arriving on a hub server gets its `?Party=` key's team but not its party (until the
-    backend keeps parties). In development mode, teams that went back on their own leave their
-    parties on the server's registry when the rest of the server returns (`DropAbsentMembers`).
+10. A team arriving on a hub server gets its `?Party=` key's team at once and, with the backend, its
+    party from Nakama on arrival. Without the backend (development) it gets the team only; teams that
+    went back on their own leave their parties on the server's registry when the rest of the server
+    returns (`DropAbsentMembers`).
+11. With the backend (placeholders): members on no game server for 120 s leave their party; a hub
+    reads its players' parties again every 5 s; invites reach the invitee through their hub server (no
+    Nakama notifications: clients have no socket).
 
 ## Not covered
 
-Persistence (parties live in hub memory), coming back from a raid as a party on a dedicated hub
-server (only the development whole-server return keeps parties), the backend's matchmaker and match
-server allocation, match servers checking the ticket (and ignoring `?Party=` outside development), party chat, a ready
-check, and invite by friends list (Steam). A member held for a reconnect shows as "(disconnected)" in the panel (`ACrossguardPlayerState::IsDisconnected`).
+Party chat, a ready check, invite by friends list (Steam), inviting a player on another hub shard (an
+invite needs the invitee's player state), backfilling a running raid, and GameLift allocation (the
+local fleet allocator stands in). A member held for a reconnect shows as "(disconnected)" in the panel (`ACrossguardPlayerState::IsDisconnected`).

@@ -195,3 +195,21 @@ These are called from Blueprint (e.g. a debug widget or the Level Blueprint) unt
   Then: kill the client again, kill its waiting character from the server and wait out the 120 s
   revive window ("died for the raid while away"); relaunching is refused ("Your raid is over.").
   Paste the log lines. Automated: `Crossguard.Scenario.Reconnect.*`.
+
+## 7. Backend step 3 (Nakama: leases, parties, matchmaking; [backend-setup.md](backend-setup.md))
+
+Needs Docker Desktop, `Tools\run_local_backend.bat`, then `python Tools\backend_smoke.py` (72 checks,
+"All backend checks passed."). For one party alone set `CROSSGUARD_MATCH_MAX_WAIT_SEC=5` in
+`Backend\.env` and run `run_local_backend.bat` again. Then `Tools\run_local_cluster.bat -Backend`.
+
+| Do | Expect |
+| --- | --- |
+| Look at both server logs | `Nakama: ... backend on`, `registered as hub server local-hub` / `match server local-match`, `Character saves: Nakama at ... save leases as local-hub`, `Parties: in Nakama`, `Matchmaking: Nakama`. |
+| Each client: Log in, Play | "Finding a hub server...", then both on the hub (`L_Hub`); no "Log in first" in the hub log. |
+| alice invites bob (P window), bob accepts | Both see the party; no "Party ... Nakama did not take it" in the hub log. Console (`http://127.0.0.1:7351`, Storage): `parties`, `party_members` objects. |
+| alice: Start raid (or the portal) | "Looking for a raid..." on both HUDs; within the max wait both travel to `127.0.0.1:7778?MatchTicket=...`. Match log: no "refused: no match ticket" / "not valid"; both on one team. Match log may show `save lease of ... not free yet` once, then the load. |
+| Launch again while searching | "Your party is already looking for a raid." |
+| bob leaves the party while alice's search runs | "Raid search called off: your party changed." |
+| Both extract | Back on `L_Hub` with the party (P window: same members, alice leading). No `version conflict` / `lease lost` in any log. |
+| After logging in, menu Join `127.0.0.1:7778` (the match server directly) | Refused: "No match ticket: start the raid from the hub." |
+| End the hub process (Task Manager) with players on it, start it again, Play | The players load after at most ~60 s ("not free yet" until the dead hub's lease expires). |

@@ -3,8 +3,11 @@
 The online backend is **Nakama** (self-hosted, open source) with PostgreSQL
 ([design-decisions.md](design-decisions.md), "Online architecture"; research:
 [backend-comparison.md](backend-comparison.md)). This page covers running it on the dev PC, the keys,
-configuring dedicated servers, and looking at saves. Steps 1 and 2 of the plan are built: the backend
-in Docker with our Go module, and the game's save backend and player identity on Nakama.
+configuring dedicated servers, and looking at saves. Steps 1-3 of the plan are built: the backend in
+Docker with our Go module; the game's save backend and player identity on Nakama; and (step 3) save
+leases, parties, the game server registry, matchmaking with match tickets and the hub picker. The Go
+module and every RPC run here end to end (`Tools/backend_smoke.py`); the Unreal side is unbuilt
+([first-compile-triage.md](first-compile-triage.md) "Batch 4").
 
 ## What is where
 
@@ -14,11 +17,12 @@ in Docker with our Go module, and the game's save backend and player identity on
 | Nakama config (non-secret defaults) | `Backend/nakama/local.yml` |
 | Keys (template; the real `Backend/.env` is gitignored) | `Backend/.env.example` |
 | Nakama image with our module (built by compose) | `Backend/nakama/Dockerfile` |
-| Go runtime module: RPCs, auth policy, tests | `Backend/nakama/modules` (`main.go`, `saves.go`, `session.go`, `auth.go`, `*_test.go`) |
+| Go runtime module: RPCs, auth policy, tests | `Backend/nakama/modules`: `main.go` (registration), `saves.go`, `leases.go`, `session.go`, `auth.go`, `parties.go`, `fleet.go` (server registry, `Allocator`), `matchmaking.go` (queue, tickets), `config.go` (tunables), `*_test.go` |
 | Start / stop / wipe | `Tools\run_local_backend.bat` (Windows), `Tools/run_local_backend.sh` |
 | End-to-end check against the running backend | `Tools/backend_smoke.py` |
-| Game: REST client, subsystem, save backend, login option | `Source/Crossguard/.../Game/CrossguardNakamaClient`, `CrossguardNakamaSubsystem`, `CrossguardNakamaSaveBackend`, `CrossguardLocalPlayer` |
-| Game tests (pure helpers) | `Crossguard.Nakama.*` (`Private/Tests/CrossguardNakamaTests.cpp`) |
+| Game: REST client, subsystem (backend switch, server id, registry, tickets), save backend (leases), login option | `Source/Crossguard/.../Game/CrossguardNakamaClient`, `CrossguardNakamaSubsystem`, `CrossguardNakamaSaveBackend`, `CrossguardLocalPlayer` |
+| Game: matchmaking on Nakama, parties on Nakama | `Game/CrossguardNakamaMatchmaking` (`ICrossguardMatchmaking`), `UCrossguardPartySubsystem` (backend mode) |
+| Game tests (pure helpers) | `Crossguard.Nakama.*` (`Private/Tests/CrossguardNakamaTests.cpp`: helpers, save payloads, leases, matchmaking answers, party mirror) |
 
 Versions are pinned together: the Go plugin only loads into the Nakama build it was compiled
 against. `Backend/nakama/modules/go.mod` requires **nakama-common v1.48.0** and Go **1.27.1**, the
@@ -39,7 +43,7 @@ Tools\run_local_backend.bat            (start; first run builds the image, ~2 mi
 Tools\run_local_backend.bat -Logs      (follow the Nakama log)
 Tools\run_local_backend.bat -Down      (stop; data kept)
 Tools\run_local_backend.bat -Reset     (stop and DELETE the local database: every account and save)
-python Tools\backend_smoke.py          (16 checks: login, verify, save load/write/conflict, refusals)
+python Tools\backend_smoke.py          (72 checks: login, saves, lease hand-off, parties, matchmaking, tickets, hub pick)
 ```
 
 The first run creates `Backend\.env` from `.env.example` with random keys. It prints:
@@ -76,28 +80,97 @@ command-line flags (no `sh -x`, which would print them).
 - Clients cannot write or delete objects in `characters`, `characters_quarantine`,
   `characters_conflicts` (refused whole, 403). They may read their own `characters` object.
 
-## RPCs (server-to-server only)
+## RPCs (server-to-server)
 
 Called by dedicated servers with the HTTP key as HTTP Basic auth (`Authorization: Basic
 base64("<key>:")`) on `POST /v2/rpc/<id>?unwrap` (raw JSON in and out). A call with a player's session
-is refused (403): the context then carries a user id.
+is refused (403): the context then carries a user id. The one exception, `crossguard_hub_find_mine`,
+is the client's (its session; the menu's Play).
 
 | RPC | In | Out | Errors |
 | --- | --- | --- | --- |
 | `crossguard_save_load` | `user_id`, `character_id` | `{"found", "version", "record"}` (version `"*"` and record `null` when there is no save; `record` last) | 400 bad ids, 404 unknown user, 500 storage |
-| `crossguard_save_write` | `user_id`, `character_id`, `record` (the save as a JSON object), `expected_version` (from the load or the last write; `"*"` = new character) | `{"version"}` (the new one) | 400 shape (not an object, no integer `version`, `playerId` ≠ `user_id`, over 8 MB, no `expected_version`), **409 version conflict** (record kept in `characters_conflicts`) |
+| `crossguard_save_write` | `user_id`, `character_id`, `record` (the save as a JSON object), `expected_version` (from the load or the last write; `"*"` = new character), **`lease_token`** | `{"version"}` (the new one) | 400 shape (not an object, no integer `version`, `playerId` ≠ `user_id`, over 8 MB, no `expected_version`, no `lease_token`), **400 code 9 "save lease not held"** (lost lease: stop writing), **409 version conflict** (record kept in `characters_conflicts`) |
+| `crossguard_lease_acquire` | `user_id`, `character_id` (`main`), `server_id`, `ttl_sec` (10-600, default 60) | `{"lease_token", "expires_at_ms", "save_version", "took_over_from"}` | **409** held by another server (retry); the holder asking again keeps its token |
+| `crossguard_lease_renew` | + `lease_token` | `{"expires_at_ms"}` | 400 code 9: lost |
+| `crossguard_lease_release` | + `lease_token` | `{"released"}` (false: not the holder) | — |
+| `crossguard_party` | `op` (`invite`, `accept`, `decline`, `decline_all`, `leave`, `kick`, `promote`, `logout`), `actor_id`, `target_id`, `party_id`, `server_id` (the hub) | `{"result", "party_id", "disbanded", "now_ms", "players": {id: {"party_id", "invites"}}, "parties": {id: {"id", "leader_id", "members", "hub_server_id"}}}` | rule refusals are answers (`result` = an `EPartyError` name), 400 bad ids |
+| `crossguard_party_get` | `user_ids` (≤ 256) | the same state for them | — |
+| `crossguard_server_register` | `server_id`, `kind` (`hub` / `match`), `address` (`host:port`), `capacity` (0: 48 match / 64 hub) | `{"heartbeat_sec", "capacity", "ticket_ttl_sec"}` | 400 |
+| `crossguard_server_heartbeat` | `server_id`, `players` | `{"known"}` (false: register again) | — |
+| `crossguard_server_deregister` | `server_id` | `{"ok"}` | — |
+| `crossguard_match_request` | `party_id` (`""` solo), `user_ids` (1-8; a party's must all be members), `server_id` (the hub) | `{"request_id", "state", "waited_sec", ...}` (below) | 400, 404 unknown user, 409 already queued |
+| `crossguard_match_status` | `request_id` | `{"request_id", "state" (`queued` / `assigned` / `cancelled`), "waited_sec", "match_id", "server_id", "address", "tickets": {user id: ticket}}` | 404 unknown / abandoned |
+| `crossguard_match_cancel` | `request_id` | `{"cancelled"}` | — |
+| `crossguard_match_over` | `server_id`, `match_id` | `{"ok"}` (the match server is free again) | — |
+| `crossguard_ticket_verify` | `ticket`, `server_id`, `user_id` (the verified session's) | `{"user_id", "party_id", "match_id", "expires_at_ms"}` | 401 unknown or expired, 403 another server's or player's |
+| `crossguard_hub_find` | `user_id`, `party_id` | `{"server_id", "address"}` | 404 no hub with room |
+| `crossguard_hub_find_mine` (client) | `{}` with the player's session | `{"server_id", "address"}` | 401 no session, 404 |
 | `crossguard_save_quarantine` | `user_id`, `character_id`, `reason` | `{"quarantined", "key"}` | copies the stored save to `characters_quarantine` (nothing deleted) |
 | `crossguard_verify_session` | `token` | `{"user_id", "username", "steam_id", "expires_at"}` | 401 bad signature / expired / unknown account, 403 banned |
 
 Storage: collection `characters`, key = character id (`main` for now: one character per account),
 owner = the Nakama user id, `permission_read` 1 (owner), `permission_write` 0 (server only).
 `characters_quarantine` and `characters_conflicts` are server-only (read 0, write 0), keyed
-`<character id>-<unix nanos>`.
+`<character id>-<unix nanos>`. Step 3 adds `save_leases/<character id>` (owned by the player,
+server-only), `parties/<party id>` (system-owned, server-only), `party_members/current` and
+`party_invites/inbox` (owned by the player; they may read their own) and `match_tickets/<ticket>`
+(system-owned, server-only). Clients cannot write or delete any of them (before-hook, `auth.go`).
+
+## Step 3: leases, parties, matchmaking (how it works)
+
+**Backend switch.** A dedicated server uses all of this when it has the HTTP key **and**
+`-SaveBackend=Nakama` (`UCrossguardNakamaSubsystem::IsBackendEnabled`). Without it everything stays
+in the process (development, PIE, tests): in-memory parties, the development matchmaking
+(`-RaidServer=`), `?Party=` on match servers. Each process has a server id: `-ServerId=<id>`, else
+`<computer>-<pid>-<random>`.
+
+**Save leases** (`leases.go`, `UCrossguardNakamaSaveBackend`). One server owns a player's save at a
+time. A load first acquires the lease (`crossguard_lease_acquire`); held by another server (the one
+the player is leaving, still writing) it retries every 1 s for up to 75 s (a crashed server's lease
+expires after 60 s and is taken over). Writes carry the token; the save and a version-checked rewrite
+of the lease are one transaction (`MultiUpdate`), so a server whose lease was taken cannot write even
+a write already on its way. Renewed every 20 s; released after the player's last write when they
+leave (travel, logout) and at shutdown. A lost lease stops writes for that player (kept on disk, like a
+version conflict). Hub → raid: the hub flushes and releases on the travel; the raid server's acquire
+waits for it.
+
+**Parties** (`parties.go`, `UCrossguardPartySubsystem`; [parties.md](parties.md) "On Nakama"). The hub
+server stays the player's authority (hub-only rules, player states) and calls `crossguard_party`;
+Nakama holds the records with the same rules as `FPartyRegistry`, so parties survive hub → raid → hub
+and are the same on every hub shard. Each hub keeps a mirror of its players' parties (refreshed on
+arrival and every 5 s). Members on no game server (no live save lease) for 120 s leave their party.
+
+**Server registry and allocation** (`fleet.go`). Dedicated servers register at `StartPlay`
+(`kind` hub or match, `-PublicAddress=<host:port>` else `127.0.0.1:<port>`, capacity: 48 per raid,
+`-RaidCapacity=`, 64 per hub, `-HubCapacity=`), report players every 10 s and deregister on exit; three
+missed heartbeats drop them. The registry is in Nakama's memory (open-source Nakama is one node): after
+a Nakama restart, heartbeats answer `known: false` and servers register again. Match servers are
+handed out by an `Allocator`: today the **local fleet** (a free registered match server, one match per
+process; freed by `crossguard_match_over`, deregistering, or nobody arriving within 180 s). GameLift
+(Anywhere locally, then managed fleets) plugs in as another `Allocator`.
+
+**Matchmaking** (`matchmaking.go`, `FCrossguardNakamaMatchmaking`). The raid launch queues the party
+(`crossguard_match_request`) and polls `crossguard_match_status` every 2 s (gives up after 300 s). A
+match forms when **2 teams** are queued or the oldest has waited **30 s** (placeholders,
+`CROSSGUARD_MATCH_MIN_TEAMS`, `CROSSGUARD_MATCH_MAX_WAIT_SEC`); the allocator reserves a match
+server and the queue fills it first come, first served, whole parties only, up to its capacity; no
+backfill into a running match (placeholder). Every player gets a **match ticket** (random, stored in
+`match_tickets`, bound to player, party, server and match, valid 120 s until used, then for the raid's
+length for reconnects). Clients travel with `?MatchTicket=`; the match server checks it at
+`PreLoginAsync` (`crossguard_ticket_verify`) and takes the team from the ticket's party; `?Party=` is
+ignored there. Nakama's built-in matchmaker is not used: it matches realtime socket sessions, and our
+servers talk to Nakama over HTTP with the server key.
+
+**Hub picker.** A team leaving a match asks `crossguard_hub_find` (the party's hub, the one it
+launched from, if registered with room; else the hub with the most room). The menu's **Play** (logged
+in, not development mode) asks `crossguard_hub_find_mine` and joins that hub.
 
 ## Dedicated servers
 
 ```
 <server> <map> -server -port=7777 -SaveBackend=Nakama -NakamaUrl=http://127.0.0.1:7350 -NakamaHttpKey=<NAKAMA_HTTP_KEY>
+         [-ServerId=hub-1] [-PublicAddress=203.0.113.5:7777] [-RaidCapacity=48 | -HubCapacity=64]
 ```
 
 - `-SaveBackend=Nakama` (or `SaveBackend=Nakama` under `[/Script/Crossguard.CrossguardSaveSubsystem]`)
@@ -117,10 +190,24 @@ owner = the Nakama user id, `permission_read` 1 (owner), `permission_write` 0 (s
   Nakama did not take are kept in `Saved/Crossguard/NakamaUnsaved/<user id>.json` (log line "not
   stored in Nakama ... kept in ...").
 
-Local test with the cluster script: start the backend, then the servers with the flags above (add
-them to `Tools\run_local_cluster.ps1`'s server command lines by hand for now), log in from each
-client's menu (**Log in**), then join. Each client of one PC needs its own `-CrossguardPlayerId=`
-(the device id is `crossguard-dev-<name>`), or `-NakamaDeviceId=`.
+### Local cluster with the backend (one PC)
+
+```
+Tools\run_local_backend.bat                 (Docker Desktop running; once)
+Tools\run_local_cluster.bat -Backend        (hub :7777, match :7778, 2 clients on the main menu)
+```
+
+`-Backend` starts both servers with `-SaveBackend=Nakama -NakamaUrl=... -ServerId=local-hub /
+local-match -PublicAddress=127.0.0.1:<port>`, the HTTP key in the `CROSSGUARD_NAKAMA_HTTP_KEY`
+environment variable (read from `Backend\.env`, not on the command line), no `-RaidServer=` and no
+`-AllowDevPlayerIds`. The clients open on the main menu (each its own `-CrossguardPlayerId=`, so its own
+device account): **Log in**, then **Play** (the backend names the hub). Party up (P), then **Start
+raid** / the raid portal: "Looking for a raid..."; with two teams queued (or after
+`CROSSGUARD_MATCH_MAX_WAIT_SEC`, set it to 5 in `Backend\.env` for one party, then
+`run_local_backend.bat` again) everyone travels to the match server with a ticket. Back from the raid
+the team lands on its hub with its party. What to look for in the logs: `Nakama: registered as hub
+server local-hub`, `Matchmaking: ... assigned to 127.0.0.1:7778`, `save lease of ... not free yet`
+(the hand-off; then the load), no `version conflict`, no `lease lost`.
 
 ## Clients
 
@@ -130,9 +217,10 @@ line shows "Logged in as <name>". The token lasts `session.token_expiry_sec` (2 
 TODO (log in again). **Steam login is a TODO**: it needs the Steam online subsystem for a Web API
 ticket ([steam-setup.md](steam-setup.md)), then `POST /v2/account/authenticate/steam`.
 
-Later option: the official **nakama-unreal** SDK (v2.11.x supports UE 5.8) once realtime sockets
-are needed (parties, matchmaker, chat, notifications). The REST client here covers saves and login
-without a plugin.
+Later option: the official **nakama-unreal** SDK (v2.11.x supports UE 5.8), or UE's WebSockets
+module, once realtime sockets are needed (chat, live notifications to clients). Parties and matchmaking
+do not need them: the hub servers drive both over HTTP. The REST client here covers it all without a
+plugin.
 
 ## Looking at saves in the console
 
@@ -145,18 +233,18 @@ server holding the player then gets a conflict on its next write (by design).
 
 ## Known limits (next steps)
 
-- **Hand-off between servers**: versions stop a stale write, they do not order the hub and raid
-  servers. If a server loads a save before the previous server's last write lands (a travel normally
-  takes longer than the write), the loading server's later writes are refused (kept in
-  `characters_conflicts` and on its disk; the player keeps playing but is not saved). The backend
-  skips writes that change only `savedAt`, so the logout after a travel does not cause this. Fix
-  later: per-player save leases in the module (the server holding the player owns writes), granted
-  with the match ticket.
+- **Single Nakama node**: the server registry and the match queue live in the Nakama process's
+  memory. A Nakama restart forgets them: servers register again on their next heartbeat, queued
+  parties must start their search again (the hub's poll gets 404 and refuses the launch). Tickets,
+  leases and parties are in the database and survive. Heroic Cloud / several nodes would need the
+  registry and queue in storage.
+- **Leases while a server hangs**: a server that stops renewing (frozen, not crashed) loses the lease
+  after 60 s; its later writes are refused and kept on its disk.
+- **Party mirror lag**: a change made on another hub shard reaches this hub's mirror on the next refresh
+  (5 s) or the next request; the raid launch's leader check uses the mirror.
+- **Stale queue entries**: a launch the hub stops polling (hub crash) is dropped after 30 s.
+- **Display names** of party members on other servers are their user ids until they are seen here.
 - Session revocation (logout, single-session) is not seen by `crossguard_verify_session` (it checks
   signature, expiry, account and ban); tokens are short-lived.
-- **Step 3**: parties and matchmaking on Nakama ([parties.md](parties.md),
-  [backend-comparison.md](backend-comparison.md) "What to build first"): Nakama parties replace the
-  in-server party (invites, leader, inbox via notifications), `PartyStartRaid` becomes a Nakama
-  matchmaker ticket with the party id, match servers accept only the backend's tickets, the hub
-  server picker lives in the module. Then GameLift Anywhere (step 4) and guilds as Nakama groups
-  (step 5).
+- **Next** (step 4): GameLift Anywhere as an `Allocator` (and `ICrossguardServerHost` in the game:
+  ready, accept player session, game session end); then guilds as Nakama groups (step 5).

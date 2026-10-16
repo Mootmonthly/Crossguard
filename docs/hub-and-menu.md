@@ -18,7 +18,7 @@ matchmaking. A player's PC never hosts a raid or a hub in the real game. The lis
 ("Development mode") exists only to develop on one PC.
 
 ```
-L_MainMenu --(backend: not built)--> hub server --raid portal / Start raid: matchmaking--> match server
+L_MainMenu --Log in, Play: backend picks--> hub server --raid portal / Start raid: matchmaking--> match server
                                          ^                                                     |
                                          +---- a finished team's clients travel back ----------+
                                                (other teams keep raiding; no hub server: menu)
@@ -30,9 +30,12 @@ L_MainMenu --(backend: not built)--> hub server --raid portal / Start raid: matc
    `ACrossguardMenuGameMode` spawns no pawn; its HUD shows the main menu, UI-only input, cursor on.
    - **Play**: DEV-ONLY (listen server): hosts the hub, `GEngine->SetClientTravel("<HubMapName>?listen?Hub")`
      (`ACrossguardMenuGameMode::BuildHostUrl`; `HubMapName` defaults to `/Game/Maps/L_Hub`,
-     `-HubMap=<path>` overrides). Only in development mode (`Crossguard::IsDevListenMode`); elsewhere
-     refused with "Online play is not available yet (no hub server)." until the backend sends players
-     to a hub server. Refused with a status line if the map is missing.
+     `-HubMap=<path>` overrides). Only in development mode (`Crossguard::IsDevListenMode`). Elsewhere
+     Play asks the backend for a hub server (`UCrossguardNakamaSubsystem::FindMyHub`,
+     `crossguard_hub_find_mine`: the player's party's hub if it has room, else the hub with the most
+     room) and joins it; not logged in: "Log in first (above), then Play."; no hub registered: "Online
+     play is not available right now (no hub server is running)." Refused with a status line if the
+     map is missing (development).
    - **Join**: the address field (`192.168.1.20`, `host:7777`), trimmed; spaces, `?`, `#` and slashes
      refused (`BuildJoinUrl`). A development tool (a listen hub or a dedicated server on the LAN). A
      failed connection drops back to the menu by the engine's travel-failure path, without a reason yet.
@@ -60,9 +63,10 @@ L_MainMenu --(backend: not built)--> hub server --raid portal / Start raid: matc
      mode the whole server to `RaidMapName`; [parties.md](parties.md) "Raid launch").
      Anyone else is refused: `OnPartyRefused` (the party window) and a HUD line
      (`ClientShowMessage`: "Only your party's leader can start the raid."). Server-side only.
-3. **Raid**: the launch asks matchmaking (`ICrossguardMatchmaking`) for a match server and each
-   member's client travels there with the backend's ticket (`?MatchTicket=`); a stub ("not
-   available") until the backend exists; development builds fake it with `RaidServerAddress` /
+3. **Raid**: the launch asks matchmaking (`ICrossguardMatchmaking`) for a match server: with the
+   backend the party queues ("Looking for a raid...") and each member's client travels there with their
+   own ticket (`?MatchTicket=`), which the match server checks with the backend (and takes the team
+   from); without it a stub ("not available"); development builds fake it with `RaidServerAddress` /
    `-RaidServer=` and `?Party=` ([parties.md](parties.md) "Raid launch"). `RaidMapName` (dev listen
    mode's whole-server launch) defaults to `/Game/Maps/Dev/L_DevSandbox` (**placeholder**) until a
    real raid map exists. The launch is absolute, so `?Hub` does not carry over and the map plays as a
@@ -95,18 +99,20 @@ L_MainMenu --(backend: not built)--> hub server --raid portal / Start raid: matc
    death while away: raid XP and carried gear lost, saved); (2) each member is saved (`SaveNow`,
    `FlushPendingSaves`): extracted players' record holds the gear they carried out, the dead's none;
    the dead's bodies stay lootable; (3) the plan per member (`GetTeamHubReturnPlan`,
-   `FCrossguardTeamHubTravel`) from **`GetHubDestination(Player)`**, in order:
-   1. the hub server the backend picks for the player (`ICrossguardMatchmaking::FindHubServer`; a
-      stub, none, until the backend exists);
+   `FCrossguardTeamHubTravel`) from **`GetHubDestination(Player, BackendHub)`**, in order:
+   1. the hub server the backend picks for the team (`ICrossguardMatchmaking::FindHubServer`, asked
+      once per team before the plan: the hub the party launched from if it has room, else the hub
+      with the most room; none without the backend);
    2. the match server's `HubServerAddress` (`-HubServer=<address>`);
    3. DEV-ONLY (listen server): in development mode with a hub map, the whole server's return (6);
       the team does not leave on its own then;
    4. otherwise the main menu with the `NoHub` message;
    then (4) each client travels: `ClientTravel("<hub server>?Party=<key>", absolute)` (development ids
    travel along as `?DevPlayerId=<name>`), or `ReturnToMenu`. The match server stays for the teams
-   still raiding. On the hub server the key gives the team (`InitNewPlayer`); the party itself comes
-   back from the backend later (not built: [parties.md](parties.md) "Back from the raid").
-   Once every team has left, the match is over (`IsMatchOver`, `OnMatchOver`) and a dedicated match
+   still raiding. On the hub server the key gives the team (`InitNewPlayer`); with the backend the
+   party itself comes back from Nakama as each member arrives ([parties.md](parties.md) "Back from the
+   raid"). Once every team has left, the match is over (`IsMatchOver`, `OnMatchOver`; with the backend
+   it tells Nakama, `crossguard_match_over`, so a kept server can take the next match) and a dedicated match
    server exits so a fresh process takes the next match (Assumed, one match per process; not in
    development mode, tests, or with `-KeepMatchServer`). A raid closes after `MaxRaidDurationSeconds`
    (**3600 s, placeholder**): raiders still in it fail it, and their teams go back
@@ -145,6 +151,10 @@ L_MainMenu --Play--> L_Hub (listen server) --raid portal / Start raid--> raid ma
    A team holding the server's own player (listen host, standalone) never leaves on its own while
    others raid (Assumed: that would close the raid for everyone).
 
+Dedicated servers on one PC with the backend: `Tools\run_local_cluster.bat -Backend`
+([backend-setup.md](backend-setup.md) "Local cluster with the backend"): menu Log in, Play, raid by
+matchmaking with tickets, back to the hub with the party.
+
 Dedicated servers on one PC (development builds): `Tools\run_local_cluster.bat` starts a dedicated hub
 (`-RaidServer=`, development matchmaking) and a dedicated match server (`-HubServer=`, `-HubMap=`):
 the real team-return path, no listen server ([dedicated-server-plan.md](dedicated-server-plan.md)).
@@ -152,8 +162,8 @@ the real team-return path, no listen server ([dedicated-server-plan.md](dedicate
 ## Placeholders and assumptions
 
 - `RaidMapName` = `L_DevSandbox`; `HubMapName` = `L_Hub`; `MenuMapName` = `L_MainMenu`.
-- Play hosts a listen server in development mode only; outside it Play is refused until the backend
-  exists (Assumed: no offline / solo hosting in the real game).
+- Play hosts a listen server in development mode only; outside it Play joins the hub server the backend
+  names (logged in only) (Assumed: no offline / solo hosting in the real game).
 - Settings ranges and steps; settings are per machine, saved only by "Save settings".
 - Hub layout (plaza size, positions) and the portal / board looks (engine shapes).
 - `-CreateMenu` sets `GameDefaultMap` (packaged game starts on the menu); the editor startup map is
@@ -161,8 +171,10 @@ the real team-return path, no listen server ([dedicated-server-plan.md](dedicate
 - No message on a failed Join yet; no "back to menu" button in the hub (Esc closes windows only).
 - Team return: 10 s countdown per team, 120 s grace for teammates away, both on the game mode. A
   teammate away when the team leaves fails their extraction (Assumed). A team arriving on a hub server
-  gets its team but not its party (Assumed, until the backend keeps parties). The development
-  matchmaking (`-RaidServer=`) is non-Shipping only (Assumed). Matchmaking is synchronous for now
-  (Assumed; the backend's will be asynchronous).
+  gets its team, and with the backend its party. The development matchmaking (`-RaidServer=`) is
+  non-Shipping only (Assumed). Matchmaking answers asynchronously (the development fake at once).
+- Server capacity: 48 players per raid (owner), 64 per hub shard (placeholder): `RaidCapacity` /
+  `HubCapacity` on the game mode, `-RaidCapacity=` / `-HubCapacity=`; a dedicated server's GameSession
+  `MaxPlayers` follows it (the engine default, 16, would refuse a full raid).
 - Development mode: party members not on the server at the whole-server return leave their parties;
   a dead player spectating a held teammate who is released at the return comes along (Assumed).

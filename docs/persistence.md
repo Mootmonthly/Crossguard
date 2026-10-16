@@ -250,12 +250,13 @@ the console: [backend-setup.md](backend-setup.md).
 | Order | One write per player in flight; saves made meanwhile merge into the next write (the newest document carries them). A load for a player with writes pending waits for them |
 | Failures | No answer, 5xx, 429: retried after 1, 2, 4, 8, 16 s (loads: 2 retries). Then, and on any other refusal: the document is kept in `Saved/Crossguard/NakamaUnsaved/<user id>.json` and logged as an error ("not stored in Nakama ... kept in ..."). A load that fails answers `Failed` |
 | Refused saves | `QuarantineCharacter` copies the stored document to `characters_quarantine` (server-only); the next write replaces the original |
-| Shutdown | `FlushWrites`: waiting writes go at once, the server waits up to `ShutdownFlushSeconds` for answers, anything unanswered is kept on disk too |
+| Save lease | One server at a time owns a player's save ([backend-setup.md](backend-setup.md) "Step 3"). The load first acquires the player's lease for this server (`crossguard_lease_acquire`); held by another server it retries every 1 s for up to 75 s (placeholders; a crashed server's lease expires after its 60 s TTL and is taken over); not got: the load answers `Failed`. Every write carries the token, checked in the same transaction as the write. Renewed every 20 s; `ReleaseCharacter` (the player left: travel or logout, after the last save) releases it once that player's writes are done; shutdown releases all. A lost lease (taken over, refused renewal or write) stops writes for that player like a version conflict |
+| Hand-off | Hub → raid: the hub's save and flush before the travel, its logout save (usually unchanged, skipped), then the release; the raid server's load waits for the lease, so it always sees the hub's last write. Raid → hub the same way. A player held for a reconnect keeps the lease (renewed) until their raid ends |
+| Shutdown | `FlushWrites`: waiting writes go at once, the server waits up to `ShutdownFlushSeconds` for answers, anything unanswered is kept on disk too; then every lease is released |
 | Size | 8 MB per record (same cap as the loader; Nakama `socket.max_request_size_bytes` raised to 9 MB) |
 
-Not built: per-player save leases (the hand-off risk in [backend-setup.md](backend-setup.md) "Known
-limits"), scenario tests against a live Nakama (the pure helpers are tested: `Crossguard.Nakama.*`;
-the RPCs end to end: `Tools/backend_smoke.py`).
+Not built: scenario tests against a live Nakama (the pure helpers are tested: `Crossguard.Nakama.*`;
+the RPCs, the lease hand-off included, end to end: `Tools/backend_smoke.py`).
 
 ## Tests
 
