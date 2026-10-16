@@ -112,6 +112,27 @@ float UCrossguardNakamaSaveBackend::RetryDelaySeconds(int32 Attempt)
 	return FMath::Min(30.0f, static_cast<float>(1 << FMath::Clamp(Attempt - 1, 0, 5)));
 }
 
+FString UCrossguardNakamaSaveBackend::WithoutSavedAt(const FString& Document)
+{
+	static const FString Key = TEXT("\"savedAt\"");
+	const int32 KeyAt = Document.Find(Key, ESearchCase::CaseSensitive);
+	if (KeyAt == INDEX_NONE)
+	{
+		return Document;
+	}
+	// Skip  : -123  (spaces allowed around the colon).
+	int32 End = KeyAt + Key.Len();
+	while (End < Document.Len() && (FChar::IsWhitespace(Document[End]) || Document[End] == TEXT(':')))
+	{
+		++End;
+	}
+	while (End < Document.Len() && (FChar::IsDigit(Document[End]) || Document[End] == TEXT('-')))
+	{
+		++End;
+	}
+	return Document.Left(KeyAt + Key.Len()) + Document.Mid(End);
+}
+
 // --- Load ----------------------------------------------------------------------------------------
 
 void UCrossguardNakamaSaveBackend::LoadCharacter(const FString& PlayerId, FLoadCallback OnLoaded)
@@ -198,6 +219,7 @@ void UCrossguardNakamaSaveBackend::HandleLoad(const FString& PlayerId, int32 Att
 	FPlayerSaves& Entry = Players.FindOrAdd(PlayerId);
 	// A fresh load: this server now knows the latest version and may write again.
 	Entry.Version = Version;
+	Entry.LastWritten.Reset();
 	Entry.bConflict = false;
 	Entry.Attempt = 0;
 	if (!bFound)
@@ -246,6 +268,27 @@ void UCrossguardNakamaSaveBackend::SaveCharacter(const FString& PlayerId, const 
 		if (OnSaved)
 		{
 			OnSaved(false, FString::Printf(TEXT("%s; kept in %s"), *Error, *File));
+		}
+		return;
+	}
+	// Nothing changed since the newest write (sent, waiting or done): writing again would only move
+	// the version. The caller waits for that write instead.
+	const FString Unstamped = WithoutSavedAt(Document);
+	if (Entry->bHasQueued && WithoutSavedAt(Entry->QueuedDocument) == Unstamped)
+	{
+		Entry->QueuedCallbacks.Add(MoveTemp(OnSaved));
+		return;
+	}
+	if (!Entry->bHasQueued && !Entry->InFlightDocument.IsEmpty() && WithoutSavedAt(Entry->InFlightDocument) == Unstamped)
+	{
+		Entry->InFlightCallbacks.Add(MoveTemp(OnSaved));
+		return;
+	}
+	if (!Entry->IsBusy() && !Entry->LastWritten.IsEmpty() && Entry->LastWritten == Unstamped)
+	{
+		if (OnSaved)
+		{
+			OnSaved(true, FString());
 		}
 		return;
 	}
@@ -329,6 +372,7 @@ void UCrossguardNakamaSaveBackend::HandleWrite(const FString& PlayerId, const FC
 			UE_LOG(LogCrossguard, Error, TEXT("Nakama: write of %s answered without a version; writes stop until the player loads again"), *PlayerId);
 		}
 		Entry->Version = NewVersion;
+		Entry->LastWritten = NewVersion.IsEmpty() ? FString() : WithoutSavedAt(Entry->InFlightDocument);
 		Entry->InFlightDocument.Reset();
 		Entry->Attempt = 0;
 		CrossguardNakamaSaveLocal::Report(Entry->InFlightCallbacks, true, FString());

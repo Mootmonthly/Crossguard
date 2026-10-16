@@ -107,6 +107,12 @@ bool FCrossguardNakamaSavePayloadTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Version"), Version, FString(TEXT("ca17727a51c632e908dee6498ae9fb05")));
 	TestEqual(TEXT("Record text exactly as stored"), Record, Stored);
 
+	TestEqual(TEXT("savedAt value dropped"), UCrossguardNakamaSaveBackend::WithoutSavedAt(TEXT("{\"version\":1,\"savedAt\": 1760000000,\"gold\":1}")),
+		FString(TEXT("{\"version\":1,\"savedAt\",\"gold\":1}")));
+	TestEqual(TEXT("Two saves differing only in savedAt compare equal"), UCrossguardNakamaSaveBackend::WithoutSavedAt(TEXT("{\"savedAt\":1,\"gold\":1}")),
+		UCrossguardNakamaSaveBackend::WithoutSavedAt(TEXT("{\"savedAt\":2,\"gold\":1}")));
+	TestEqual(TEXT("No savedAt: unchanged"), UCrossguardNakamaSaveBackend::WithoutSavedAt(TEXT("{\"gold\":1}")), FString(TEXT("{\"gold\":1}")));
+
 	TestFalse(TEXT("Garbage refused"), UCrossguardNakamaSaveBackend::ParseLoadResponse(TEXT("<html>"), bFound, Version, Record));
 	TestFalse(TEXT("Found without a version refused"),
 		UCrossguardNakamaSaveBackend::ParseLoadResponse(TEXT("{\"found\":true,\"version\":\"\",\"record\":{}}"), bFound, Version, Record));

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Containers/Ticker.h"
 #include "CoreMinimal.h"
+#include "Containers/Ticker.h"
 #include "Game/CrossguardSaveBackend.h"
 #include "UObject/Object.h"
 
@@ -23,6 +23,10 @@ struct FCrossguardNakamaResponse;
 //   the refused document is kept, in Nakama (characters_conflicts) and on this disk.
 // - One write per player in flight, in call order; saves made meanwhile are merged into the next write
 //   (the newest document carries everything; every waiting callback gets that write's result).
+// - A document equal to the newest one this server wrote or is writing for the player, but for "savedAt", is not
+//   written again (its callback joins that write). A travel saves before leaving and again at logout; the second,
+//   unchanged write would move the version under the server the player just joined, which then could
+//   not save (version conflict).
 // - Retries: no answer, 5xx or 429 are retried with backoff (1, 2, 4, 8, 16 s); then, and on any other
 //   refusal, the document is kept in Saved/Crossguard/NakamaUnsaved/<id>.json and logged as an error.
 //   A save is never dropped silently.
@@ -65,12 +69,16 @@ public:
 	static bool ParseLoadResponse(const FString& Body, bool& bOutFound, FString& OutVersion, FString& OutRecord);
 	// Seconds before retry number Attempt (1-based): 1, 2, 4, 8, 16, capped at 30.
 	static float RetryDelaySeconds(int32 Attempt);
+	// The document without its "savedAt" member's value (for "nothing changed" checks).
+	static FString WithoutSavedAt(const FString& Document);
 
 private:
 	struct FPlayerSaves
 	{
 		// Storage version: "*" = nothing stored yet, empty = never loaded here.
 		FString Version;
+		// WithoutSavedAt of the last document stored at Version by this server; empty after a load.
+		FString LastWritten;
 		// A write was refused for a stale version: no more writes until the player loads again.
 		bool bConflict = false;
 		// The write on its way to Nakama, and who waits for it.
