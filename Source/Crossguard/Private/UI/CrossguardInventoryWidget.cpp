@@ -549,6 +549,16 @@ void UCrossguardInventoryWidget::RedrawActions()
 	default:
 		break;
 	}
+	// Splitting a stack: one off, or half of it; the piece goes to the nearest free squares.
+	if (Selected.Count > 1)
+	{
+		AddAction(TEXT("Split 1 off"), [Id](UCrossguardInventoryComponent& Target) { Target.RequestSplitItem(Id, 1); });
+	}
+	if (Selected.Count > 3)
+	{
+		const int32 Half = Selected.Count / 2;
+		AddAction(FString::Printf(TEXT("Split %d off"), Half), [Id, Half](UCrossguardInventoryComponent& Target) { Target.RequestSplitItem(Id, Half); });
+	}
 	AddAction(bPlaceRotated ? TEXT("Rotate: on") : TEXT("Rotate: off"), [this](UCrossguardInventoryComponent&) { bPlaceRotated = !bPlaceRotated; });
 	AddAction(TEXT("Drop"), [this, Id](UCrossguardInventoryComponent& Target)
 	{

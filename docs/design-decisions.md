@@ -202,6 +202,10 @@ Independent of category, a skill is:
   shield 2 × 2; spear 1 × 5; other two-handed weapons and bows 2 × 4; helm, gloves, boots, cape 2 × 2; chest and legs
   2 × 3; Skill Gems, potions and bandages 1 × 1; throwables (explosive bottles, throwing knives and
   axes, javelins) 1 × 3.
+- Splitting a stack (placeholder, assumed 2026-10-16): the inventory screen offers "Split 1 off"
+  and, from 4 up, "Split half off"; the piece lands in the first free squares of the same
+  container, else the first free squares anywhere (Backpack / Quiver as their rules allow); no room
+  refuses it and nothing changes.
 - Arrows are 1 × 3 and Bolts 1 × 2, each stacking up to 20 in the same squares. Throwables stack
   up to 3, consumables (potions, bandages) up to 5.
 - Healing Potion: restores 15 HP over 10 s, +5 HP per rarity level. Bandage: restores 10 HP over a

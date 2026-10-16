@@ -213,6 +213,46 @@ bool FCrossguardScenarioUIWidgetsBind::RunTest(const FString& Parameters)
 			}
 		}
 
+		// Splitting: one potion off the stack of 2 makes two stacks of 1; splitting a single is refused.
+		{
+			FCrossguardInventoryItem Potions;
+			bool bHaveStack = false;
+			for (const FCrossguardInventoryItem& Item : Inventory->GetItems())
+			{
+				if (Item.ItemId == CrossguardScenarioUI::UIPotion() && Item.Count >= 2)
+				{
+					Potions = Item;
+					bHaveStack = true;
+				}
+			}
+			if (C.Require(bHaveStack, TEXT("a stack of at least 2 potions")))
+			{
+				const int32 Total = Inventory->CountItem(CrossguardScenarioUI::UIPotion());
+				int32 StacksBefore = 0;
+				for (const FCrossguardInventoryItem& Item : Inventory->GetItems())
+				{
+					StacksBefore += Item.ItemId == CrossguardScenarioUI::UIPotion() ? 1 : 0;
+				}
+				Inventory->RequestSplitItem(Potions.Id, 1);
+				int32 StacksAfter = 0;
+				int32 Singles = 0;
+				for (const FCrossguardInventoryItem& Item : Inventory->GetItems())
+				{
+					StacksAfter += Item.ItemId == CrossguardScenarioUI::UIPotion() ? 1 : 0;
+					Singles += Item.ItemId == CrossguardScenarioUI::UIPotion() && Item.Count == 1 ? 1 : 0;
+				}
+				C.Test.TestEqual(TEXT("Splitting one off makes one more stack"), StacksAfter, StacksBefore + 1);
+				C.Test.TestTrue(TEXT("The piece is a stack of 1"), Singles >= 1);
+				C.Test.TestEqual(TEXT("No potion made or lost by the split"), Inventory->CountItem(CrossguardScenarioUI::UIPotion()), Total);
+				FCrossguardInventoryItem Source;
+				C.Test.TestTrue(TEXT("The source stack lost one"), Inventory->FindItem(Potions.Id, Source) && Source.Count == Potions.Count - 1);
+				C.ClearLog();
+				Inventory->RequestSplitItem(Potions.Id, Source.Count);
+				C.Test.TestTrue(TEXT("Splitting the whole stack off is refused"), C.LogContains(TEXT("rejected")));
+				C.Test.TestEqual(TEXT("Nothing changed on the refusal"), Inventory->CountItem(CrossguardScenarioUI::UIPotion()), Total);
+			}
+		}
+
 		if (C.Require(Inventory->OpenLootContainer(Body), TEXT("the player opens the body")))
 		{
 			InventoryWidget->Refresh();
@@ -234,7 +274,7 @@ bool FCrossguardScenarioUIWidgetsBind::RunTest(const FString& Parameters)
 			{
 				const int32 PotionsBefore = Inventory->CountItem(CrossguardScenarioUI::UIPotion());
 				InventoryWidget->DropOnLoot(Potion, false);
-				C.Test.TestEqual(TEXT("A stack dropped on the body goes in"), Inventory->CountItem(CrossguardScenarioUI::UIPotion()), 0);
+				C.Test.TestEqual(TEXT("A stack dropped on the body goes in"), Inventory->CountItem(CrossguardScenarioUI::UIPotion()), PotionsBefore - Potion.Count);
 				FCrossguardInventoryItem OnBody;
 				bool bOnBody = false;
 				for (const FCrossguardInventoryItem& Item : Inventory->GetOpenContainerItems())

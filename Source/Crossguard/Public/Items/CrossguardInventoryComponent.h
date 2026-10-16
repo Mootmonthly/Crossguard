@@ -60,6 +60,8 @@ enum class ECrossguardInventoryError : uint8
 	NoContainerOpen,
 	OutOfRange,
 	NotReady,
+	// Splitting: the count is not between 1 and the stack's count minus one.
+	CannotSplit,
 };
 
 USTRUCT(BlueprintType)
@@ -194,7 +196,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardInventoryRejected, const 
 //
 // A stack can be dropped on the ground (ACrossguardWorldItem) and picked up with the interact key.
 //
-// Not built yet: the guild bank, splitting stacks.
+// Not built yet: the guild bank.
 UCLASS(ClassGroup = (Crossguard), meta = (BlueprintSpawnableComponent))
 class CROSSGUARD_API UCrossguardInventoryComponent : public UActorComponent
 {
@@ -277,6 +279,11 @@ public:
 	// as many as fit.
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void RequestMoveItem(int32 ItemId, ECrossguardInventoryContainer Container, FIntPoint Position, bool bRotated);
+
+	// Splits Count off a stack into a new stack in the first free spot (the stack's own container
+	// first). Count must leave at least one behind; no spot: NoRoom.
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void RequestSplitItem(int32 ItemId, int32 Count);
 
 	// Weapons go in Slot of weapon set WeaponSet (-1: the one in hand); armor in its own slot; a
 	// Backpack or Quiver in its container slot. What was there moves into the inventory.
@@ -385,6 +392,8 @@ public:
 protected:
 	UFUNCTION(Server, Reliable)
 	void ServerMoveItem(int32 ItemId, ECrossguardInventoryContainer Container, FIntPoint Position, bool bRotated);
+	UFUNCTION(Server, Reliable)
+	void ServerSplitItem(int32 ItemId, int32 Count);
 
 	UFUNCTION(Server, Reliable)
 	void ServerEquipItem(int32 ItemId, ECrossguardEquipmentSlot Slot, int32 WeaponSet);
@@ -439,6 +448,7 @@ protected:
 
 private:
 	FCrossguardInventoryResult MoveItem(int32 ItemId, ECrossguardInventoryContainer Container, FIntPoint Position, bool bRotated);
+	FCrossguardInventoryResult SplitItem(int32 ItemId, int32 Count);
 	FCrossguardInventoryResult EquipItem(int32 ItemId, ECrossguardEquipmentSlot Slot, int32 WeaponSet);
 	FCrossguardInventoryResult EquipContainer(const FCrossguardInventoryItem& Item);
 	FCrossguardInventoryResult UnequipWeapon(ECrossguardEquipmentSlot Slot, int32 WeaponSet);

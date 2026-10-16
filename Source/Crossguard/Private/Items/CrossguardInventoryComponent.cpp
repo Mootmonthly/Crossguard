@@ -477,6 +477,59 @@ void UCrossguardInventoryComponent::ServerMoveItem_Implementation(int32 ItemId, 
 	Finish(MoveItem(ItemId, Container, Position, bRotated));
 }
 
+void UCrossguardInventoryComponent::RequestSplitItem(int32 ItemId, int32 Count)
+{
+	if (IsServer())
+	{
+		Finish(SplitItem(ItemId, Count));
+	}
+	else
+	{
+		ServerSplitItem(ItemId, Count);
+	}
+}
+
+void UCrossguardInventoryComponent::ServerSplitItem_Implementation(int32 ItemId, int32 Count)
+{
+	Finish(SplitItem(ItemId, Count));
+}
+
+FCrossguardInventoryResult UCrossguardInventoryComponent::SplitItem(int32 ItemId, int32 Count)
+{
+	if (IsOwnerDead())
+	{
+		return Fail(ECrossguardInventoryError::OwnerDead);
+	}
+	const int32 Index = IndexOfItem(ItemId);
+	if (Index == INDEX_NONE)
+	{
+		return Fail(ECrossguardInventoryError::UnknownItem);
+	}
+	if (Count < 1 || Count >= Items[Index].Count)
+	{
+		return Fail(ECrossguardInventoryError::CannotSplit);
+	}
+	// The new stack: the same item (affixes, rarity) with Count of them, in the first free spot;
+	// its own container is tried first so it lands beside the stack it came from.
+	FCrossguardInventoryItem Piece = Items[Index];
+	Piece.Count = Count;
+	Crossguard::FGridSize Size;
+	Crossguard::FGridPlacement Spot;
+	if (GetGridSize(Piece, Size) && BuildGrid(Piece.Container).FindFreeSpot(Size, true, Spot))
+	{
+		Piece.Position = FIntPoint(Spot.X, Spot.Y);
+		Piece.bRotated = Spot.bRotated;
+	}
+	else if (!FindPlacement(Piece))
+	{
+		return Fail(ECrossguardInventoryError::NoRoom);
+	}
+	Piece.Id = NextItemId++;
+	Items[Index].Count -= Count;
+	Items.Add(Piece);
+	return {};
+}
+
 void UCrossguardInventoryComponent::RequestEquipItem(int32 ItemId, ECrossguardEquipmentSlot Slot, int32 WeaponSet)
 {
 	if (IsServer())
