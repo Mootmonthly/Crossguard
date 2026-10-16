@@ -35,10 +35,11 @@ Several systems were written without an editor build. Do this before building mo
 
 | Item | Needs | Notes |
 | --- | --- | --- |
-| Build and fix compile errors | Editor | Progression, inventory, bodies, revive, ammo, consumables, stash, gold, vendors, lockpicking, doors, extraction and the 10 skills are uncompiled. |
-| Import new tables | Editor | `DT_Items` (row `CrossguardItemRow`); reimport `DT_Weapons`, `DT_Armor`. Set `InventoryComponent.ItemTable`. |
+| Build and fix compile errors | Done | Built on UE 5.8 on the owner's PC; 103/103 editor tests pass (all first-run failures were test-side). Notes in [first-compile-triage.md](first-compile-triage.md). |
+| Import new tables | Done | `Tools\editor_setup.bat` imports every `DT_` table into `/Game/Data` and sets the references (rerun after data changes). |
 | Playtest each system | Editor | Debug options on the character: `DebugInventory`, `bDebugLootTakesAll`, `DebugReviveDelay`, `bUseDebugProgression`; turn off the game mode's `bIsRaid` to test the stash and vendors. |
-| Two-client PIE check | Editor | `Equipment.Wielding.*` tags reach other clients; bodies ragdoll on every client. |
+| Two-client PIE check | Editor | `Equipment.Wielding.*` tags reach other clients; bodies ragdoll on every client; stealth hidden from enemy clients (time the possible ~5 s leak, dedicated server + 3 clients). |
+| Crowd avoidance | Editor, Code | Without a nav mesh a minion walks into its summoner's back and stops (seen in tests). Check on a real map; turn on RVO/detour avoidance for monsters and minions if they bunch up. |
 
 ## Milestone 1: One complete raid
 
