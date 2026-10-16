@@ -12,6 +12,8 @@ Plugins/**/Intermediate/
 .vscode/
 .idea/
 *.sln
+*.slnx
+UpgradeLog*.htm
 *.suo
 *.sdf
 *.VC.db
