@@ -43,10 +43,20 @@ summary):
    the stash chest (CrossguardStashChest) and vendor NPC (CrossguardVendorNPC) if it has none, then
    saves it. Skipped if the classes are missing (editor not rebuilt) or both are already there.
    They only open in the hub: play the map with ?Hub (game mode bIsRaid off).
+7. Optional (CG_SETUP_CREATE_HUB=1 or --create-hub): /Game/Maps/L_Hub (docs/hub-and-menu.md): a 60 m
+   plaza with the sandbox's lighting, four player starts, nav mesh bounds, a CrossguardHubMarker (the
+   map plays as the hub without ?Hub), the stash chest and vendor NPC (place_hub_actors), a
+   CrossguardPartyBoard and a CrossguardRaidPortal; game mode override BP_CrossguardGameMode.
+   Skipped if the map exists.
+8. Optional (CG_SETUP_CREATE_MENU=1 or --create-menu): /Game/Maps/L_MainMenu (floor, light, player
+   start, game mode override CrossguardMenuGameMode) if missing; then Config/DefaultEngine.ini
+   GameMapsSettings GameDefaultMap = L_MainMenu (text edit; EditorStartupMap is left alone).
 
 Options (environment variables, or arguments after the script path when the runner passes them):
     CG_SETUP_CREATE_MAP=1            / --create-map
     CG_SETUP_ADD_HUB_ACTORS=1        / --add-hub-actors
+    CG_SETUP_CREATE_HUB=1            / --create-hub
+    CG_SETUP_CREATE_MENU=1           / --create-menu
     CG_SETUP_CREATE_BLUEPRINTS=1     / --create-blueprints   (BP_CrossguardGameMode + BP_CrossguardCharacter
                                                               in /Game/Blueprints, native parents)
     CG_SETUP_KEEP_MAPPING_CONTEXT=1  / --keep-mapping-context
@@ -67,7 +77,10 @@ ENGINE-API UNCERTAINTY (written without an engine to run against; check the log 
 - Map creation: LevelEditorSubsystem.new_level / save_current_level inside the pythonscript
   commandlet; NavMeshBoundsVolume spawned by EditorActorSubsystem.spawn_actor_from_class getting a
   box brush (UActorFactoryBoxVolume). The nav mesh itself is built when the map is opened in the
-  editor (or Build -> Build Paths), not here.
+  editor (or Build -> Build Paths), not here. new_level is assumed to make a non-World-Partition
+  level (the hub marker must be in the persistent level).
+- Hub / menu maps: World Settings "default_game_mode" set to a native class
+  (unreal.CrossguardMenuGameMode.static_class()).
 """
 
 import json
@@ -1191,8 +1204,8 @@ def set_game_default_map(map_path):
 # ------------------------------------------------------------------------------------------------
 
 def main():
-    log("project {}; create map: {}, add hub actors: {}, create blueprints: {}".format(PROJECT_DIR, CREATE_MAP, ADD_HUB_ACTORS,
-                                                                                    CREATE_BLUEPRINTS))
+    log("project {}; create map: {}, add hub actors: {}, create hub: {}, create menu: {}, create blueprints: {}".format(
+        PROJECT_DIR, CREATE_MAP, ADD_HUB_ACTORS, CREATE_HUB, CREATE_MENU, CREATE_BLUEPRINTS))
 
     if native_class("CrossguardGameMode") is None:
         record("FAIL", "Crossguard C++ classes", "unreal.CrossguardGameMode missing: the Crossguard module is not "
@@ -1246,6 +1259,20 @@ def main():
             add_hub_actors()
         except Exception:  # noqa: BLE001
             record("FAIL", "Hub actors in " + MAP_PATH, traceback.format_exc().strip().splitlines()[-1])
+            unreal.log_error(traceback.format_exc())
+
+    if CREATE_HUB:
+        try:
+            create_hub_map(game_mode_cls)
+        except Exception:  # noqa: BLE001
+            record("FAIL", "Hub map " + HUB_MAP_PATH, traceback.format_exc().strip().splitlines()[-1])
+            unreal.log_error(traceback.format_exc())
+
+    if CREATE_MENU:
+        try:
+            create_menu_map()
+        except Exception:  # noqa: BLE001
+            record("FAIL", "Menu map " + MENU_MAP_PATH, traceback.format_exc().strip().splitlines()[-1])
             unreal.log_error(traceback.format_exc())
 
 

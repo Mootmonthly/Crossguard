@@ -33,6 +33,14 @@
     Add a stash chest and a vendor NPC to the existing L_DevSandbox if it has none (-CreateMap
     places them in a new map). Play the map with ?Hub to use them.
 
+.PARAMETER CreateHub
+    Also create /Game/Maps/L_Hub (plaza, lighting, player starts, nav bounds, hub marker, stash chest,
+    vendor NPC, party board, raid portal; BP_CrossguardGameMode override) if it does not exist.
+
+.PARAMETER CreateMenu
+    Also create /Game/Maps/L_MainMenu (CrossguardMenuGameMode override) if it does not exist, and set
+    GameDefaultMap to it in Config\DefaultEngine.ini (the editor startup map is left alone).
+
 .PARAMETER CreateBlueprints
     Create BP_CrossguardGameMode / BP_CrossguardCharacter in /Game/Blueprints (native parents) when
     missing, instead of skipping them.
@@ -52,6 +60,8 @@
     Tools\editor_setup.bat
 .EXAMPLE
     Tools\editor_setup.bat -SkipBuild -CreateMap
+.EXAMPLE
+    Tools\editor_setup.bat -SkipBuild -CreateHub -CreateMenu
 #>
 [CmdletBinding()]
 param(
@@ -59,6 +69,8 @@ param(
     [switch]$SkipBuild,
     [switch]$CreateMap,
     [switch]$AddHubActors,
+    [switch]$CreateHub,
+    [switch]$CreateMenu,
     [switch]$CreateBlueprints,
     [switch]$KeepMappingContext,
     [ValidateSet("Commandlet", "Editor")]
@@ -135,6 +147,8 @@ foreach ($stale in @($SummaryFile, $EditorLog, $EditorErrLog)) { Remove-Item -Pa
 # Options go through the environment (quoting arguments through -script= is fragile).
 $env:CG_SETUP_CREATE_MAP = if ($CreateMap) { "1" } else { "" }
 $env:CG_SETUP_ADD_HUB_ACTORS = if ($AddHubActors) { "1" } else { "" }
+$env:CG_SETUP_CREATE_HUB = if ($CreateHub) { "1" } else { "" }
+$env:CG_SETUP_CREATE_MENU = if ($CreateMenu) { "1" } else { "" }
 $env:CG_SETUP_CREATE_BLUEPRINTS = if ($CreateBlueprints) { "1" } else { "" }
 $env:CG_SETUP_KEEP_MAPPING_CONTEXT = if ($KeepMappingContext) { "1" } else { "" }
 $env:CG_SETUP_QUIT = if ($Mode -eq "Editor") { "1" } else { "" }
