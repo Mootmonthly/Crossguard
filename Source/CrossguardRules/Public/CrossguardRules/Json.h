@@ -59,7 +59,10 @@ namespace Crossguard
 		const std::string& AsString() const { return Text; }
 
 		// Arrays. Empty for other types.
-		const std::vector<FJsonNode>& Items() const { return Children; }
+		const std::vector<FJsonNode>& Items() const;
+		// Array item Index; null if out of range or not an array.
+		const FJsonNode* At(std::size_t Index) const;
+		FJsonNode* At(std::size_t Index);
 		// Turns a Null node into an array; does nothing to other types.
 		FJsonNode& Push(FJsonNode Value);
 
@@ -71,8 +74,8 @@ namespace Crossguard
 		FJsonNode& Set(const std::string& Key, FJsonNode Value);
 		bool Remove(const std::string& Key);
 		const std::vector<std::string>& Keys() const { return MemberKeys; }
-		// Values in Keys() order.
-		const std::vector<FJsonNode>& Values() const { return Children; }
+		// Values in Keys() order. Empty for other types.
+		const std::vector<FJsonNode>& Values() const;
 
 	private:
 		EType NodeType = EType::Null;

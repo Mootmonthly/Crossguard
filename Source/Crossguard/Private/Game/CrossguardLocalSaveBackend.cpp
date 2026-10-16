@@ -5,6 +5,7 @@
 #include "Misc/Crc.h"
 #include "Misc/DateTime.h"
 #include "Misc/FileHelper.h"
+#include "Misc/Guid.h"
 #include "Misc/Paths.h"
 
 FString UCrossguardLocalSaveBackend::GetDirectory() const
@@ -105,7 +106,9 @@ void UCrossguardLocalSaveBackend::QuarantineCharacter(const FString& PlayerId, c
 	{
 		return;
 	}
-	const FString Aside = FPaths::ChangeExtension(Path, FString::Printf(TEXT("corrupt-%s.json"), *FDateTime::UtcNow().ToString(TEXT("%Y%m%d-%H%M%S"))));
+	// Time plus a random tag: two refusals within a second never collide.
+	const FString Aside = FPaths::ChangeExtension(Path, FString::Printf(TEXT("corrupt-%s-%s.json"), *FDateTime::UtcNow().ToString(TEXT("%Y%m%d-%H%M%S")),
+		*FGuid::NewGuid().ToString(EGuidFormats::Digits).Left(8)));
 	if (IFileManager::Get().Move(*Aside, *Path, false, true))
 	{
 		UE_LOG(LogCrossguard, Warning, TEXT("Save for %s set aside as %s (%s)"), *PlayerId, *Aside, *Reason);

@@ -63,6 +63,35 @@ namespace Crossguard
 		return NodeType == EType::Real ? Real : 0.0;
 	}
 
+	namespace JsonDetail
+	{
+		const std::vector<FJsonNode>& NoChildren()
+		{
+			static const std::vector<FJsonNode> Empty;
+			return Empty;
+		}
+	}
+
+	const std::vector<FJsonNode>& FJsonNode::Items() const
+	{
+		return NodeType == EType::Array ? Children : JsonDetail::NoChildren();
+	}
+
+	const std::vector<FJsonNode>& FJsonNode::Values() const
+	{
+		return NodeType == EType::Object ? Children : JsonDetail::NoChildren();
+	}
+
+	const FJsonNode* FJsonNode::At(std::size_t Index) const
+	{
+		return NodeType == EType::Array && Index < Children.size() ? &Children[Index] : nullptr;
+	}
+
+	FJsonNode* FJsonNode::At(std::size_t Index)
+	{
+		return NodeType == EType::Array && Index < Children.size() ? &Children[Index] : nullptr;
+	}
+
 	FJsonNode& FJsonNode::Push(FJsonNode Value)
 	{
 		if (NodeType == EType::Null)

@@ -11,7 +11,7 @@
 // and a single server; a game with several servers needs a shared backend instead.
 //
 // Writes go to a temporary file first and then replace the save, so a crash mid-write leaves the
-// previous save intact. A refused save is renamed to <PlayerId>.corrupt-<UTC time>.json and kept.
+// previous save intact. A refused save is renamed to <PlayerId>.corrupt-<UTC time>-<tag>.json and kept.
 // Synchronous: callbacks run before the calls return.
 UCLASS()
 class CROSSGUARD_API UCrossguardLocalSaveBackend : public UObject, public ICrossguardSaveBackend

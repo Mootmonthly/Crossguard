@@ -469,10 +469,10 @@ namespace Crossguard
 				Reader.ReadItems(*Carried, "items", "carried", Limits.MaxCarriedItems, Out.Carried, true);
 			}
 
-			if (const FJsonNode* Quarantine = Reader.Get(Root, "quarantine", "", FJsonNode::EType::Object, false))
+			if (const FJsonNode* QuarantineNode = Reader.Get(Root, "quarantine", "", FJsonNode::EType::Object, false))
 			{
-				Reader.ReadItems(*Quarantine, "items", "quarantine", Limits.MaxQuarantinedItems, Out.QuarantinedItems, false);
-				Reader.StringList(*Quarantine, "skills", "quarantine", Out.QuarantinedSkills, false);
+				Reader.ReadItems(*QuarantineNode, "items", "quarantine", Limits.MaxQuarantinedItems, Out.QuarantinedItems, false);
+				Reader.StringList(*QuarantineNode, "skills", "quarantine", Out.QuarantinedSkills, false);
 			}
 		}
 

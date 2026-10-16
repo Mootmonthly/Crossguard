@@ -32,7 +32,7 @@
 
 namespace CrossguardScenarioSave
 {
-	constexpr float Row = 2500.0f;
+	constexpr float SceneRow = 2500.0f;
 	// Long enough that no debounced save fires while a step is between "wipe" and "load".
 	constexpr float TestDebounceSeconds = 600.0f;
 
@@ -79,7 +79,7 @@ namespace CrossguardScenarioSave
 		Saves->SaveDebounceSeconds = TestDebounceSeconds;
 		C.Test.AddInfo(FString::Printf(TEXT("Saves go to %s"), *Folder.Directory));
 
-		ACrossguardCharacter* Player = C.SpawnPlayer(Name, FVector(0.0f, Row, 0.0f));
+		ACrossguardCharacter* Player = C.SpawnPlayer(Name, FVector(0.0f, SceneRow, 0.0f));
 		ACrossguardPlayerState* PlayerState = Player != nullptr ? C.PlayerState(Player) : nullptr;
 		if (!C.Require(PlayerState != nullptr && PlayerState->GetStash() != nullptr && Player->GetInventoryComponent() != nullptr,
 				TEXT("the player has a player state, a stash and an inventory")))
@@ -308,9 +308,9 @@ bool FCrossguardScenarioSaveRoundTrip::RunTest(const FString& Parameters)
 				if (Item.Category == ECrossguardItemCategory::Weapon)
 				{
 					bSwordFound = true;
-					C.Test.TestEqual(TEXT("Sword position"), Item.Position, FIntPoint(3, 4));
+					C.Test.TestTrue(TEXT("Sword position (3, 4)"), Item.Position == FIntPoint(3, 4));
 					C.Test.TestTrue(TEXT("Sword rotated"), Item.bRotated);
-					C.Test.TestEqual(TEXT("Sword rarity"), Item.Weapon.Rarity, ECrossguardRarity::Rare);
+					C.Test.TestTrue(TEXT("Sword rarity Rare"), Item.Weapon.Rarity == ECrossguardRarity::Rare);
 					C.Test.TestEqual(TEXT("Sword affixes"), Item.Weapon.Affixes.Num(), 2);
 					if (Item.Weapon.Affixes.Num() == 2)
 					{
@@ -320,8 +320,8 @@ bool FCrossguardScenarioSaveRoundTrip::RunTest(const FString& Parameters)
 			}
 		}
 		C.Test.TestTrue(TEXT("The sword is in tab 2"), bSwordFound);
-		C.Test.TestEqual(TEXT("Axe back in hand"), Player->GetEquipmentComponent()->GetItem(ECrossguardEquipmentSlot::MainHand).WeaponId,
-			FName(TEXT("axe_one_handed")));
+		C.Test.TestTrue(TEXT("Axe back in hand"),
+			Player->GetEquipmentComponent()->GetItem(ECrossguardEquipmentSlot::MainHand).WeaponId == FName(TEXT("axe_one_handed")));
 		C.Test.TestEqual(TEXT("Carried potions"), Player->GetInventoryComponent()->CountItem(TEXT("healing_potion")), 3);
 		C.Test.TestEqual(TEXT("Carried ruby"), Player->GetInventoryComponent()->CountItem(TEXT("ruby")), 1);
 		C.Test.TestTrue(TEXT("Log: loaded"), C.LogContains(TEXT("Loaded the save")));
@@ -402,7 +402,7 @@ bool FCrossguardScenarioSaveCorrupt::RunTest(const FString& Parameters)
 		C.Test.TestEqual(TEXT("XP untouched"), Progression->GetTotalXp(), 60);
 		C.Test.TestEqual(TEXT("Potions untouched"), Player->GetInventoryComponent()->CountItem(TEXT("healing_potion")), 2);
 		C.Test.TestEqual(TEXT("The refused file is kept aside"), CountCorruptCopies(Folder->Directory), 1);
-		C.Test.TestEqual(TEXT("Still saving this player"), Saves->GetSaveState(Progression), ECrossguardSaveState::Ready);
+		C.Test.TestTrue(TEXT("Still saving this player"), Saves->GetSaveState(Progression) == ECrossguardSaveState::Ready);
 
 		// The next save writes the live state again, and it loads.
 		Saves->SaveNow(Progression);
@@ -435,7 +435,10 @@ bool FCrossguardScenarioSaveCorrupt::RunTest(const FString& Parameters)
 			Crossguard::FJsonNode* Tabs = Root.Find("stash") != nullptr ? Root.Find("stash")->Find("tabs") : nullptr;
 			if (Tabs != nullptr && !Tabs->Items().empty())
 			{
-				const_cast<Crossguard::FJsonNode&>(Tabs->Items()[0]).Find("items")->Push(Unknown);
+				if (Crossguard::FJsonNode* Items = Tabs->At(0)->Find("items"))
+				{
+					Items->Push(Unknown);
+				}
 			}
 		}), TEXT("the save file can be edited"));
 		C.ClearLog();

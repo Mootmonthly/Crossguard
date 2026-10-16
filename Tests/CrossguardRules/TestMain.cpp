@@ -1920,9 +1920,7 @@ static void TestSaveRefusesCorruptDocuments()
 	{
 		return EditedDocument([&](FJsonNode& Root)
 		{
-			FJsonNode* Tabs = Root.Find("stash")->Find("tabs");
-			FJsonNode& Item = const_cast<FJsonNode&>(Tabs->Items()[0].Find("items")->Items()[0]);
-			Item.Set(Key, Value);
+			Root.Find("stash")->Find("tabs")->At(0)->Find("items")->At(0)->Set(Key, Value);
 		});
 	};
 	CHECK(ParseCharacterSave(EditFirstItem("rarity", FJsonNode::MakeString("shiny"))).Error == ESaveLoadError::InvalidField);

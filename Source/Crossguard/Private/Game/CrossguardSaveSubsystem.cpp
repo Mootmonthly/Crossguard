@@ -175,7 +175,7 @@ namespace CrossguardSaveDetail
 	}
 
 	// Size and stack size from the character's data tables. False if the game has no such item.
-	bool DescribeItem(const UCrossguardInventoryComponent& Inventory, const FCrossguardInventoryItem& Item, FIntPoint& OutSize, int32& OutMaxStack)
+	bool DescribeSavedItem(const UCrossguardInventoryComponent& Inventory, const FCrossguardInventoryItem& Item, FIntPoint& OutSize, int32& OutMaxStack)
 	{
 		OutSize = Inventory.GetItemSize(Item);
 		OutMaxStack = 1;
@@ -267,7 +267,7 @@ namespace CrossguardSaveDetail
 			{
 				FIntPoint Size;
 				int32 MaxStack = 1;
-				if (!DescribeItem(*Inventory, ToGame(Saved), Size, MaxStack))
+				if (!DescribeSavedItem(*Inventory, ToGame(Saved), Size, MaxStack))
 				{
 					return false;
 				}
@@ -662,7 +662,7 @@ void UCrossguardSaveSubsystem::Apply(FPlayerEntry& Entry, ACrossguardPlayerState
 			Crossguard::FSavedItem Saved = ToSaved(Left);
 			FIntPoint Size;
 			int32 MaxStack = 1;
-			if (DescribeItem(*Inventory, Left, Size, MaxStack))
+			if (DescribeSavedItem(*Inventory, Left, Size, MaxStack))
 			{
 				Saved.Size = {Size.X, Size.Y};
 			}
@@ -690,7 +690,7 @@ void UCrossguardSaveSubsystem::Apply(FPlayerEntry& Entry, ACrossguardPlayerState
 				Item.bWasEquipped = false;
 				FIntPoint Size;
 				int32 MaxStack = 1;
-				if (Inventory != nullptr && DescribeItem(*Inventory, Item, Size, MaxStack))
+				if (Inventory != nullptr && DescribeSavedItem(*Inventory, Item, Size, MaxStack))
 				{
 					Item.MaxStack = MaxStack;
 				}
