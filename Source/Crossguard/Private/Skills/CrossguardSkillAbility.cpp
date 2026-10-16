@@ -283,6 +283,14 @@ bool UCrossguardSkillAbility::CommitOrCancel(const FGameplayAbilitySpecHandle Ha
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return false;
 	}
+	// Art hook: the cast starts on every machine (the owning client plays its prediction).
+	if (ACrossguardCharacter* Caster = ActorInfo != nullptr ? Cast<ACrossguardCharacter>(ActorInfo->AvatarActor.Get()) : nullptr)
+	{
+		FCrossguardAttackCue Cue;
+		Cue.Kind = ECrossguardAttackKind::Cast;
+		Cue.SkillId = SkillId;
+		Caster->NotifyAttackStarted(Cue, ActivationInfo.GetActivationPredictionKey().IsValidKey());
+	}
 	return true;
 }
 

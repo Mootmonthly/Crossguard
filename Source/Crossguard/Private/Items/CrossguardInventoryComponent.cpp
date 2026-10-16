@@ -4,6 +4,8 @@
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Character/CrossguardCharacter.h"
+#include "Combat/CrossguardCosmetics.h"
 #include "Combat/CrossguardThrownProjectile.h"
 #include "Combat/CrossguardWeaponAttackAbility.h"
 #include "Crossguard.h"
@@ -1708,7 +1710,18 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::Throw(int32 Index, con
 		Projectile->DotSpec = MakeDamageSpec(Row.ThrowDotPerSecond);
 		Projectile->DotSeconds = Row.ThrowDotSeconds;
 	}
+	// Art from data (Items.json projectileMesh, ...), over the projectile Blueprint's.
+	Projectile->Visual.MergeFrom(CrossguardCosmetics::ProjectileVisualFromItem(Row));
 	Projectile->FinishSpawning(SpawnTransform);
+	// Art hook: the throw starts on every machine (server side; not predicted).
+	if (ACrossguardCharacter* ThrowerCharacter = Cast<ACrossguardCharacter>(Thrower))
+	{
+		FCrossguardAttackCue Cue;
+		Cue.Kind = ECrossguardAttackKind::Throw;
+		Cue.bHasWeapon = Row.bHasCountsAsWeapon;
+		Cue.WeaponType = Row.CountsAsWeapon;
+		ThrowerCharacter->NotifyAttackStarted(Cue);
+	}
 
 	// One is used up per throw; the hands stay on the next one if any is left.
 	const FCrossguardInventoryItem Thrown = Items[Index];

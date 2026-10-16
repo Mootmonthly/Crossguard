@@ -100,6 +100,7 @@ void ACrossguardThrownProjectile::LifeSpanExpired()
 
 void ACrossguardThrownProjectile::Explode(const FVector& Center)
 {
+	NotifyImpact(Center);
 	ApplyInRadius(GetWorld(), Center, ExplosionRadius, DamageSpec);
 	if (DotSeconds > 0.0f && DotSpec.IsValid() && DamageAreaClass != nullptr)
 	{

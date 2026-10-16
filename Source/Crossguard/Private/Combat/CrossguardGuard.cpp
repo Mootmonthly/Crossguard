@@ -230,6 +230,16 @@ namespace CrossguardGuard
 				TargetASC->ApplyGameplayEffectSpecToSelf(Reduced);
 			}
 		}
+		// Art hook: a hit stopped whole still reaches the defender's OnDamageTaken (0, blocked); one
+		// partly through is reported by the damage itself.
+		if (Outcome.DefenderDamage <= 0.0 && Magic <= 0.0f)
+		{
+			if (ACrossguardCharacter* Defender = Cast<ACrossguardCharacter>(Target))
+			{
+				const FVector Toward = (Hit.Origin - Target->GetActorLocation()).GetSafeNormal2D();
+				Defender->NotifyDamageTaken(0.0f, Hit.Attacker, Target->GetActorLocation() + Toward * Target->GetSimpleCollisionRadius(), true, false);
+			}
+		}
 		Stun(Source, TargetASC, static_cast<float>(Outcome.DefenderStunSeconds));
 
 		// Mirror rule: the losing attacker takes the defender's weapon (a shield: nothing) and a stun.

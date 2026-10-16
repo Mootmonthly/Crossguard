@@ -124,6 +124,27 @@ void UCrossguardAttributeSet::PostGameplayEffectExecute(const FGameplayEffectMod
 			SetHealth(FMath::Clamp(GetHealth() - Damage, 0.0f, GetMaxHealth()));
 			UE_LOG(LogCrossguard, Log, TEXT("%s took %.1f damage from %s (%.1f / %.1f HP)"), *GetNameSafe(GetOwningActor()), Damage,
 				*GetNameSafe(Data.EffectSpec.GetContext().GetOriginalInstigator()), GetHealth(), GetMaxHealth());
+			// Art hook: every machine plays the hit (hit react, sparks, numbers); cosmetic only.
+			if (ACrossguardCharacter* Hurt = Cast<ACrossguardCharacter>(GetOwningActor()))
+			{
+				AActor* DamageSource = Data.EffectSpec.GetContext().GetOriginalInstigator();
+				const FHitResult* HitResult = Data.EffectSpec.GetContext().GetHitResult();
+				FVector HitLocation = Hurt->GetActorLocation();
+				if (HitResult != nullptr && HitResult->bBlockingHit)
+				{
+					HitLocation = HitResult->ImpactPoint;
+				}
+				else if (DamageSource != nullptr && DamageSource != Hurt)
+				{
+					// The side facing the source, at the body's middle.
+					HitLocation += (DamageSource->GetActorLocation() - HitLocation).GetSafeNormal2D() * Hurt->GetSimpleCollisionRadius();
+				}
+				// A guard let only part of it through (CrossguardGuard::ApplyHit's AttackShare).
+				const bool bBlocked = Data.EffectSpec.GetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_AttackShare, false, 1.0f) < 1.0f;
+				// Damage over time ticks are not hits: no attacker's hit sound for them.
+				const bool bDirectHit = Data.EffectSpec.GetPeriod() <= 0.0f;
+				Hurt->NotifyDamageTaken(Damage, DamageSource, HitLocation, bBlocked, bDirectHit);
+			}
 			if (GetHealth() > 0.0f)
 			{
 				if (ACrossguardCharacter* Damaged = Cast<ACrossguardCharacter>(GetOwningActor()))

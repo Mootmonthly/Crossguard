@@ -6,8 +6,10 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Character/CrossguardCharacter.h"
+#include "Combat/CrossguardCosmetics.h"
 #include "Combat/CrossguardGuard.h"
 #include "Combat/CrossguardProjectile.h"
+#include "Engine/DataTable.h"
 #include "Engine/World.h"
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Items/CrossguardInventoryComponent.h"
@@ -104,6 +106,15 @@ void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecH
 		return;
 	}
 
+	// Art hook: the swing / shot starts on every machine (the owning client plays its prediction).
+	ACrossguardCharacter* Attacker = Cast<ACrossguardCharacter>(ActorInfo->AvatarActor.Get());
+	FCrossguardAttackCue Cue;
+	Cue.Kind = Weapon->Delivery == ECrossguardAttackDelivery::MeleeSwing ? ECrossguardAttackKind::Melee : ECrossguardAttackKind::Ranged;
+	Cue.bHasWeapon = true;
+	Cue.WeaponType = Weapon->WeaponType;
+	Cue.Slot = Slot;
+	Cue.Duration = Interval;
+
 	if (ActorInfo->IsNetAuthority())
 	{
 		// Each shot uses up one ammo (bows: one arrow).
@@ -112,6 +123,10 @@ void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecH
 		{
 			EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 			return;
+		}
+		if (Attacker != nullptr)
+		{
+			Attacker->NotifyAttackStarted(Cue, ActivationInfo.GetActivationPredictionKey().IsValidKey());
 		}
 
 		UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
@@ -150,6 +165,10 @@ void UCrossguardWeaponAttackAbility::ActivateAbility(const FGameplayAbilitySpecH
 		case ECrossguardAttackDelivery::None:
 			break;
 		}
+	}
+	else if (Attacker != nullptr)
+	{
+		Attacker->NotifyAttackStarted(Cue);
 	}
 
 	float RecoverySeconds = Interval;
@@ -491,6 +510,16 @@ void UCrossguardWeaponAttackAbility::SpawnProjectile(const FGameplayEffectSpecHa
 		Projectile->ImpactPower = CrossguardGuard::ImpactPowerOf(Avatar, Slot);
 		Projectile->OnHitSpecs = Riders.OnHitSpecs;
 		Projectile->bCancelSkillsOnHit = Riders.bCancelSkills;
+		// The ammo's art from data (Items.json projectileMesh, ...), over the projectile Blueprint's.
+		const UCrossguardEquipmentComponent* Equipment = FindEquipment(GetCurrentActorInfo());
+		const FCrossguardWeaponRow* Weapon = Equipment != nullptr ? Equipment->GetWeaponRow(Slot) : nullptr;
+		const UCrossguardInventoryComponent* Inventory = FindInventory(GetCurrentActorInfo());
+		const FCrossguardItemRow* Ammo = Weapon != nullptr && !Weapon->AmmoId.IsNone() && Inventory != nullptr && Inventory->ItemTable != nullptr
+			? Inventory->ItemTable->FindRow<FCrossguardItemRow>(Weapon->AmmoId, TEXT("WeaponAttack"), false) : nullptr;
+		if (Ammo != nullptr)
+		{
+			Projectile->Visual.MergeFrom(CrossguardCosmetics::ProjectileVisualFromItem(*Ammo));
+		}
 		Projectile->FinishSpawning(SpawnTransform);
 	}
 }

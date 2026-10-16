@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Combat/CrossguardCosmetics.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "GameplayEffectTypes.h"
@@ -8,6 +9,7 @@
 
 class UProjectileMovementComponent;
 class USphereComponent;
+class UStaticMeshComponent;
 
 // Server-spawned, replicated projectile (arrows, staff bolts). Applies DamageSpec to the first actor
 // with an ability system it hits, then is destroyed. Speed and gravity are set per Blueprint subclass
@@ -36,6 +38,23 @@ public:
 	bool bGroundFlyingOnHit = false;
 	bool bMortalStrikeOnHit = false;
 
+	// Art: mesh, trail, impact effect and sound (empty: none). Set on a Blueprint subclass's defaults;
+	// spawners fill it from data before FinishSpawning (ammo and throwables: Items.json
+	// projectileMesh, trailVfx, impactVfx, impactSound). Replicated with the spawn, so every machine
+	// shows the same.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Replicated, Category = "Projectile|Art")
+	FCrossguardProjectileVisual Visual;
+
+	// It hit or exploded at Location: on every machine (Visual's impact effect and sound play on their
+	// own). Blueprint: extra impact visuals.
+	UFUNCTION(BlueprintImplementableEvent, Category = "Projectile|Art")
+	void OnProjectileImpact(FVector Location);
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// Impacts played on this machine (tests).
+	int32 GetImpactCount() const { return ImpactCount; }
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -52,4 +71,21 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	TObjectPtr<UProjectileMovementComponent> Movement;
+
+	// Shows Visual.Mesh (no collision). Empty until a mesh is set.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile|Art")
+	TObjectPtr<UStaticMeshComponent> VisualMesh;
+
+	// Server, once, right before it is destroyed by a hit or explosion: every machine plays the impact.
+	void NotifyImpact(const FVector& Location);
+
+	// Reliable: it is sent right before the actor goes away, and an impact is rare.
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastImpact(FVector_NetQuantize Location);
+
+private:
+	// Every rendering machine: Visual's mesh and trail.
+	void ApplyVisual();
+	bool bImpactNotified = false;
+	int32 ImpactCount = 0;
 };

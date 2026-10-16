@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/NetSerialization.h"
 #include "Items/CrossguardItemTypes.h"
 #include "UObject/SoftObjectPtr.h"
 
@@ -139,6 +140,10 @@ namespace CrossguardCosmetics
 
 	CROSSGUARD_API void SpawnFxAt(const UObject* WorldContext, const TSoftObjectPtr<UNiagaraSystem>& System, const FVector& Location,
 		const FRotator& Rotation = FRotator::ZeroRotator);
+
+	// An ammo or throwable row's art (projectileMesh, trailVfx, impactVfx, impactSound); unset fields
+	// stay empty (FCrossguardProjectileVisual::MergeFrom keeps the Blueprint's for them).
+	CROSSGUARD_API FCrossguardProjectileVisual ProjectileVisualFromItem(const FCrossguardItemRow& Row);
 
 	// Attached to Parent (kept relative), destroyed with it.
 	CROSSGUARD_API UNiagaraComponent* SpawnFxAttached(const TSoftObjectPtr<UNiagaraSystem>& System, USceneComponent* Parent);

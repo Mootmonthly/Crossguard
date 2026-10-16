@@ -7,6 +7,9 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Skills/CrossguardSkillAbility.h"
 #include "Components/SphereComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
+#include "Net/UnrealNetwork.h"
 
 ACrossguardProjectile::ACrossguardProjectile()
 {
@@ -25,11 +28,59 @@ ACrossguardProjectile::ACrossguardProjectile()
 	Movement->MaxSpeed = 4000.0f;
 	Movement->bRotationFollowsVelocity = true;
 	Movement->ProjectileGravityScale = 0.0f;
+
+	VisualMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("VisualMesh"));
+	VisualMesh->SetupAttachment(Collision);
+	VisualMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	VisualMesh->SetGenerateOverlapEvents(false);
+}
+
+void ACrossguardProjectile::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	// Set before FinishSpawning: it arrives with the spawn.
+	DOREPLIFETIME_CONDITION(ACrossguardProjectile, Visual, COND_InitialOnly);
+}
+
+void ACrossguardProjectile::ApplyVisual()
+{
+	if (!CrossguardCosmetics::CanPlay(this))
+	{
+		return;
+	}
+	if (!Visual.Mesh.IsNull() && VisualMesh->GetStaticMesh() == nullptr)
+	{
+		if (UStaticMesh* Mesh = Visual.Mesh.LoadSynchronous())
+		{
+			VisualMesh->SetStaticMesh(Mesh);
+			VisualMesh->SetRelativeRotation(Visual.MeshRotation);
+			VisualMesh->SetRelativeScale3D(Visual.MeshScale);
+		}
+	}
+	CrossguardCosmetics::SpawnFxAttached(Visual.TrailVfx, Collision);
+}
+
+void ACrossguardProjectile::NotifyImpact(const FVector& Location)
+{
+	if (HasAuthority() && !bImpactNotified)
+	{
+		bImpactNotified = true;
+		MulticastImpact(Location);
+	}
+}
+
+void ACrossguardProjectile::MulticastImpact_Implementation(FVector_NetQuantize Location)
+{
+	++ImpactCount;
+	CrossguardCosmetics::SpawnFxAt(this, Visual.ImpactVfx, Location);
+	CrossguardCosmetics::PlaySoundAt(this, Visual.ImpactSound, Location);
+	OnProjectileImpact(Location);
 }
 
 void ACrossguardProjectile::BeginPlay()
 {
 	Super::BeginPlay();
+	ApplyVisual();
 
 	if (AActor* Shooter = GetInstigator())
 	{
@@ -63,6 +114,7 @@ void ACrossguardProjectile::HandleImpact(AActor* OtherActor, const FHitResult& H
 			const float Through = CrossguardGuard::ApplyHit(ShooterASC, OtherActor, DamageSpec, GuardHit);
 			if (Through <= 0.0f)
 			{
+				NotifyImpact(Hit.bBlockingHit ? FVector(Hit.ImpactPoint) : GetActorLocation());
 				Destroy();
 				return;
 			}
@@ -77,5 +129,6 @@ void ACrossguardProjectile::HandleImpact(AActor* OtherActor, const FHitResult& H
 			UCrossguardWeaponAttackAbility::FinishMeleeHits(Landed, ShooterASC, {OtherActor});
 		}
 	}
+	NotifyImpact(Hit.bBlockingHit ? FVector(Hit.ImpactPoint) : GetActorLocation());
 	Destroy();
 }

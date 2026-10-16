@@ -40,6 +40,7 @@ void ACrossguardSpellProjectile::Explode(const FVector& Center, AActor* DirectTa
 		return;
 	}
 	bExploded = true;
+	NotifyImpact(Center);
 
 	UAbilitySystemComponent* DirectASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(DirectTarget);
 	if (DirectASC != nullptr && DamageSpec.IsValid())
