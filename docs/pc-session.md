@@ -131,5 +131,5 @@ hand** column of [editor-tests.md](editor-tests.md#checklist-coverage)):
 - `CrossguardCooldownEffect` "grants no tags" warning: cooldown tags are added per cast, so it is noise.
   If it is worth silencing, give the effect class a target-tags component with a harmless parent tag
   (e.g. `Cooldown`) — compile and rerun the cooldown tests after.
-- Ask the owner before deleting `test+new.umap` / `L_Test.umap` or touching the Android File Server
-  `SecurityToken` in `DefaultEngine.ini`.
+- Keep `test+new.umap` / `L_Test.umap` (the owner playtests in them). Android File Server is disabled in the .uproject;
+  if the editor asks to re-enable it or regenerates a `SecurityToken`, decline and don't commit it.
