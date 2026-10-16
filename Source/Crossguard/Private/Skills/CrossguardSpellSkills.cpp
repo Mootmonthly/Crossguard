@@ -368,12 +368,16 @@ void UCrossguardSummonSkeletonsAbility::ActivateAbility(const FGameplayAbilitySp
 		// The previous ones still standing die.
 		DismissMinions();
 
-		const auto Skeleton = [](ECrossguardCombatRole Role, float Health)
+		const auto Skeleton = [](ECrossguardCombatRole Role, float Health, const FCrossguardBodyVisual& Visual)
 		{
-			return [Role, Health](ACrossguardMinion& Minion)
+			return [Role, Health, Visual](ACrossguardMinion& Minion)
 			{
 				Minion.CombatRole = Role;
 				Minion.FixedHealth = Health;
+				if (Visual.HasMesh())
+				{
+					Minion.BodyVisual = Visual;
+				}
 			};
 		};
 		// In a ring around the caster, the Mage behind.
@@ -383,10 +387,10 @@ void UCrossguardSummonSkeletonsAbility::ActivateAbility(const FGameplayAbilitySp
 		{
 			const float Yaw = -90.0f + 180.0f * Index / (SkeletonWarriors - 1);
 			const FVector Offset = Facing.RotateVector(FRotator(0.0f, Yaw, 0.0f).Vector() * SkeletonRingRadius);
-			SpawnMinion(WarriorClass, Center + Offset, SkeletonSeconds, Skeleton(ECrossguardCombatRole::Warrior, SkeletonWarriorHealth));
+			SpawnMinion(WarriorClass, Center + Offset, SkeletonSeconds, Skeleton(ECrossguardCombatRole::Warrior, SkeletonWarriorHealth, WarriorVisual));
 		}
 		SpawnMinion(MageClass, Center - Facing.Vector() * SkeletonRingRadius, SkeletonSeconds,
-			Skeleton(ECrossguardCombatRole::Mage, SkeletonMageHealth));
+			Skeleton(ECrossguardCombatRole::Mage, SkeletonMageHealth, MageVisual));
 	}
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }
@@ -441,6 +445,10 @@ void UCrossguardSummonCompanionAbility::ActivateAbility(const FGameplayAbilitySp
 				Minion.ImpactPower = ImpactPower;
 				Minion.SkillIds = Skills;
 				Minion.SkillCatalog = Catalog;
+				if (CompanionVisual.HasMesh())
+				{
+					Minion.BodyVisual = CompanionVisual;
+				}
 			},
 			Scale);
 	}

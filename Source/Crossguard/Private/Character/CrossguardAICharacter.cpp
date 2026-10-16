@@ -20,6 +20,9 @@
 #include "Game/CrossguardTeamLibrary.h"
 #include "TimerManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Animation/AnimInstance.h"
+#include "Engine/SkeletalMesh.h"
+#include "Net/UnrealNetwork.h"
 #include "Skills/CrossguardDataPassiveAbility.h"
 #include "Skills/CrossguardNativeSkills.h"
 #include "Skills/CrossguardSkillAbility.h"
@@ -67,6 +70,65 @@ ACrossguardAICharacter::ACrossguardAICharacter()
 		const float HalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 		PlaceholderMesh->SetRelativeScale3D(FVector(Radius / 50.0f, Radius / 50.0f, HalfHeight / 50.0f));
 	}
+}
+
+void ACrossguardAICharacter::BeginPlay()
+{
+	Super::BeginPlay();
+	ApplyBodyVisual();
+}
+
+void ACrossguardAICharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ACrossguardAICharacter, BodyVisual);
+}
+
+void ACrossguardAICharacter::OnRep_BodyVisual()
+{
+	ApplyBodyVisual();
+}
+
+void ACrossguardAICharacter::ApplyBodyVisual()
+{
+	USkeletalMeshComponent* Body = GetMesh();
+	if (!BodyVisual.HasMesh() || Body == nullptr)
+	{
+		return;
+	}
+	// Loaded on the server too: the body container copies the mesh, and the ragdoll needs it.
+	USkeletalMesh* LoadedMesh = BodyVisual.Mesh.LoadSynchronous();
+	if (LoadedMesh == nullptr)
+	{
+		UE_LOG(LogCrossguard, Warning, TEXT("%s: body mesh '%s' not found"), *GetName(), *BodyVisual.Mesh.ToString());
+		return;
+	}
+	Body->SetSkeletalMeshAsset(LoadedMesh);
+	if (!BodyVisual.AnimClass.IsNull())
+	{
+		if (UClass* AnimClass = BodyVisual.AnimClass.LoadSynchronous())
+		{
+			Body->SetAnimInstanceClass(AnimClass);
+		}
+	}
+	// Feet at the capsule's bottom (unscaled: the actor's scale applies on top), then the data's offset.
+	const float HalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+	SetBodyMeshRelativeTransform(FTransform(FRotator(0.0f, BodyVisual.MeshYaw, 0.0f),
+		FVector(0.0f, 0.0f, -HalfHeight) + BodyVisual.MeshOffset, FVector(FMath::Max(BodyVisual.MeshScale, 0.01f))));
+	Body->SetVisibility(true);
+	PlaceholderMesh->SetVisibility(false);
+}
+
+void ACrossguardAICharacter::NotifyAIAttack(ECrossguardAttackKind Kind, float Duration, FName SkillId)
+{
+	FCrossguardAttackCue Cue;
+	Cue.Kind = Kind;
+	const TOptional<ECrossguardWeaponType> Held = GetWieldedWeapon();
+	Cue.bHasWeapon = Held.IsSet();
+	Cue.WeaponType = Held.Get(ECrossguardWeaponType::Sword);
+	Cue.Duration = Duration;
+	Cue.SkillId = SkillId;
+	NotifyAttackStarted(Cue);
 }
 
 void ACrossguardAICharacter::PossessedBy(AController* NewController)
@@ -318,6 +380,7 @@ bool ACrossguardAICharacter::TryAttack(AActor* Target)
 		GetActorEyesViewPoint(Eyes, Unused);
 		const FVector Direction = (Target->GetActorLocation() - Eyes).GetSafeNormal();
 		BreakOwnStealth();
+		NotifyAIAttack(ECrossguardAttackKind::Cast, FireballInterval, TEXT("fireball"));
 		UCrossguardFireballAbility::LaunchFireball(ASC, FireballClass, Eyes, Direction);
 		NextAttackTime = Now + FireballInterval;
 		return true;
@@ -334,6 +397,7 @@ bool ACrossguardAICharacter::TryAttack(AActor* Target)
 		: FCrossguardRiderAttack::ForAIMelee(GetWieldedWeapon());
 	// Attacking gives it away, as a player's attack does.
 	BreakOwnStealth();
+	NotifyAIAttack(bRanged ? ECrossguardAttackKind::Ranged : ECrossguardAttackKind::Melee, ActionSpeedInterval(AttackInterval));
 	const FCrossguardAttackRiders Riders = UCrossguardWeaponAttackAbility::GatherRiders(Attack, ASC);
 	const FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(UCrossguardDamageEffect::StaticClass(), 1.0f, ASC->MakeEffectContext());
 	if (Spec.IsValid())

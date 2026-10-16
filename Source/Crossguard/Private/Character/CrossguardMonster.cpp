@@ -82,6 +82,16 @@ void ACrossguardMonster::ApplyMobData()
 		SkillCatalog = GameMode->MobSkillCatalog;
 	}
 	GrantSkills();
+	// Art: its own mesh from data (mixed spawners give every mob its look). Replicated to clients.
+	if (!Row->Mesh.IsNull())
+	{
+		BodyVisual.Mesh = Row->Mesh;
+		BodyVisual.AnimClass = Row->AnimClass;
+		BodyVisual.MeshScale = Row->MeshScale;
+		BodyVisual.MeshOffset = Row->MeshOffset;
+		BodyVisual.MeshYaw = Row->MeshYaw;
+		ApplyBodyVisual();
+	}
 }
 
 void ACrossguardMonster::OnRep_MobScale()

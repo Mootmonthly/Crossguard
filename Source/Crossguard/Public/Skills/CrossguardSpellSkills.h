@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Combat/CrossguardCosmetics.h"
 #include "CoreMinimal.h"
 #include "Skills/CrossguardSkillAbility.h"
 
@@ -160,6 +161,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Summon")
 	TSubclassOf<ACrossguardMinion> MageClass;
 
+	// Art: the skeletons' bodies (skeletal mesh, Anim Blueprint, scale, offset) without a Blueprint
+	// subclass per look. Empty: the class's own (the placeholder cylinder).
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Summon|Art")
+	FCrossguardBodyVisual WarriorVisual;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Summon|Art")
+	FCrossguardBodyVisual MageVisual;
+
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 };
@@ -175,6 +184,10 @@ public:
 	// Set a Blueprint subclass for the mesh.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Summon")
 	TSubclassOf<ACrossguardMinion> CompanionClass;
+
+	// Art: the companion's body (the tiger's, the demon's). Empty: the class's own.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Summon|Art")
+	FCrossguardBodyVisual CompanionVisual;
 
 	UCrossguardSummonCompanionAbility();
 

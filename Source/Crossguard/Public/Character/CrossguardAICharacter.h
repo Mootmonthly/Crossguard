@@ -143,6 +143,18 @@ public:
 	// Server. Back to full Health (monsters giving up the chase).
 	void RestoreFullHealth();
 
+	// Art: its body from data (a mob row's mesh fields, a summon ability's settings). Set before
+	// BeginPlay (spawners: before FinishSpawning) or call ApplyBodyVisual after changing it on the
+	// server. Replicated: every machine swaps the placeholder cylinder for the mesh. Empty Mesh: the
+	// cylinder (or whatever the Blueprint set).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_BodyVisual, Category = "Crossguard|Art")
+	FCrossguardBodyVisual BodyVisual;
+
+	// Puts BodyVisual on the body mesh and hides the placeholder (does nothing without a mesh).
+	void ApplyBodyVisual();
+
+	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void PossessedBy(AController* NewController) override;
 	// Monsters and minions stay dead (a revive would duplicate a monster's loot).
 	virtual bool CanBeRevived() const override { return false; }
@@ -151,7 +163,16 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Crossguard|AI")
 	TObjectPtr<UStaticMeshComponent> PlaceholderMesh;
 
+public:
+	// The placeholder cylinder (tests: hidden once a mesh from data is on).
+	UStaticMeshComponent* GetPlaceholderMesh() const { return PlaceholderMesh; }
+
 private:
+	UFUNCTION()
+	void OnRep_BodyVisual();
+	// Server: its attack starts on every machine (art hook).
+	void NotifyAIAttack(ECrossguardAttackKind Kind, float Duration, FName SkillId = NAME_None);
+
 	void ClearSkills();
 	// Ends its Stealth (it attacked).
 	void BreakOwnStealth();
