@@ -272,7 +272,7 @@ Independent of category, a skill is:
 
 ## Hub and main menu
 
-Details: [hub-and-menu.md](hub-and-menu.md). Nothing here is ruled; all **(placeholder, Assumed)**:
+Details: [hub-and-menu.md](hub-and-menu.md). All **(placeholder, Assumed)** except the trip back to the hub (ruled):
 
 - Title screen `L_MainMenu` (Game Default Map): Play hosts the hub `L_Hub` as a listen server, Join
   connects to a typed address, Settings (mouse sensitivity 0.1–5, field of view 60–120°, master volume;
@@ -282,8 +282,21 @@ Details: [hub-and-menu.md](hub-and-menu.md). Nothing here is ruled; all **(place
   only); others get "Only your party's leader can start the raid.".
 - The raid map is `L_DevSandbox` until a real one exists.
 - A player dead for the raid with no teammate left goes to `L_MainMenu` ("Your raid is over.").
-  Extracting does not yet lead back to the hub (open question for the owner: the listen-server hub
-  is gone while its host raids).
+- **Ruled (owner), back to the hub, option 1**: once every player in the raid is done (extracted or
+  dead for the raid), the whole server travels back to the hub map (seamless ServerTravel, the
+  reverse of the raid launch) and everyone still on it comes along; extracted players spectate until
+  then. Disconnected raiders held for a reconnect count as still in the raid until they die or
+  reconnect and finish, or until a grace runs out. Option 2 (dedicated hub servers) comes later
+  ([roadmap.md](roadmap.md), Milestone 5). Details: [hub-and-menu.md](hub-and-menu.md), "Back to the
+  hub". **(placeholder)**: the countdown once nobody is left is **10 s** ("Returning to the hub in
+  N s" on the HUD); with only held raiders left the server waits **120 s** for them. **Assumed**: a
+  held character still in the raid when the server leaves fails its extraction (released as a death
+  while away: raid XP and carried gear lost; same rule as "the raid ends while away" under
+  Reconnecting); party members not on the server at the return (gone to the menu, released, logged
+  out) leave their parties, as a hub logout does; a dead player spectating a held teammate who is
+  released at the return comes along instead of going to the menu; the hub URL also carries `?Hub`
+  (besides the hub marker); with nobody connected (only held raiders) there is no countdown at all;
+  the trip back is off when the game mode's `HubMapName` is empty (e.g. a separate raid server).
 
 ## Extraction
 
@@ -304,8 +317,9 @@ point of interest instead of only using fixed extraction points. Ruled details:
 - Ruled (owner): an extracted character leaves the raid at once and the player spectates a
   teammate still in the raid. Its gear is saved as carried out, then the character is removed from
   the world (nothing stays behind, unlike a death's body); it can no longer pick up, loot, open or
-  trade, and keeps no portal alive. Assumed (placeholder until the trip to the hub exists): with no
-  teammate left the player stays where they extracted (not sent to the menu, unlike a solo death).
+  trade, and keeps no portal alive. With no teammate left the player stays where they extracted (not
+  sent to the menu, unlike a solo death) until the server goes back to the hub (ruled, option 1:
+  "Hub and main menu").
 
 ## Gathering
 
@@ -606,7 +620,8 @@ match, as long as their character has not died yet. How it works: [persistence.m
   hub path. The same refusal applies to a player who extracted or died for the raid and then logged
   out.
 - Assumed: if the raid ends or the server shuts down while the player is away, their character was
-  still in the raid: a failed extraction (gear lost). The stored save is the raid start's (no carried
+  still in the raid: a failed extraction (gear lost). The return to the hub releases such players
+  before travelling (after the **120 s** grace, placeholder; "Hub and main menu"). The stored save is the raid start's (no carried
   gear, `inRaid`), which loads as exactly that.
 - Assumed: the save is not written at the disconnect (the raid's record stays pending); the raid's
   end for that player saves as usual (extraction after reconnecting, or failure).

@@ -42,6 +42,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Crossguard|UI")
 	FString GetInteractPrompt() const { return InteractPrompt; }
 
+	// The message line as shown now (empty once it has timed out at a refresh). Tests.
+	UFUNCTION(BlueprintPure, Category = "Crossguard|UI")
+	FString GetMessageLine() const;
+
 	// "F: Loot body" for what F would use now; empty if nothing. Mirrors the character's choice
 	// (nearest interactable in range, roughly in front), for display only.
 	static FString DescribeInteraction(const ACrossguardCharacter* Character, const AActor* Target);

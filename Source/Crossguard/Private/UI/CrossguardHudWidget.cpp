@@ -151,6 +151,11 @@ void UCrossguardHudWidget::ShowMessage(const FString& Message, FLinearColor Colo
 	MessageUntil = (World != nullptr ? World->GetTimeSeconds() : 0.0) + Seconds;
 }
 
+FString UCrossguardHudWidget::GetMessageLine() const
+{
+	return MessageText != nullptr ? MessageText->GetText().ToString() : FString();
+}
+
 void UCrossguardHudWidget::NativeRefresh()
 {
 	ACrossguardCharacter* Character = GetCrossguardCharacter();

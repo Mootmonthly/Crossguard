@@ -155,6 +155,8 @@ These are called from Blueprint (e.g. a debug widget or the Level Blueprint) unt
 | Open `L_Hub` directly (no `?Hub`) | Still a hub: the stash opens (it is refused in a raid). |
 | Raid portal alone | Travels to `L_DevSandbox`, a raid (monsters, XP held). As a party member (second PC joined with Join): refused, HUD "Only your party's leader can start the raid."; the leader's F takes both. |
 | Die for the raid as a client with no teammate left | The client lands on `L_MainMenu` with "Your raid is over.". |
+| Back to the hub: Menu → Play, raid portal alone, extract (an extraction zone, or a portal after the unlock) | HUD "Returning to the hub in 10 s" counting down; then the listen server travels to `L_Hub` (log "server travel back to the hub"); you spawn in the hub with the gear you carried out, the banked XP (extraction included) and gold; the stash opens (a hub). Paste the log lines. |
+| Back to the hub with two PCs (PC 2 joined, one party): PC 1 extracts, PC 2 still raids | No countdown while PC 2 raids. PC 2 extracts (or dies for the raid and stays spectating): 10 s, then both are in `L_Hub`, still one party (`PartyInfo`), PC 1 can launch again. Variant: kill PC 2's process mid-raid after PC 1 extracted: "Returning to the hub in 120 s"; relaunching PC 2 within the grace calls it off ("called off"); otherwise PC 1 goes back alone and PC 2's raid failed ("was still away when the raid ended"). |
 
 ## 6. Two players (PIE, 2 clients, Listen Server)
 

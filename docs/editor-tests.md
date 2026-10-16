@@ -156,10 +156,10 @@ damage is computed from the characters' actual stats, so they work at any level.
 
 ### The scenarios
 
-155 tests in 25 files (137 `Crossguard.Scenario.*`, 10 `Crossguard.Net.*`, 8 `Crossguard.Visual.*`;
+157 tests in 26 files (139 `Crossguard.Scenario.*`, 10 `Crossguard.Net.*`, 8 `Crossguard.Visual.*`;
 2026-10-16; `Net.SeamlessTravelHubToRaid`, `Scenario.UI.StashAndVendor`, `Visual.HubUI`,
 `Scenario.UI.PanelsBind`, `Net.ReconnectShowsDisconnected`, `Scenario.Hub.MainMenuBinds` /
-`HubMarker` / `RaidPortal` and `Scenario.Art.*` not yet built). Grouped by file; the name is the full test name.
+`HubMarker` / `RaidPortal`, `Scenario.Art.*` and `Scenario.HubReturn.*` not yet built). Grouped by file; the name is the full test name.
 
 **`CrossguardScenarioRaidTests.cpp`**
 
@@ -382,7 +382,7 @@ game mode's Mob Table is unset.
 
 | Test | Checks |
 | --- | --- |
-| `Crossguard.Net.SeamlessTravelHubToRaid` | Listen server + 1 client in the hub (`Raid(false)`), saving on into a temporary folder (`Saved\Automation\TravelTests`, deleted after). The host invites, client 1 accepts; each banks quest XP and gold, holds a weapon (Rare sword / Uncommon axe) and carries potions or bandages and a ruby. `RaidMapName` = `/Game/Maps/Dev/L_DevSandbox`; the plan is a ServerTravel with `?Party=<id>`; the leader's `StartRaid` travels **seamlessly** for real (`net.AllowPIESeamlessTravel` set to 1 for the run, restored after, also on failure). On the raid map, server side: exactly two player states, each found by its **engine PlayerId** (copied only by seamless travel), same player id and `DevPlayerId`, party key and party view = the party id, allies on one team, same banked XP, level and gold, same weapon in hand and same inventory (kinds and counts; the debug loadout included), raid begun with 0 raid XP, the game mode a raid (`bIsRaid`); the save entry followed the new player state (state Ready, a record with the same player id marked in-raid, the raid start written); no `is online with that id`, `You are already in this match`, `could not rejoin a team after travel` or `NOT supported in single process PIE` in the log. Each client's world is the raid map with its own pawn and its party view. Skipped (warning) without `L_DevSandbox` (`Tools\editor_setup.bat -CreateMap`), without the cvar, or with `-RaidMap=` on the command line. |
+| `Crossguard.Net.SeamlessTravelHubToRaid` | Listen server + 1 client in the hub (`Raid(false)`), saving on into a temporary folder (`Saved\Automation\TravelTests`, deleted after). The host invites, client 1 accepts; each banks quest XP and gold, holds a weapon (Rare sword / Uncommon axe) and carries potions or bandages and a ruby. `RaidMapName` = `/Game/Maps/Dev/L_DevSandbox`; the plan is a ServerTravel with `?Party=<id>`; the leader's `StartRaid` travels **seamlessly** for real (`net.AllowPIESeamlessTravel` set to 1 for the run, restored after, also on failure). On the raid map, server side: exactly two player states, each found by its **engine PlayerId** (copied only by seamless travel), same player id and `DevPlayerId`, party key and party view = the party id, allies on one team, same banked XP, level and gold, same weapon in hand and same inventory (kinds and counts; the debug loadout included), raid begun with 0 raid XP, the game mode a raid (`bIsRaid`); the save entry followed the new player state (state Ready, a record with the same player id marked in-raid, the raid start written); no `is online with that id`, `You are already in this match`, `could not rejoin a team after travel` or `NOT supported in single process PIE` in the log. Each client's world is the raid map with its own pawn and its party view. Skipped (warning) without `L_DevSandbox` (`Tools\editor_setup.bat -CreateMap`), without the cvar, or with `-RaidMap=` on the command line. **Way back** (`/Game/Maps/L_Hub`; the rest skipped with a warning without it or with `-HubMap=`): both extract (countdown set to 1 s, `bHubReturnTravelInTests`), the countdown runs, the server travels seamlessly to `L_Hub`; there: the hub plays as the hub (`bIsRaid` off), two player states found by engine PlayerId, each with a pawn on server and client, same player id, party key and view, still allies, banked XP (extraction included), level and gold as after extracting, not in a raid and `HasFinishedRaid` false, the weapon in hand and inventory they carried out (gold coins aside), the save Ready and not a raid record; the leader may plan the next launch; log "server travel back to the hub" and none of the bad lines. |
 
 **`CrossguardScenarioSaveTests.cpp`** (character saves, [persistence.md](persistence.md); saving is off in tests, so these turn it on with a temporary folder under `Saved\Automation\SaveTests` and delete it at the end)
 
@@ -411,6 +411,15 @@ game mode's Mob Table is unset.
 | `Crossguard.Scenario.Hub.MainMenuBinds` | `UCrossguardMainMenuWidget` builds for the PIE player in C++; main buttons Play, Join, Settings, Quit in that order; Play's URL is `/Game/Maps/L_Hub?listen?Hub` (no menu game mode in the test world: the default); Join's URL is the trimmed field, none when empty, and clicking Join then refuses with a status line; Settings opens and closes, a field of view step changes it, volume clamps at 100 % (not saved). |
 | `Crossguard.Scenario.Hub.HubMarker` | On a raid map with no marker `IsHubMap` is false (`?Hub` alone true); a spawned `ACrossguardHubMarker` makes `IsHubWorld` and `IsHubMap` true and, applied as `InitGame` does, `bIsRaid` off; destroyed, false again. Skipped if the test map already holds a marker. `InitGame` itself is not re-run. |
 | `Crossguard.Scenario.Hub.RaidPortal` | Hub (`bIsRaid` off): A leads a party with B, Solo alone, a raid server address set; a plan-only portal (`bPlanOnly`): B refused `NotLeader` (no URL), A plans a client travel to `127.0.0.1:7777?Party=<id>`, Solo to `127.0.0.1:7777`; in a raid A is refused `OnlyInHub`. The party board: prompt, and with a game viewport the PIE player's party window opens. |
+
+**`CrossguardScenarioHubReturnTests.cpp`** (the whole server back to the hub once nobody is left in the
+raid, [hub-and-menu.md](hub-and-menu.md) "Back to the hub"; countdown 1 s and grace 3 s for the run,
+plan only: `bHubReturnPlanOnly`, nothing travels. `Net.SeamlessTravelHubToRaid` travels back for real)
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.HubReturn.LastExtractionStartsCountdown` | The PIE player and another raider; the other extracts: no countdown, and none after longer than the countdown (a remaining raider keeps the raid going). The PIE player extracts too: the countdown runs (the short one, not waiting for anyone away), log "Raid over: returning to the hub in 1 s", the PIE player's HUD message line "Returning to the hub in 1 s" (warning if it has no HUD widget). At its end the return starts: the planned URL is `BuildHubReturnUrl(HubMapName, listen?)` (the hub map, `?Hub`), log "Return to the hub planned". Skipped if the game mode's Hub Map Name is empty. |
+| `Crossguard.Scenario.HubReturn.HeldOnlyWaitsForGrace` | A raider with a development id; the PIE player extracts (no countdown). The raider's connection closes: held, the countdown runs and waits for them (the grace, longer than the countdown). They log in again: the countdown is called off (log), and nothing starts past the grace. Disconnected again: the grace starts over; when it runs out (not before), they are released: no longer held, their raid here over (a failed extraction), log "was still away when the raid ended", the character left behind no longer theirs; the planned URL targets the hub. Skipped without `ACrossguardPlayerController`. |
 
 **`CrossguardScenarioArtHookTests.cpp`** (art hooks, [art-placeholder-plan.md](art-placeholder-plan.md#how-the-art-hooks-into-the-code).
 The data has no art yet: a weapon or mob row's mesh is set in memory around the equip or spawn and put
@@ -525,7 +534,7 @@ use server-side players in one standalone PIE; `Crossguard.Net.*` use real PIE c
 | 6 Both see bodies ragdoll | auto | `Net.DeathRagdollsOnEveryClient`, `Visual.RagdollBody` | — |
 | 6 `showdebug` shows the other's `Equipment.Wielding.*` | auto | `Net.WieldingTagsReplicate` | The debug HUD itself. |
 | 6 Concurrent loot never duplicates | auto | `Social.ConcurrentLootNeverDuplicates`, `Net.ConcurrentLootFromTwoClients` | — |
-| 6 Parties and the raid launch | part | `Net.PartyInviteAcceptMakesAllies`, `Net.PartyKickPromoteLeave`, `Hub.PartyRaidLaunchPlan`, `Net.SeamlessTravelHubToRaid` (unbuilt) | Two PCs (a real network, not one process); the ClientTravel path to a raid server. |
+| 6 Parties and the raid launch | part | `Net.PartyInviteAcceptMakesAllies`, `Net.PartyKickPromoteLeave`, `Hub.PartyRaidLaunchPlan`, `Net.SeamlessTravelHubToRaid` (there and back; unbuilt), `HubReturn.*` (unbuilt) | Two PCs (a real network, not one process); the ClientTravel path to a raid server. |
 | 6 Reconnecting mid-raid | part | `Reconnect.RetakesCharacter`, `Reconnect.DiedWhileAway`, `Net.ReconnectShowsDisconnected` (the teammate's marker) | A real crash and relaunch (two processes): the connection timeout, the client getting its pawn and HUD back. |
 
 Totals: 69 rows: 65 auto, 3 script, 1 part (the party raid launch's travel), none manual (2026-10-16). What the "By hand" column
@@ -542,7 +551,8 @@ rows: `Combat.ArrowBlockedNoStun`, `SwingClash`, `AIIgnoresAllySwings`, `StunBlo
   (`Crossguard.Net.*`); keys are untested, and the UI only to the point that its widgets build and
   show the right state (`Scenario.UI.WidgetsBind`): nothing is drawn or clicked by a mouse.
 - Map travel: only `Net.SeamlessTravelHubToRaid` travels, in one process (single-process PIE with
-  `net.AllowPIESeamlessTravel 1`, the engine's own caveat), to a saved map (`L_DevSandbox`). A non-seamless
+  `net.AllowPIESeamlessTravel 1`, the engine's own caveat), to saved maps (`L_DevSandbox` and back to
+  `L_Hub`). A non-seamless
   travel, the ClientTravel path to a separate raid server, and travel between two machines are untested.
 - Networked tests drive clients from C++ (`ActivateSkill` on the client pawn, inventory requests on
   the client component): the real path from a key press to the request is not covered.

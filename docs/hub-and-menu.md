@@ -5,15 +5,17 @@ How a player gets from the title screen into a raid and back. Code: `ACrossguard
 `UCrossguardSettingsSave`, `ACrossguardHubMarker`, `ACrossguardRaidPortal` and
 `ACrossguardPartyBoard` (Interaction). Maps are made by `Tools/editor_setup.py` (`-CreateMenu`,
 `-CreateHub`; [pc-session.md](pc-session.md)). Tests: `Crossguard.Menu.Urls`,
-`Crossguard.Scenario.Hub.MainMenuBinds`, `.HubMarker`, `.RaidPortal`
+`Crossguard.Scenario.Hub.MainMenuBinds`, `.HubMarker`, `.RaidPortal`,
+`Crossguard.Scenario.HubReturn.*`, `Crossguard.Net.SeamlessTravelHubToRaid` (there and back)
 ([editor-tests.md](editor-tests.md)).
 
 ## Flow
 
 ```
-L_MainMenu --Play--> L_Hub (listen server) --raid portal / Start raid--> raid map --extract--> (spectate; hub trip not built)
-     ^   \--Join <address>--> someone's hub                                  |
-     +-------------------- dead for the raid, no teammate left --------------+
+L_MainMenu --Play--> L_Hub (listen server) --raid portal / Start raid--> raid map --extract--> spectate
+     ^   \--Join       ^                                                   |                      |
+     |                 +--------- nobody left in the raid: the whole server travels back ---------+
+     +---------------- dead for the raid, no teammate left ----------------+
 ```
 
 1. **Menu** (`/Game/Maps/L_MainMenu`, the project's Game Default Map once `-CreateMenu` ran):
@@ -55,10 +57,40 @@ L_MainMenu --Play--> L_Hub (listen server) --raid portal / Start raid--> raid ma
    menu shows "Your raid is over.". `MenuMapName` defaults to `/Game/Maps/L_MainMenu`; empty or a map
    that does not exist falls back to the engine's `ClientReturnToMainMenuWithTextReason` (the Game
    Default Map). The listen-server host is never sent away (it would end the match for everyone).
-   **Extract → hub is not built**: an extracted player spectates / stays (ruled placeholder in
-   [design-decisions.md](design-decisions.md), Extraction). With a listen-server hub the hub no
-   longer exists during the raid (the host travelled), so the trip back needs either the whole server
-   travelling back to L_Hub when the raid ends, or dedicated hub servers; owner decision.
+   Those players are gone: they do not come back with the server.
+5. **Back to the hub** (ruled, owner: option 1, the whole server goes back; dedicated hub servers
+   are option 2, later: [roadmap.md](roadmap.md) Milestone 5). An extracted player spectates a
+   teammate still in the raid, or stays where they left. After every extraction, death for the raid,
+   release of a held player, logout, reconnect and new raider, `ACrossguardGameMode::UpdateHubReturn`
+   counts who is still in the raid:
+   - **Someone connected still raids** (alive or downed, or reconnecting): nothing happens; a running
+     countdown is called off ("Return to the hub called off: a raider is back.").
+   - **Nobody is left**: a countdown of `HubReturnCountdownSeconds` (**10 s, placeholder**); every
+     player's HUD message line shows "Returning to the hub in N s" (`ClientShowMessage`, once a
+     second).
+   - **Only raiders away** (disconnected, held for a reconnect: [persistence.md](persistence.md),
+     "Reconnecting"): they still count as in the raid, but only for `HeldPlayerReturnGraceSeconds`
+     (**120 s, placeholder**), shown the same way. A reconnect calls it off; a held character dying
+     meanwhile brings it down to the short countdown.
+   - Nobody connected at all (a solo raider crashed, everyone else went to the menu): no countdown;
+     the held character waits for its reconnect as before.
+   At the end (`ReturnToHub`): (1) raiders still away are released as if they died while away
+   (`ReleaseHeldPlayer`: raid failed, raid XP and carried gear lost, saved, no way back into that
+   raid: the existing Assumed rule); their spectators come along instead of going to the menu;
+   (2) party members not on the server (gone to the menu, released, logged out) leave their parties,
+   as logging out of the hub does ([parties.md](parties.md)); (3) every player's save is written
+   (`SaveNow`, then `FlushPendingSaves`): extracted players' record holds the gear they carried out,
+   the dead's none; (4) `UWorld::ServerTravel("<HubMapName>?listen?Hub", absolute)` (`?listen` only on
+   a listen server; `BuildHubReturnUrl`), seamless like the launch. `HubMapName` defaults to
+   `/Game/Maps/L_Hub`; `-HubMap=<path>` overrides it; empty turns the trip off (players stay as
+   before). A hub map that does not exist logs an error and nobody travels.
+   In the hub: `?Hub` and the hub marker turn `bIsRaid` off; seamless travel brings the player states
+   (party key, team, banked XP, gold, stash) and controllers; the new player states start with no
+   finished raid (`HasFinishedRaid` is not copied), so `PlayerCanRestart` spawns everyone; the save
+   subsystem puts each player's latest record (gear carried out) on the new pawn
+   (`PlayerJoined` / `PlayerReady`); parties are untouched (the subsystem lives with the game
+   instance), and the leader can launch the next raid.
+   The raid launch saves its travellers the same way before its `ServerTravel` / `ClientTravel`.
 
 ## Placeholders and assumptions
 
@@ -69,3 +101,9 @@ L_MainMenu --Play--> L_Hub (listen server) --raid portal / Start raid--> raid ma
 - `-CreateMenu` sets `GameDefaultMap` (packaged game starts on the menu); the editor startup map is
   left alone (the owner playtests in `L_Test` / `test+new`).
 - No message on a failed Join yet; no "back to menu" button in the hub (Esc closes windows only).
+- Back to the hub: 10 s countdown, 120 s grace for raiders away, both on the game mode. A raider away
+  when the server leaves fails their extraction (Assumed rule). Party members who are not on the
+  server at the return leave their parties (Assumed, as a hub logout). A dead player spectating a
+  held teammate who is released at the return comes along instead of going to the menu (Assumed).
+- A separate raid server (`RaidServerAddress`, clients travelled there) would also travel to its own
+  `HubMapName` and become a hub; set `HubMapName` empty there until option 2 (dedicated hubs) exists.

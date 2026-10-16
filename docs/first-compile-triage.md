@@ -307,7 +307,7 @@ follows it). Reviewed by reading; nothing built or run.
 | ST5 | Runtime: the editor during PIE seamless travel | `GEditor->PlayWorld`, `GEditor->GetPIEWorldContext(0)->World()` follow the travel | The runner reads instance 0's context world; `PlayWorld` only to tell whether PIE runs. If PIE ending after the travel hangs ("PIE did not end within 30 s"), the editor lost track of the travelled world. | End PIE from the context: `GEditor->RequestEndPlayMap()` is already used; report it (engine side). |
 | ST6 | Runtime: engine order in seamless travel | `APlayerState::CopyProperties` copies the engine `PlayerId` before `SetUniqueId` (S5) | Client 1 has no `DevPlayerId` (a remote PIE client), so its save id is `session-<PlayerId>`; the test is the check for S5. If "player id (save and party key)" or "save still tracked" fails for client 1 only: | S5's fix: call `Saves->PlayerJoined(Next)` and the party refresh again at the end of `ACrossguardPlayerState::CopyProperties`. |
 | ST7 | Runtime: the raid map | `L_DevSandbox`'s game mode must be a `CrossguardGameMode` with `bIsRaid` on (the C++ default; `editor_setup` does not change it) | If the Blueprint's `bIsRaid` is off, no raid begins on arrival and the arrival wait times out. | Leave `bIsRaid` on in `BP_CrossguardGameMode` (test maps use `?Hub` or `SetRaid`). |
-| ST8 | Runtime: carried gear | The hub record is taken by `MarkDirty` when the inventory / equipment changes (the watcher) and by `PlayerReady` | The test does not call `SaveNow` before the launch on purpose: if "carried items" or "weapon in hand" fail, the watcher missed a change and the real launch would lose it too. | Save the travellers (`SaveNow`) in `UCrossguardPartySubsystem::StartRaid` before `ServerTravel`. |
+| ST8 | Runtime: carried gear | The hub record is taken by `MarkDirty` when the inventory / equipment changes (the watcher) and by `PlayerReady` | **Applied**: `UCrossguardPartySubsystem::StartRaid` now saves the travellers (`SaveNow`, `FlushPendingSaves`) before travelling, and `ACrossguardGameMode::ReturnToHub` does the same on the way back. A watcher miss no longer shows in this test. | — |
 
 ### Stash and vendor screens (`Crossguard.Scenario.UI.StashAndVendor`, `Crossguard.Visual.HubUI`)
 
@@ -373,6 +373,27 @@ edits to `ACrossguardGameMode` (`IsHubMap`, `MenuMapName`, `ReturnToMenu`, `Raid
 | HM8 | Runtime: `Scenario.Hub.RaidPortal` | `Interact` on a `SpawnPlayer` member calls `ClientShowMessage` (client RPC on a server-side controller with no connection: runs locally, no HUD, no-op) | Assumed harmless. | — |
 | HM9 | `Tools/editor_setup.py` `create_hub_map` / `create_menu_map` | `set_editor_property("default_game_mode", unreal.CrossguardMenuGameMode.static_class())`; spawning `CrossguardHubMarker` (an `AInfo`) with `spawn_actor_from_class`; `new_level` making a non-World-Partition map | Python API from memory. | Run with `-Mode Editor`; or place `CrossguardHubMarker` by hand and set World Settings → GameMode Override. |
 | HM10 | `Tools/editor_setup.py` `set_game_default_map` | Text edit of `Config/DefaultEngine.ini` `[/Script/EngineSettings.GameMapsSettings]` | The running commandlet keeps the old value in memory (harmless). | Project Settings → Maps & Modes → Game Default Map. |
+
+### Back to the hub (`Crossguard.Scenario.HubReturn.*`, `Crossguard.Net.SeamlessTravelHubToRaid` way back)
+
+`ACrossguardGameMode`: `HubMapName`, `HubReturnCountdownSeconds`, `HeldPlayerReturnGraceSeconds`,
+`UpdateHubReturn` / `HubReturnTick` / `ReturnToHub`, `BuildHubReturnUrl`, `ReleaseHeldPlayer(Id,
+bRaidOver)`, namespace `CrossguardGameModeLocal`; `UCrossguardPartySubsystem::DropAbsentMembers` and
+saves before `StartRaid`'s travel; `UCrossguardHudWidget::GetMessageLine`; new
+`Tests/CrossguardScenarioHubReturnTests.cpp` (namespace `CrossguardScenarioHubReturn`, helpers
+prefixed `HubReturn`); the travel test's way back. Reviewed by reading; nothing built or run.
+
+| # | Where | Call | Why it may fail | Suggested fix |
+| --- | --- | --- | --- | --- |
+| HR1 | `Public/Game/CrossguardGameMode.h` | `#include "TimerManager.h"` for the `FTimerHandle` member | `FTimerHandle` lives in `Engine/TimerHandle.h` in 5.x; `TimerManager.h` includes it (the save subsystem header does the same). | `#include "Engine/TimerHandle.h"`. |
+| HR2 | `CrossguardGameMode.cpp` `UpdateHubReturn` / `HubReturnTick` | `UWorld::GetPlayerControllerIterator()`, `FConstPlayerControllerIterator`, `It->Get()` | As the scenario framework uses them. | — |
+| HR3 | `CrossguardGameMode.cpp` `UpdateHubReturn` | `UWorld::GetTimeSeconds()` taken as `double`; `FMath::Max(0.0f, float)` into a `double` | If 5.8 returns `float`, still fine (widened). | `static_cast<double>(...)`. |
+| HR4 | `CrossguardGameMode.cpp` `ReturnToHub` | `UWorld::ServerTravel(Url, true)` from a timer callback on a raid map, seamless | As `StartRaid`. Assumed `?Hub` and `?listen` in the URL reach the hub game mode's `InitGame` options after a seamless travel; the hub marker turns `bIsRaid` off anyway. If the hub plays as a raid: | Check the marker is in `L_Hub`'s persistent level (HM3). |
+| HR5 | `CrossguardGameMode.cpp` `Logout` | `SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, ...))` | Same shape as `HandleExtraction`'s. | — |
+| HR6 | Runtime: hub arrival | `HandleSeamlessTravelPlayer` → `HandleStartingNewPlayer` → `RestartPlayer` for a controller that had no pawn (extracted / dead, unpossessed) | Assumed the engine spawns a pawn for it as for the raid launch (`PlayerCanRestart` is true in the hub: new player states, `bIsRaid` off). If a traveller arrives without a pawn ("both travellers have a pawn" times out): | Call `RestartPlayer(C)` at the end of `HandleSeamlessTravelPlayer` when `!bIsRaid && C->GetPawn() == nullptr`. |
+| HR7 | Runtime: `Scenario.HubReturn.LastExtractionStartsCountdown` | `HandleExtraction` on the PIE player's own character; `ClientShowMessage` on the local controller runs at once (standalone) | If "HUD: the countdown line" fails while the log line passes: the HUD widget was not built yet in the test world. | Accept the warning path, or check after a `Wait(0.1f)`. |
+| HR8 | Runtime: `Net.SeamlessTravelHubToRaid` way back | The extracted pawns are destroyed next tick; the save record keeps their gear (no pawn: `Last.Carried`) | If "carried items (gold coins banked)" fails in the hub: the extraction save or `ReturnToHub`'s `SaveNow` lost the gear. | Compare the record built right after `HandleExtraction` (`BuildRecord`) with the hub's inventory to see which step dropped it. |
+| HR9 | `CrossguardPartySubsystem.cpp` `DropAbsentMembers` | Iterates `Registry.All()` (an `std::unordered_map`), then leaves; `SyncParty` on a raid map (`SetPlayerParty`) | Collected before changing. Moves remaining members' teams just before the travel (harmless; `HandleSeamlessTravelPlayer` joins them again). | — |
 
 ### Art hooks (`Crossguard.Scenario.Art.*`)
 

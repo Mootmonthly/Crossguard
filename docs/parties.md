@@ -125,7 +125,11 @@ The URL is built by `Crossguard::BuildRaidTravelUrl` (`UCrossguardPartySubsystem
 3. PC 1 `PartyInvite <PC 2's name>` (`PartyInfo` lists names), PC 2 `PartyAccept`. Both are allies.
 4. PC 1 (leader) `PartyStartRaid`: the whole server is the party, so the listen server travels to the
    raid map (an absolute travel: `?Hub` does not carry over, so it is a raid) and PC 2 follows; both
-   on one team.
+   on one team. Each traveller's save is written first (`SaveNow`).
+5. Both extract (or die for the raid and stay spectating): once nobody is left in the raid, after
+   10 s the listen server travels back to the hub (`HubMapName`, `?listen?Hub`) and PC 2 follows, still
+   in the same party, the leader free to launch again ([hub-and-menu.md](hub-and-menu.md), "Back to
+   the hub").
 
 Seamless travel in PIE needs `net.AllowPIESeamlessTravel 1`; without it PIE falls back to a
 non-seamless travel (player states are re-created; the subsystem's fallback above still finds the
@@ -137,8 +141,9 @@ to `/Game/Maps/Dev/L_DevSandbox` with `net.AllowPIESeamlessTravel 1` (set for th
 checks on the raid map that both arrived with the same engine PlayerId (seamless, not a fresh login),
 player id, `DevPlayerId`, party (key, view, one team), banked XP, level, gold, weapon in hand and
 carried items (through the save subsystem's record), that their raid began, and that the save entry
-followed the new player state without a duplicate-login refusal. The ClientTravel path and a real
-two-machine travel stay manual.
+followed the new player state without a duplicate-login refusal. Then both extract and the server
+travels back to `/Game/Maps/L_Hub` (if it exists): same party, gear carried out, free to launch
+again. The ClientTravel path and a real two-machine travel stay manual.
 
 With a dedicated hub (or a listen host not in the party), set `RaidServerAddress` to a running raid
 server (e.g. a second process `Crossguard.exe /Game/L_Test?listen -game`, or a dedicated server):
@@ -166,7 +171,10 @@ Still assumed:
 3. A leader leaving hands the lead to the longest-standing member; the last member leaving
    disbands the party.
 4. Decline and promote work anywhere, in a raid too.
-5. Logging out of the hub leaves the party; logging out of a raid does not.
+5. Logging out of the hub leaves the party; logging out of a raid does not. When the server goes
+   back to the hub after a raid (`ACrossguardGameMode::ReturnToHub`), every party member who is not
+   on the server any more (sent to the menu, released while away, logged out) leaves their party
+   then (`UCrossguardPartySubsystem::DropAbsentMembers`); the rest keep their party in the hub.
 6. Raid launch: ServerTravel when the whole server is the party and `RaidMapName` is set, else
    ClientTravel to `RaidServerAddress`, refused when the listen host is in a party that is not the
    whole server. Both settings are placeholders until a matchmaker exists.
@@ -177,6 +185,7 @@ Still assumed:
 
 ## Not covered
 
-Persistence (parties live in hub memory), coming back from a raid as a party, a matchmaker and raid
+Persistence (parties live in hub memory), coming back from a raid as a party on another server
+(the whole-server return keeps parties: [hub-and-menu.md](hub-and-menu.md)), a matchmaker and raid
 server allocation, raid servers checking `?Party=` against the matchmaker, party chat, a ready
 check, and invite by friends list (Steam). A member held for a reconnect shows as "(disconnected)" in the panel (`ACrossguardPlayerState::IsDisconnected`).

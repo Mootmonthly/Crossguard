@@ -41,6 +41,7 @@ loses it like a failed extraction. A player whose own client crashes can reconne
 | Raid ends (extraction or failure) | `ACrossguardPlayerState::EndRaid` → `SaveNow` |
 | Logout | `ACrossguardGameMode::Logout` → `PlayerLeaving` (save, then forget the player). Not for a raider held for a reconnect: no save, the record is kept |
 | Changes between raids | Progression, stash, inventory, equipment and loadout changes → `MarkDirty`; written after `SaveDebounceSeconds` (2 s); several changes share one write |
+| Raid launch, return to the hub | Every traveller `SaveNow`, then `FlushPendingSaves`, just before the travel (`UCrossguardPartySubsystem::StartRaid`, `ACrossguardGameMode::ReturnToHub`; [hub-and-menu.md](hub-and-menu.md)) |
 | Map change, shutdown | Pending writes are flushed (`FWorldDelegates::OnWorldCleanup`, `Deinitialize`) |
 
 The record is built when a change happens (the pawn is surely there then); only the write waits. A
@@ -48,9 +49,10 @@ player with no pawn (logging out, spectating) keeps the carried gear of the last
 saves with the pawn still holding the gear, then the character leaves the world
 (`ACrossguardGameMode::HandleExtraction`), so nothing it could touch afterwards reaches the save.
 
-Seamless travel (hub → raid map on the same server) replaces the player state and the pawn: the
-subsystem keeps the latest record per player id and applies it to the new player state and pawn, so
-carried gear comes along. Logging out forgets the record (another server may change the save before
+Seamless travel (hub → raid map on the same server, and back to the hub when the raid is over)
+replaces the player state and the pawn: the subsystem keeps the latest record per player id and
+applies it to the new player state and pawn, so carried gear comes along (on the way back: what the
+player extracted with; a player dead for the raid has none). Logging out forgets the record (another server may change the save before
 the player comes back).
 
 Applying goes through the components' server functions: `ACrossguardPlayerState::RestoreSavedProgression`,

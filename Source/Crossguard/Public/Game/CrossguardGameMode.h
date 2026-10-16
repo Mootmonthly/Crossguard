@@ -98,7 +98,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Crossguard")
 	FCrossguardPlayerExtracted OnPlayerExtracted;
 
-	// --- Back to the hub after the raid (docs/hub-and-menu.md, "After the raid"). Server. ---
+	// --- Back to the hub after the raid (docs/hub-and-menu.md, "Back to the hub"). Server. ---
 	//
 	// Ruled (owner): once nobody is left in the raid (everyone extracted or dead for the raid), the
 	// whole server travels back to the hub map (seamless ServerTravel, the reverse of the hub's raid
