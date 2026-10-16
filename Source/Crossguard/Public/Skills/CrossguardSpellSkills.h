@@ -198,7 +198,7 @@ protected:
 	TArray<FName> Skills;
 };
 
-// [Summon Tiger] (Spell, 185 s): a tiger for 180 s. 100 HP, 20 Attack Damage claws; Hunter's Leap,
+// [Summon Tiger] (Spell, 185 s): a tiger for 180 s. 100 HP, 20 Attack Damage claws, 1.3 a second; Hunter's Leap,
 // Neckbite, Slash. Needs a Pet Gem (Tiger) in the inventory (not used up; AI summoners need none).
 UCLASS()
 class CROSSGUARD_API UCrossguardSummonTigerAbility : public UCrossguardSummonCompanionAbility
@@ -213,7 +213,7 @@ public:
 		FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 };
 
-// [Summon Greater Demon] (Spell, 240 s): a large demon for 60 s. 220 HP, a two-handed sword
+// [Summon Greater Demon] (Spell, 240 s): a demon 3x the player's size for 60 s. 220 HP, a two-handed sword
 // dealing 40 Attack Damage; Mortal Strike, Sword Mastery, Eldritch Shield, Shade Blow.
 UCLASS()
 class CROSSGUARD_API UCrossguardSummonGreaterDemonAbility : public UCrossguardSummonCompanionAbility

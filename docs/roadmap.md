@@ -126,7 +126,6 @@ Decisions that block items above. Answers go into design-decisions.md.
 | Which arrows does a bow use first when several rarities are carried? | Ammo (currently: first found) |
 | Is drinking a potion instant? Does bandaging slow movement? | Consumables (currently: instant, full speed) |
 | Jewelry, quarterstaffs, two-handed pavise shields, the Beastial transformation for Neckbite | Later content |
-| Tiger attack speed, Demon size? | Summon Tiger, Summon Greater Demon (currently: 1 s; 1.5×) |
 | Real drop rates: what each monster and chest drops, and rarity odds | Loot tables (placeholders now) |
 | Does a bundle's requirement also switch off the skills it includes (The Mithril Knight without Plate in every slot: still Multiscale, Immutable, Antimagic Garb? Spear of Liscor without a Spear: still Antimagic Garb)? | The Mithril Knight, Spear of Liscor (currently: no, only the bundle's own bonuses) |
 | Does throwing a throwing knife count as a "dagger attack" (Splinter of Winter, Gouge)? | Splinter of Winter (currently: no, only basic attacks) |

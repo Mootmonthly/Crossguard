@@ -222,9 +222,9 @@ damage is computed from the characters' actual stats, so they work at any level.
 | `Crossguard.Scenario.Skills.HuntersTracking` | Passive on; footprints appear behind a walking enemy, are still there at 25 s, fade about 30 s after the last step. |
 | `Crossguard.Scenario.Skills.SummonSkeletons` | 5 Warriors (40 HP) and 1 Mage (30 HP), 60 s life; they damage the dummy; a recast replaces them; gone after 60 s. |
 | `Crossguard.Scenario.Skills.SummonSkeletonsFollow` | No enemy around: the necromancer walks 20 m away and all six skeletons come to within 4.5 m (follow distance 3 m). |
-| `Crossguard.Scenario.Skills.SummonTiger` | Refused without `pet_gem_tiger` (no cooldown); with it: one tiger, 100 HP, 20 AD, Hunter's Leap / Neckbite / Slash, gem kept; it hits the dummy (log); gone after 180 s. |
+| `Crossguard.Scenario.Skills.SummonTiger` | Refused without `pet_gem_tiger` (no cooldown); with it: one tiger, 100 HP, 20 AD, 1.3 attacks a second, Hunter's Leap / Neckbite / Slash, gem kept; it hits the dummy (log); gone after 180 s. |
 | `Crossguard.Scenario.Skills.SummonTigerLeapAndRiders` | A dummy 8 m off (kept alive): the tiger uses Hunter's Leap, Neckbite (the dummy is Silenced) and Slash (cooldowns); its hits show the claw 20, the +10 Magic (Neckbite) and the +7 (Slash) after the dummy's Armor. |
-| `Crossguard.Scenario.Skills.SummonGreaterDemon` | One demon, 220 HP, 1.5x, two-handed sword, 40 AD, Mortal Strike / Eldritch Shield / Shade Blow, gone after 60 s. |
+| `Crossguard.Scenario.Skills.SummonGreaterDemon` | One demon, 220 HP, 3x the warlock's size standing on its floor, two-handed sword, 40 AD, Mortal Strike / Eldritch Shield / Shade Blow, gone after 60 s. |
 | `Crossguard.Scenario.Skills.SummonGreaterDemonFights` | Against a dummy 4 m off (kept alive): the demon raises Eldritch Shield, uses Mortal Strike and Shade Blow (cooldowns), a hit does at least the sword's 40 after Armor, and Shade Blow's heal block lands on the dummy. |
 | `Crossguard.Scenario.Skills.NeckbiteSilence` | The tiger's Neckbite silences a flying victim: Flight stops, Heal fails, basic attack works; about 2 s. |
 | `Crossguard.Scenario.Skills.Silence` | `State.Silenced` 2 s: Heal refused (no cooldown), basic attack works; Heal works after. |

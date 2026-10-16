@@ -8,6 +8,7 @@
 #include "AbilitySystemGlobals.h"
 #include "Character/CrossguardAICharacter.h"
 #include "Character/CrossguardMinion.h"
+#include "Components/CapsuleComponent.h"
 #include "Combat/CrossguardSpellProjectile.h"
 #include "Engine/World.h"
 #include "Items/CrossguardInventoryComponent.h"
@@ -417,7 +418,15 @@ void UCrossguardSummonCompanionAbility::ActivateAbility(const FGameplayAbilitySp
 			Catalog = AISummoner->SkillCatalog;
 		}
 		const FRotator Facing(0.0f, Summoner->GetActorRotation().Yaw, 0.0f);
-		SpawnMinion(CompanionClass, Summoner->GetActorLocation() + Facing.Vector() * CompanionDistance, Seconds,
+		FVector Location = Summoner->GetActorLocation() + Facing.Vector() * CompanionDistance;
+		// A scaled-up companion (the 3x demon) stands on the summoner's floor instead of spawning
+		// half in it: its capsule centre goes up by the extra half height.
+		const ACrossguardMinion* Defaults = CompanionClass.GetDefaultObject();
+		if (Defaults != nullptr && Defaults->GetCapsuleComponent() != nullptr && Scale > 1.0f)
+		{
+			Location.Z += (Scale - 1.0f) * Defaults->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+		}
+		SpawnMinion(CompanionClass, Location, Seconds,
 			[this, Catalog](ACrossguardMinion& Minion)
 			{
 				Minion.CombatRole = ECrossguardCombatRole::Warrior;
@@ -444,8 +453,8 @@ UCrossguardSummonTigerAbility::UCrossguardSummonTigerAbility()
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_SummonTiger);
 	Health = 100.0f;
 	AttackDamage = 20.0f;
-	// Assumption: one claw attack a second.
-	AttackInterval = 1.0f;
+	// Ruled: 1.3 claw attacks a second.
+	AttackInterval = 1.0f / 1.3f;
 	Seconds = 180.0f;
 	Skills = {TEXT("hunters_leap"), TEXT("neckbite"), TEXT("slash")};
 }
@@ -476,9 +485,10 @@ UCrossguardSummonGreaterDemonAbility::UCrossguardSummonGreaterDemonAbility()
 	AttackDamage = 40.0f;
 	// The two-handed sword's speed (Data/Items/Weapons.json: once every 1.4 s).
 	AttackInterval = 1.4f;
-	// Assumptions: "large" is 1.5x, with a matching reach.
+	// Ruled: 3x the player's size (minions and players share the character capsule). Assumption: the
+	// reach stays 3 m (centre to centre), as set for the old 1.5x size.
 	AttackRange = 300.0f;
-	Scale = 1.5f;
+	Scale = 3.0f;
 	Seconds = 60.0f;
 	bWieldsWeapon = true;
 	WeaponType = ECrossguardWeaponType::Sword;

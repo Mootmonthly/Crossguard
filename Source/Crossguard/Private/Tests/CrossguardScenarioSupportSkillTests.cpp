@@ -101,9 +101,12 @@ namespace CrossguardScenarioSupportSkills
 	constexpr float TigerHealth = 100.0f;
 	constexpr float TigerAttackDamage = 20.0f;
 	constexpr float TigerSeconds = 180.0f;
+	// Ruled: 1.3 claw attacks a second.
+	constexpr float TigerAttackInterval = 1.0f / 1.3f;
 	constexpr float DemonHealth = 220.0f;
 	constexpr float DemonAttackDamage = 40.0f;
-	constexpr float DemonScale = 1.5f;
+	// Ruled: 3x the player's size.
+	constexpr float DemonScale = 3.0f;
 	constexpr float DemonSeconds = 60.0f;
 	constexpr float SilenceSeconds = 2.0f;
 
@@ -2084,7 +2087,7 @@ bool FCrossguardScenarioSupportSummonSkeletons::RunTest(const FString& Parameter
 // ---------------------------------------------------------------------------------------------------
 // Checklist: "summon_tiger without a pet_gem_tiger in the inventory -> Refused; with one it works and
 // the gem stays." and "summon_tiger (wand in hand), dummy 8 m away -> One cylinder; it ... hits ...
-// Vanishes after 180 s." Tiger: 100 HP, 20 Attack Damage (design-decisions.md).
+// Vanishes after 180 s." Tiger: 100 HP, 20 Attack Damage, 1.3 attacks a second (design-decisions.md).
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioSupportSummonTiger, "Crossguard.Scenario.Skills.SummonTiger", CROSSGUARD_SCENARIO_FLAGS)
 
@@ -2149,6 +2152,7 @@ bool FCrossguardScenarioSupportSummonTiger::RunTest(const FString& Parameters)
 		C.Remember(TEXT("Tiger"), Tiger);
 		C.Test.TestEqual(TEXT("The tiger has 100 HP"), C.MaxHealth(Tiger), TigerHealth, 0.01f);
 		C.Test.TestEqual(TEXT("The tiger's claws deal 20 Attack Damage"), Tiger->AttackDamage, TigerAttackDamage, 0.001f);
+		C.Test.TestEqual(TEXT("The tiger attacks 1.3 times a second"), Tiger->AttackInterval, TigerAttackInterval, 0.001f);
 		C.Test.TestEqual(TEXT("The tiger lives 180 s"), Tiger->GetLifeSpan(), TigerSeconds, 0.2f);
 		C.Test.TestTrue(TEXT("The tiger has Hunter's Leap"), HasSkill(Tiger, TEXT("hunters_leap")));
 		C.Test.TestTrue(TEXT("The tiger has Neckbite"), HasSkill(Tiger, TEXT("neckbite")));
@@ -2187,7 +2191,7 @@ bool FCrossguardScenarioSupportSummonTiger::RunTest(const FString& Parameters)
 
 // ---------------------------------------------------------------------------------------------------
 // Checklist: "summon_greater_demon near a second client -> A bigger cylinder ... Gone after 60 s."
-// Demon: 220 HP, 1.5x size, 40 Attack Damage (design-decisions.md).
+// Demon: 220 HP, 3x the player's size, 40 Attack Damage (design-decisions.md).
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioSupportSummonGreaterDemon, "Crossguard.Scenario.Skills.SummonGreaterDemon", CROSSGUARD_SCENARIO_FLAGS)
 
@@ -2210,7 +2214,7 @@ bool FCrossguardScenarioSupportSummonGreaterDemon::RunTest(const FString& Parame
 
 	Scenario.Wait(0.5f);
 
-	Scenario.Step(TEXT("Summon: a 1.5x demon with 220 HP"), [](FScenarioContext& C)
+	Scenario.Step(TEXT("Summon: a 3x demon with 220 HP"), [](FScenarioContext& C)
 	{
 		ACrossguardCharacter* Warlock = Character(C, TEXT("Warlock"));
 		if (Warlock == nullptr)
@@ -2231,7 +2235,13 @@ bool FCrossguardScenarioSupportSummonGreaterDemon::RunTest(const FString& Parame
 		ACrossguardMinion* Demon = Minions[0];
 		C.Remember(TEXT("Demon"), Demon);
 		C.Test.TestEqual(TEXT("The demon has 220 HP"), C.MaxHealth(Demon), DemonHealth, 0.01f);
-		C.Test.TestEqual(TEXT("The demon is 1.5x size"), static_cast<float>(Demon->GetActorScale3D().X), DemonScale, 0.001f);
+		C.Test.TestEqual(TEXT("The demon is 3x size"), static_cast<float>(Demon->GetActorScale3D().X), DemonScale, 0.001f);
+		C.Test.TestEqual(TEXT("The demon is 3x the warlock's height"), Demon->GetCapsuleComponent()->GetScaledCapsuleHalfHeight(),
+			DemonScale * Warlock->GetCapsuleComponent()->GetScaledCapsuleHalfHeight(), 0.1f);
+		// Standing on the floor, not sunk into it: the feet within 10 cm of the warlock's.
+		const float DemonFeet = static_cast<float>(Demon->GetActorLocation().Z) - Demon->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+		const float WarlockFeet = static_cast<float>(Warlock->GetActorLocation().Z) - Warlock->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+		C.Test.TestEqual(TEXT("The demon stands on the warlock's floor"), DemonFeet, WarlockFeet, 10.0f);
 		C.Test.TestEqual(TEXT("The demon's sword deals 40 Attack Damage"), Demon->AttackDamage, DemonAttackDamage, 0.001f);
 		C.Test.TestTrue(TEXT("The demon wields a two-handed sword"), Demon->bWieldsWeapon && Demon->bTwoHandedWeapon
 			&& Demon->WeaponType == ECrossguardWeaponType::Sword);
