@@ -34,8 +34,15 @@ $ErrorActionPreference = "Stop"
 $backend = (Resolve-Path (Join-Path $PSScriptRoot "..\Backend")).Path
 Push-Location $backend
 try {
-    docker info *> $null
-    if ($LASTEXITCODE -ne 0) {
+    # Windows PowerShell 5.1 turns redirected native stderr into errors: check without "Stop".
+    $ErrorActionPreference = "Continue"
+    $dockerOk = $false
+    if (Get-Command docker -ErrorAction SilentlyContinue) {
+        docker info *> $null
+        $dockerOk = ($LASTEXITCODE -eq 0)
+    }
+    $ErrorActionPreference = "Stop"
+    if (-not $dockerOk) {
         Write-Host "Docker is not running. Start Docker Desktop and try again." -ForegroundColor Red
         exit 4
     }
