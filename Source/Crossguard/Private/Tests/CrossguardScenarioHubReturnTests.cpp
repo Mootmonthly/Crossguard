@@ -1,5 +1,5 @@
-// Scenario tests: the whole server going back to the hub once nobody is left in the raid
-// (docs/hub-and-menu.md, "Back to the hub"). The travel itself is planned only here
+// Scenario tests: DEV-ONLY (listen server): the whole server going back to the hub once nobody is left
+// in the raid (docs/hub-and-menu.md, "Development mode"; PIE is development listen mode). The travel itself is planned only here
 // (ACrossguardGameMode::bHubReturnPlanOnly); Net.SeamlessTravelHubToRaid travels there and back for real.
 // The countdown and the grace are shortened for the run (placeholders: 10 s and 120 s).
 // Framework: CrossguardScenario.h, docs/editor-tests.md.
@@ -38,6 +38,11 @@ namespace CrossguardScenarioHubReturn
 		if (Mode->GetHubMapName().IsEmpty())
 		{
 			C.Skip(TEXT("The game mode has no Hub Map Name: no trip back to the hub to test"));
+			return false;
+		}
+		if (Mode->GetHubDestination(nullptr).Kind != ECrossguardHubDestination::DevServerTravel)
+		{
+			C.Skip(TEXT("Not the development whole-server return (a hub server is set, or not dev listen mode)"));
 			return false;
 		}
 		Mode->HubReturnCountdownSeconds = HubReturnTestCountdown;

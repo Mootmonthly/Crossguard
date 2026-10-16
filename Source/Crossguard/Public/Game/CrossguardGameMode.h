@@ -26,17 +26,32 @@ struct FCrossguardHeldPlayer
 	FString TeamKey;
 };
 
-// How one member of a team that finished early goes back to the hub (ACrossguardGameMode::ReturnTeamToHub).
+// Where a player leaving this match server goes (ACrossguardGameMode::GetHubDestination).
+enum class ECrossguardHubDestination : uint8
+{
+	// A dedicated hub server (the backend's pick, else HubServerAddress / -HubServer=): the client travels.
+	HubServer,
+	// DEV-ONLY (listen server): the whole server travels back to the hub map (ReturnToHub).
+	DevServerTravel,
+	// Nowhere (a dedicated or Shipping server that knows no hub server): the main menu, with a message.
+	Menu,
+};
+
+struct FCrossguardHubDestination
+{
+	ECrossguardHubDestination Kind = ECrossguardHubDestination::Menu;
+	// HubServer: the hub server's address; DevServerTravel: the hub map.
+	FString Address;
+	// For logs: "backend", "-HubServer", "dev listen server", "none".
+	FString Source;
+};
+
+// How one member of a team that finished goes back to the hub (ACrossguardGameMode::ReturnTeamToHub).
 enum class ECrossguardTeamHubTravel : uint8
 {
-	// To the dedicated hub server (HubServerAddress) with ?Party=<key>.
+	// To a hub server (GetHubDestination) with ?Party=<key>.
 	HubServer,
-	// The team leader: opens the hub map on its own machine as a listen server, ?Party=<key>.
-	HostHub,
-	// Another member: connects to the leader's hub (the leader's address as the raid server sees it)
-	// after TeamHubJoinDelaySeconds.
-	JoinLeader,
-	// Nowhere to go (no leader address, no hub map): the main menu.
+	// No hub server known: the main menu (NoHubReason).
 	Menu,
 };
 
@@ -47,9 +62,6 @@ struct FCrossguardTeamHubTravel
 	TWeakObjectPtr<APlayerController> Player;
 	ECrossguardTeamHubTravel Mode = ECrossguardTeamHubTravel::Menu;
 	FString Url;
-	// Seconds the client waits before travelling.
-	float DelaySeconds = 0.0f;
-	bool bLeader = false;
 };
 
 // A team's countdown to its early trip back.
@@ -64,9 +76,14 @@ struct FCrossguardTeamHubCountdown
 
 // Match game mode. Assigns teams on login from the "Party" URL option: players joining with the
 // same ?Party=<key> share a team (up to 8); players without one each get their own team.
-// Matchmaking must put the party key in the travel URL. In the hub, in-game parties
+// Development travel URLs carry the party key; real match servers will learn the team from the
+// backend's match ticket (?MatchTicket=, not checked yet). In the hub, in-game parties
 // (UCrossguardPartySubsystem, docs/parties.md) move their members onto one team with SetPlayerParty
-// and launch the raid with RaidMapName / RaidServerAddress.
+// and launch the raid through matchmaking (UCrossguardMatchmakingSubsystem).
+//
+// Owner's architecture: raids on dedicated match servers many teams join, hubs on dedicated hub
+// servers, a backend for accounts, saves, parties and matchmaking. The listen-server flow is the
+// single-PC development mode only (Crossguard::IsDevListenMode, tagged "DEV-ONLY (listen server)").
 UCLASS()
 class CROSSGUARD_API ACrossguardGameMode : public AGameModeBase
 {
@@ -139,19 +156,21 @@ public:
 
 	// --- Back to the hub after the raid (docs/hub-and-menu.md, "Back to the hub"). Server. ---
 	//
-	// Ruled (owner): once nobody is left in the raid (everyone extracted or dead for the raid), the
-	// whole server travels back to the hub map (seamless ServerTravel, the reverse of the hub's raid
-	// launch); extracted players spectate meanwhile. Disconnected raiders held for a reconnect still
-	// count as in the raid, but only for HeldPlayerReturnGraceSeconds once nobody else is.
+	// A team (one party key; solo: a team of one) whose members have all extracted or died for the raid
+	// leaves this match server for its hub destination (GetHubDestination) while the other teams play on
+	// (ReturnTeamToHub). DEV-ONLY (listen server): when the destination is the whole-server return, the
+	// finished teams wait and, once nobody is left in the raid, the whole server travels back to the hub
+	// map (ReturnToHub). Disconnected raiders held for a reconnect still count as in the raid, but only
+	// for HeldPlayerReturnGraceSeconds.
 
-	// The hub map the server travels back to: "<HubMapName>?listen?Hub" on a listen server,
-	// "<HubMapName>?Hub" otherwise. The -HubMap=<path> command line option overrides it (as on the
-	// menu's game mode). Empty: no trip back (extracted players stay where they left).
+	// DEV-ONLY (listen server): the hub map the whole server travels back to: "<HubMapName>?listen?Hub"
+	// on a listen server, "<HubMapName>?Hub" otherwise. The -HubMap=<path> command line option overrides
+	// it (as on the menu's game mode). Empty in development mode: no trip back (players stay).
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Hub Return")
 	FString HubMapName = TEXT("/Game/Maps/L_Hub");
 
-	// Seconds from the last player leaving the raid to the travel (HUD: "Returning to the hub in N s").
-	// Placeholder.
+	// Seconds from a team's (development: the last) player leaving the raid to the travel (HUD:
+	// "Returning to the hub in N s"). Placeholder.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Hub Return", meta = (ClampMin = "0"))
 	float HubReturnCountdownSeconds = 10.0f;
 
@@ -163,10 +182,16 @@ public:
 
 	FString GetHubMapName() const;
 
-	// "<HubMap>?listen?Hub" (bListen) or "<HubMap>?Hub"; empty if HubMap is empty.
+	// DEV-ONLY (listen server): "<HubMap>?listen?Hub" (bListen) or "<HubMap>?Hub"; empty if HubMap is empty.
 	static FString BuildHubReturnUrl(const FString& HubMap, bool bListen);
 
-	// The countdown to the trip back runs.
+	// Where Player goes when their team is done, in order: the hub server the backend picks
+	// (matchmaking; a stub until the backend exists), HubServerAddress / -HubServer=, in development
+	// mode only (Crossguard::IsDevListenMode, the match server is the dev listen server) the whole
+	// server's return to HubMapName, else the main menu. Player may be null (the server's default).
+	FCrossguardHubDestination GetHubDestination(const APlayerController* Player) const;
+
+	// DEV-ONLY (listen server): the whole server's countdown to the trip back runs.
 	bool IsHubReturnPending() const { return bHubReturnPending; }
 	// Seconds until the travel (0 when not pending).
 	float GetHubReturnSecondsLeft() const;
@@ -176,8 +201,9 @@ public:
 	bool HasHubReturnStarted() const { return bHubReturnStarted; }
 	const FString& GetHubReturnUrl() const { return HubReturnUrl; }
 
-	// Server. The countdown's end: held raiders fail their raid, everyone's save is written, absent
-	// players leave their parties, then the server travels to the hub (unless plan only).
+	// DEV-ONLY (listen server). Server. The whole server's countdown's end: held raiders fail their
+	// raid, everyone's save is written, absent players leave their parties, then the server travels to
+	// the hub (unless plan only). Refused outside development mode.
 	void ReturnToHub();
 
 	// Tests: ReturnToHub does everything but the ServerTravel. During automation tests it is plan only
@@ -185,31 +211,17 @@ public:
 	bool bHubReturnPlanOnly = false;
 	bool bHubReturnTravelInTests = false;
 
-	// --- A team going back early (docs/hub-and-menu.md, "A team goes back early"). Server. ---
+	// --- A team going back (docs/hub-and-menu.md, "A team goes back"). Server. ---
 	//
-	// Ruled (owner): a team (one party key; solo: a team of one) whose members have all extracted or
-	// died for the raid goes back to the hub at once (after its own HubReturnCountdownSeconds, shown to
-	// that team only), without waiting for the teams still raiding. If no other team is left raiding,
-	// the whole server goes instead (above). The other teams play on. The server's own player (a
-	// listen-server host, standalone) cannot leave early: its team waits for the whole-server return
-	// (Assumed: the host leaving would close the raid for everyone).
+	// Ruled (owner): a finished team goes back without waiting for the teams still raiding (after its
+	// own HubReturnCountdownSeconds, shown to that team only). DEV-ONLY (listen server): a team holding
+	// the server's own player (listen host, standalone) never leaves early, and with the whole-server
+	// return as the destination finished teams wait for it.
 
-	// A dedicated hub server ("203.0.113.5:7777") finished teams connect to. The -HubServer=<address>
-	// command line option overrides it. Empty (the listen-server era): the team's leader opens the hub
-	// map on its own machine as a listen server and the others join it (known limitation: the leader's
-	// machine must accept connections, NAT / port forwarding; docs/hub-and-menu.md).
+	// A dedicated hub server ("203.0.113.5:7777") finished teams travel to when the backend names none.
+	// The -HubServer=<address> command line option overrides it.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Hub Return")
 	FString HubServerAddress;
-
-	// Seconds a member waits before joining the leader's hub (the leader's map has to load and listen
-	// first). Placeholder.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Hub Return", meta = (ClampMin = "0"))
-	float TeamHubJoinDelaySeconds = 5.0f;
-
-	// The port the leader's hub listens on (the engine's default port; the leader's game is not told
-	// another). Placeholder.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Hub Return", meta = (ClampMin = "1", ClampMax = "65535"))
-	int32 TeamHubListenPort = 7777;
 
 	FString GetHubServerAddress() const;
 
@@ -226,18 +238,14 @@ public:
 	bool WasSentToMenu(const FString& PlayerId) const { return SentToMenuIds.Contains(PlayerId); }
 
 	// Server. The team's countdown ended: its raiders away fail the raid, every member is saved and
-	// marked as leaving, then each member's client travels (unless plan only, bHubReturnPlanOnly).
+	// marked as leaving, then each member's client travels to their hub destination, or goes to the
+	// menu without one (unless plan only, bHubReturnPlanOnly). Does nothing while the destination is
+	// the development whole-server return.
 	void ReturnTeamToHub(int32 TeamId);
 
-	// "<HubMap>?listen?Hub?Party=<key>" (no ?Party= for an empty key); empty if HubMap is empty or the
-	// key is not URL-safe.
-	static FString BuildTeamHubHostUrl(const FString& HubMap, const FString& Party);
-	// "<Address>?Party=<key>", e.g. a hub server or "<leader ip>:<port>"; empty if Address is empty or
-	// the key is not URL-safe.
+	// "<Address>?Party=<key>" (a hub server; no ?Party= for an empty key); empty if Address is empty or
+	// holds URL separators, or the key is not URL-safe.
 	static FString BuildTeamHubJoinUrl(const FString& Address, const FString& Party);
-
-	// Tests: stands in for the leader's network address (scenario players have no connection).
-	FString TeamHubTestLeaderAddress;
 
 	virtual void StartPlay() override;
 
@@ -297,15 +305,17 @@ public:
 	// they had logged in with ?Party=<Party>. No-op if that is their key already.
 	void SetPlayerParty(AController* Controller, const FString& Party);
 
-	// --- Raid launch from the hub (docs/parties.md). Placeholders until a matchmaker exists. ---
+	// --- Raid launch from the hub (docs/parties.md). The real launch asks matchmaking
+	// (UCrossguardMatchmakingSubsystem) for a match server. ---
 
-	// The raid map a party that is the whole server travels to (ServerTravel), e.g.
-	// "/Game/Maps/L_Raid". The -RaidMap=<path> command line option overrides it. Empty: none.
+	// DEV-ONLY (listen server): the raid map a party that is the whole server travels to (ServerTravel),
+	// e.g. "/Game/Maps/L_Raid". The -RaidMap=<path> command line option overrides it. Empty: none.
 	// Placeholder default: the dev sandbox (monsters, chests, gather nodes) until a raid map exists.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Raid Launch")
 	FString RaidMapName = TEXT("/Game/Maps/Dev/L_DevSandbox");
 
-	// A separate raid server ("203.0.113.5:7777") the party's clients travel to while the rest of the
+	// Development matchmaking's fake assignment (FCrossguardDevMatchmaking; never in Shipping): a match
+	// server ("203.0.113.5:7777") the party's clients travel to with ?Party=<key> while the rest of the
 	// hub stays. The -RaidServer=<address> command line option overrides it. Empty: none.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Raid Launch")
 	FString RaidServerAddress;
@@ -360,6 +370,9 @@ private:
 	// During Login of this process's own player (a ULocalPlayer: standalone, listen-server host).
 	bool bLoggingInLocalPlayer = false;
 
+	// Players finished with the raid go somewhere: false only in development mode with no hub map and
+	// no hub server (they stay, as before; the dead with nobody to watch go to the menu).
+	bool HasTripBack() const;
 	// After anyone's raid state changes (extraction, death for the raid, a held player's release, a
 	// logout, a reconnect, a new raider): starts, shortens or cancels the countdown to the hub.
 	void UpdateHubReturn();
@@ -374,7 +387,7 @@ private:
 	TMap<int32, FCrossguardTeamHubCountdown> TeamHubReturns;
 	TMap<int32, TArray<FCrossguardTeamHubTravel>> TeamHubPlans;
 	TSet<FString> LeavingForHubIds;
-	// Finished teams that hold the server's own player: told once that they wait for everyone.
+	// DEV-ONLY (listen server): finished teams waiting for the whole server's return: told once.
 	TSet<int32> TeamsWaitingForServer;
 	FTimerHandle TeamHubReturnTimer;
 	// Every HubReturnTickSeconds while a team counts down: its HUD line, and ReturnTeamToHub on time.
@@ -385,8 +398,6 @@ private:
 	void TellTeam(int32 TeamId, const FString& Message) const;
 	// This server process's own player (listen-server host, standalone): it has a ULocalPlayer.
 	static bool IsServerOwnPlayer(const APlayerController* Player);
-	// The player's IP address as this server sees its connection (empty without one).
-	FString RemoteAddressOf(APlayerController* Player) const;
 	// World time of the travel.
 	double HubReturnAt = 0.0;
 	// The last whole second shown on the HUD.

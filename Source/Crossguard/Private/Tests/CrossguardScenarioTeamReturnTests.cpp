@@ -1,8 +1,9 @@
-// Scenario tests: a team that has finished the raid goes back to the hub early while other teams
-// still raid (docs/hub-and-menu.md, "A team goes back early"). The members' travel is planned only
-// here (ACrossguardGameMode::bHubReturnPlanOnly): the plan is read back per member. The countdown is
-// shortened for the run (placeholder: 10 s). Scenario players have no connection, so the leader's
-// address is ACrossguardGameMode::TeamHubTestLeaderAddress.
+// Scenario tests: a team that has finished the raid leaves the match server for its hub destination
+// while other teams still raid (docs/hub-and-menu.md, "A team goes back"): a hub server
+// (HubServerAddress), the development whole-server return (dev listen mode, no hub server), or the
+// menu (not development mode, no hub server: forced with Crossguard::SetDevListenModeOverrideForTests).
+// The members' travel is planned only here (ACrossguardGameMode::bHubReturnPlanOnly): the plan is read
+// back per member. The countdown is shortened for the run (placeholder: 10 s).
 // Framework: CrossguardScenario.h, docs/editor-tests.md.
 
 #include "Tests/CrossguardScenario.h"
@@ -11,7 +12,9 @@
 
 #include "Camera/PlayerCameraManager.h"
 #include "Character/CrossguardCharacter.h"
+#include "Game/CrossguardDevMode.h"
 #include "Game/CrossguardGameMode.h"
+#include "Game/CrossguardMenuGameMode.h"
 #include "Game/CrossguardPlayerState.h"
 #include "GameFramework/PlayerController.h"
 #include "UI/CrossguardHUD.h"
@@ -22,30 +25,29 @@ namespace CrossguardScenarioTeamReturn
 	using CrossguardScenario::FScenarioContext;
 
 	constexpr float TeamReturnTestCountdown = 1.0f;
-	const TCHAR* const TeamReturnLeaderAddress = TEXT("198.51.100.7");
 	const TCHAR* const TeamReturnHubServer = TEXT("203.0.113.9:7777");
 	const TCHAR* const TeamReturnPartyA = TEXT("teamreturnA");
 	// Development ids, set straight on the player states ("dev-<name>": the URL carries ?DevPlayerId=<name>).
 	const TCHAR* const TeamReturnFirstId = TEXT("dev-teamreturn-a1");
 	const TCHAR* const TeamReturnSecondId = TEXT("dev-teamreturn-a2");
 
-	// Short countdown, plan only, a stand-in leader address. False (scenario over) without a game mode
-	// or a hub map.
-	bool PrepareTeamReturn(FScenarioContext& C)
+	// Short countdown, plan only. HubServer: the hub server address to set (empty: none). False
+	// (scenario over) without a game mode, or when -HubServer= on the command line would override it.
+	bool PrepareTeamReturn(FScenarioContext& C, const FString& HubServer)
 	{
 		ACrossguardGameMode* Mode = C.GameMode();
 		if (!C.Require(Mode != nullptr && Mode->bIsRaid, TEXT("a raid map's game mode")))
 		{
 			return false;
 		}
-		if (Mode->GetHubMapName().IsEmpty())
+		if (Mode->GetHubServerAddress() != Mode->HubServerAddress)
 		{
-			C.Skip(TEXT("The game mode has no Hub Map Name: no trip back to the hub to test"));
+			C.Skip(TEXT("-HubServer= is on the command line: the test's address would be ignored"));
 			return false;
 		}
+		Mode->HubServerAddress = HubServer;
 		Mode->HubReturnCountdownSeconds = TeamReturnTestCountdown;
 		Mode->bHubReturnPlanOnly = true;
-		Mode->TeamHubTestLeaderAddress = TeamReturnLeaderAddress;
 		return true;
 	}
 
@@ -96,23 +98,24 @@ namespace CrossguardScenarioTeamReturn
 	}
 }
 
-// Two teams: A (two raiders) and B (the PIE player). A2 dies for the raid and watches A1; A1 extracts:
-// A2 is not sent to the menu but watches its body, and team A counts down alone (B unaffected). At its
-// end A's plan: the leader (A1) hosts the hub locally with ?Party=<key>, A2 joins the leader's address
-// after the join delay; both are leaving and A2's disconnect is no hold for a reconnect. Then B (the
-// last team) extracts: the whole server returns as before.
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioTeamReturnEarly, "Crossguard.Scenario.HubReturn.TeamFinishesEarly", CROSSGUARD_SCENARIO_FLAGS)
+// With a hub server (HubServerAddress, as -HubServer=): two teams, A (two raiders) and B (the PIE
+// player). A2 dies for the raid and watches A1; A1 extracts: A2 is not sent to the menu but watches its
+// body, and team A counts down alone (B unaffected). At its end both members travel to the hub server
+// with ?Party=<key> at once; both are leaving and A2's disconnect is no hold for a reconnect. Then B
+// (the last team, holding the server's own player) extracts: it leaves as a team too, no whole-server
+// travel.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioTeamReturnHubServer, "Crossguard.Scenario.HubReturn.TeamToHubServer", CROSSGUARD_SCENARIO_FLAGS)
 
-bool FCrossguardScenarioTeamReturnEarly::RunTest(const FString& Parameters)
+bool FCrossguardScenarioTeamReturnHubServer::RunTest(const FString& Parameters)
 {
 	using namespace CrossguardScenario;
 	using namespace CrossguardScenarioTeamReturn;
 
 	FScenario Scenario(*this);
 
-	Scenario.Step(TEXT("Team A dies and extracts while team B (the PIE player) raids"), [](FScenarioContext& C)
+	Scenario.Step(TEXT("A hub server is set; team A dies and extracts while team B (the PIE player) raids"), [](FScenarioContext& C)
 	{
-		if (!PrepareTeamReturn(C) || !SpawnTeamA(C))
+		if (!PrepareTeamReturn(C, TeamReturnHubServer) || !SpawnTeamA(C))
 		{
 			return;
 		}
@@ -126,6 +129,9 @@ bool FCrossguardScenarioTeamReturnEarly::RunTest(const FString& Parameters)
 		{
 			return;
 		}
+		const FCrossguardHubDestination Destination = Mode->GetHubDestination(SecondController);
+		C.Test.TestTrue(TEXT("Destination: the hub server"),
+			Destination.Kind == ECrossguardHubDestination::HubServer && Destination.Address == TeamReturnHubServer);
 
 		Mode->HandlePermanentDeath(Second);
 		C.Test.TestTrue(TEXT("A2 watches A1 (a teammate still in the raid)"), TeamReturnWatches(SecondController, First));
@@ -138,7 +144,7 @@ bool FCrossguardScenarioTeamReturnEarly::RunTest(const FString& Parameters)
 		C.Test.TestTrue(FString::Printf(TEXT("Team A's countdown is the short one (%.2f s left)"), Mode->GetTeamHubReturnSecondsLeft(TeamA)),
 			Mode->GetTeamHubReturnSecondsLeft(TeamA) > 0.0f && Mode->GetTeamHubReturnSecondsLeft(TeamA) <= TeamReturnTestCountdown + 0.01f);
 		C.Test.TestFalse(TEXT("Team B still raids: no countdown for it"), Mode->IsTeamHubReturnPending(TeamB));
-		C.Test.TestFalse(TEXT("No whole-server return while B raids"), Mode->IsHubReturnPending() || Mode->HasHubReturnStarted());
+		C.Test.TestFalse(TEXT("No whole-server return"), Mode->IsHubReturnPending() || Mode->HasHubReturnStarted());
 		C.Test.TestTrue(TEXT("Log: team A returns while others raid"), C.LogContains(TEXT("returning to the hub in 1 s while others raid")));
 	});
 
@@ -148,35 +154,30 @@ bool FCrossguardScenarioTeamReturnEarly::RunTest(const FString& Parameters)
 		return Mode != nullptr && Mode->GetTeamHubReturnPlan(static_cast<int32>(C.Number(TEXT("TeamA")))) != nullptr;
 	});
 
-	Scenario.Step(TEXT("Team A's plan: the leader hosts, A2 joins the leader; B unaffected"), [](FScenarioContext& C)
+	Scenario.Step(TEXT("Team A's plan: both travel to the hub server with the party key; B unaffected"), [](FScenarioContext& C)
 	{
 		ACrossguardGameMode* Mode = C.GameMode();
 		const int32 TeamA = static_cast<int32>(C.Number(TEXT("TeamA")));
 		const TArray<FCrossguardTeamHubTravel>* Plan = Mode != nullptr ? Mode->GetTeamHubReturnPlan(TeamA) : nullptr;
-		if (!C.Require(Plan != nullptr, TEXT("team A's plan")))
+		if (!C.Require(Plan != nullptr && Plan->Num() == 2, TEXT("a plan for both members")))
 		{
 			return;
 		}
-		C.Test.TestEqual(TEXT("Two members go"), Plan->Num(), 2);
-		const FCrossguardTeamHubTravel* Leader = TeamReturnEntry(*Plan, TeamReturnFirstId);
-		const FCrossguardTeamHubTravel* Member = TeamReturnEntry(*Plan, TeamReturnSecondId);
-		if (!C.Require(Leader != nullptr && Member != nullptr, TEXT("both members are in the plan")))
+		const FString Expected = ACrossguardGameMode::BuildTeamHubJoinUrl(TeamReturnHubServer, TeamReturnPartyA);
+		C.Test.TestEqual(TEXT("Hub server URL"), Expected, FString::Printf(TEXT("%s?Party=%s"), TeamReturnHubServer, TeamReturnPartyA));
+		for (const TCHAR* Id : {TeamReturnFirstId, TeamReturnSecondId})
 		{
-			return;
+			const FCrossguardTeamHubTravel* Travel = TeamReturnEntry(*Plan, Id);
+			if (!C.Require(Travel != nullptr, FString::Printf(TEXT("%s is in the plan"), Id)))
+			{
+				return;
+			}
+			C.Test.AddInfo(FString::Printf(TEXT("%s: %s"), Id, *Travel->Url));
+			C.Test.TestTrue(FString(Id) + TEXT(" travels to the hub server"), Travel->Mode == ECrossguardTeamHubTravel::HubServer);
+			// "dev-teamreturn-a1" travels as ?DevPlayerId=teamreturn-a1.
+			C.Test.TestEqual(FString(Id) + TEXT(": <hub server>?Party=<key>?DevPlayerId=<name>"), Travel->Url,
+				Expected + TEXT("?DevPlayerId=") + FString(Id).RightChop(4));
 		}
-		C.Test.AddInfo(FString::Printf(TEXT("Leader: %s; member: %s in %.1f s"), *Leader->Url, *Member->Url, Member->DelaySeconds));
-		C.Test.TestTrue(TEXT("A1 (first to join, no party known here) leads"), Leader->bLeader && !Member->bLeader);
-		C.Test.TestTrue(TEXT("The leader hosts the hub on its own machine"), Leader->Mode == ECrossguardTeamHubTravel::HostHub);
-		const FString HostUrl = ACrossguardGameMode::BuildTeamHubHostUrl(Mode->GetHubMapName(), TeamReturnPartyA);
-		C.Test.TestTrue(TEXT("Host URL: <hub map>?listen?Hub?Party=<key>"), !HostUrl.IsEmpty() && Leader->Url.StartsWith(HostUrl));
-		C.Test.TestTrue(TEXT("Host URL: listen, hub and party"), Leader->Url.Contains(TEXT("?listen")) && Leader->Url.Contains(TEXT("?Hub"))
-			&& Leader->Url.Contains(FString::Printf(TEXT("?Party=%s"), TeamReturnPartyA)));
-		C.Test.TestTrue(TEXT("Host URL carries the development id"), Leader->Url.EndsWith(TEXT("?DevPlayerId=teamreturn-a1")));
-		C.Test.TestEqual(TEXT("The leader goes at once"), Leader->DelaySeconds, 0.0f);
-		C.Test.TestTrue(TEXT("A2 joins the leader's hub"), Member->Mode == ECrossguardTeamHubTravel::JoinLeader);
-		C.Test.TestTrue(TEXT("Join URL: <leader address>:<port>?Party=<key>"),
-			Member->Url.StartsWith(FString::Printf(TEXT("%s:%d?Party=%s"), TeamReturnLeaderAddress, Mode->TeamHubListenPort, TeamReturnPartyA)));
-		C.Test.TestEqual(TEXT("A2 waits for the leader's hub (join delay)"), Member->DelaySeconds, Mode->TeamHubJoinDelaySeconds);
 		C.Test.TestTrue(TEXT("Both are leaving for the hub"), Mode->IsLeavingForHub(TeamReturnFirstId) && Mode->IsLeavingForHub(TeamReturnSecondId));
 		C.Test.TestFalse(TEXT("A2 still not sent to the menu"), Mode->WasSentToMenu(TeamReturnSecondId));
 		C.Test.TestTrue(TEXT("Log: team A's return planned"), C.LogContains(FString::Printf(TEXT("Team %d return to the hub planned"), TeamA)));
@@ -205,7 +206,7 @@ bool FCrossguardScenarioTeamReturnEarly::RunTest(const FString& Parameters)
 
 	Scenario.Wait(0.3f);
 
-	Scenario.Step(TEXT("A2 gone: not held; then team B extracts"), [](FScenarioContext& C)
+	Scenario.Step(TEXT("A2 gone: not held; then team B (the last) extracts"), [](FScenarioContext& C)
 	{
 		ACrossguardGameMode* Mode = C.GameMode();
 		ACrossguardCharacter* Local = C.LocalPlayer();
@@ -215,10 +216,90 @@ bool FCrossguardScenarioTeamReturnEarly::RunTest(const FString& Parameters)
 		}
 		C.Test.TestNull(TEXT("A2 left for the hub: not held"), Mode->FindHeldPlayer(TeamReturnSecondId));
 		C.Test.TestTrue(TEXT("A2 cannot log in to this raid again"), Mode->HasFinishedRaidHere(TeamReturnSecondId));
-		C.Test.TestFalse(TEXT("No whole-server return yet"), Mode->IsHubReturnPending());
 		Mode->HandleExtraction(Local);
-		C.Test.TestTrue(TEXT("The last team is done: the whole server's countdown runs"), Mode->IsHubReturnPending());
-		C.Test.TestFalse(TEXT("No team countdown for B (the whole server goes)"), Mode->IsTeamHubReturnPending(static_cast<int32>(C.Number(TEXT("TeamB")))));
+		const int32 TeamB = static_cast<int32>(C.Number(TEXT("TeamB")));
+		C.Test.TestTrue(TEXT("The last team leaves as a team too"), Mode->IsTeamHubReturnPending(TeamB));
+		C.Test.TestFalse(TEXT("No whole-server return with a hub server"), Mode->IsHubReturnPending() || Mode->HasHubReturnStarted());
+	});
+
+	Scenario.WaitUntil(TEXT("team B's plan is made"), TeamReturnTestCountdown + 3.0f, [](FScenarioContext& C)
+	{
+		const ACrossguardGameMode* Mode = C.GameMode();
+		return Mode != nullptr && Mode->GetTeamHubReturnPlan(static_cast<int32>(C.Number(TEXT("TeamB")))) != nullptr;
+	});
+
+	Scenario.Step(TEXT("Team B travels to the hub server; the server never travels"), [](FScenarioContext& C)
+	{
+		ACrossguardGameMode* Mode = C.GameMode();
+		const TArray<FCrossguardTeamHubTravel>* Plan = Mode != nullptr ? Mode->GetTeamHubReturnPlan(static_cast<int32>(C.Number(TEXT("TeamB")))) : nullptr;
+		if (!C.Require(Plan != nullptr && Plan->Num() == 1, TEXT("a plan for the PIE player")))
+		{
+			return;
+		}
+		C.Test.TestTrue(TEXT("To the hub server"), (*Plan)[0].Mode == ECrossguardTeamHubTravel::HubServer
+			&& (*Plan)[0].Url.StartsWith(TeamReturnHubServer));
+		C.Test.TestFalse(TEXT("No whole-server return"), Mode->HasHubReturnStarted());
+		Mode->HubServerAddress.Reset();
+	});
+
+	Scenario.Run();
+	return true;
+}
+
+// DEV-ONLY (listen server): development mode (PIE), no hub server: a finished team (A) does not leave
+// early but waits; once the last team (B, the PIE player) is done, the whole server's countdown runs
+// and its return is a server travel to the hub map.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioTeamReturnDevWholeServer, "Crossguard.Scenario.HubReturn.DevWholeServerFallback", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioTeamReturnDevWholeServer::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioTeamReturn;
+
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("Development mode, no hub server; team A extracts while B raids"), [](FScenarioContext& C)
+	{
+		if (!PrepareTeamReturn(C, FString()))
+		{
+			return;
+		}
+		ACrossguardGameMode* Mode = C.GameMode();
+		if (Mode->GetHubMapName().IsEmpty())
+		{
+			C.Skip(TEXT("The game mode has no Hub Map Name: no development whole-server return to test"));
+			return;
+		}
+		if (!C.Require(Crossguard::IsDevListenMode(C.World()), TEXT("PIE is development listen mode")) || !SpawnTeamA(C))
+		{
+			return;
+		}
+		const FCrossguardHubDestination Destination = Mode->GetHubDestination(nullptr);
+		C.Test.TestTrue(TEXT("Destination: the development whole-server return to the hub map"),
+			Destination.Kind == ECrossguardHubDestination::DevServerTravel && Destination.Address == Mode->GetHubMapName());
+		Mode->HandleExtraction(C.Get<ACrossguardCharacter>(TEXT("A1")));
+		Mode->HandleExtraction(C.Get<ACrossguardCharacter>(TEXT("A2")));
+		const int32 TeamA = static_cast<int32>(C.Number(TEXT("TeamA")));
+		C.Test.TestFalse(TEXT("Team A does not leave early: it waits for the whole server"), Mode->IsTeamHubReturnPending(TeamA));
+		C.Test.TestTrue(TEXT("Log: waiting for the other teams"), C.LogContains(TEXT("waiting for the other teams (development listen server)")));
+		C.Test.TestFalse(TEXT("No whole-server countdown while B raids"), Mode->IsHubReturnPending());
+		C.Test.TestFalse(TEXT("Not leaving"), Mode->IsLeavingForHub(TeamReturnFirstId));
+	});
+
+	Scenario.Wait(TeamReturnTestCountdown + 0.5f);
+
+	Scenario.Step(TEXT("Still no plan for A; B extracts: the whole server counts down"), [](FScenarioContext& C)
+	{
+		ACrossguardGameMode* Mode = C.GameMode();
+		ACrossguardCharacter* Local = C.LocalPlayer();
+		if (!C.Require(Mode != nullptr && Local != nullptr, TEXT("the game mode and the PIE player")))
+		{
+			return;
+		}
+		C.Test.TestNull(TEXT("No team plan for A"), Mode->GetTeamHubReturnPlan(static_cast<int32>(C.Number(TEXT("TeamA")))));
+		Mode->HandleExtraction(Local);
+		C.Test.TestTrue(TEXT("The whole server's countdown runs"), Mode->IsHubReturnPending());
+		C.Test.TestFalse(TEXT("No team countdown for B"), Mode->IsTeamHubReturnPending(static_cast<int32>(C.Number(TEXT("TeamB")))));
 	});
 
 	Scenario.WaitUntil(TEXT("the whole server's return starts"), TeamReturnTestCountdown + 3.0f, [](FScenarioContext& C)
@@ -226,7 +307,7 @@ bool FCrossguardScenarioTeamReturnEarly::RunTest(const FString& Parameters)
 		return C.GameMode() != nullptr && C.GameMode()->HasHubReturnStarted();
 	});
 
-	Scenario.Step(TEXT("The whole server travels to the hub as before"), [](FScenarioContext& C)
+	Scenario.Step(TEXT("The whole server travels to the hub map"), [](FScenarioContext& C)
 	{
 		const ACrossguardGameMode* Mode = C.GameMode();
 		if (!C.Require(Mode != nullptr, TEXT("the game mode")))
@@ -242,88 +323,36 @@ bool FCrossguardScenarioTeamReturnEarly::RunTest(const FString& Parameters)
 	return true;
 }
 
-// A dedicated hub server is set (HubServerAddress): both members of a finished team travel straight to
-// it with ?Party=<key>, at once; nobody hosts.
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioTeamReturnHubServer, "Crossguard.Scenario.HubReturn.TeamToHubServer", CROSSGUARD_SCENARIO_FLAGS)
+// Not development mode (forced: as a dedicated or Shipping server) and no hub server: a solo raider
+// dies for the raid while the PIE player raids; their team of one counts down and its plan is the main
+// menu (with the NoHub message), never a whole-server travel. The destination order is checked too.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioTeamReturnNoHub, "Crossguard.Scenario.HubReturn.NoHubServerToMenu", CROSSGUARD_SCENARIO_FLAGS)
 
-bool FCrossguardScenarioTeamReturnHubServer::RunTest(const FString& Parameters)
+bool FCrossguardScenarioTeamReturnNoHub::RunTest(const FString& Parameters)
 {
 	using namespace CrossguardScenario;
 	using namespace CrossguardScenarioTeamReturn;
 
 	FScenario Scenario(*this);
 
-	Scenario.Step(TEXT("A hub server is set; team A extracts while the PIE player raids"), [](FScenarioContext& C)
+	Scenario.Step(TEXT("Destination order; then dedicated mode, a solo raider dies"), [](FScenarioContext& C)
 	{
-		if (!PrepareTeamReturn(C))
+		if (!PrepareTeamReturn(C, TeamReturnHubServer))
 		{
 			return;
 		}
 		ACrossguardGameMode* Mode = C.GameMode();
-		if (Mode->GetHubServerAddress() != Mode->HubServerAddress)
-		{
-			C.Skip(TEXT("-HubServer= is on the command line: the test's address would be ignored"));
-			return;
-		}
-		Mode->HubServerAddress = TeamReturnHubServer;
-		if (!SpawnTeamA(C))
-		{
-			return;
-		}
-		Mode->HandleExtraction(C.Get<ACrossguardCharacter>(TEXT("A1")));
-		Mode->HandleExtraction(C.Get<ACrossguardCharacter>(TEXT("A2")));
-		C.Test.TestTrue(TEXT("Team A's countdown runs"), Mode->IsTeamHubReturnPending(static_cast<int32>(C.Number(TEXT("TeamA")))));
-	});
-
-	Scenario.WaitUntil(TEXT("team A's plan is made"), TeamReturnTestCountdown + 3.0f, [](FScenarioContext& C)
-	{
-		const ACrossguardGameMode* Mode = C.GameMode();
-		return Mode != nullptr && Mode->GetTeamHubReturnPlan(static_cast<int32>(C.Number(TEXT("TeamA")))) != nullptr;
-	});
-
-	Scenario.Step(TEXT("Both travel to the hub server with the party key"), [](FScenarioContext& C)
-	{
-		ACrossguardGameMode* Mode = C.GameMode();
-		const TArray<FCrossguardTeamHubTravel>* Plan = Mode != nullptr ? Mode->GetTeamHubReturnPlan(static_cast<int32>(C.Number(TEXT("TeamA")))) : nullptr;
-		if (!C.Require(Plan != nullptr && Plan->Num() == 2, TEXT("a plan for both members")))
-		{
-			return;
-		}
-		const FString Expected = ACrossguardGameMode::BuildTeamHubJoinUrl(TeamReturnHubServer, TeamReturnPartyA);
-		for (const FCrossguardTeamHubTravel& Travel : *Plan)
-		{
-			C.Test.AddInfo(FString::Printf(TEXT("%s: %s"), *Travel.PlayerId, *Travel.Url));
-			C.Test.TestTrue(Travel.PlayerId + TEXT(" travels to the hub server"), Travel.Mode == ECrossguardTeamHubTravel::HubServer);
-			C.Test.TestTrue(Travel.PlayerId + TEXT(": <hub server>?Party=<key>"), !Expected.IsEmpty() && Travel.Url.StartsWith(Expected));
-			C.Test.TestEqual(Travel.PlayerId + TEXT(" goes at once"), Travel.DelaySeconds, 0.0f);
-		}
-		C.Test.TestTrue(TEXT("The PIE player still raids"), C.LocalPlayer() != nullptr && C.PlayerState(C.LocalPlayer()) != nullptr
-			&& C.PlayerState(C.LocalPlayer())->IsInRaid());
+		Crossguard::SetDevListenModeOverrideForTests(C.World(), false);
+		C.Test.TestFalse(TEXT("Forced: not development mode"), Crossguard::IsDevListenMode(C.World()));
+		C.Test.TestTrue(TEXT("A hub server wins"), Mode->GetHubDestination(nullptr).Kind == ECrossguardHubDestination::HubServer);
 		Mode->HubServerAddress.Reset();
-	});
+		C.Test.TestTrue(TEXT("No hub server, not development: the menu"), Mode->GetHubDestination(nullptr).Kind == ECrossguardHubDestination::Menu);
+		Crossguard::SetDevListenModeOverrideForTests(C.World(), true);
+		C.Test.TestEqual(TEXT("Development mode: the whole-server return (or the menu without a hub map)"),
+			static_cast<int32>(Mode->GetHubDestination(nullptr).Kind),
+			static_cast<int32>(Mode->GetHubMapName().IsEmpty() ? ECrossguardHubDestination::Menu : ECrossguardHubDestination::DevServerTravel));
+		Crossguard::SetDevListenModeOverrideForTests(C.World(), false);
 
-	Scenario.Run();
-	return true;
-}
-
-// A solo raider dies for the raid while the PIE player raids: ruled, no trip to the menu; their team
-// of one counts down and its plan opens the hub on their own machine (no party key).
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioTeamReturnSolo, "Crossguard.Scenario.HubReturn.SoloFinisherHostsHub", CROSSGUARD_SCENARIO_FLAGS)
-
-bool FCrossguardScenarioTeamReturnSolo::RunTest(const FString& Parameters)
-{
-	using namespace CrossguardScenario;
-	using namespace CrossguardScenarioTeamReturn;
-
-	FScenario Scenario(*this);
-
-	Scenario.Step(TEXT("A solo raider dies for the raid"), [](FScenarioContext& C)
-	{
-		if (!PrepareTeamReturn(C))
-		{
-			return;
-		}
-		ACrossguardGameMode* Mode = C.GameMode();
 		ACrossguardCharacter* Solo = C.SpawnPlayer(TEXT("Solo"), FVector(0.0f, 1000.0f, 0.0f));
 		if (!C.Require(Solo != nullptr && C.PlayerState(Solo) != nullptr, TEXT("the solo raider spawned")))
 		{
@@ -333,7 +362,7 @@ bool FCrossguardScenarioTeamReturnSolo::RunTest(const FString& Parameters)
 		SoloState->DevPlayerId = TEXT("dev-teamreturn-solo");
 		C.SetNumber(TEXT("TeamSolo"), SoloState->GetTeamId());
 		Mode->HandlePermanentDeath(Solo);
-		C.Test.TestFalse(TEXT("Ruled: not sent to the menu"), Mode->WasSentToMenu(TEXT("dev-teamreturn-solo")));
+		C.Test.TestFalse(TEXT("Ruled: not sent to the menu on their own"), Mode->WasSentToMenu(TEXT("dev-teamreturn-solo")));
 		C.Test.TestTrue(TEXT("The team of one counts down"), Mode->IsTeamHubReturnPending(SoloState->GetTeamId()));
 	});
 
@@ -343,22 +372,19 @@ bool FCrossguardScenarioTeamReturnSolo::RunTest(const FString& Parameters)
 		return Mode != nullptr && Mode->GetTeamHubReturnPlan(static_cast<int32>(C.Number(TEXT("TeamSolo")))) != nullptr;
 	});
 
-	Scenario.Step(TEXT("The solo raider hosts the hub locally"), [](FScenarioContext& C)
+	Scenario.Step(TEXT("Nowhere to go: the main menu"), [](FScenarioContext& C)
 	{
 		const ACrossguardGameMode* Mode = C.GameMode();
 		const TArray<FCrossguardTeamHubTravel>* Plan = Mode != nullptr ? Mode->GetTeamHubReturnPlan(static_cast<int32>(C.Number(TEXT("TeamSolo")))) : nullptr;
+		Crossguard::SetDevListenModeOverrideForTests(C.World(), TOptional<bool>());
 		if (!C.Require(Plan != nullptr && Plan->Num() == 1, TEXT("a plan for one")))
 		{
 			return;
 		}
-		const FCrossguardTeamHubTravel& Travel = (*Plan)[0];
-		C.Test.AddInfo(FString::Printf(TEXT("Solo: %s"), *Travel.Url));
-		C.Test.TestTrue(TEXT("Leader of a team of one"), Travel.bLeader);
-		C.Test.TestTrue(TEXT("Hosts the hub on its own machine"), Travel.Mode == ECrossguardTeamHubTravel::HostHub);
-		C.Test.TestEqual(TEXT("<hub map>?listen?Hub, no party key"), Travel.Url,
-			ACrossguardGameMode::BuildTeamHubHostUrl(Mode->GetHubMapName(), FString()) + TEXT("?DevPlayerId=teamreturn-solo"));
-		C.Test.TestFalse(TEXT("No ?Party="), Travel.Url.Contains(TEXT("?Party=")));
-		C.Test.TestFalse(TEXT("No whole-server return: the PIE player raids"), Mode->IsHubReturnPending() || Mode->HasHubReturnStarted());
+		C.Test.TestTrue(TEXT("To the menu"), (*Plan)[0].Mode == ECrossguardTeamHubTravel::Menu && (*Plan)[0].Url.IsEmpty());
+		C.Test.TestTrue(TEXT("Log: no hub server"), C.LogContains(TEXT("goes to the menu (no hub server)")));
+		C.Test.TestFalse(TEXT("No whole-server return"), Mode->IsHubReturnPending() || Mode->HasHubReturnStarted());
+		C.Test.TestFalse(TEXT("The menu says why"), ACrossguardMenuGameMode::ReasonMessage(ACrossguardMenuGameMode::NoHubReason).IsEmpty());
 	});
 
 	Scenario.Run();

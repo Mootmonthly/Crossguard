@@ -10,6 +10,7 @@
 #include "Components/VerticalBox.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "Game/CrossguardDevMode.h"
 #include "Game/CrossguardMenuGameMode.h"
 #include "Game/CrossguardPlayerController.h"
 #include "Game/CrossguardSettingsSave.h"
@@ -229,6 +230,14 @@ void UCrossguardMainMenuWidget::TravelTo(const FString& Url)
 void UCrossguardMainMenuWidget::Play()
 {
 	using namespace CrossguardMainMenuLocal;
+	if (!Crossguard::IsDevListenMode(GetWorld()))
+	{
+		// The real game never hosts on a player's PC: Play will connect to a hub server once the
+		// backend exists.
+		ShowStatus(TEXT("Online play is not available yet (no hub server)."), Refusal);
+		return;
+	}
+	// DEV-ONLY (listen server): this PC hosts the hub.
 	const FString Url = GetPlayUrl();
 	FString Map;
 	Url.Split(TEXT("?"), &Map, nullptr);

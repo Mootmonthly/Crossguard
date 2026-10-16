@@ -26,7 +26,8 @@ public:
 
 	// --- What the buttons do ---
 
-	// Hosts the hub: a listen server on the hub map with ?Hub. Refused (status line) if the map is missing.
+	// DEV-ONLY (listen server): hosts the hub: a listen server on the hub map with ?Hub. Refused (status
+	// line) outside development mode (Crossguard::IsDevListenMode) or if the map is missing.
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|UI")
 	void Play();
 

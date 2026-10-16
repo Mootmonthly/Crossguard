@@ -11,8 +11,10 @@
 #include "Engine/EngineBaseTypes.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "Game/CrossguardDevMode.h"
 #include "Game/CrossguardGameMode.h"
 #include "Game/CrossguardGuildSubsystem.h"
+#include "Game/CrossguardMatchmaking.h"
 #include "Game/CrossguardPartyComponent.h"
 #include "Game/CrossguardPartySubsystem.h"
 #include "Game/CrossguardPlayerState.h"
@@ -26,6 +28,22 @@ namespace CrossguardScenarioParty
 	constexpr float PartySceneY = 12000.0f;
 	// Game seconds a replicated change may take to show on a client.
 	constexpr float PartyReplicationWait = 5.0f;
+
+	// A backend's answer, for the real launch path: a match server and a ticket.
+	class FPartyTestMatchmaking : public ICrossguardMatchmaking
+	{
+	public:
+		virtual FCrossguardMatchAssignment RequestMatch(const UWorld* HubWorld, const FCrossguardMatchRequest& Request) const override
+		{
+			FCrossguardMatchAssignment Assignment;
+			Assignment.Status = ECrossguardMatchStatus::Assigned;
+			Assignment.ServerAddress = TEXT("198.51.100.20:7777");
+			Assignment.Ticket = TEXT("ticket-123");
+			return Assignment;
+		}
+		virtual FString FindHubServer(const FString& PlayerId, const FString& PartyKey) const override { return FString(); }
+		virtual FString Describe() const override { return TEXT("party test"); }
+	};
 
 	FString PartyEnumName(ECrossguardPartyResult Value)
 	{
@@ -622,6 +640,40 @@ bool FCrossguardScenarioPartyRaidLaunch::RunTest(const FString& Parameters)
 		const bool bListen = C.World()->GetNetMode() == NM_ListenServer;
 		C.Test.TestEqual(TEXT("URL"), Url, UCrossguardPartySubsystem::RaidTravelUrl(TEXT("/Game/L_Test"), PartyId, bListen ? TEXT("listen") : TEXT("")));
 		C.Test.TestTrue(TEXT("URL starts with the map and carries the key"), Url.StartsWith(FString::Printf(TEXT("/Game/L_Test?%s=%s"), ACrossguardGameMode::PartyOption, *PartyId)));
+	});
+
+	Scenario.Step(TEXT("Not development mode: no whole-server launch; a backend's match server with a ticket"), [](FScenarioContext& C)
+	{
+		UCrossguardPartySubsystem* Parties = PartiesOf(C);
+		UCrossguardMatchmakingSubsystem* Matchmaking = UCrossguardMatchmakingSubsystem::Get(C.World());
+		ACrossguardPlayerState* A = C.PlayerState(C.Get<ACrossguardCharacter>(TEXT("A")));
+		if (Parties == nullptr || !C.Require(A != nullptr && Matchmaking != nullptr, TEXT("A and the matchmaking subsystem exist")))
+		{
+			return;
+		}
+		// The whole server is A's party and a raid map is set (previous step), but no -RaidServer=.
+		Crossguard::SetDevListenModeOverrideForTests(C.World(), false);
+		ECrossguardRaidTravel Mode = ECrossguardRaidTravel::ServerTravel;
+		FString Url;
+		ExpectParty(C, TEXT("Dedicated, no matchmaking: refused"), Parties->PlanRaidTravel(A, Mode, Url), ECrossguardPartyResult::NoRaidDestination);
+		C.Test.TestEqual(TEXT("Mode"), TravelEnumName(Mode), TravelEnumName(ECrossguardRaidTravel::NoDestination));
+
+		Matchmaking->SetMatchmaking(MakeShared<FPartyTestMatchmaking>());
+		ExpectParty(C, TEXT("A backend's assignment"), Parties->PlanRaidTravel(A, Mode, Url), ECrossguardPartyResult::None);
+		C.Test.TestEqual(TEXT("Mode"), TravelEnumName(Mode), TravelEnumName(ECrossguardRaidTravel::ClientTravel));
+		C.Test.TestEqual(TEXT("URL: the match server with the ticket, no ?Party="), Url,
+			FString::Printf(TEXT("198.51.100.20:7777?%s=ticket-123"), UCrossguardMatchmakingSubsystem::MatchTicketOption));
+		Matchmaking->SetMatchmaking(nullptr);
+
+		// The Shipping default: nothing available.
+		Matchmaking->SetMatchmaking(MakeShared<FCrossguardNoMatchmaking>());
+		C.GameMode()->RaidServerAddress = TEXT("127.0.0.1:7777");
+		ExpectParty(C, TEXT("No backend: refused even with -RaidServer"), Parties->PlanRaidTravel(A, Mode, Url), ECrossguardPartyResult::NoRaidDestination);
+		C.GameMode()->RaidServerAddress.Reset();
+		Matchmaking->SetMatchmaking(nullptr);
+		Crossguard::SetDevListenModeOverrideForTests(C.World(), TOptional<bool>());
+
+		C.Test.TestTrue(TEXT("A bad ticket builds no URL"), UCrossguardMatchmakingSubsystem::BuildMatchTravelUrl(TEXT("host:7777"), TEXT("a?b")).IsEmpty());
 	});
 
 	Scenario.Step(TEXT("In a raid the launch is refused"), [](FScenarioContext& C)

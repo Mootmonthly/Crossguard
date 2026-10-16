@@ -10,7 +10,8 @@ class UCrossguardMainMenuWidget;
 
 // The main menu map's game mode (L_MainMenu, Tools/editor_setup.py -CreateMenu; docs/hub-and-menu.md):
 // no pawn, its HUD shows UCrossguardMainMenuWidget with the mouse cursor on. Play hosts the hub
-// (HubMapName, as a listen server with ?Hub), Join connects to an address, Settings, Quit. A player
+// (DEV-ONLY (listen server): HubMapName as a listen server with ?Hub; refused outside development
+// mode until the backend sends players to a hub server), Join connects to an address, Settings, Quit. A player
 // whose raid is over comes back here (ACrossguardGameMode::ReturnToMenu) with a reason key in the URL.
 UCLASS()
 class CROSSGUARD_API ACrossguardMenuGameMode : public AGameModeBase
@@ -38,6 +39,8 @@ public:
 	static const TCHAR* ReasonOption;
 	// Reason key: the player's raid is over (dead for the raid, no teammate left).
 	static const TCHAR* RaidOverReason;
+	// Reason key: the player's team is done but the match server knows no hub server to send them to.
+	static const TCHAR* NoHubReason;
 
 	// --- Pure helpers (tested) ---
 

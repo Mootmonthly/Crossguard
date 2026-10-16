@@ -12,6 +12,7 @@
 
 const TCHAR* ACrossguardMenuGameMode::ReasonOption = TEXT("MenuReason");
 const TCHAR* ACrossguardMenuGameMode::RaidOverReason = TEXT("RaidOver");
+const TCHAR* ACrossguardMenuGameMode::NoHubReason = TEXT("NoHub");
 
 // --- ACrossguardMenuGameMode ----------------------------------------------------------------------
 
@@ -86,6 +87,10 @@ FString ACrossguardMenuGameMode::ReasonMessage(const FString& ReasonKey)
 	if (ReasonKey == RaidOverReason)
 	{
 		return TEXT("Your raid is over.");
+	}
+	if (ReasonKey == NoHubReason)
+	{
+		return TEXT("Your raid is over. No hub server is available right now.");
 	}
 	return FString();
 }
