@@ -269,6 +269,8 @@ data, attack-started events, weapon meshes from the weapon table, and hit / dama
 3. Monsters' held weapons are not shown (mobs have a weapon type, not a weapon item). A weapon mesh
    on a monster: a socket-attached Static Mesh in its Blueprint, or a later data field.
 4. No footstep hook (anim notifies in the Anim Blueprint do that without code).
+5. Monster animations without an Anim Blueprint: `animations` in Mobs.json (idle, move, attack, death by
+   state; 2026-10-16). No blending, no hit reacts, no Physics Assets for monsters yet (no ragdoll).
 
 ## Sources (checked 2026-10-16)
 

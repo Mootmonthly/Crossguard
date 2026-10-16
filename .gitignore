@@ -27,3 +27,7 @@ __pycache__/
 
 # Local backend secrets (Backend/.env.example is the template)
 Backend/.env
+
+# Epic Niagara Examples Pack (Fab, 1.2 GB): only the systems in use are committed (git add -f;
+# Content/ThirdParty/LICENSES.md).
+Content/NiagaraExamples/

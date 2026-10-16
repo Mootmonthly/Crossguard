@@ -8,7 +8,9 @@
     "maxStack": 20,
     "sellValue": 0,
     "sellPerRarity": 0,
-    "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactWood.S_ImpactWood"
+    "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactWood.S_ImpactWood",
+    "trailVfx": "/Game/NiagaraExamples/FX_Weapons/Trails/NS_SimpleRibbonTrail.NS_SimpleRibbonTrail",
+    "impactVfx": "/Game/NiagaraExamples/FX_Weapons/Impacts/NS_Impact_Wood.NS_Impact_Wood"
   },
   {
     "id": "bandage",
@@ -33,7 +35,9 @@
     "maxStack": 20,
     "sellValue": 0,
     "sellPerRarity": 0,
-    "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactWood.S_ImpactWood"
+    "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactWood.S_ImpactWood",
+    "trailVfx": "/Game/NiagaraExamples/FX_Weapons/Trails/NS_SimpleRibbonTrail.NS_SimpleRibbonTrail",
+    "impactVfx": "/Game/NiagaraExamples/FX_Weapons/Impacts/NS_Impact_Wood.NS_Impact_Wood"
   },
   {
     "id": "emerald",
@@ -63,7 +67,8 @@
     "countsAsWeapon": null,
     "impactPower": 0,
     "projectileMesh": "/Game/ThirdParty/Kenney/SurvivalKit/SM_Bottle.SM_Bottle",
-    "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactGlass.S_ImpactGlass"
+    "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactGlass.S_ImpactGlass",
+    "impactVfx": "/Game/NiagaraExamples/FX_Explosions/NS_Explosion_Small.NS_Explosion_Small"
   },
   {
     "id": "gold_coin",
@@ -187,7 +192,8 @@
     "countsAsWeapon": "Axe",
     "impactPower": 3,
     "projectileMesh": "/Game/ThirdParty/Kenney/SurvivalKit/SM_ToolAxe.SM_ToolAxe",
-    "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactMetal.S_ImpactMetal"
+    "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactMetal.S_ImpactMetal",
+    "impactVfx": "/Game/NiagaraExamples/FX_Weapons/Impacts/NS_Impact_Metal.NS_Impact_Metal"
   },
   {
     "id": "throwing_knife",
@@ -207,6 +213,7 @@
     "countsAsWeapon": "Dagger",
     "impactPower": 1,
     "projectileMesh": "/Game/ThirdParty/PolyHaven/OrnateMedievalDagger/SM_OrnateMedievalDagger.SM_OrnateMedievalDagger",
-    "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactMetal.S_ImpactMetal"
+    "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactMetal.S_ImpactMetal",
+    "impactVfx": "/Game/NiagaraExamples/FX_Weapons/Impacts/NS_Impact_Metal.NS_Impact_Metal"
   }
 ]

@@ -18,7 +18,7 @@
     "ammo": null,
     "canParry": false,
     "impactPower": 4,
-    "mesh": "/Game/ThirdParty/PolyHaven/WoodenAxe/SM_WoodenAxe.SM_WoodenAxe"
+    "mesh": "/Game/ThirdParty/Quaternius/MedievalWeapons/SM_Axe_Small.SM_Axe_Small"
   },
   {
     "id": "axe_two_handed",
@@ -39,10 +39,7 @@
     "ammo": null,
     "canParry": true,
     "impactPower": 6,
-    "mesh": "/Game/ThirdParty/PolyHaven/WoodenAxe/SM_WoodenAxe.SM_WoodenAxe",
-    "relativeTransform": {
-      "scale": 1.5
-    }
+    "mesh": "/Game/ThirdParty/Quaternius/MedievalWeapons/SM_Axe_Double.SM_Axe_Double"
   },
   {
     "id": "bow",
@@ -62,7 +59,8 @@
     "delivery": "Projectile",
     "ammo": "arrow",
     "canParry": false,
-    "impactPower": 3
+    "impactPower": 3,
+    "mesh": "/Game/ThirdParty/Quaternius/MedievalWeapons/SM_Bow_Wooden.SM_Bow_Wooden"
   },
   {
     "id": "dagger_one_handed",
@@ -83,7 +81,10 @@
     "ammo": null,
     "canParry": false,
     "impactPower": 1,
-    "mesh": "/Game/ThirdParty/PolyHaven/OrnateMedievalDagger/SM_OrnateMedievalDagger.SM_OrnateMedievalDagger"
+    "mesh": "/Game/ThirdParty/Quaternius/MedievalWeapons/SM_Dagger.SM_Dagger",
+    "relativeTransform": {
+      "scale": 0.8
+    }
   },
   {
     "id": "shield_one_handed",
@@ -101,9 +102,9 @@
     "ammo": null,
     "canParry": false,
     "impactPower": 4,
-    "mesh": "/Game/ThirdParty/PolyHaven/KiteShield/SM_KiteShield.SM_KiteShield",
+    "mesh": "/Game/ThirdParty/Quaternius/MedievalWeapons/SM_Shield_Heater.SM_Shield_Heater",
     "relativeTransform": {
-      "scale": 0.6
+      "scale": 1.2
     }
   },
   {
@@ -125,10 +126,7 @@
     "ammo": null,
     "canParry": true,
     "impactPower": 5,
-    "mesh": "/Game/ThirdParty/Kenney/MiniDungeon/SM_Spear.SM_Spear",
-    "relativeTransform": {
-      "scale": 3.3
-    }
+    "mesh": "/Game/ThirdParty/Quaternius/MedievalWeapons/SM_Spear.SM_Spear"
   },
   {
     "id": "staff_two_handed",
@@ -148,7 +146,11 @@
     "delivery": "Projectile",
     "ammo": null,
     "canParry": true,
-    "impactPower": 4
+    "impactPower": 4,
+    "mesh": "/Game/ThirdParty/KayKit/Skeletons/SM_Skeleton_Staff.SM_Skeleton_Staff",
+    "relativeTransform": {
+      "scale": 0.75
+    }
   },
   {
     "id": "sword_one_handed",
@@ -169,9 +171,9 @@
     "ammo": null,
     "canParry": false,
     "impactPower": 3,
-    "mesh": "/Game/ThirdParty/Kenney/MiniDungeon/SM_Sword.SM_Sword",
+    "mesh": "/Game/ThirdParty/Quaternius/MedievalWeapons/SM_Sword.SM_Sword",
     "relativeTransform": {
-      "scale": 1.8
+      "scale": 0.8
     }
   },
   {
@@ -193,10 +195,7 @@
     "ammo": null,
     "canParry": true,
     "impactPower": 5,
-    "mesh": "/Game/ThirdParty/Kenney/MiniDungeon/SM_Sword.SM_Sword",
-    "relativeTransform": {
-      "scale": 2.6
-    }
+    "mesh": "/Game/ThirdParty/Quaternius/MedievalWeapons/SM_Sword_Big.SM_Sword_Big"
   },
   {
     "id": "wand_one_handed",

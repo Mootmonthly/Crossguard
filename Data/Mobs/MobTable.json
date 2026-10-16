@@ -20,15 +20,19 @@
 		"Scale": 1,
 		"Skills": [],
 		"LootTableId": "mob_example_brute",
-		"Mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Zombie.SK_Zombie",
+		"Mesh": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Orc.SK_Orc",
 		"AnimClass": "",
-		"MeshScale": 2.3,
+		"MeshScale": 0.55,
 		"MeshOffset": {
 			"X": 0,
 			"Y": 0,
 			"Z": 0
 		},
-		"MeshYaw": -90
+		"MeshYaw": 90,
+		"IdleAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_OrcCharacterArmature_Idle.SK_OrcCharacterArmature_Idle",
+		"MoveAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_OrcCharacterArmature_Walk.SK_OrcCharacterArmature_Walk",
+		"AttackAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_OrcCharacterArmature_Punch.SK_OrcCharacterArmature_Punch",
+		"DeathAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_OrcCharacterArmature_Death.SK_OrcCharacterArmature_Death"
 	},
 	{
 		"Name": "mithril_dragon",
@@ -59,15 +63,19 @@
 			"summon_greater_demon"
 		],
 		"LootTableId": "mob_mithril_dragon",
-		"Mesh": "",
+		"Mesh": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Dragon_Evolved.SK_Dragon_Evolved",
 		"AnimClass": "",
-		"MeshScale": 1,
+		"MeshScale": 0.62,
 		"MeshOffset": {
 			"X": 0,
 			"Y": 0,
 			"Z": 0
 		},
-		"MeshYaw": -90
+		"MeshYaw": 90,
+		"IdleAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Dragon_EvolvedCharacterArmature_Flying_Idle.SK_Dragon_EvolvedCharacterArmature_Flying_Idle",
+		"MoveAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Dragon_EvolvedCharacterArmature_Fast_Flying.SK_Dragon_EvolvedCharacterArmature_Fast_Flying",
+		"AttackAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Dragon_EvolvedCharacterArmature_Headbutt.SK_Dragon_EvolvedCharacterArmature_Headbutt",
+		"DeathAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Dragon_EvolvedCharacterArmature_Death.SK_Dragon_EvolvedCharacterArmature_Death"
 	},
 	{
 		"Name": "skeleton_archer",
@@ -93,15 +101,19 @@
 			"antimagic_garb"
 		],
 		"LootTableId": "mob_skeleton_archer",
-		"Mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Skeleton.SK_Skeleton",
+		"Mesh": "/Game/ThirdParty/KayKit/Skeletons/SK_Skeleton_Rogue.SK_Skeleton_Rogue",
 		"AnimClass": "",
-		"MeshScale": 2.5,
+		"MeshScale": 0.85,
 		"MeshOffset": {
 			"X": 0,
 			"Y": 0,
 			"Z": 0
 		},
-		"MeshYaw": -90
+		"MeshYaw": -90,
+		"IdleAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Idle.Rig_Medium_SpecialSkeletons_Idle",
+		"MoveAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Walking.Rig_Medium_SpecialSkeletons_Walking",
+		"AttackAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_CombatRangedRanged_Bow_Release.Rig_Medium_CombatRangedRanged_Bow_Release",
+		"DeathAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Death.Rig_Medium_SpecialSkeletons_Death"
 	},
 	{
 		"Name": "skeleton_mage",
@@ -129,15 +141,19 @@
 			"wall"
 		],
 		"LootTableId": "mob_skeleton_mage",
-		"Mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Skeleton.SK_Skeleton",
+		"Mesh": "/Game/ThirdParty/KayKit/Skeletons/SK_Skeleton_Mage.SK_Skeleton_Mage",
 		"AnimClass": "",
-		"MeshScale": 2.5,
+		"MeshScale": 0.85,
 		"MeshOffset": {
 			"X": 0,
 			"Y": 0,
 			"Z": 0
 		},
-		"MeshYaw": -90
+		"MeshYaw": -90,
+		"IdleAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Idle.Rig_Medium_SpecialSkeletons_Idle",
+		"MoveAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Walking.Rig_Medium_SpecialSkeletons_Walking",
+		"AttackAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_CombatRangedRanged_Magic_Shoot.Rig_Medium_CombatRangedRanged_Magic_Shoot",
+		"DeathAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Death.Rig_Medium_SpecialSkeletons_Death"
 	},
 	{
 		"Name": "skeleton_soldier",
@@ -165,14 +181,18 @@
 			"heroic_might"
 		],
 		"LootTableId": "mob_skeleton_soldier",
-		"Mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Skeleton.SK_Skeleton",
+		"Mesh": "/Game/ThirdParty/KayKit/Skeletons/SK_Skeleton_Warrior.SK_Skeleton_Warrior",
 		"AnimClass": "",
-		"MeshScale": 2.5,
+		"MeshScale": 0.85,
 		"MeshOffset": {
 			"X": 0,
 			"Y": 0,
 			"Z": 0
 		},
-		"MeshYaw": -90
+		"MeshYaw": -90,
+		"IdleAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Idle.Rig_Medium_SpecialSkeletons_Idle",
+		"MoveAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Walking.Rig_Medium_SpecialSkeletons_Walking",
+		"AttackAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_CombatMeleeMelee_2H_Attack_Chop.Rig_Medium_CombatMeleeMelee_2H_Attack_Chop",
+		"DeathAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Death.Rig_Medium_SpecialSkeletons_Death"
 	}
 ]

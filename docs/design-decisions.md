@@ -677,16 +677,25 @@ Everything here is cosmetic: no rule depends on it.
   projectile's impact is reliable (it is sent just before the projectile goes away).
 - Assumed: a skill cast fires `OnAttackStarted` (`Kind` Cast, `SkillId`) when it commits, also for
   self-buffs (Slash readying, Stealth).
-- Assumed (placeholder, 2026-10-16): the first imported art (CC0, `Content/ThirdParty/LICENSES.md`)
-  is wired up as: one-handed sword Kenney sword ×1.8, two-handed sword the same ×2.6, dagger Poly
-  Haven dagger, one- and two-handed axe Poly Haven wooden axe (×1, ×1.5), shield Poly Haven kite
-  shield ×0.6, spear Kenney spear ×3.3; bow, staff, wand none. Throwing axe, knife and bottle fly
-  as Kenney tool axe, the dagger and Kenney bottle; arrows and bolts no mesh, impact sounds only.
-  Skeleton mobs use Kenney's skeleton (×2.5), the example brute Kenney's zombie (×2.3), the dragon
-  none. The meshes' hand orientation and the mobs' facing (`meshYaw` -90) are untuned: no Anim
-  Blueprint yet (monsters stand in their bind pose) and no Physics Asset (no monster ragdoll).
+- Assumed (placeholder, 2026-10-16): the imported art (CC0 except the Niagara pack;
+  `Content/ThirdParty/LICENSES.md`) is wired up as: weapons from Quaternius' Medieval Weapons Pack
+  (one-handed sword ×0.8, two-handed Sword_Big, dagger ×0.8, one-handed Axe_Small, two-handed
+  Axe_Double, spear, Shield_Heater ×1.2, wooden bow), the staff KayKit's ×0.75, the wand none. Thrown
+  axe, knife and bottle fly as Kenney tool axe, the Poly Haven dagger and Kenney bottle; arrows and
+  bolts have no mesh (Quaternius' arrow lies along Y and the projectile mesh has no rotation field),
+  a ribbon trail and a wood impact. Skeleton soldier / archer / mage: KayKit Warrior / Rogue / Mage
+  (×0.85) with KayKit's skeleton idle, walk and death, and a two-handed chop / bow release / magic
+  shot; the example brute Quaternius' Orc (×0.55), the mithril dragon Quaternius' Dragon_Evolved
+  (×0.62 on its scale 6), both `meshYaw` 90, with their own takes. Niagara: hits `NS_Impact_Concrete`,
+  block and parry `NS_Spark_Burst`, the explosive bottle `NS_Explosion_Small`, thrown metal
+  `NS_Impact_Metal`. Untuned: weapon angles in the hand (the sword points oddly), the monsters' exact
+  size and facing. No Physics Assets yet: monsters play their death animation instead of a ragdoll.
   Character sounds: swing Kenney knifeSlice, hit impactPunch_medium, block impactMetal_heavy,
   death impactSoft_heavy.
+- Assumed (placeholder, 2026-10-16, owner's choice of approach): monsters without an Anim Blueprint
+  play data animations by state (`animations` in Mobs.json: idle and move loop, move above 20 cm/s;
+  the attack once per attack start; death once, holding the last pose), picked every 0.1 s, only on
+  machines that draw them.
 - Assumed (development only, 2026-10-16): in non-Shipping builds `-CrossguardPlayerId=<name>` is
   also the player name, so the local cluster's clients are alice and bob (invites go by name).
 

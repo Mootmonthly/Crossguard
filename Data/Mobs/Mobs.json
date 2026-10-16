@@ -78,10 +78,17 @@
         }
       ]
     },
+    "mesh": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Orc.SK_Orc",
+    "meshScale": 0.55,
+    "meshYaw": 90,
+    "animations": {
+      "idle": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_OrcCharacterArmature_Idle.SK_OrcCharacterArmature_Idle",
+      "move": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_OrcCharacterArmature_Walk.SK_OrcCharacterArmature_Walk",
+      "attack": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_OrcCharacterArmature_Punch.SK_OrcCharacterArmature_Punch",
+      "death": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_OrcCharacterArmature_Death.SK_OrcCharacterArmature_Death"
+    },
     "description": "Placeholder mob matching the built-in monster defaults. Edit or delete it in the Mob Forge.",
-    "notes": [],
-    "mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Zombie.SK_Zombie",
-    "meshScale": 2.3
+    "notes": []
   },
   {
     "id": "mithril_dragon",
@@ -170,6 +177,15 @@
         }
       ]
     },
+    "mesh": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Dragon_Evolved.SK_Dragon_Evolved",
+    "meshScale": 0.62,
+    "meshYaw": 90,
+    "animations": {
+      "idle": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Dragon_EvolvedCharacterArmature_Flying_Idle.SK_Dragon_EvolvedCharacterArmature_Flying_Idle",
+      "move": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Dragon_EvolvedCharacterArmature_Fast_Flying.SK_Dragon_EvolvedCharacterArmature_Fast_Flying",
+      "attack": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Dragon_EvolvedCharacterArmature_Headbutt.SK_Dragon_EvolvedCharacterArmature_Headbutt",
+      "death": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Dragon_EvolvedCharacterArmature_Death.SK_Dragon_EvolvedCharacterArmature_Death"
+    },
     "description": "",
     "notes": []
   },
@@ -256,10 +272,16 @@
         }
       ]
     },
+    "mesh": "/Game/ThirdParty/KayKit/Skeletons/SK_Skeleton_Rogue.SK_Skeleton_Rogue",
+    "meshScale": 0.85,
+    "animations": {
+      "idle": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Idle.Rig_Medium_SpecialSkeletons_Idle",
+      "move": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Walking.Rig_Medium_SpecialSkeletons_Walking",
+      "death": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Death.Rig_Medium_SpecialSkeletons_Death",
+      "attack": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_CombatRangedRanged_Bow_Release.Rig_Medium_CombatRangedRanged_Bow_Release"
+    },
     "description": "",
-    "notes": [],
-    "mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Skeleton.SK_Skeleton",
-    "meshScale": 2.5
+    "notes": []
   },
   {
     "id": "skeleton_mage",
@@ -346,10 +368,16 @@
         }
       ]
     },
+    "mesh": "/Game/ThirdParty/KayKit/Skeletons/SK_Skeleton_Mage.SK_Skeleton_Mage",
+    "meshScale": 0.85,
+    "animations": {
+      "idle": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Idle.Rig_Medium_SpecialSkeletons_Idle",
+      "move": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Walking.Rig_Medium_SpecialSkeletons_Walking",
+      "death": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Death.Rig_Medium_SpecialSkeletons_Death",
+      "attack": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_CombatRangedRanged_Magic_Shoot.Rig_Medium_CombatRangedRanged_Magic_Shoot"
+    },
     "description": "",
-    "notes": [],
-    "mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Skeleton.SK_Skeleton",
-    "meshScale": 2.5
+    "notes": []
   },
   {
     "id": "skeleton_soldier",
@@ -436,9 +464,15 @@
         }
       ]
     },
+    "mesh": "/Game/ThirdParty/KayKit/Skeletons/SK_Skeleton_Warrior.SK_Skeleton_Warrior",
+    "meshScale": 0.85,
+    "animations": {
+      "idle": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Idle.Rig_Medium_SpecialSkeletons_Idle",
+      "move": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Walking.Rig_Medium_SpecialSkeletons_Walking",
+      "death": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Death.Rig_Medium_SpecialSkeletons_Death",
+      "attack": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_CombatMeleeMelee_2H_Attack_Chop.Rig_Medium_CombatMeleeMelee_2H_Attack_Chop"
+    },
     "description": "",
-    "notes": [],
-    "mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Skeleton.SK_Skeleton",
-    "meshScale": 2.5
+    "notes": []
   }
 ]

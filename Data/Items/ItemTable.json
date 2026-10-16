@@ -22,8 +22,8 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "",
-		"TrailVfx": "",
-		"ImpactVfx": "",
+		"TrailVfx": "/Game/NiagaraExamples/FX_Weapons/Trails/NS_SimpleRibbonTrail.NS_SimpleRibbonTrail",
+		"ImpactVfx": "/Game/NiagaraExamples/FX_Weapons/Impacts/NS_Impact_Wood.NS_Impact_Wood",
 		"ImpactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactWood.S_ImpactWood"
 	},
 	{
@@ -76,8 +76,8 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "",
-		"TrailVfx": "",
-		"ImpactVfx": "",
+		"TrailVfx": "/Game/NiagaraExamples/FX_Weapons/Trails/NS_SimpleRibbonTrail.NS_SimpleRibbonTrail",
+		"ImpactVfx": "/Game/NiagaraExamples/FX_Weapons/Impacts/NS_Impact_Wood.NS_Impact_Wood",
 		"ImpactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactWood.S_ImpactWood"
 	},
 	{
@@ -131,7 +131,7 @@
 		"ImpactPower": 0,
 		"ProjectileMesh": "/Game/ThirdParty/Kenney/SurvivalKit/SM_Bottle.SM_Bottle",
 		"TrailVfx": "",
-		"ImpactVfx": "",
+		"ImpactVfx": "/Game/NiagaraExamples/FX_Explosions/NS_Explosion_Small.NS_Explosion_Small",
 		"ImpactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactGlass.S_ImpactGlass"
 	},
 	{
@@ -428,7 +428,7 @@
 		"ImpactPower": 3,
 		"ProjectileMesh": "/Game/ThirdParty/Kenney/SurvivalKit/SM_ToolAxe.SM_ToolAxe",
 		"TrailVfx": "",
-		"ImpactVfx": "",
+		"ImpactVfx": "/Game/NiagaraExamples/FX_Weapons/Impacts/NS_Impact_Metal.NS_Impact_Metal",
 		"ImpactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactMetal.S_ImpactMetal"
 	},
 	{
@@ -455,7 +455,7 @@
 		"ImpactPower": 1,
 		"ProjectileMesh": "/Game/ThirdParty/PolyHaven/OrnateMedievalDagger/SM_OrnateMedievalDagger.SM_OrnateMedievalDagger",
 		"TrailVfx": "",
-		"ImpactVfx": "",
+		"ImpactVfx": "/Game/NiagaraExamples/FX_Weapons/Impacts/NS_Impact_Metal.NS_Impact_Metal",
 		"ImpactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactMetal.S_ImpactMetal"
 	}
 ]
