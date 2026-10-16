@@ -43,10 +43,15 @@ not attack.
 | Inventory | `UCrossguardInventoryWidget` | Equipment (two weapon sets, six armor slots, Backpack, Quiver), the 10 × 5 grid and the Backpack / Quiver grids (cells over each item's footprint, rarity colours, short names in one-square cells, stack counts, tooltips with name, count and rarity), selected item actions (equip main / off hand, equip, take in hand, hotbar keys 3–7, learn a gem, rotate, drop, put in the open body), hotbar keys (click to clear), and the open body or chest beside it (click a stack to take it, Take all, Close). |
 | Trade window | `UCrossguardTradeWidget` | Ask the nearest player; answer a request; your items, your offer and theirs; banked gold; lock / unlock; accept; cancel; state line (who has locked or accepted, stacks n / 12). |
 | Guild window | `UCrossguardGuildWidget` | Create a guild (name field) and answer invites; name, your rank and what it allows; roster with rank and online state, promote / demote / make leader / kick (greyed when your rank cannot); invite nearest player; leave; bank gold with deposit / withdraw; bank stacks with withdraw; your stacks with deposit. |
-| Building blocks | `UCrossguardWidgetBase`, `UCrossguardWindowWidget`, `UCrossguardUIButton`, `UCrossguardItemGridWidget`, `CrossguardUI::*` helpers | Tree built in code, periodic refresh, a full-screen window frame that swallows stray clicks, a click/right-click/hover box, the item grid. |
+| Building blocks | `UCrossguardWidgetBase`, `UCrossguardWindowWidget`, `UCrossguardUIButton`, `UCrossguardItemGridWidget`, `UCrossguardItemDragOperation`, `CrossguardUI::*` helpers | Tree built in code, periodic refresh, a full-screen window frame that swallows stray clicks, a click/right-click/hover box that can start a drag and take a drop, the item grid (its cells drag; a drop anywhere on it reports the square the item's top-left lands on), the drag payload (item, source, grabbed square). |
 
 ### How to use the inventory
 
+- Drag an item (hold the left button and move): drop it on a square to move it there (the square
+  under the mouse is where the grabbed part of the item lands), on a stack of the same kind to
+  merge, on an equipment slot to equip it there, or on the open body / chest to put it in; drag a
+  stack out of the body / chest onto your grids or an equipment slot to take it. A drag keeps the
+  item's rotation. Everything below still works by clicking.
 - Click an item to select it (yellow). Then click a square to move it there (Rotate toggles the
   orientation for that move), click an item of the same kind to merge into it, or click an
   equipment slot to equip it there (weapons into that set's hand).

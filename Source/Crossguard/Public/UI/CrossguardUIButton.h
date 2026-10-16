@@ -43,12 +43,22 @@ public:
 	TFunction<void()> OnClicked;
 	TFunction<void()> OnRightClicked;
 	TFunction<void()> OnHovered;
+	// Set: a left press starts a drag once the mouse moves (the click then fires on release instead
+	// of on press). Returns the operation, or null for no drag.
+	TFunction<UDragDropOperation*(const FGeometry&, const FPointerEvent&)> OnDragStart;
+	// Set: something dropped on this box. Returns true if it took it.
+	TFunction<bool(UDragDropOperation*)> OnDropped;
 
 protected:
 	virtual void BuildTree() override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+	virtual FReply NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	virtual void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
+	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
+	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+	virtual void NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+	virtual void NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 
 private:
 	void ApplyLook();

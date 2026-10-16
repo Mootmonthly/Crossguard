@@ -160,12 +160,97 @@ bool FCrossguardScenarioUIWidgetsBind::RunTest(const FString& Parameters)
 			C.Test.TestEqual(TEXT("Clicking it again deselects it"), InventoryWidget->GetSelectedItemId(), 0);
 		}
 
+		// Drag and drop within the inventory: a one-square stack to a free square (the PIE player may
+		// carry a Blueprint debug loadout, so both are looked for).
+		{
+			const FIntPoint GridSize = Inventory->GetContainerSize(ECrossguardInventoryContainer::Main);
+			TSet<FIntPoint> Taken;
+			FCrossguardInventoryItem Small;
+			bool bHaveSmall = false;
+			for (const FCrossguardInventoryItem& Item : Inventory->GetItems())
+			{
+				if (Item.Container != ECrossguardInventoryContainer::Main)
+				{
+					continue;
+				}
+				const FIntPoint Footprint = Item.bRotated ? FIntPoint(Item.Size.Y, Item.Size.X) : Item.Size;
+				for (int32 X = 0; X < Footprint.X; ++X)
+				{
+					for (int32 Y = 0; Y < Footprint.Y; ++Y)
+					{
+						Taken.Add(Item.Position + FIntPoint(X, Y));
+					}
+				}
+				if (!bHaveSmall && Item.Size == FIntPoint(1, 1))
+				{
+					Small = Item;
+					bHaveSmall = true;
+				}
+			}
+			FIntPoint Free(-1, -1);
+			for (int32 Y = GridSize.Y - 1; Y >= 0 && Free.X < 0; --Y)
+			{
+				for (int32 X = GridSize.X - 1; X >= 0; --X)
+				{
+					if (!Taken.Contains(FIntPoint(X, Y)))
+					{
+						Free = FIntPoint(X, Y);
+						break;
+					}
+				}
+			}
+			if (bHaveSmall && Free.X >= 0)
+			{
+				InventoryWidget->DropItem(ECrossguardInventoryContainer::Main, Free, Small, false);
+				FCrossguardInventoryItem Moved;
+				C.Test.TestTrue(*FString::Printf(TEXT("A dropped stack moves to the square it was dropped on (%d, %d)"), Free.X, Free.Y),
+					Inventory->FindItem(Small.Id, Moved) && Moved.Position == Free && Moved.Container == ECrossguardInventoryContainer::Main);
+				C.Test.TestEqual(TEXT("A drop clears the selection"), InventoryWidget->GetSelectedItemId(), 0);
+			}
+			else
+			{
+				C.Test.AddWarning(TEXT("No one-square stack or no free square: the drop-to-square check was skipped"));
+			}
+		}
+
 		if (C.Require(Inventory->OpenLootContainer(Body), TEXT("the player opens the body")))
 		{
 			InventoryWidget->Refresh();
 			C.Test.TestEqual(TEXT("One loot cell per stack on the body"), InventoryWidget->GetLootCellCount(), Inventory->GetOpenContainerItems().Num());
 			C.Test.TestTrue(TEXT("The body shows the ruby"), InventoryWidget->GetLootCellCount() > 0);
 			const int32 RubiesBefore = Inventory->CountItem(CrossguardScenarioUI::UIRuby());
+			// Drag a potion onto the body, then drag it back out of it.
+			FCrossguardInventoryItem Potion;
+			bool bHavePotion = false;
+			for (const FCrossguardInventoryItem& Item : Inventory->GetItems())
+			{
+				if (Item.ItemId == CrossguardScenarioUI::UIPotion())
+				{
+					Potion = Item;
+					bHavePotion = true;
+				}
+			}
+			if (C.Require(bHavePotion, TEXT("the player still has potions")))
+			{
+				const int32 PotionsBefore = Inventory->CountItem(CrossguardScenarioUI::UIPotion());
+				InventoryWidget->DropOnLoot(Potion, false);
+				C.Test.TestEqual(TEXT("A stack dropped on the body goes in"), Inventory->CountItem(CrossguardScenarioUI::UIPotion()), 0);
+				FCrossguardInventoryItem OnBody;
+				bool bOnBody = false;
+				for (const FCrossguardInventoryItem& Item : Inventory->GetOpenContainerItems())
+				{
+					if (Item.ItemId == CrossguardScenarioUI::UIPotion())
+					{
+						OnBody = Item;
+						bOnBody = true;
+					}
+				}
+				if (C.Require(bOnBody, TEXT("the body holds the potions now")))
+				{
+					InventoryWidget->DropItem(ECrossguardInventoryContainer::Main, FIntPoint::ZeroValue, OnBody, true);
+					C.Test.TestEqual(TEXT("A stack dragged out of the body is taken"), Inventory->CountItem(CrossguardScenarioUI::UIPotion()), PotionsBefore);
+				}
+			}
 			InventoryWidget->TakeAll();
 			C.Test.TestEqual(TEXT("Take all moved the ruby into the inventory"), Inventory->CountItem(CrossguardScenarioUI::UIRuby()), RubiesBefore + 1);
 			C.Test.TestEqual(TEXT("The body is empty"), Body->GetItems().Num(), 0);

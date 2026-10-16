@@ -41,6 +41,12 @@ public:
 	void ClickItem(const FCrossguardInventoryItem& Item);
 	void RightClickItem(const FCrossguardInventoryItem& Item);
 	void ClickSquare(ECrossguardInventoryContainer Container, FIntPoint Position);
+	// Drag and drop, callable directly. An item dropped with its top-left on Position of one of the
+	// player's grids: from the open body / chest it is taken (wherever it fits); from the player's own
+	// grids it moves there (onto the top-left of a stack of the same kind: merges), keeping its rotation.
+	void DropItem(ECrossguardInventoryContainer Container, FIntPoint Position, const FCrossguardInventoryItem& Item, bool bFromLoot);
+	// An item dropped on the open body / chest: put in (nothing for one dragged out of it).
+	void DropOnLoot(const FCrossguardInventoryItem& Item, bool bFromLoot);
 	// Takes every stack from the open body or chest (one request per stack).
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|UI")
 	void TakeAll();

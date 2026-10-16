@@ -3,6 +3,7 @@
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/SizeBox.h"
+#include "UI/CrossguardItemDragOperation.h"
 #include "UI/CrossguardUIButton.h"
 #include "UI/CrossguardUIHelpers.h"
 
@@ -110,7 +111,59 @@ void UCrossguardItemGridWidget::SetGrid(FIntPoint Size, const TArray<FCrossguard
 				OnItemRightClicked(Copy);
 			}
 		};
+		const FString CellLabel = Cell->GetLabel();
+		const FLinearColor CellColor(Rarity.R * 0.35f, Rarity.G * 0.35f, Rarity.B * 0.35f, 0.95f);
+		Cell->OnDragStart = [this, Copy, Footprint, CellLabel, CellColor, Rarity](const FGeometry& Geometry, const FPointerEvent& MouseEvent)
+		{
+			return StartDrag(Copy, Footprint, CellLabel, CellColor, Rarity, Geometry, MouseEvent);
+		};
 		Place(Cell, Item.Position, Footprint, 1);
 		++ItemCellCount;
 	}
+}
+
+UDragDropOperation* UCrossguardItemGridWidget::StartDrag(const FCrossguardInventoryItem& Item, FIntPoint Footprint, const FString& Label,
+	const FLinearColor& Color, const FLinearColor& LabelColor, const FGeometry& CellGeometry, const FPointerEvent& MouseEvent)
+{
+	UCrossguardItemDragOperation* Operation = NewObject<UCrossguardItemDragOperation>(this);
+	Operation->Item = Item;
+	Operation->bFromLoot = bLootGrid;
+	// Which of the item's squares was grabbed: a drop puts the top-left square that many squares up
+	// and left of the square under the mouse.
+	const FVector2D Local = CellGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
+	Operation->GrabOffset = FIntPoint(FMath::Clamp(FMath::FloorToInt(Local.X / SquareSize), 0, Footprint.X - 1),
+		FMath::Clamp(FMath::FloorToInt(Local.Y / SquareSize), 0, Footprint.Y - 1));
+	// The visual: the cell again, at its size, following the mouse from the grabbed point.
+	USizeBox* Visual = Make<USizeBox>();
+	Visual->SetWidthOverride(Footprint.X * SquareSize - 2.0f);
+	Visual->SetHeightOverride(Footprint.Y * SquareSize - 2.0f);
+	UCrossguardUIButton* Ghost = Make<UCrossguardUIButton>();
+	Ghost->SetLabel(Label);
+	Ghost->SetFontSize(SquareSize >= 38.0f ? 11 : 10);
+	Ghost->SetLabelPadding(FMargin(1.0f));
+	Ghost->SetLabelWrap(Footprint.X >= 2);
+	Ghost->SetColor(FLinearColor(Color.R, Color.G, Color.B, 0.8f));
+	Ghost->SetLabelColor(LabelColor);
+	Ghost->SetVisibility(ESlateVisibility::HitTestInvisible);
+	Visual->SetContent(Ghost);
+	Operation->DefaultDragVisual = Visual;
+	Operation->Pivot = EDragPivot::MouseDown;
+	return Operation;
+}
+
+bool UCrossguardItemGridWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+	const UCrossguardItemDragOperation* Drag = Cast<UCrossguardItemDragOperation>(InOperation);
+	if (Drag == nullptr || !OnItemDropped || Canvas == nullptr)
+	{
+		return false;
+	}
+	// The square under the mouse, then back by the grabbed offset: where the item's top-left goes.
+	const FVector2D Local = Canvas->GetCachedGeometry().AbsoluteToLocal(InDragDropEvent.GetScreenSpacePosition());
+	const FIntPoint Under(FMath::FloorToInt(Local.X / SquareSize), FMath::FloorToInt(Local.Y / SquareSize));
+	const FIntPoint Position(FMath::Max(Under.X - Drag->GrabOffset.X, 0), FMath::Max(Under.Y - Drag->GrabOffset.Y, 0));
+	// A copy: the callback redraws this grid, which rebuilds the cells.
+	const TFunction<void(FIntPoint, const UCrossguardItemDragOperation&)> Callback = OnItemDropped;
+	Callback(Position, *Drag);
+	return true;
 }

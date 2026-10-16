@@ -10,6 +10,7 @@
 #include "Engine/DataTable.h"
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Items/CrossguardLootContainer.h"
+#include "UI/CrossguardItemDragOperation.h"
 #include "UI/CrossguardItemGridWidget.h"
 #include "UI/CrossguardUIButton.h"
 #include "UI/CrossguardUIHelpers.h"
@@ -71,8 +72,9 @@ void UCrossguardInventoryWidget::BuildTree()
 {
 	BuildFrame(TEXT("Inventory   (I / Tab to close)"), FVector2D(1240.0f, 700.0f));
 
-	UTextBlock* Hint = MakeText(TEXT("Click an item to select it, then click a square to move it, an item of the same kind to merge, or an "
-		"equipment slot to equip it. Right click: equip / take in hand / learn. With nothing selected, click a worn item to take it off."), 10,
+	UTextBlock* Hint = MakeText(TEXT("Drag an item to a square, onto a stack of the same kind to merge, onto an equipment slot to equip it, "
+		"or between your inventory and an open body or chest. Or click it to select it, then click where it goes. "
+		"Right click: equip / take in hand / learn. With nothing selected, click a worn item to take it off."), 10,
 		FLinearColor(0.7f, 0.7f, 0.7f));
 	Hint->SetAutoWrapText(true);
 	AddTo(Body, Hint);
@@ -121,6 +123,10 @@ void UCrossguardInventoryWidget::BuildTree()
 		Grid->OnItemClicked = [this](const FCrossguardInventoryItem& Item) { ClickItem(Item); };
 		Grid->OnItemRightClicked = [this](const FCrossguardInventoryItem& Item) { RightClickItem(Item); };
 		Grid->OnSquareClicked = [this, Container](FIntPoint Position) { ClickSquare(Container, Position); };
+		Grid->OnItemDropped = [this, Container](FIntPoint Position, const UCrossguardItemDragOperation& Drag)
+		{
+			DropItem(Container, Position, Drag.Item, Drag.bFromLoot);
+		};
 	};
 	BindGrid(MainGrid, ECrossguardInventoryContainer::Main);
 	BindGrid(BackpackGrid, ECrossguardInventoryContainer::Backpack);
@@ -158,6 +164,8 @@ void UCrossguardInventoryWidget::BuildTree()
 		}
 	};
 	LootGrid->OnItemRightClicked = LootGrid->OnItemClicked;
+	LootGrid->bLootGrid = true;
+	LootGrid->OnItemDropped = [this](FIntPoint, const UCrossguardItemDragOperation& Drag) { DropOnLoot(Drag.Item, Drag.bFromLoot); };
 }
 
 int32 UCrossguardInventoryWidget::GetItemCellCount() const
@@ -309,7 +317,9 @@ void UCrossguardInventoryWidget::RedrawEquipment()
 	FCrossguardInventoryItem Selected;
 	const bool bHasSelected = SelectedItemId != 0 && Inventory->FindItem(SelectedItemId, Selected);
 	// Callbacks look the inventory up again when clicked (the character may have changed since).
-	const auto AddSlot = [this](const FString& Label, ECrossguardRarity Rarity, bool bEmpty, TFunction<void(UCrossguardInventoryComponent&)> OnClick)
+	// OnDrop: an item of the slot's kind dragged onto it (one from the open body is taken instead).
+	const auto AddSlot = [this](const FString& Label, ECrossguardRarity Rarity, bool bEmpty, TFunction<void(UCrossguardInventoryComponent&)> OnClick,
+		TFunction<void(UCrossguardInventoryComponent&, const FCrossguardInventoryItem&)> OnDrop)
 	{
 		UCrossguardUIButton* Button = MakeButton(Label, [this, Callback = MoveTemp(OnClick)]()
 		{
@@ -319,6 +329,25 @@ void UCrossguardInventoryWidget::RedrawEquipment()
 			}
 			MarkDirty();
 		}, 10);
+		Button->OnDropped = [this, Callback = MoveTemp(OnDrop)](UDragDropOperation* Operation)
+		{
+			const UCrossguardItemDragOperation* Drag = Cast<UCrossguardItemDragOperation>(Operation);
+			UCrossguardInventoryComponent* Target = GetInventory();
+			if (Drag == nullptr || Target == nullptr)
+			{
+				return false;
+			}
+			if (Drag->bFromLoot)
+			{
+				Target->RequestTakeFromContainer(Drag->Item.Id);
+			}
+			else
+			{
+				Callback(*Target, Drag->Item);
+			}
+			Select(0);
+			return true;
+		};
 		if (!bEmpty)
 		{
 			const FLinearColor Color = CrossguardUI::RarityColor(Rarity);
@@ -350,6 +379,13 @@ void UCrossguardInventoryWidget::RedrawEquipment()
 				{
 					Target.RequestUnequipWeapon(Hand, Set);
 				}
+			},
+			[Set, Hand](UCrossguardInventoryComponent& Target, const FCrossguardInventoryItem& Dropped)
+			{
+				if (Dropped.Category == ECrossguardItemCategory::Weapon)
+				{
+					Target.RequestEquipItem(Dropped.Id, Hand, Set);
+				}
 			});
 		}
 	}
@@ -375,6 +411,13 @@ void UCrossguardInventoryWidget::RedrawEquipment()
 			{
 				Target.RequestUnequipArmor(ArmorSlot);
 			}
+		},
+		[](UCrossguardInventoryComponent& Target, const FCrossguardInventoryItem& Dropped)
+		{
+			if (Dropped.Category == ECrossguardItemCategory::Armor)
+			{
+				Target.RequestEquipItem(Dropped.Id);
+			}
 		});
 	}
 
@@ -399,6 +442,13 @@ void UCrossguardInventoryWidget::RedrawEquipment()
 			{
 				// Must be empty (the server says so otherwise).
 				Target.RequestUnequipContainer(Kind);
+			}
+		},
+		[](UCrossguardInventoryComponent& Target, const FCrossguardInventoryItem& Dropped)
+		{
+			if (Dropped.Category == ECrossguardItemCategory::Container)
+			{
+				Target.RequestEquipItem(Dropped.Id);
 			}
 		});
 	}
@@ -588,6 +638,36 @@ void UCrossguardInventoryWidget::ClickSquare(ECrossguardInventoryContainer Conta
 		return;
 	}
 	Inventory->RequestMoveItem(SelectedItemId, Container, Position, bPlaceRotated);
+	Select(0);
+}
+
+void UCrossguardInventoryWidget::DropItem(ECrossguardInventoryContainer Container, FIntPoint Position, const FCrossguardInventoryItem& Item, bool bFromLoot)
+{
+	UCrossguardInventoryComponent* Inventory = GetInventory();
+	if (Inventory == nullptr)
+	{
+		return;
+	}
+	if (bFromLoot)
+	{
+		// Taking puts it wherever it fits; the server has no "take to this square".
+		Inventory->RequestTakeFromContainer(Item.Id);
+	}
+	else
+	{
+		Inventory->RequestMoveItem(Item.Id, Container, Position, Item.bRotated);
+	}
+	Select(0);
+}
+
+void UCrossguardInventoryWidget::DropOnLoot(const FCrossguardInventoryItem& Item, bool bFromLoot)
+{
+	UCrossguardInventoryComponent* Inventory = GetInventory();
+	if (Inventory == nullptr || bFromLoot || Inventory->GetOpenContainer() == nullptr)
+	{
+		return;
+	}
+	Inventory->RequestPutInContainer(Item.Id);
 	Select(0);
 }
 

@@ -1,5 +1,7 @@
 #include "UI/CrossguardUIButton.h"
 
+#include "Blueprint/DragDropOperation.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Components/Border.h"
 #include "Components/TextBlock.h"
 #include "Styling/CoreStyle.h"
@@ -111,6 +113,12 @@ FReply UCrossguardUIButton::NativeOnMouseButtonDown(const FGeometry& InGeometry,
 {
 	if (bActive)
 	{
+		if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && OnDragStart)
+		{
+			// Draggable: Slate tells us (NativeOnDragDetected) once the mouse moves; a release without
+			// moving is the click (NativeOnMouseButtonUp).
+			return UWidgetBlueprintLibrary::DetectDragIfPressed(InMouseEvent, this, EKeys::LeftMouseButton).NativeReply;
+		}
 		// Copies: a callback may rebuild the window, which can drop this button.
 		if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && OnClicked)
 		{
@@ -124,6 +132,49 @@ FReply UCrossguardUIButton::NativeOnMouseButtonDown(const FGeometry& InGeometry,
 		}
 	}
 	return FReply::Handled();
+}
+
+FReply UCrossguardUIButton::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	if (bActive && OnDragStart && InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && OnClicked)
+	{
+		const TFunction<void()> Callback = OnClicked;
+		Callback();
+	}
+	return FReply::Handled();
+}
+
+void UCrossguardUIButton::NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation)
+{
+	OutOperation = bActive && OnDragStart ? OnDragStart(InGeometry, InMouseEvent) : nullptr;
+}
+
+bool UCrossguardUIButton::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+	bHovered = false;
+	ApplyLook();
+	if (bActive && OnDropped)
+	{
+		const TFunction<bool(UDragDropOperation*)> Callback = OnDropped;
+		return Callback(InOperation);
+	}
+	// Not taken here: the panel behind (an item grid) may take it.
+	return false;
+}
+
+void UCrossguardUIButton::NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+	Super::NativeOnDragEnter(InGeometry, InDragDropEvent, InOperation);
+	// The hover highlight while something is dragged over it (no mouse-enter events during a drag).
+	bHovered = true;
+	ApplyLook();
+}
+
+void UCrossguardUIButton::NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+	Super::NativeOnDragLeave(InDragDropEvent, InOperation);
+	bHovered = false;
+	ApplyLook();
 }
 
 void UCrossguardUIButton::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
