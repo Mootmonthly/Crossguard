@@ -28,6 +28,10 @@ public:
 	// Hit by Attacker, from any range: with no target (or walking home), it turns on them.
 	void NotifyAttacked(AActor* Attacker);
 
+	// Whom it is fighting now (null with no target, e.g. walking home with nobody in aggro).
+	UFUNCTION(BlueprintPure, Category = "Crossguard|AI")
+	AActor* GetCurrentTarget() const { return Target.Get(); }
+
 private:
 	// The nearest valid target within AggroRange in line of sight, standing within LeashRange of
 	// home (no point chasing someone the leash would pull it back from).

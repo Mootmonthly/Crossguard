@@ -81,8 +81,11 @@
 
 class ACrossguardCharacter;
 class ACrossguardGameMode;
+class ACrossguardMinion;
 class ACrossguardMonster;
 class ACrossguardPlayerState;
+class AStaticMeshActor;
+class APawn;
 struct FGameplayAttribute;
 
 // Scenario tests run in the editor with Play-In-Editor. Listed under the Product filter. In UE 5.5+
@@ -172,7 +175,21 @@ namespace CrossguardScenario
 		ACrossguardCharacter* SpawnDummy(FName Name, const FVector& FloorPoint, float Yaw = 180.0f);
 		// An ACrossguardMonster with MobId (stats from the game mode's Mob Table at BeginPlay), possessed
 		// by its monster controller: it will fight players and minions it sees within its aggro range.
-		ACrossguardMonster* SpawnMonster(FName Name, FName MobId, const FVector& FloorPoint, float Yaw = 0.0f);
+		// Configure runs on the deferred spawn, after MobId is set and before BeginPlay and possession
+		// (CombatRole, FixedHealth, AggroRange, ...; a MobId's row still applies over them at BeginPlay).
+		ACrossguardMonster* SpawnMonster(FName Name, FName MobId, const FVector& FloorPoint, float Yaw = 0.0f,
+			TFunction<void(ACrossguardMonster&)> Configure = nullptr);
+		// A minion of Summoner, spawned as summon skills do (UCrossguardSummonAbility::SpawnMinion):
+		// owned and instigated by Summoner, SetSummoner before BeginPlay (its team), facing the
+		// summoner's yaw, possessed by its minion controller. MinionClass: a subclass of
+		// ACrossguardMinion (default ACrossguardMinion). Configure runs before BeginPlay (CombatRole,
+		// FixedHealth, ...). Unlike a summon: no life span, always spawned (not nudged out of others),
+		// and not dismissed when the summoner casts again.
+		ACrossguardMinion* SpawnMinion(FName Name, ACrossguardCharacter* Summoner, const FVector& FloorPoint, UClass* MinionClass = nullptr,
+			TFunction<void(ACrossguardMinion&)> Configure = nullptr);
+		// A static engine cube scaled to Size (cm), centred at Center, blocking everything (pawns,
+		// weapon traces, line of sight: BlockAll). A wall: SpawnBlockingBox(Name, {500, Y, 200}, {20, 600, 400}).
+		AStaticMeshActor* SpawnBlockingBox(FName Name, const FVector& Center, const FVector& Size);
 		// Any actor (Class: a subclass of T, default T). Configure runs before FinishSpawning (before
 		// BeginPlay). Location is used as is (not put on the floor).
 		template <typename T>
@@ -254,6 +271,11 @@ namespace CrossguardScenario
 		// Lethal damage through the native damage effect, so death runs as in play (body, kill XP to
 		// Killer's player). No Killer: the victim's own (no XP).
 		void Kill(AActor* Victim, AActor* Killer = nullptr);
+		// One hit of Attack / Magic base damage from Source to Victim through the native damage effect
+		// (as Kill, but these amounts): resistances, bonuses and the victim's damage reactions apply
+		// (a monster turns on Source); guards and dodges do not. No Source: the victim's own. Returns
+		// the Health it took off. Fails the scenario without ability systems.
+		float Damage(AActor* Source, AActor* Victim, float Attack, float Magic = 0.0f);
 
 		// --- Reading state ------------------------------------------------------------------------
 
@@ -267,6 +289,12 @@ namespace CrossguardScenario
 		bool HasTag(const AActor* Actor, const TCHAR* TagName) const;
 		// State.Dead.
 		bool IsDead(const AActor* Actor) const;
+		// Whom an AI pawn is fighting: a monster's or minion's controller target
+		// (GetCurrentTarget), else its AI controller's focus actor. Null without one.
+		AActor* TargetOf(const APawn* Pawn) const;
+		// Weapon clanks (blocks, parries, clashes: MulticastWeaponClank -> OnWeaponClank) the character
+		// has played since it spawned. 0 for other actors. The clank is played by the defender.
+		int32 ClankCount(const AActor* Actor) const;
 		ACrossguardPlayerState* PlayerState(const AActor* Actor) const;
 		// The equipped weapon's AD or MD at its rarity (what a basic attack hits for before stats).
 		float WeaponValue(const ACrossguardCharacter* Character, ECrossguardEquipmentSlot Slot = ECrossguardEquipmentSlot::MainHand) const;
@@ -335,8 +363,9 @@ namespace CrossguardScenario
 		AActor* SpawnActorInternal(FName Name, UClass* Class, const FVector& Location, float Yaw, TFunctionRef<void(AActor&)> Configure);
 		// Deferred spawn of a Crossguard character above FloorPoint; bAIController: possessed by its
 		// AI controller on spawn.
+		// SpawnOwner: owner and instigator (summoned minions).
 		ACrossguardCharacter* SpawnCharacter(FName Name, UClass* Class, const FVector& FloorPoint, float Yaw, bool bAIController,
-			TFunctionRef<void(ACrossguardCharacter&)> Configure);
+			TFunctionRef<void(ACrossguardCharacter&)> Configure, ACrossguardCharacter* SpawnOwner = nullptr);
 
 		TWeakObjectPtr<UWorld> WorldPtr;
 		TWeakObjectPtr<ACrossguardGameMode> GameModePtr;
@@ -360,6 +389,9 @@ namespace CrossguardScenario
 		// Polls Condition every frame (or every PollSeconds of game time) until it returns true. Fails
 		// the scenario after TimeoutGameSeconds of game time. Conditions may act too (attack until dead).
 		FScenario& WaitUntil(const FString& Name, float TimeoutGameSeconds, TFunction<bool(FScenarioContext&)> Condition, float PollSeconds = 0.0f);
+		// Waits Seconds of game time, calling Watch every frame (record Health drops, top up, act).
+		// Never fails on its own: it simply ends after Seconds (contrast WaitUntil).
+		FScenario& WaitWatching(const FString& Name, float Seconds, TFunction<void(FScenarioContext&)> Watch);
 
 		// Options, before Run().
 		// Global time dilation from the start (default 1). Speeds long timers: Wait / WaitUntil and
@@ -384,6 +416,7 @@ namespace CrossguardScenario
 				Step,
 				Wait,
 				WaitUntil,
+				WaitWatching,
 			};
 			EKind Kind = EKind::Step;
 			FString Name;

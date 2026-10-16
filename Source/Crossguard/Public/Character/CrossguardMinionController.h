@@ -30,6 +30,10 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 
+	// Whom it is fighting now (null while it follows its summoner).
+	UFUNCTION(BlueprintPure, Category = "Crossguard|AI")
+	AActor* GetCurrentTarget() const { return Target.Get(); }
+
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 

@@ -26,6 +26,11 @@ class UCrossguardGuardAbility;
 class UCrossguardTrackingComponent;
 struct FOnAttributeChangeData;
 
+class ACrossguardCharacter;
+
+// The clank, natively: the character that played it and the point of impact.
+DECLARE_MULTICAST_DELEGATE_TwoParams(FCrossguardWeaponClankSignature, ACrossguardCharacter*, FVector);
+
 // Player character. Owns its ability system: a character's stats and skills live and die with it,
 // as an extraction match ends with the character extracted or dead.
 UCLASS()
@@ -58,6 +63,13 @@ public:
 	// The clank: hook the bounce-back animation and the sound here (Blueprint).
 	UFUNCTION(BlueprintImplementableEvent, Category = "Crossguard|Combat")
 	void OnWeaponClank(FVector ImpactPoint);
+
+	// The same clank for C++ listeners (tests), broadcast right after OnWeaponClank on every machine
+	// that plays it.
+	FCrossguardWeaponClankSignature OnWeaponClankNative;
+
+	// Clanks this character has played on this machine (tests).
+	int32 GetWeaponClankCount() const { return WeaponClankCount; }
 	UCrossguardAbilitySystemComponent* GetCrossguardAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UCrossguardLoadoutComponent* GetLoadoutComponent() const { return LoadoutComponent; }
 	UCrossguardEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
@@ -196,6 +208,12 @@ public:
 	virtual void OnRep_PlayerState() override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// [Stealth] anti-cheat: while State.Stealthed, not net-relevant to viewers outside its team, so
+	// enemy clients never receive its position (the actor despawns there and is re-created when
+	// stealth ends). Its own player and allies (spectators included) still get it. Switch:
+	// crossguard.StealthHidesFromEnemies (CrossguardCharacter.cpp; placeholder, default on).
+	virtual bool IsNetRelevantFor(const AActor* RealViewer, const AActor* ViewTarget, const FVector& SrcLocation) const override;
 
 	// Server. Copies level and attribute allocation from the player state and re-initializes the
 	// attributes if either changed. Called by the player state; does nothing with
@@ -498,4 +516,7 @@ private:
 	int32 LastSwingImpactPower = 0;
 	float LastSwingWeaponDamage = 0.0f;
 	FVector LastSwingFacing = FVector::ForwardVector;
+
+	// Clanks played on this machine (GetWeaponClankCount).
+	int32 WeaponClankCount = 0;
 };

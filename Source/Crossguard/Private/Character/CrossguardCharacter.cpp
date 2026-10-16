@@ -21,6 +21,7 @@
 #include "Game/CrossguardTeamLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
+#include "HAL/IConsoleManager.h"
 #include "InputAction.h"
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
@@ -37,6 +38,17 @@
 #include "Skills/CrossguardLoadoutComponent.h"
 #include "Skills/CrossguardSkillAbility.h"
 #include "Skills/CrossguardTrackingComponent.h"
+
+namespace CrossguardStealthRelevancy
+{
+	// Placeholder switch for the play test (docs/anti-cheat.md, "Stealth position leak"). Read on the
+	// server only: a client changing its own copy changes nothing.
+	TAutoConsoleVariable<bool> CVarStealthHidesFromEnemies(
+		TEXT("crossguard.StealthHidesFromEnemies"),
+		true,
+		TEXT("Stealthed characters are not net-relevant to clients outside their team, so enemy clients get no position (the actor despawns there). 0: old behavior, hidden only by each client's rendering."),
+		ECVF_Default);
+}
 
 ACrossguardCharacter::ACrossguardCharacter()
 {
@@ -632,6 +644,12 @@ void ACrossguardCharacter::InitializeAbilitySystem()
 void ACrossguardCharacter::OnStealthChanged(const FGameplayTag Tag, int32 Count)
 {
 	UpdateStealthVisibility();
+	// Server: relevancy (IsNetRelevantFor) changes with stealth; replicate soon so enemy clients drop
+	// the character, or get it back, without waiting for the next regular update.
+	if (HasAuthority())
+	{
+		ForceNetUpdate();
+	}
 	// While stealthed, re-check twice a second: the local viewer's pawn or team may change. A
 	// dedicated server draws nothing.
 	if (Count > 0 && GetNetMode() != NM_DedicatedServer)
@@ -642,6 +660,29 @@ void ACrossguardCharacter::OnStealthChanged(const FGameplayTag Tag, int32 Count)
 	{
 		GetWorldTimerManager().ClearTimer(StealthVisibilityTimer);
 	}
+}
+
+bool ACrossguardCharacter::IsNetRelevantFor(const AActor* RealViewer, const AActor* ViewTarget, const FVector& SrcLocation) const
+{
+	// Server only (the net driver asks per client connection). Server-side AI never goes through
+	// this: monsters' perception of stealth is separate. bAlwaysRelevant must stay false on
+	// characters, or the net driver never asks; NetCullDistance only adds hiding on top of this.
+	if (CrossguardStealthRelevancy::CVarStealthHidesFromEnemies.GetValueOnGameThread()
+		&& AbilitySystemComponent != nullptr && AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Stealthed)
+		&& RealViewer != nullptr)
+	{
+		// Always relevant to its own player (owner / view target), whatever the team.
+		const bool bOwnViewer = RealViewer == GetController() || ViewTarget == this || IsOwnedBy(RealViewer)
+			|| (ViewTarget != nullptr && IsOwnedBy(ViewTarget));
+		// RealViewer is the viewing PlayerController; the team library resolves it through its player
+		// state, so a spectating ally (no pawn) still counts. No design reveal radius yet
+		// (design-decisions.md, Stealth): an enemy never gets it while stealthed.
+		if (!bOwnViewer && !UCrossguardTeamLibrary::AreAllies(RealViewer, this))
+		{
+			return false;
+		}
+	}
+	return Super::IsNetRelevantFor(RealViewer, ViewTarget, SrcLocation);
 }
 
 void ACrossguardCharacter::ClientLaunch_Implementation(FVector Velocity)
@@ -1231,5 +1272,7 @@ bool ACrossguardCharacter::GetActiveSwing(double Now, double Window, int32& OutI
 
 void ACrossguardCharacter::MulticastWeaponClank_Implementation(FVector ImpactPoint)
 {
+	++WeaponClankCount;
 	OnWeaponClank(ImpactPoint);
+	OnWeaponClankNative.Broadcast(this, ImpactPoint);
 }
