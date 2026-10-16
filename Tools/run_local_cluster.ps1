@@ -16,7 +16,7 @@
         incompatible version).
 
     Hub server:   <HubMap>?Hub -server -port=<HubPort> -AllowDevPlayerIds -RaidServer=127.0.0.1:<RaidPort>
-    Match server: <RaidMap> -server -port=<RaidPort> -AllowDevPlayerIds -HubServer=127.0.0.1:<HubPort>
+    Match server: <RaidMap> -server -port=<RaidPort> -AllowDevPlayerIds -HubServer=127.0.0.1:<HubPort> -KeepMatchServer
     Client i:     127.0.0.1:<port>?DevPlayerId=<name i> -game -windowed (tiled) -CrossguardPlayerId=<name i>
 
     Each server is started first and waited for ("listening on port" in its log) before the clients.
@@ -231,7 +231,9 @@ if ($ok -and -not $NoRaid) {
     # Teams go back to the hub server (-HubServer=). Not -DevListenHub: a dedicated match server never
     # travels to the hub map as a whole (ACrossguardGameMode::GetHubDestination).
     $hubArg = if ($NoHub) { "" } else { "-HubServer=127.0.0.1:$HubPort" }
-    $cmd = Get-CgServerCommand $RaidMap $RaidPort $hubArg
+    # A dedicated match server exits when its match is over (one match per process); keep it up locally
+    # so several raids can be tried in a row.
+    $cmd = Get-CgServerCommand $RaidMap $RaidPort "$hubArg -KeepMatchServer".Trim()
     $raid = Start-CgProcess "match" $cmd[0] $cmd[1]
     $ok = $ok -and (Wait-CgListening "match" $raid $RaidPort)
 }
