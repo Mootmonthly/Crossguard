@@ -393,12 +393,13 @@ bool FCrossguardScenarioMonsterLeashReturnsHome::RunTest(const FString& Paramete
 	using namespace CrossguardScenarioMonsterAI;
 
 	static constexpr float SceneY = 2000.0f;
-	// A short leash so the chase is short.
-	static constexpr float Leash = 600.0f;
+	// The real leash (30 m): the player keeps retreating ahead of the chase until the monster is
+	// past it.
+	static constexpr float RetreatStep = 800.0f;
 	FScenario Scenario(*this);
 	Scenario.TimeDilation(2.0f);
 
-	Scenario.Step(TEXT("A monster with a 6 m leash and a player 4 m away"), [](FScenarioContext& C)
+	Scenario.Step(TEXT("A monster (30 m leash) and a player 4 m away"), [](FScenarioContext& C)
 	{
 		ACrossguardMonster* Monster = C.SpawnMonster(TEXT("Monster"), NAME_None, FVector(0.0f, SceneY, 0.0f), 0.0f);
 		ACrossguardCharacter* Player = C.SpawnPlayer(TEXT("Player"), FVector(400.0f, SceneY, 0.0f), 180.0f);
@@ -406,7 +407,8 @@ bool FCrossguardScenarioMonsterLeashReturnsHome::RunTest(const FString& Paramete
 		{
 			return;
 		}
-		Monster->LeashRange = Leash;
+		C.Require(Monster->LeashRange >= 2900.0f && Monster->LeashRange <= 3100.0f,
+			FString::Printf(TEXT("the monster's Leash Range is the checklist's 30 m (is %.0f cm)"), Monster->LeashRange));
 	});
 
 	Scenario.WaitUntil(TEXT("the monster targets the player"), 3.0f, [](FScenarioContext& C)
@@ -415,7 +417,7 @@ bool FCrossguardScenarioMonsterLeashReturnsHome::RunTest(const FString& Paramete
 		return Monster != nullptr && FocusOf(Monster) == C.FindActor(TEXT("Player"));
 	});
 
-	Scenario.Step(TEXT("The player hurts it, then steps 12 m from its home: beyond the leash, still in aggro range"), [](FScenarioContext& C)
+	Scenario.Step(TEXT("The player hurts it, then retreats 12 m from its home"), [](FScenarioContext& C)
 	{
 		ACrossguardMonster* Monster = C.Get<ACrossguardMonster>(TEXT("Monster"));
 		ACrossguardCharacter* Player = C.Get<ACrossguardCharacter>(TEXT("Player"));
@@ -430,18 +432,33 @@ bool FCrossguardScenarioMonsterLeashReturnsHome::RunTest(const FString& Paramete
 			return;
 		}
 		C.Place(Player, FVector(1200.0f, SceneY, 0.0f), 180.0f);
-		C.Test.TestTrue(TEXT("The player now stands beyond the leash from the monster's home"),
-			FVector::Dist(Player->GetActorLocation(), Monster->GetHomeLocation()) > Monster->LeashRange);
 	});
 
-	Scenario.WaitUntil(TEXT("the chase pulls the monster beyond its leash"), 5.0f, [](FScenarioContext& C)
+	// The player steps 8 m further along +X whenever the monster closes to 6 m, until the chase has
+	// pulled the monster past 30 m from home (the player ends up about 38 m out).
+	Scenario.WaitUntil(TEXT("the chase pulls the monster beyond its 30 m leash"), 25.0f, [](FScenarioContext& C)
 	{
 		const ACrossguardMonster* Monster = C.Get<ACrossguardMonster>(TEXT("Monster"));
-		TopUpHealth(C.FindActor(TEXT("Player")));
-		return Monster != nullptr && DistanceFromHome(Monster) > Monster->LeashRange;
+		ACrossguardCharacter* Player = C.Get<ACrossguardCharacter>(TEXT("Player"));
+		if (Monster == nullptr || Player == nullptr)
+		{
+			return false;
+		}
+		TopUpHealth(Player);
+		if (DistanceFromHome(Monster) > Monster->LeashRange)
+		{
+			C.Test.AddInfo(FString::Printf(TEXT("The monster gave up %.0f cm from home, the player %.0f cm out"), DistanceFromHome(Monster),
+				FVector::Dist2D(Player->GetActorLocation(), Monster->GetHomeLocation())));
+			return true;
+		}
+		if (Distance2D(Monster, Player) < 600.0f && FocusOf(Monster) == Player)
+		{
+			C.Place(Player, FVector(Player->GetActorLocation().X + RetreatStep, SceneY, 0.0f), 180.0f);
+		}
+		return false;
 	});
 
-	Scenario.WaitUntil(TEXT("the monster walks back home and is healed to full"), 15.0f, [](FScenarioContext& C)
+	Scenario.WaitUntil(TEXT("the monster walks back home and is healed to full"), 30.0f, [](FScenarioContext& C)
 	{
 		const ACrossguardMonster* Monster = C.Get<ACrossguardMonster>(TEXT("Monster"));
 		TopUpHealth(C.FindActor(TEXT("Player")));
@@ -477,8 +494,8 @@ bool FCrossguardScenarioMonsterLeashReturnsHome::RunTest(const FString& Paramete
 		{
 			return;
 		}
-		C.Test.TestTrue(TEXT("The player is within the monster's aggro range"), Distance2D(Monster, Player) < Monster->AggroRange);
-		C.Test.TestNull(TEXT("...but beyond its leash, so not a target"), FocusOf(Monster));
+		C.Test.TestTrue(TEXT("The player stands beyond the leash from home"), FVector::Dist2D(Player->GetActorLocation(), Monster->GetHomeLocation()) > Monster->LeashRange);
+		C.Test.TestNull(TEXT("Beyond its leash: not a target"), FocusOf(Monster));
 		C.Test.TestTrue(TEXT("The monster stays home"), DistanceFromHome(Monster) <= 150.0f);
 		C.Test.TestEqual(TEXT("And stays at full Health"), C.Health(Monster), C.MaxHealth(Monster), 0.01f);
 	});
@@ -575,12 +592,15 @@ bool FCrossguardScenarioMonsterReactsToDamage::RunTest(const FString& Parameters
 	using namespace CrossguardScenarioMonsterAI;
 
 	static constexpr float SceneY = 4000.0f;
-	// Beyond aggro (15 m), within the leash from home (30 m).
-	static constexpr float PlayerDistance = 2500.0f;
+	// The checklist's 40 m: beyond aggro (15 m) and beyond the leash from home (30 m), so the monster
+	// comes at its attacker but could not reach it standing there; the player then meets it inside
+	// the leash.
+	static constexpr float PlayerDistance = 4000.0f;
+	static constexpr float MeetDistance = 1500.0f;
 	FScenario Scenario(*this);
 	Scenario.TimeDilation(2.0f);
 
-	Scenario.Step(TEXT("A monster and a player 25 m away"), [](FScenarioContext& C)
+	Scenario.Step(TEXT("A monster and a player 40 m away"), [](FScenarioContext& C)
 	{
 		ACrossguardMonster* Monster = C.SpawnMonster(TEXT("Monster"), NAME_None, FVector(0.0f, SceneY, 0.0f), 0.0f);
 		ACrossguardCharacter* Player = C.SpawnPlayer(TEXT("Player"), FVector(PlayerDistance, SceneY, 0.0f), 180.0f);
@@ -588,13 +608,12 @@ bool FCrossguardScenarioMonsterReactsToDamage::RunTest(const FString& Parameters
 		{
 			return;
 		}
-		C.Require(Monster->AggroRange < PlayerDistance - 100.0f && Monster->LeashRange > PlayerDistance + 100.0f,
-			TEXT("25 m is beyond the monster's aggro range and within its leash"));
+		C.Require(Monster->AggroRange < PlayerDistance - 100.0f, TEXT("40 m is beyond the monster's aggro range"));
 	});
 
 	Scenario.Wait(1.5f);
 
-	Scenario.Step(TEXT("Ignored; then the player hurts it from 25 m"), [](FScenarioContext& C)
+	Scenario.Step(TEXT("Ignored; then the player hurts it from 40 m"), [](FScenarioContext& C)
 	{
 		ACrossguardMonster* Monster = C.Get<ACrossguardMonster>(TEXT("Monster"));
 		ACrossguardCharacter* Player = C.Get<ACrossguardCharacter>(TEXT("Player"));
@@ -614,7 +633,22 @@ bool FCrossguardScenarioMonsterReactsToDamage::RunTest(const FString& Parameters
 		return Monster != nullptr && FocusOf(Monster) == C.FindActor(TEXT("Player"));
 	});
 
-	Scenario.WaitUntil(TEXT("the monster closes in and hits the attacker"), 12.0f, [](FScenarioContext& C)
+	Scenario.WaitUntil(TEXT("the monster comes at least 5 m toward its attacker"), 8.0f, [](FScenarioContext& C)
+	{
+		const ACrossguardMonster* Monster = C.Get<ACrossguardMonster>(TEXT("Monster"));
+		return Monster != nullptr && DistanceFromHome(Monster) > 500.0f && FocusOf(Monster) == C.FindActor(TEXT("Player"));
+	});
+
+	Scenario.Step(TEXT("The player comes to 15 m from the monster's home"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = C.Get<ACrossguardCharacter>(TEXT("Player"));
+		if (Player != nullptr)
+		{
+			C.Place(Player, FVector(MeetDistance, SceneY, 0.0f), 180.0f);
+		}
+	});
+
+	Scenario.WaitUntil(TEXT("the monster closes in and hits the attacker"), 15.0f, [](FScenarioContext& C)
 	{
 		const ACrossguardMonster* Monster = C.Get<ACrossguardMonster>(TEXT("Monster"));
 		const AActor* Player = C.FindActor(TEXT("Player"));
@@ -1409,6 +1443,84 @@ bool FCrossguardScenarioSpawnerRespawn::RunTest(const FString& Parameters)
 		{
 			C.Test.TestEqual(TEXT("The spawner has spawned 2 monsters in all (one dead, one alive)"), SpawnedBy(C, Spawner).Num(), 2);
 		}
+	});
+
+	Scenario.Run();
+	return true;
+}
+
+// --- Mithril dragon ---------------------------------------------------------------------------------
+
+// Checklist: "mithril_dragon spawner: ... summons fight you". The dragon (Mob Table: Summon
+// Skeletons, Summon Greater Demon) casts a summon at a player 10 m off; the minions are its.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioMithrilDragonSummons, "Crossguard.Scenario.Monsters.MithrilDragonSummons", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioMithrilDragonSummons::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioMonsterAI;
+
+	static constexpr float SceneY = 6000.0f;
+	static const FName MithrilDragon(TEXT("mithril_dragon"));
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("A mithril dragon and a player 10 m away"), [](FScenarioContext& C)
+	{
+		const UDataTable* Table = RequireMobTable(C);
+		if (Table == nullptr)
+		{
+			return;
+		}
+		if (Table->FindRow<FCrossguardMobRow>(MithrilDragon, TEXT("Scenario"), false) == nullptr)
+		{
+			C.Skip(TEXT("the Mob Table has no mithril_dragon row (reimport Data/Mobs/MobTable.json)"));
+			return;
+		}
+		if (C.GameMode()->MobSkillCatalog == nullptr)
+		{
+			C.Skip(TEXT("the game mode's Mob Skill Catalog is unset (DA_SkillCatalog, Crossguard | Mobs): the dragon gets no summons"));
+			return;
+		}
+		ACrossguardMonster* Dragon = C.SpawnMonster(TEXT("Dragon"), MithrilDragon, FVector(0.0f, SceneY, 0.0f), 0.0f);
+		ACrossguardCharacter* Player = C.SpawnPlayer(TEXT("Player"), FVector(1000.0f, SceneY, 0.0f), 180.0f);
+		C.Require(Dragon != nullptr && Player != nullptr, TEXT("dragon and player spawned"));
+	});
+
+	Scenario.WaitUntil(TEXT("the dragon casts a summon"), 20.0f, [](FScenarioContext& C)
+	{
+		const AActor* Dragon = C.FindActor(TEXT("Dragon"));
+		TopUpHealth(C.FindActor(TEXT("Player")));
+		if (Dragon == nullptr)
+		{
+			return false;
+		}
+		for (const ACrossguardMinion* Minion : C.FindAll<ACrossguardMinion>())
+		{
+			if (Minion->GetSummoner() == Dragon)
+			{
+				return true;
+			}
+		}
+		return false;
+	});
+
+	Scenario.Step(TEXT("Its minions are out"), [](FScenarioContext& C)
+	{
+		const AActor* Dragon = C.FindActor(TEXT("Dragon"));
+		int32 Count = 0;
+		FString Classes;
+		for (const ACrossguardMinion* Minion : C.FindAll<ACrossguardMinion>())
+		{
+			if (Dragon != nullptr && Minion->GetSummoner() == Dragon)
+			{
+				++Count;
+				Classes += Minion->GetClass()->GetName() + TEXT(" ");
+			}
+		}
+		C.Test.AddInfo(FString::Printf(TEXT("The dragon summoned %d minion(s): %s"), Count, *Classes));
+		C.Test.TestTrue(TEXT("The dragon has at least one minion"), Count >= 1);
+		C.Test.TestTrue(TEXT("Summon Skeletons or Summon Greater Demon is on cooldown"),
+			C.IsOnCooldown(Cast<ACrossguardCharacter>(Dragon), TEXT("summon_skeletons")) || C.IsOnCooldown(Cast<ACrossguardCharacter>(Dragon), TEXT("summon_greater_demon")));
 	});
 
 	Scenario.Run();

@@ -292,4 +292,160 @@ bool FCrossguardScenarioGatherNodeMoveInterrupts::RunTest(const FString& Paramet
 	return true;
 }
 
+// ------------------------------------------------------------------------------------------------
+// Checklist: "attacking ... breaks the channel". A swing at the air with a sword mid-channel: the
+// channel breaks ("attacked"), no ore, no XP, the node stays.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioGatherNodeAttackInterrupts, "Crossguard.Scenario.Raid.GatherNodeAttackInterrupts", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioGatherNodeAttackInterrupts::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioGathering;
+
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("A player with a sword faces a gather_ore node"), [](FScenarioContext& C)
+	{
+		SpawnGatherScene(C, GatherOreTable, OreIron);
+		if (!C.IsStopped())
+		{
+			C.Equip(GatherPlayer(C), TEXT("sword_one_handed"));
+		}
+	});
+
+	Scenario.Wait(GatherLandSeconds + GatherViewSettleSeconds);
+
+	Scenario.Step(TEXT("F starts the channel"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = GatherPlayer(C);
+		ACrossguardGatherNode* Node = GatherNodeOf(C);
+		if (Player == nullptr || Node == nullptr)
+		{
+			return;
+		}
+		C.AimAt(Player, Node->GetActorLocation());
+		C.ClearLog();
+		Player->TryInteract();
+		C.Require(Node->GetGatherer() == Player, TEXT("the player is gathering the node"));
+	});
+
+	Scenario.Wait(GatherChannelSeconds * 0.25f);
+
+	Scenario.Step(TEXT("The player swings"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = GatherPlayer(C);
+		if (Player != nullptr)
+		{
+			C.Require(C.BasicAttack(Player), TEXT("the swing starts"));
+		}
+	});
+
+	Scenario.Wait(0.3f);
+
+	Scenario.Step(TEXT("The channel broke: attacked"), [](FScenarioContext& C)
+	{
+		ACrossguardGatherNode* Node = GatherNodeOf(C);
+		if (Node == nullptr)
+		{
+			return;
+		}
+		C.Test.TestFalse(TEXT("Nobody is gathering"), Node->IsBeingGathered());
+		C.Test.TestTrue(TEXT("Log: interrupted: attacked"), C.LogContains(TEXT("interrupted: attacked")));
+	});
+
+	Scenario.Wait(GatherChannelSeconds + GatherSlackSeconds);
+
+	Scenario.Step(TEXT("No ore, no XP, the node stays"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = GatherPlayer(C);
+		ACrossguardGatherNode* Node = GatherNodeOf(C);
+		if (Player == nullptr || Node == nullptr)
+		{
+			return;
+		}
+		C.Test.TestFalse(TEXT("The node is not depleted"), Node->IsDepleted());
+		C.Test.TestEqual(TEXT("No ore"), GatheredCountOf(Player, OreIron, OreMithril), 0);
+		C.Test.TestEqual(TEXT("No raid XP"), RaidXpOf(C, Player), static_cast<int32>(C.Number(TEXT("RaidXp"))));
+	});
+
+	Scenario.Run();
+	return true;
+}
+
+// ------------------------------------------------------------------------------------------------
+// Checklist: "taking damage breaks the channel". 5 damage mid-channel (any amount counts): the
+// channel breaks ("took damage"), no ore, no XP, the node stays.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioGatherNodeDamageInterrupts, "Crossguard.Scenario.Raid.GatherNodeDamageInterrupts", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioGatherNodeDamageInterrupts::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioGathering;
+
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("A player faces a gather_ore node"), [](FScenarioContext& C)
+	{
+		SpawnGatherScene(C, GatherOreTable, OreIron);
+	});
+
+	Scenario.Wait(GatherLandSeconds + GatherViewSettleSeconds);
+
+	Scenario.Step(TEXT("F starts the channel"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = GatherPlayer(C);
+		ACrossguardGatherNode* Node = GatherNodeOf(C);
+		if (Player == nullptr || Node == nullptr)
+		{
+			return;
+		}
+		C.AimAt(Player, Node->GetActorLocation());
+		C.ClearLog();
+		Player->TryInteract();
+		C.Require(Node->GetGatherer() == Player, TEXT("the player is gathering the node"));
+	});
+
+	Scenario.Wait(GatherChannelSeconds * 0.25f);
+
+	Scenario.Step(TEXT("The player takes 5 damage"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = GatherPlayer(C);
+		if (Player != nullptr)
+		{
+			C.Test.TestTrue(TEXT("The hit lands"), C.Damage(nullptr, Player, 5.0f) > 0.0f);
+		}
+	});
+
+	Scenario.Wait(0.3f);
+
+	Scenario.Step(TEXT("The channel broke: took damage"), [](FScenarioContext& C)
+	{
+		ACrossguardGatherNode* Node = GatherNodeOf(C);
+		if (Node == nullptr)
+		{
+			return;
+		}
+		C.Test.TestFalse(TEXT("Nobody is gathering"), Node->IsBeingGathered());
+		C.Test.TestTrue(TEXT("Log: interrupted: took damage"), C.LogContains(TEXT("interrupted: took damage")));
+	});
+
+	Scenario.Wait(GatherChannelSeconds + GatherSlackSeconds);
+
+	Scenario.Step(TEXT("No ore, no XP, the node stays"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = GatherPlayer(C);
+		ACrossguardGatherNode* Node = GatherNodeOf(C);
+		if (Player == nullptr || Node == nullptr)
+		{
+			return;
+		}
+		C.Test.TestFalse(TEXT("The node is not depleted"), Node->IsDepleted());
+		C.Test.TestEqual(TEXT("No ore"), GatheredCountOf(Player, OreIron, OreMithril), 0);
+		C.Test.TestEqual(TEXT("No raid XP"), RaidXpOf(C, Player), static_cast<int32>(C.Number(TEXT("RaidXp"))));
+	});
+
+	Scenario.Run();
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

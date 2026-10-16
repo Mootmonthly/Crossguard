@@ -2435,4 +2435,433 @@ bool FCrossguardScenarioSupportSilence::RunTest(const FString& Parameters)
 	return true;
 }
 
+namespace CrossguardScenarioSupportSkills
+{
+	// Amounts of the "<Victim> took X damage from <Source>" lines in the captured log.
+	TArray<float> DamageAmounts(const FScenarioContext& C, const AActor* Victim, const AActor* Source)
+	{
+		TArray<float> Amounts;
+		if (Victim == nullptr || Source == nullptr)
+		{
+			return Amounts;
+		}
+		const FString VictimPart = FString::Printf(TEXT(": %s took "), *Victim->GetName());
+		const FString SourcePart = FString::Printf(TEXT(" damage from %s ("), *Source->GetName());
+		for (const FString& Line : C.LogLines())
+		{
+			const int32 Start = Line.Find(VictimPart);
+			if (Start == INDEX_NONE || !Line.Contains(SourcePart))
+			{
+				continue;
+			}
+			Amounts.Add(FCString::Atof(*Line.Mid(Start + VictimPart.Len())));
+		}
+		return Amounts;
+	}
+
+	float MaxAmount(const TArray<float>& Amounts)
+	{
+		float Max = 0.0f;
+		for (const float Amount : Amounts)
+		{
+			Max = FMath::Max(Max, Amount);
+		}
+		return Max;
+	}
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Checklist: "flight: Space / Left Ctrl". Left Ctrl (OnFlyDown) is downward movement input while
+// flying: after rising for 1.5 s, 1 s of it brings the flier down, still flying.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioSupportFlightDescend, "Crossguard.Scenario.Skills.FlightDescend", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioSupportFlightDescend::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioSupportSkills;
+
+	static constexpr float SceneRow = 7000.0f;
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("A player with a wand and Flight"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Flier = C.SpawnPlayer(TEXT("Flier"), FVector(0.0f, SceneRow, 0.0f), 0.0f);
+		if (!C.Require(Flier != nullptr, TEXT("flier spawned")) || !C.Equip(Flier, TEXT("wand_one_handed")))
+		{
+			return;
+		}
+		C.Require(GrantSkillsAtCost(C, Flier, {TEXT("flight")}, CostFlight), TEXT("Flight granted"));
+	});
+	Scenario.Wait(0.5f);
+	Scenario.Step(TEXT("Take off"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Flier = Character(C, TEXT("Flier"));
+		if (Flier == nullptr || !C.Require(C.ActivateSkill(Flier, TEXT("flight")), TEXT("Flight activates")))
+		{
+			return;
+		}
+		C.SetNumber(TEXT("GroundZ"), Flier->GetActorLocation().Z);
+		C.SetNumber(TEXT("RiseAt"), C.Now());
+	});
+	Scenario.WaitUntil(TEXT("Space: rise for 1.5 s"), 4.0f, [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Flier = FindCharacter(C, TEXT("Flier"));
+		if (Flier == nullptr)
+		{
+			return false;
+		}
+		Flier->AddMovementInput(FVector::UpVector, 1.0f);
+		return C.Now() - C.Number(TEXT("RiseAt")) >= 1.5;
+	});
+	Scenario.Step(TEXT("Up; now Left Ctrl"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Flier = Character(C, TEXT("Flier"));
+		if (Flier == nullptr)
+		{
+			return;
+		}
+		C.SetNumber(TEXT("TopZ"), Flier->GetActorLocation().Z);
+		C.SetNumber(TEXT("DescendAt"), C.Now());
+		C.Test.TestTrue(TEXT("Rose more than 1 m"), Flier->GetActorLocation().Z - C.Number(TEXT("GroundZ")) > 100.0);
+	});
+	// What holding Left Ctrl does (OnFlyDown): downward movement input, for 1 s.
+	Scenario.WaitUntil(TEXT("Left Ctrl: descend for 1 s"), 4.0f, [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Flier = FindCharacter(C, TEXT("Flier"));
+		if (Flier == nullptr)
+		{
+			return false;
+		}
+		Flier->AddMovementInput(FVector::UpVector, -1.0f);
+		return C.Now() - C.Number(TEXT("DescendAt")) >= 1.0;
+	});
+	Scenario.Step(TEXT("Lower, still flying"), [](FScenarioContext& C)
+	{
+		const ACrossguardCharacter* Flier = Character(C, TEXT("Flier"));
+		if (Flier == nullptr)
+		{
+			return;
+		}
+		const float Dropped = static_cast<float>(C.Number(TEXT("TopZ")) - Flier->GetActorLocation().Z);
+		C.Test.AddInfo(FString::Printf(TEXT("Descended %.1f cm in 1 s"), Dropped));
+		C.Test.TestTrue(TEXT("Downward input brings the flier down (more than 50 cm in 1 s)"), Dropped > 50.0f);
+		C.Test.TestTrue(TEXT("Still flying"), C.HasTag(Flier, CrossguardTags::State_Flying));
+		C.Test.TestTrue(TEXT("Still in the air"), Flier->GetActorLocation().Z - C.Number(TEXT("GroundZ")) > 20.0);
+	});
+
+	Scenario.Run();
+	return true;
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Checklist: "summon_skeletons ... follow you otherwise". No enemy around: the six walk after the
+// necromancer who moved 20 m away, to the controller's follow distance (3 m).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioSupportSummonSkeletonsFollow, "Crossguard.Scenario.Skills.SummonSkeletonsFollow", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioSupportSummonSkeletonsFollow::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioSupportSkills;
+
+	static constexpr float SceneRow = 7500.0f;
+	static constexpr float FollowSlack = 450.0f;
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("A necromancer with Summon Skeletons, nobody else around"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Necromancer = C.SpawnPlayer(TEXT("Necromancer"), FVector(0.0f, SceneRow, 0.0f), 0.0f);
+		if (!C.Require(Necromancer != nullptr, TEXT("necromancer spawned")) || !C.Equip(Necromancer, TEXT("wand_one_handed")))
+		{
+			return;
+		}
+		C.Require(GrantSkillsAtCost(C, Necromancer, {TEXT("summon_skeletons")}, CostSummonSkeletons), TEXT("Summon Skeletons granted"));
+	});
+	Scenario.Wait(0.5f);
+	Scenario.Step(TEXT("Summon, then walk 20 m away"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Necromancer = Character(C, TEXT("Necromancer"));
+		if (Necromancer == nullptr || !C.Require(C.ActivateSkill(Necromancer, TEXT("summon_skeletons")), TEXT("Summon Skeletons activates")))
+		{
+			return;
+		}
+		if (!C.Require(MinionsOf(C, Necromancer).Num() == SkeletonCount, TEXT("six skeletons")))
+		{
+			return;
+		}
+		C.Place(Necromancer, FVector(2000.0f, SceneRow, 0.0f), 0.0f);
+	});
+	Scenario.WaitUntil(TEXT("all six skeletons come to within 4.5 m of the necromancer"), 20.0f, [](FScenarioContext& C)
+	{
+		const ACrossguardCharacter* Necromancer = FindCharacter(C, TEXT("Necromancer"));
+		if (Necromancer == nullptr)
+		{
+			return false;
+		}
+		const TArray<ACrossguardMinion*> Minions = MinionsOf(C, Necromancer);
+		if (Minions.Num() != SkeletonCount)
+		{
+			return false;
+		}
+		for (const ACrossguardMinion* Minion : Minions)
+		{
+			if (FVector::Dist2D(Minion->GetActorLocation(), Necromancer->GetActorLocation()) > FollowSlack)
+			{
+				return false;
+			}
+		}
+		return true;
+	});
+	Scenario.Step(TEXT("They followed"), [](FScenarioContext& C)
+	{
+		const ACrossguardCharacter* Necromancer = Character(C, TEXT("Necromancer"));
+		if (Necromancer == nullptr)
+		{
+			return;
+		}
+		for (const ACrossguardMinion* Minion : MinionsOf(C, Necromancer))
+		{
+			C.Test.AddInfo(FString::Printf(TEXT("%s is %.0f cm from the necromancer"), *Minion->GetName(),
+				FVector::Dist2D(Minion->GetActorLocation(), Necromancer->GetActorLocation())));
+		}
+		C.Test.TestEqual(TEXT("Still six"), MinionsOf(C, Necromancer).Num(), SkeletonCount);
+	});
+
+	Scenario.Run();
+	return true;
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Checklist: "summon_tiger: leap, riders, hits for 20". The tiger uses Hunter's Leap on a dummy 8 m
+// off, bites (Neckbite: +10 Magic, Silence) and slashes (+7 Attack): the skills go on cooldown, the
+// dummy is Silenced, and a hit carries at least the +10 Magic over the 20 claw.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioSupportSummonTigerLeapAndRiders, "Crossguard.Scenario.Skills.SummonTigerLeapAndRiders", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioSupportSummonTigerLeapAndRiders::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioSupportSkills;
+
+	static constexpr float SceneRow = 8000.0f;
+	static constexpr float NeckbiteMagic = 10.0f;
+	static constexpr float SlashAttack = 7.0f;
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("A tamer with the gem and Summon Tiger, a dummy 8 m away"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Tamer = C.SpawnPlayer(TEXT("Tamer"), FVector(0.0f, SceneRow, 0.0f), 0.0f);
+		ACrossguardCharacter* Dummy = C.SpawnDummy(TEXT("Dummy"), FVector(800.0f, SceneRow, 0.0f), 180.0f);
+		if (!C.Require(Tamer != nullptr && Dummy != nullptr, TEXT("tamer and dummy spawned")) || !C.Equip(Tamer, TEXT("wand_one_handed")))
+		{
+			return;
+		}
+		C.Require(GrantSkillsAtCost(C, Tamer, {TEXT("summon_tiger")}, CostSummonTiger) && C.GiveItem(Tamer, TigerPetGem) == 0,
+			TEXT("Summon Tiger granted and the gem in the inventory"));
+	});
+	Scenario.Wait(0.5f);
+	Scenario.Step(TEXT("Summon the tiger"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Tamer = Character(C, TEXT("Tamer"));
+		ACrossguardCharacter* Dummy = Character(C, TEXT("Dummy"));
+		if (Tamer == nullptr || Dummy == nullptr || !C.Require(C.ActivateSkill(Tamer, TEXT("summon_tiger")), TEXT("Summon Tiger activates")))
+		{
+			return;
+		}
+		const TArray<ACrossguardMinion*> Minions = MinionsOf(C, Tamer);
+		if (!C.Require(Minions.Num() == 1, TEXT("one tiger")))
+		{
+			return;
+		}
+		C.Remember(TEXT("Tiger"), Minions[0]);
+		C.ClearLog();
+		C.SetNumber(TEXT("Claw"), C.ExpectedDamage(Minions[0], Dummy, TigerAttackDamage));
+		C.SetNumber(TEXT("Neckbite"), C.ExpectedDamage(Minions[0], Dummy, TigerAttackDamage, NeckbiteMagic));
+		C.SetNumber(TEXT("Slash"), C.ExpectedDamage(Minions[0], Dummy, TigerAttackDamage + SlashAttack));
+	});
+	Scenario.WaitUntil(TEXT("the tiger leaps, bites (the dummy is Silenced) and slashes"), 25.0f, [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Dummy = Character(C, TEXT("Dummy"));
+		const ACrossguardMinion* Tiger = Cast<ACrossguardMinion>(C.FindActor(TEXT("Tiger")));
+		if (Dummy == nullptr || Tiger == nullptr)
+		{
+			return false;
+		}
+		// The dummy must outlive 25 s of a 20-damage tiger.
+		C.SetHealth(Dummy, C.MaxHealth(Dummy));
+		if (C.IsOnCooldown(Tiger, TEXT("hunters_leap")))
+		{
+			C.SetNumber(TEXT("Leapt"), 1.0);
+		}
+		if (C.IsOnCooldown(Tiger, TEXT("neckbite")))
+		{
+			C.SetNumber(TEXT("Bit"), 1.0);
+		}
+		if (C.HasTag(Dummy, CrossguardTags::State_Silenced))
+		{
+			C.SetNumber(TEXT("Silenced"), 1.0);
+		}
+		if (C.IsOnCooldown(Tiger, TEXT("slash")))
+		{
+			C.SetNumber(TEXT("Slashed"), 1.0);
+		}
+		return C.Number(TEXT("Leapt")) > 0.0 && C.Number(TEXT("Bit")) > 0.0 && C.Number(TEXT("Silenced")) > 0.0 && C.Number(TEXT("Slashed")) > 0.0
+			&& MaxAmount(DamageAmounts(C, Dummy, Tiger)) >= C.Number(TEXT("Neckbite")) - 0.5;
+	});
+	// The riders have cooldowns (Slash 4 s, Neckbite 7 s): between them the claws hit plain.
+	Scenario.WaitUntil(TEXT("a plain claw hit lands for the 20"), 12.0f, [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Dummy = Character(C, TEXT("Dummy"));
+		const AActor* Tiger = C.FindActor(TEXT("Tiger"));
+		if (Dummy == nullptr || Tiger == nullptr)
+		{
+			return false;
+		}
+		C.SetHealth(Dummy, C.MaxHealth(Dummy));
+		for (const float Amount : DamageAmounts(C, Dummy, Tiger))
+		{
+			if (FMath::IsNearlyEqual(Amount, static_cast<float>(C.Number(TEXT("Claw"))), 0.5f))
+			{
+				return true;
+			}
+		}
+		return false;
+	});
+	Scenario.Step(TEXT("Leap, Neckbite, Slash and the riders' numbers"), [](FScenarioContext& C)
+	{
+		const ACrossguardCharacter* Dummy = Character(C, TEXT("Dummy"));
+		const AActor* Tiger = C.FindActor(TEXT("Tiger"));
+		C.Test.TestTrue(TEXT("The tiger used Hunter's Leap"), C.Number(TEXT("Leapt")) > 0.0);
+		C.Test.TestTrue(TEXT("The tiger used Neckbite"), C.Number(TEXT("Bit")) > 0.0);
+		C.Test.TestTrue(TEXT("Neckbite Silenced the dummy"), C.Number(TEXT("Silenced")) > 0.0);
+		C.Test.TestTrue(TEXT("The tiger used Slash"), C.Number(TEXT("Slashed")) > 0.0);
+		const TArray<float> Amounts = DamageAmounts(C, Dummy, Tiger);
+		FString List;
+		for (const float Amount : Amounts)
+		{
+			List += FString::Printf(TEXT("%.1f "), Amount);
+		}
+		C.Test.AddInfo(FString::Printf(TEXT("Tiger hits on the dummy: %s(claw %.1f, with Neckbite %.1f, with Slash %.1f)"), *List,
+			C.Number(TEXT("Claw")), C.Number(TEXT("Neckbite")), C.Number(TEXT("Slash"))));
+		C.Test.TestTrue(TEXT("A hit carried the +10 Magic rider (at least the Neckbite amount)"), MaxAmount(Amounts) >= C.Number(TEXT("Neckbite")) - 0.5);
+		bool bPlainClaw = false;
+		for (const float Amount : Amounts)
+		{
+			bPlainClaw |= FMath::IsNearlyEqual(Amount, static_cast<float>(C.Number(TEXT("Claw"))), 0.5f);
+		}
+		C.Test.TestTrue(TEXT("A plain claw hit did the 20 (after the dummy's Armor)"), bPlainClaw);
+	});
+
+	Scenario.Run();
+	return true;
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Checklist: "summon_greater_demon ... Eldritch Shield, hits with riders". Against a dummy 4 m off,
+// the demon raises Eldritch Shield, hits for its 40 (two-handed sword) and rides Shade Blow (heal
+// block on the dummy) or Mortal Strike on a swing.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioSupportSummonGreaterDemonFights, "Crossguard.Scenario.Skills.SummonGreaterDemonFights", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioSupportSummonGreaterDemonFights::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioSupportSkills;
+
+	static constexpr float SceneRow = 8500.0f;
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("A warlock with Summon Greater Demon, a dummy 4 m away"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Warlock = C.SpawnPlayer(TEXT("Warlock"), FVector(0.0f, SceneRow, 0.0f), 0.0f);
+		ACrossguardCharacter* Dummy = C.SpawnDummy(TEXT("Dummy"), FVector(400.0f, SceneRow, 0.0f), 180.0f);
+		if (!C.Require(Warlock != nullptr && Dummy != nullptr, TEXT("warlock and dummy spawned")) || !C.Equip(Warlock, TEXT("wand_one_handed")))
+		{
+			return;
+		}
+		C.Require(GrantSkillsAtCost(C, Warlock, {TEXT("summon_greater_demon")}, CostSummonGreaterDemon), TEXT("Summon Greater Demon granted"));
+	});
+	Scenario.Wait(0.5f);
+	Scenario.Step(TEXT("Summon the demon"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Warlock = Character(C, TEXT("Warlock"));
+		ACrossguardCharacter* Dummy = Character(C, TEXT("Dummy"));
+		if (Warlock == nullptr || Dummy == nullptr || !C.Require(C.ActivateSkill(Warlock, TEXT("summon_greater_demon")), TEXT("Summon Greater Demon activates")))
+		{
+			return;
+		}
+		const TArray<ACrossguardMinion*> Minions = MinionsOf(C, Warlock);
+		if (!C.Require(Minions.Num() == 1, TEXT("one demon")))
+		{
+			return;
+		}
+		C.Remember(TEXT("Demon"), Minions[0]);
+		C.ClearLog();
+		C.SetNumber(TEXT("Sword"), C.ExpectedDamage(Minions[0], Dummy, DemonAttackDamage));
+	});
+	Scenario.WaitUntil(TEXT("the demon raises Eldritch Shield, hits for 40 and rides a next-attack skill"), 25.0f, [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Dummy = Character(C, TEXT("Dummy"));
+		const ACrossguardMinion* Demon = Cast<ACrossguardMinion>(C.FindActor(TEXT("Demon")));
+		if (Dummy == nullptr || Demon == nullptr)
+		{
+			return false;
+		}
+		C.SetHealth(Dummy, C.MaxHealth(Dummy));
+		if (C.IsOnCooldown(Demon, TEXT("eldritch_shield")))
+		{
+			C.SetNumber(TEXT("Shielded"), 1.0);
+		}
+		if (C.HasTag(Dummy, CrossguardTags::State_HealBlocked))
+		{
+			C.SetNumber(TEXT("HealBlocked"), 1.0);
+		}
+		if (C.IsOnCooldown(Demon, TEXT("shade_blow")))
+		{
+			C.SetNumber(TEXT("ShadeBlow"), 1.0);
+		}
+		if (C.IsOnCooldown(Demon, TEXT("mortal_strike")))
+		{
+			C.SetNumber(TEXT("MortalStrike"), 1.0);
+		}
+		if (MaxAmount(DamageAmounts(C, Dummy, Demon)) >= C.Number(TEXT("Sword")) - 0.5)
+		{
+			C.SetNumber(TEXT("Hit40"), 1.0);
+		}
+		return C.Number(TEXT("Shielded")) > 0.0 && C.Number(TEXT("Hit40")) > 0.0 && C.Number(TEXT("ShadeBlow")) > 0.0 && C.Number(TEXT("MortalStrike")) > 0.0;
+	});
+	// One rider per swing: Shade Blow's heal block lands on a later hit than Mortal Strike's.
+	Scenario.WaitUntil(TEXT("Shade Blow's heal block lands on the dummy"), 12.0f, [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Dummy = Character(C, TEXT("Dummy"));
+		if (Dummy == nullptr)
+		{
+			return false;
+		}
+		C.SetHealth(Dummy, C.MaxHealth(Dummy));
+		if (C.HasTag(Dummy, CrossguardTags::State_HealBlocked))
+		{
+			C.SetNumber(TEXT("HealBlocked"), 1.0);
+		}
+		return C.Number(TEXT("HealBlocked")) > 0.0;
+	});
+	Scenario.Step(TEXT("Eldritch Shield, the 40, Shade Blow and Mortal Strike"), [](FScenarioContext& C)
+	{
+		const ACrossguardCharacter* Dummy = Character(C, TEXT("Dummy"));
+		const AActor* Demon = C.FindActor(TEXT("Demon"));
+		C.Test.TestTrue(TEXT("The demon raised Eldritch Shield"), C.Number(TEXT("Shielded")) > 0.0);
+		C.Test.TestTrue(TEXT("The demon used Shade Blow"), C.Number(TEXT("ShadeBlow")) > 0.0);
+		C.Test.TestTrue(TEXT("Shade Blow blocked the dummy's healing"), C.Number(TEXT("HealBlocked")) > 0.0);
+		C.Test.TestTrue(TEXT("The demon used Mortal Strike"), C.Number(TEXT("MortalStrike")) > 0.0);
+		const TArray<float> Amounts = DamageAmounts(C, Dummy, Demon);
+		FString List;
+		for (const float Amount : Amounts)
+		{
+			List += FString::Printf(TEXT("%.1f "), Amount);
+		}
+		C.Test.AddInfo(FString::Printf(TEXT("Demon hits on the dummy: %s(sword %.1f)"), *List, C.Number(TEXT("Sword"))));
+		C.Test.TestTrue(TEXT("A hit did at least the sword's 40 (after the dummy's Armor)"), MaxAmount(Amounts) >= C.Number(TEXT("Sword")) - 0.5);
+	});
+
+	Scenario.Run();
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

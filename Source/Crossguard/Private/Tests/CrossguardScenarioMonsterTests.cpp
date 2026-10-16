@@ -118,4 +118,101 @@ bool FCrossguardScenarioMobSpawner::RunTest(const FString& Parameters)
 	return true;
 }
 
+// Checklist: "Mob spawner: soldiers and archers, 3–5". Statistically, with a fixed random seed: 24
+// spawners of skeleton_soldier (weight 3) and skeleton_archer (weight 1), Count 3–5, each spawn
+// 3, 4 or 5 (all three counts seen), both mobs appear, archers about a quarter of the ~96.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioSpawnerMixAndCount, "Crossguard.Scenario.Monsters.SpawnerMixAndCount", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioSpawnerMixAndCount::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioMonsters;
+
+	static constexpr int32 SpawnerCount = 24;
+	static constexpr int32 Columns = 6;
+	static constexpr float Spacing = 1500.0f;
+	static constexpr int32 SoldierWeight = 3;
+	static constexpr int32 ArcherWeight = 1;
+	static const FName SkeletonArcher(TEXT("skeleton_archer"));
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("24 spawners of soldiers (3) and archers (1), 3-5 each, seeded"), [](FScenarioContext& C)
+	{
+		const ACrossguardGameMode* Mode = C.GameMode();
+		if (!C.Require(Mode != nullptr, TEXT("a Crossguard game mode")))
+		{
+			return;
+		}
+		if (Mode->MobTable == nullptr || Mode->MobTable->FindRow<FCrossguardMobRow>(SkeletonSoldier, TEXT("Scenario"), false) == nullptr
+			|| Mode->MobTable->FindRow<FCrossguardMobRow>(SkeletonArcher, TEXT("Scenario"), false) == nullptr)
+		{
+			C.Skip(TEXT("the game mode's Mob Table needs skeleton_soldier and skeleton_archer rows (DT_Mobs from Data/Mobs/MobTable.json)"));
+			return;
+		}
+		C.SetRaid(true);
+		// The spawners pick with FMath::RandRange: one seed, one outcome.
+		FMath::RandInit(20261016);
+		for (int32 Index = 0; Index < SpawnerCount; ++Index)
+		{
+			// A grid north of the origin, away from the PIE player at (-30 m, -30 m).
+			const FVector Location(-4000.0f + Spacing * (Index % Columns), 1000.0f + Spacing * (Index / Columns), 50.0f);
+			ACrossguardMobSpawner* Spawner = C.SpawnActor<ACrossguardMobSpawner>(FName(*FString::Printf(TEXT("Spawner%d"), Index)), Location, 0.0f,
+				[](ACrossguardMobSpawner& Spawned)
+				{
+					FCrossguardMobSpawnOption Soldier;
+					Soldier.MobId = SkeletonSoldier;
+					Soldier.Weight = SoldierWeight;
+					FCrossguardMobSpawnOption Archer;
+					Archer.MobId = SkeletonArcher;
+					Archer.Weight = ArcherWeight;
+					Spawned.Mobs = {Soldier, Archer};
+					Spawned.CountMin = 3;
+					Spawned.CountMax = 5;
+					Spawned.Radius = 300.0f;
+					Spawned.RespawnSeconds = 0.0f;
+				});
+			if (!C.Require(Spawner != nullptr, TEXT("spawner spawned")))
+			{
+				return;
+			}
+		}
+	});
+
+	Scenario.Wait(1.0f);
+
+	Scenario.Step(TEXT("Each spawned 3 to 5; soldiers and archers about 3:1"), [](FScenarioContext& C)
+	{
+		int32 Total = 0;
+		int32 Archers = 0;
+		int32 Soldiers = 0;
+		TSet<int32> CountsSeen;
+		for (int32 Index = 0; Index < SpawnerCount; ++Index)
+		{
+			const AActor* Spawner = C.FindActor(FName(*FString::Printf(TEXT("Spawner%d"), Index)));
+			if (!C.Require(Spawner != nullptr, TEXT("the spawner still exists")))
+			{
+				return;
+			}
+			const TArray<ACrossguardMonster*> Monsters = SpawnedBy(C, Spawner);
+			C.Test.TestTrue(*FString::Printf(TEXT("Spawner %d spawned 3 to 5 (spawned %d)"), Index, Monsters.Num()), Monsters.Num() >= 3 && Monsters.Num() <= 5);
+			CountsSeen.Add(Monsters.Num());
+			for (const ACrossguardMonster* Monster : Monsters)
+			{
+				++Total;
+				Soldiers += Monster->MobId == SkeletonSoldier ? 1 : 0;
+				Archers += Monster->MobId == SkeletonArcher ? 1 : 0;
+			}
+		}
+		const float ArcherShare = Total > 0 ? static_cast<float>(Archers) / static_cast<float>(Total) : 0.0f;
+		C.Test.AddInfo(FString::Printf(TEXT("%d monsters from %d spawners: %d soldiers, %d archers (%.0f%% archers; weights 3:1 expect 25%%)"),
+			Total, SpawnerCount, Soldiers, Archers, ArcherShare * 100.0f));
+		C.Test.TestEqual(TEXT("Every monster is a soldier or an archer"), Soldiers + Archers, Total);
+		C.Test.TestTrue(TEXT("Counts of 3, 4 and 5 all occur over 24 spawners"), CountsSeen.Contains(3) && CountsSeen.Contains(4) && CountsSeen.Contains(5));
+		C.Test.TestTrue(TEXT("Archers are between 12% and 40% of the spawns (3:1 weights)"), ArcherShare >= 0.12f && ArcherShare <= 0.40f);
+	});
+
+	Scenario.Run();
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

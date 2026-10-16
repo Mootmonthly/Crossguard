@@ -100,4 +100,66 @@ bool FCrossguardScenarioFireball::RunTest(const FString& Parameters)
 	return true;
 }
 
+// Checklist: "fireball ... 15 to you within 2 m". A dummy 1.5 m away: the impact is within 2 m of the
+// caster, who takes the 15 Magic splash (coefficient 1); the dummy takes the 50 hit and no splash
+// ("15 to everyone else", design-decisions.md).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioFireballSelfSplash, "Crossguard.Scenario.Skills.FireballSelfSplash", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioFireballSelfSplash::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioSkills;
+
+	static constexpr float SplashDamage = 15.0f;
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("A caster with a wand and Fireball, a dummy 1.5 m away"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Caster = C.SpawnPlayer(TEXT("Caster"), FVector(0.0f, 2500.0f, 0.0f), 0.0f);
+		ACrossguardCharacter* Dummy = C.SpawnDummy(TEXT("Dummy"), FVector(150.0f, 2500.0f, 0.0f), 180.0f);
+		if (!C.Require(Caster != nullptr && Dummy != nullptr, TEXT("caster and dummy spawned")) || !C.Equip(Caster, TEXT("wand_one_handed")))
+		{
+			return;
+		}
+		C.Require(C.GrantSkills(Caster, {TEXT("fireball")}), TEXT("Fireball granted"));
+	});
+
+	Scenario.Wait(0.5f);
+
+	Scenario.Step(TEXT("Cast at the dummy"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Caster = C.Get<ACrossguardCharacter>(TEXT("Caster"));
+		ACrossguardCharacter* Dummy = C.Get<ACrossguardCharacter>(TEXT("Dummy"));
+		if (Caster == nullptr || Dummy == nullptr)
+		{
+			return;
+		}
+		C.Aim(Caster, Dummy);
+		C.SetNumber(TEXT("CasterBefore"), C.Health(Caster));
+		C.SetNumber(TEXT("DummyBefore"), C.Health(Dummy));
+		C.SetNumber(TEXT("ExpectedSplash"), C.ExpectedDamage(Caster, Caster, 0.0f, SplashDamage, 1.0f));
+		C.SetNumber(TEXT("ExpectedHit"), C.ExpectedDamage(Caster, Dummy, 0.0f, FireballDamage, FireballCoefficient));
+		C.Require(C.ActivateSkill(Caster, TEXT("fireball")), TEXT("Fireball activates"));
+	});
+
+	Scenario.Wait(FireballFlightWait);
+
+	Scenario.Step(TEXT("The caster took the splash; the dummy the hit"), [](FScenarioContext& C)
+	{
+		const ACrossguardCharacter* Caster = C.Get<ACrossguardCharacter>(TEXT("Caster"));
+		const ACrossguardCharacter* Dummy = C.Get<ACrossguardCharacter>(TEXT("Dummy"));
+		if (Caster == nullptr || Dummy == nullptr)
+		{
+			return;
+		}
+		C.Test.TestEqual(TEXT("The caster took the 15 Magic splash (within 2 m of the impact)"),
+			static_cast<float>(C.Number(TEXT("CasterBefore")) - C.Health(Caster)), static_cast<float>(C.Number(TEXT("ExpectedSplash"))), 0.05f);
+		C.Test.TestEqual(TEXT("The dummy took the 50 hit, no splash on top"),
+			static_cast<float>(C.Number(TEXT("DummyBefore")) - C.Health(Dummy)), static_cast<float>(C.Number(TEXT("ExpectedHit"))), 0.05f);
+	});
+
+	Scenario.Run();
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

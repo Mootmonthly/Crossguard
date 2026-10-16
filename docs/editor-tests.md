@@ -154,7 +154,8 @@ damage is computed from the characters' actual stats, so they work at any level.
 
 ### The scenarios
 
-95 tests in 12 files. Grouped by file; the name is the full test name.
+117 tests in 15 files (106 `Crossguard.Scenario.*`, 5 `Crossguard.Net.*`, 6 `Crossguard.Visual.*`;
+2026-10-16). Grouped by file; the name is the full test name.
 
 **`CrossguardScenarioRaidTests.cpp`**
 
@@ -189,12 +190,15 @@ damage is computed from the characters' actual stats, so they work at any level.
 | --- | --- |
 | `Crossguard.Scenario.Raid.GatherNode` | A native `ACrossguardGatherNode` (`gather_herb`, default 2 s, once per raid) 1.5 m ahead: F starts the channel; standing still, after 2 s at least one herb is in the inventory, raid XP +10 (`GatherNode`), the node is depleted and "gathered" logged; F again is refused ("depleted"), and no more herbs or XP follow. Skipped without `gather_herb` in `DT_Loot` or `herb_silverleaf` in `DT_Items`. |
 | `Crossguard.Scenario.Raid.GatherNodeMoveInterrupts` | F at a `gather_ore` node, then the player is moved 1 m aside 0.5 s in: "interrupted: moved", nobody gathering; 2.5 s later no ore, no raid XP, the node not depleted. Skipped without the data like `GatherNode`. |
+| `Crossguard.Scenario.Raid.GatherNodeAttackInterrupts` | As MoveInterrupts, but the player (with a sword) swings 0.5 s in: "interrupted: attacked"; no ore, no XP, the node stays. |
+| `Crossguard.Scenario.Raid.GatherNodeDamageInterrupts` | As MoveInterrupts, but the player takes 5 damage 0.5 s in: "interrupted: took damage"; no ore, no XP, the node stays. |
 
 **`CrossguardScenarioSkillTests.cpp`**
 
 | Test | Checks |
 | --- | --- |
 | `Crossguard.Scenario.Skills.Fireball` | A player with `wand_one_handed` and `fireball` casts at a dummy 6 m away: Fireball goes on cooldown (`Cooldown.Skill.Fireball`); 1 s later the dummy has lost exactly the formula's damage for 50 Magic Damage at coefficient 0.5 (at least 50 before Magic Resistance); the caster, outside the 2 m splash, is unhurt. |
+| `Crossguard.Scenario.Skills.FireballSelfSplash` | A dummy 1.5 m away: the caster takes the 15 Magic splash (coefficient 1, own Magic Resistance), the dummy the 50 hit and no splash. |
 
 **`CrossguardScenarioSupportSkillTests.cpp`**
 
@@ -207,6 +211,7 @@ damage is computed from the characters' actual stats, so they work at any level.
 | `Crossguard.Scenario.Skills.ShootingStar` | Blinds the watcher (2 s), dash about 10 m through them, 50 Attack Damage to them, caster not blinded. |
 | `Crossguard.Scenario.Skills.Dragonification` | Max HP +50% (Health keeps its %), AR / MR +0.25, Flare Breath and Flight granted, no weapons / basic attack / other skills / 1–2 drawing; Flight works; all back after 45 s. |
 | `Crossguard.Scenario.Skills.Flight` | `State.Flying`, flying movement; upward input rises; hovers without input; ends after 20 s and the flier lands. |
+| `Crossguard.Scenario.Skills.FlightDescend` | After rising 1.5 s, 1 s of downward input (what Left Ctrl does) brings the flier down more than 50 cm, still flying and in the air. |
 | `Crossguard.Scenario.Skills.Wall` | One wall 3 m ahead, on the floor, across the view; gone after 15 s. |
 | `Crossguard.Scenario.Skills.Light` | One orb attached 1.2 m over the caster for 120 s; a recast replaces it. |
 | `Crossguard.Scenario.Skills.Stealth` | `State.Stealthed`; the hider's capsule is hidden from the PIE player; attacking ends it with +10% Movement Speed and +25% ADB for 3 s; otherwise it lasts 12 s. |
@@ -216,8 +221,11 @@ damage is computed from the characters' actual stats, so they work at any level.
 | `Crossguard.Scenario.Skills.Multiscale` | Equipped: the knight and a same-Party member get AR / MR +0.15 and `State.Multiscale`, an outsider nothing; unequipped: gone from all. |
 | `Crossguard.Scenario.Skills.HuntersTracking` | Passive on; footprints appear behind a walking enemy, are still there at 25 s, fade about 30 s after the last step. |
 | `Crossguard.Scenario.Skills.SummonSkeletons` | 5 Warriors (40 HP) and 1 Mage (30 HP), 60 s life; they damage the dummy; a recast replaces them; gone after 60 s. |
+| `Crossguard.Scenario.Skills.SummonSkeletonsFollow` | No enemy around: the necromancer walks 20 m away and all six skeletons come to within 4.5 m (follow distance 3 m). |
 | `Crossguard.Scenario.Skills.SummonTiger` | Refused without `pet_gem_tiger` (no cooldown); with it: one tiger, 100 HP, 20 AD, Hunter's Leap / Neckbite / Slash, gem kept; it hits the dummy (log); gone after 180 s. |
+| `Crossguard.Scenario.Skills.SummonTigerLeapAndRiders` | A dummy 8 m off (kept alive): the tiger uses Hunter's Leap, Neckbite (the dummy is Silenced) and Slash (cooldowns); its hits show the claw 20, the +10 Magic (Neckbite) and the +7 (Slash) after the dummy's Armor. |
 | `Crossguard.Scenario.Skills.SummonGreaterDemon` | One demon, 220 HP, 1.5x, two-handed sword, 40 AD, Mortal Strike / Eldritch Shield / Shade Blow, gone after 60 s. |
+| `Crossguard.Scenario.Skills.SummonGreaterDemonFights` | Against a dummy 4 m off (kept alive): the demon raises Eldritch Shield, uses Mortal Strike and Shade Blow (cooldowns), a hit does at least the sword's 40 after Armor, and Shade Blow's heal block lands on the dummy. |
 | `Crossguard.Scenario.Skills.NeckbiteSilence` | The tiger's Neckbite silences a flying victim: Flight stops, Heal fails, basic attack works; about 2 s. |
 | `Crossguard.Scenario.Skills.Silence` | `State.Silenced` 2 s: Heal refused (no cooldown), basic attack works; Heal works after. |
 
@@ -257,6 +265,7 @@ damage is computed from the characters' actual stats, so they work at any level.
 | `Crossguard.Scenario.Combat.ArrowBlockedNoStun` | A Ranged monster's arrow on a raised shield: blocked, 0% through, nobody hurt, archer never stunned. |
 | `Crossguard.Scenario.Combat.SwingClash` | Swings within 0.25 s clash (tie stops both, lighter swinger takes the heavy weapon's damage and a stun, no riposte); the clank pushes the pair apart; an answer 0.4 s late lands in full. |
 | `Crossguard.Scenario.Combat.AIGuardsAgainstSwings` | 20 dagger swings at a harmless built-in monster: it raises its guard, some swings are parried and some land. |
+| `Crossguard.Scenario.Combat.SkeletonSoldierParryMirror` | Dagger swings at a `skeleton_soldier` (sword, Impact Power 5) until one is parried: the soldier's sword damage comes back on the attacker (logged right after the parry) and the attacker is stunned about 1 s. Skipped without the Mob Table row. |
 | `Crossguard.Scenario.Combat.AIIgnoresAllySwings` | A party member's minion never guards against its ally's 12 swings; every one lands (friendly fire). |
 | `Crossguard.Scenario.Combat.StunBlocksActions` | Stunned (by a parry, or directly): no attack, skill, jump, movement or guard, a raised guard drops; all work again after. |
 
@@ -277,19 +286,21 @@ damage is computed from the characters' actual stats, so they work at any level.
 | Test | Checks |
 | --- | --- |
 | `Crossguard.Scenario.Monsters.MobSpawner` | A `CrossguardMobSpawner` with `skeleton_soldier` (weight 1), Count 3–3, Radius 6 m, placed 40 m out during a raid: 3 monsters owned by it, each with Mob Id `skeleton_soldier`, Max Health and Health = the mob's Health in `DT_Mobs` (120), a controller, within the radius, above the floor. |
+| `Crossguard.Scenario.Monsters.SpawnerMixAndCount` | Seeded (`FMath::RandInit`): 24 spawners of `skeleton_soldier` (weight 3) and `skeleton_archer` (1), Count 3–5: each spawned 3 to 5 with all three counts seen, every monster one of the two, archers 12–40% of the ~96 (expected 25%). Skipped without both rows. |
 
 **`CrossguardScenarioMonsterAITests.cpp`** (no NavMesh: monsters steer straight at their goal)
 
 | Test | Checks |
 | --- | --- |
 | `Crossguard.Scenario.Monsters.AggroSightAndAttack` | A built-in monster ignores a player beyond aggro range and one behind a wall; once it sees them it closes in and hits for its Attack Damage (formula) once per Attack Interval, from within Attack Range. |
-| `Crossguard.Scenario.Monsters.LeashReturnsHome` | 6 m leash: pulled beyond it with nobody in reach, it walks home, healed to full, and ignores a player beyond the leash. |
+| `Crossguard.Scenario.Monsters.LeashReturnsHome` | The real 30 m leash: the player retreats ahead of the chase until the monster is past 30 m from home; it walks back, healed to full, and ignores the player standing beyond the leash. |
 | `Crossguard.Scenario.Monsters.LeashRetargets` | Pulled beyond the leash while another player is in range within it: turns on that player, not healed. |
-| `Crossguard.Scenario.Monsters.ReactsToDamageFromAnyRange` | A player 25 m away is ignored until they hurt it; then it turns, closes in and hits. |
+| `Crossguard.Scenario.Monsters.ReactsToDamageFromAnyRange` | A player 40 m away (beyond aggro and the leash) is ignored until they hurt it; then it turns and comes at least 5 m; the player meets it 15 m from its home and it hits. |
 | `Crossguard.Scenario.Monsters.MonsterTeam` | Two monsters and one's minion never fight each other; all three go for a player; nothing hurt among them. |
 | `Crossguard.Scenario.Monsters.DeathBodyLootXp` | Six monsters of one mob killed: each dead, not revivable, leaves a body; at least one body holds loot; Basic Monster XP per kill. |
 | `Crossguard.Scenario.Monsters.BossKillXpAndLoot` | A boss (`mithril_dragon` if present) killed: Boss Monster XP, a body, the dragon's body holds loot. |
 | `Crossguard.Scenario.Monsters.MobDataApplied` | Each mob in the Mob Table (up to 6, all 5 today): role, weapon, Impact Power, damage, intervals, ranges, loot table, kill XP, Health, walk speed, scale, feet on the floor, skills with bundles expanded. |
+| `Crossguard.Scenario.Monsters.MithrilDragonSummons` | A `mithril_dragon` with a player 10 m off casts one of its summons within 20 s: minions with the dragon as summoner, Summon Skeletons or Summon Greater Demon on cooldown. Skipped without the Mob Table row or the Mob Skill Catalog. |
 | `Crossguard.Scenario.Monsters.RangedKeepsDistanceAndShoots` | `skeleton_archer` walks in to its Keep Distance (never closer) and hits the player with arrows more than once. |
 | `Crossguard.Scenario.Monsters.MageKeepsDistanceAndCasts` | A Mage mob keeps its distance and a fireball hits the player. |
 | `Crossguard.Scenario.Monsters.SkeletonMageUsesSkills` | `skeleton_mage` casts Fireball at the player; no Heal while healthy; below 60% it heals itself ("healed" logged). |
@@ -369,18 +380,18 @@ use server-side players in one standalone PIE; `Crossguard.Net.*` use real PIE c
 | 4 Portal: 60 s, extract; walk away collapses | auto | `Raid.ExtractPortal` | `BeamMesh` look. |
 | 4 X refused outside / twice | auto | `Raid.PortalRefusals` | — |
 | 4 `chest_common` chest | auto | `Raid.ChestCommonLoot` | Its look: `Visual.Chest` (no mesh yet). |
-| 4 Monster: aggro 15 m, 12 per 1.5 s, 30 m leash, shot from 40 m, kill XP and body | part | `Monsters.AggroSightAndAttack`, `LeashReturnsHome`, `LeashRetargets`, `ReactsToDamageFromAnyRange`, `DeathBodyLootXp` | NavMesh pathing; the 30 m leash (tests use 6 m) and 40 m (tests 25 m). |
+| 4 Monster: aggro 15 m, 12 per 1.5 s, 30 m leash, shot from 40 m, kill XP and body | auto | `Monsters.AggroSightAndAttack`, `LeashReturnsHome`, `LeashRetargets`, `ReactsToDamageFromAnyRange`, `DeathBodyLootXp` | NavMesh pathing round obstacles (the floor is open). |
 | 4 `boss_monster` dummy: 3–5 extra items | auto | `Raid.BossLootOnDummy` | — |
 | 4 Door snaps open / closed | auto | `Raid.DoorOpenClose` | The mesh moving. |
 | 4 Locked door, lockpicking 5 s | auto | `Raid.LockedDoor` | — |
-| 4 `fireball` 50+; 15 to you within 2 m | part | `Skills.Fireball` | The self-splash within 2 m. |
+| 4 `fireball` 50+; 15 to you within 2 m | auto | `Skills.Fireball`, `Skills.FireballSelfSplash` | — |
 | 4 `heal` dummy, then self | auto | `Skills.Heal` | — |
 | 4 `mute` | auto | `Skills.Mute` | — |
 | 4 `eldritch_shield` | auto | `Skills.EldritchShield` | — |
 | 4 `chop_down`, flier falls | auto | `Skills.ChopDown` | — |
 | 4 `shooting_star` | auto | `Skills.ShootingStar` | — |
 | 4 `dragonification` | auto | `Skills.Dragonification` | Q selector UI; the form's look: `Visual.Dragonification` (no art yet). |
-| 4 `flight` Space / Left Ctrl | part | `Skills.Flight` | Descending (Left Ctrl), the key bindings. |
+| 4 `flight` Space / Left Ctrl | auto | `Skills.Flight`, `Skills.FlightDescend` | The key bindings themselves. |
 | 4 Next-attack stack; Mortal Strike kill refresh | auto | `Skills.NextAttackStack`, `Skills.MortalStrikeKillRefresh` | States display. |
 | 4 `gouge` | auto | `Skills.Gouge` | — |
 | 4 `shade_blow` heal block | auto | `Skills.ShadeBlowHealBlock` | — |
@@ -397,16 +408,16 @@ use server-side players in one standalone PIE; `Crossguard.Net.*` use real PIE c
 | 4 `hunters_tracking` grey marks | auto | `Skills.HuntersTracking`, `Net.TrackingMarksOnTrackerOnly` | Their look. |
 | 4 Drop with G, pick up with F | auto | `Raid.DropAndPickUp` | The box's look. |
 | 4 Gather node: 2 s, herbs, +10 XP, depleted, refused again | auto | `Raid.GatherNode`, `Visual.GatherNode` | — |
-| 4 Gather node: walking, attacking or damage breaks the channel | part | `Raid.GatherNodeMoveInterrupts` | Attacking and taking damage (rules unit tested: `CheckGatherInterrupt`). |
-| 4 `summon_skeletons` | part | `Skills.SummonSkeletons` | Following you; NavMesh pathing. |
-| 4 `summon_tiger` leap, riders, hits for 20 | part | `Skills.SummonTiger` | Leap, the +7 / +10 Magic riders (only "it hits" is checked). |
-| 4 `summon_greater_demon` | part | `Skills.SummonGreaterDemon` | Raising Eldritch Shield, its 40 hits with riders in a fight. |
+| 4 Gather node: walking, attacking or damage breaks the channel | auto | `Raid.GatherNodeMoveInterrupts`, `GatherNodeAttackInterrupts`, `GatherNodeDamageInterrupts` | — |
+| 4 `summon_skeletons` | auto | `Skills.SummonSkeletons`, `Skills.SummonSkeletonsFollow` | — |
+| 4 `summon_tiger` leap, riders, hits for 20 | auto | `Skills.SummonTiger`, `Skills.SummonTigerLeapAndRiders` | — |
+| 4 `summon_greater_demon` | auto | `Skills.SummonGreaterDemon`, `Skills.SummonGreaterDemonFights` | — |
 | 4 Neckbite silences 2 s, stops a channel | auto | `Skills.NeckbiteSilence`, `Skills.Silence` | — |
-| 4 Mob spawner: soldiers and archers, 3–5, archers keep away, body, respawn | part | `Monsters.MobSpawner`, `SpawnerRespawn`, `RangedKeepsDistanceAndShoots` | Weighted mix and 3–5 count (tests use one mob, fixed count); NavMesh. |
-| 4 `mithril_dragon` spawner: scale 6 on the floor, summons fight you | part | `Monsters.MobDataApplied`, `MonsterTeam` | The dragon casting its summons (team rule is tested with a generic minion). |
+| 4 Mob spawner: soldiers and archers, 3–5, archers keep away, body, respawn | auto | `Monsters.MobSpawner`, `SpawnerRespawn`, `RangedKeepsDistanceAndShoots`, `Monsters.SpawnerMixAndCount` | — |
+| 4 `mithril_dragon` spawner: scale 6 on the floor, summons fight you | auto | `Monsters.MobDataApplied`, `MonsterTeam`, `Monsters.MithrilDragonSummons` | — |
 | 4 Block | auto | `Combat.ShieldBlock` | Two real clients. |
 | 4 Parry | auto | `Combat.ParryTwoHanded`, `ImpactDifferences` (`axe_two_handed` vs `sword_one_handed`), `Skills.RiposteRider` | Two real clients. |
-| 4 Monsters guard ~half, stun and sword damage back | part | `Combat.AIGuardsAgainstSwings` | The ~50% rate and `skeleton_soldier`'s mirror damage / 1 s stun (built-in monster, damage 0). |
+| 4 Monsters guard ~half, stun and sword damage back | auto | `Combat.AIGuardsAgainstSwings`, `Combat.SkeletonSoldierParryMirror` | The ~50% rate is checked loosely (some parried, some landed). |
 | 4 Trading | auto | `Social.Trade*` (7) | Console commands, two real clients. |
 | 4 Guilds | auto | `Social.Guild*` (4) | Console commands, two real clients. |
 | 4 `summon_tiger` needs `pet_gem_tiger` | auto | `Skills.SummonTiger` | — |
@@ -421,9 +432,12 @@ use server-side players in one standalone PIE; `Crossguard.Net.*` use real PIE c
 | 6 `showdebug` shows the other's `Equipment.Wielding.*` | auto | `Net.WieldingTagsReplicate` | The debug HUD itself. |
 | 6 Concurrent loot never duplicates | auto | `Social.ConcurrentLootNeverDuplicates`, `Net.ConcurrentLootFromTwoClients` | — |
 
-Totals: 66 rows: 49 auto, 12 part, 5 manual. Not checklist rows: `Combat.ArrowBlockedNoStun`,
-`SwingClash`, `AIIgnoresAllySwings`, `StunBlocksActions`, `Skills.LikeALion`, `Quickshot`,
-`ArcaneArrows`, the extra trade and guild cases.
+Totals: 68 rows: 65 auto, 3 script, none part or manual (2026-10-16). What the "By hand" column
+still leaves to a person is feel, art and real internet play: looks (frames from the visual run),
+key bindings, UI, NavMesh pathing round obstacles, and play over a real network. Not checklist
+rows: `Combat.ArrowBlockedNoStun`, `SwingClash`, `AIIgnoresAllySwings`, `StunBlocksActions`,
+`Skills.LikeALion`, `Quickshot`, `ArcaneArrows`, the extra trade and guild cases, and the
+`Crossguard.Net.*` / `Crossguard.Visual.*` scenarios.
 
 ### Known limits
 
@@ -436,7 +450,7 @@ Totals: 66 rows: 49 auto, 12 part, 5 manual. Not checklist rows: `Combat.ArrowBl
   `OnWeaponClank` Blueprint event) is counted from the Impact Power log line before it; the
   Blueprint event, sound and effect are not checked.
 - AI guard chance (50%) is checked loosely: over 20 swings, at least one parried and one landed.
-- No NavMesh in the test map: monsters steer straight; pathing round obstacles is untested.
+- No NavMesh in the test map: monsters and minions steer straight at their goal on the open floor, which the distance and follow checks need nothing more for; pathing round obstacles is untested.
 - Visuals: the [visual run](#visual-run) only takes pictures; nothing judges them. Audio, arcs and
   effects are never checked.
 - Data-dependent tests skip (pass with a warning) when `DT_Mobs`, `DT_Loot`, `DA_SkillCatalog` or

@@ -16,9 +16,12 @@
 #include "AbilitySystemGlobals.h"
 #include "Character/CrossguardCharacter.h"
 #include "Character/CrossguardMinion.h"
+#include "Character/CrossguardMobRow.h"
 #include "Character/CrossguardMonster.h"
 #include "Combat/CrossguardGuard.h"
 #include "CrossguardRules/Combat.h"
+#include "Engine/DataTable.h"
+#include "Game/CrossguardGameMode.h"
 #include "Game/CrossguardTeamLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Items/CrossguardEquipmentComponent.h"
@@ -996,6 +999,116 @@ bool FCrossguardScenarioStunBlocksActions::RunTest(const FString& Parameters)
 		C.Test.TestTrue(TEXT("B can attack again"), C.BasicAttack(B));
 		C.Test.TestTrue(TEXT("B can use Unleash again"), C.ActivateSkill(B, Skill));
 		C.Test.TestTrue(TEXT("C can raise its guard again"), C.RaiseGuard(Guard));
+	});
+
+	Scenario.Run();
+	return true;
+}
+
+// --- skeleton_soldier's parry -----------------------------------------------------------------------
+
+// Checklist: "Monsters guard ~half, stun and sword damage back" with a real mob: a skeleton_soldier
+// (sword, Impact Power 5) parries a dagger (1): the swing is mirrored (the soldier's sword damage on
+// the attacker, logged right after the parry) and the attacker is stunned 1 s.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioSkeletonSoldierParryMirror, "Crossguard.Scenario.Combat.SkeletonSoldierParryMirror", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioSkeletonSoldierParryMirror::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioGuard;
+
+	static constexpr float SceneY = 5000.0f;
+	static const FName SkeletonSoldier(TEXT("skeleton_soldier"));
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("A player with a dagger, a skeleton_soldier 1.5 m away"), [](FScenarioContext& C)
+	{
+		const ACrossguardGameMode* Mode = C.GameMode();
+		if (!C.Require(Mode != nullptr, TEXT("a Crossguard game mode")))
+		{
+			return;
+		}
+		if (Mode->MobTable == nullptr || Mode->MobTable->FindRow<FCrossguardMobRow>(SkeletonSoldier, TEXT("Scenario"), false) == nullptr)
+		{
+			C.Skip(TEXT("the game mode's Mob Table needs a skeleton_soldier row (DT_Mobs from Data/Mobs/MobTable.json)"));
+			return;
+		}
+		ACrossguardCharacter* Player = C.SpawnPlayer(TEXT("Player"), FVector(0.0f, SceneY, 0.0f), 0.0f);
+		ACrossguardMonster* Soldier = C.SpawnMonster(TEXT("Soldier"), SkeletonSoldier, FVector(150.0f, SceneY, 0.0f), 180.0f);
+		if (!C.Require(Player != nullptr && Soldier != nullptr, TEXT("player and soldier spawned")) || !C.Equip(Player, TEXT("dagger_one_handed")))
+		{
+			return;
+		}
+		C.Require(Soldier->ImpactPower - MainHandImpactPower(Player) >= 3,
+			FString::Printf(TEXT("the soldier's sword (%d) out-weighs the dagger (%d) by 3 or more: a parry mirrors and stuns"), Soldier->ImpactPower, MainHandImpactPower(Player)));
+		C.Require(Soldier->AttackDamage > 0.0f, TEXT("the soldier's sword has damage to mirror"));
+	});
+
+	Scenario.Wait(0.5f);
+
+	Scenario.WaitUntil(TEXT("a dagger swing is parried"), 40.0f, [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = C.Get<ACrossguardCharacter>(TEXT("Player"));
+		ACrossguardMonster* Soldier = C.Get<ACrossguardMonster>(TEXT("Soldier"));
+		if (Player == nullptr || Soldier == nullptr)
+		{
+			return false;
+		}
+		// Both outlive the exchange (the soldier hits for 30; the dagger chips the soldier).
+		C.SetHealth(Soldier, C.MaxHealth(Soldier));
+		const int32 Parried = C.LogCount(CheckLine(Soldier, TEXT("parried"), Player));
+		if (Parried > 0)
+		{
+			C.SetNumber(TEXT("StunnedAtParry"), C.HasTag(Player, CrossguardTags::State_Stunned) ? 1.0 : 0.0);
+			C.SetNumber(TEXT("ParriedAt"), C.Now());
+			// The mirror damage is logged right after the parry.
+			const TArray<FString> Lines = C.LogLines();
+			const FString ParryLine = CheckLine(Soldier, TEXT("parried"), Player);
+			const FString MirrorLine = FString::Printf(TEXT("%s took "), *Player->GetName());
+			for (int32 Index = 0; Index < Lines.Num(); ++Index)
+			{
+				if (Lines[Index].Contains(ParryLine))
+				{
+					for (int32 Next = Index + 1; Next < FMath::Min(Lines.Num(), Index + 4); ++Next)
+					{
+						if (Lines[Next].Contains(MirrorLine) && Lines[Next].Contains(FString::Printf(TEXT("damage from %s ("), *Soldier->GetName())))
+						{
+							C.SetNumber(TEXT("Mirrored"), 1.0);
+							C.Test.AddInfo(Lines[Index]);
+							C.Test.AddInfo(Lines[Next]);
+						}
+					}
+					break;
+				}
+			}
+			return true;
+		}
+		if (!C.HasTag(Player, CrossguardTags::State_Stunned))
+		{
+			C.SetHealth(Player, C.MaxHealth(Player));
+			C.Aim(Player, Soldier);
+			C.BasicAttack(Player);
+		}
+		return false;
+	});
+
+	Scenario.Step(TEXT("Mirrored and stunned"), [](FScenarioContext& C)
+	{
+		C.Test.TestTrue(TEXT("The soldier's sword damage came back on the attacker (logged after the parry)"), C.Number(TEXT("Mirrored")) > 0.0);
+		C.Test.TestTrue(TEXT("The attacker is stunned by the parry"), C.Number(TEXT("StunnedAtParry")) > 0.0);
+	});
+
+	Scenario.WaitUntil(TEXT("the stun wears off"), 3.0f, [](FScenarioContext& C)
+	{
+		const ACrossguardCharacter* Player = C.Get<ACrossguardCharacter>(TEXT("Player"));
+		return Player != nullptr && !C.HasTag(Player, CrossguardTags::State_Stunned);
+	});
+
+	Scenario.Step(TEXT("The stun lasted about 1 s"), [](FScenarioContext& C)
+	{
+		const float Elapsed = C.Now() - static_cast<float>(C.Number(TEXT("ParriedAt")));
+		C.Test.AddInfo(FString::Printf(TEXT("Stunned for %.2f s"), Elapsed));
+		C.Test.TestTrue(TEXT("Stunned about 1 s (0.5 to 1.5)"), Elapsed >= 0.5f && Elapsed <= 1.5f);
 	});
 
 	Scenario.Run();
