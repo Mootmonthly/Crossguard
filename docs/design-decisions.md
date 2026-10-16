@@ -275,11 +275,11 @@ point of interest instead of only using fixed extraction points. Ruled details:
   solo); the channel collapses only when none are left.
 - A collapsed portal still uses up the player's one summon for the raid.
 - Summoning is on X for now.
-- Assumed until ruled otherwise (placeholder until the trip to the hub exists): an extracted
-  character leaves the raid at once. Its gear is saved as carried out, then the character is removed
-  from the world (nothing stays behind, unlike a death's body); it can no longer pick up, loot, open
-  or trade, and keeps no portal alive. The player spectates a teammate still in the raid; with none
-  left they stay where they extracted (not sent to the menu, unlike a solo death).
+- Ruled (owner): an extracted character leaves the raid at once and the player spectates a
+  teammate still in the raid. Its gear is saved as carried out, then the character is removed from
+  the world (nothing stays behind, unlike a death's body); it can no longer pick up, loot, open or
+  trade, and keeps no portal alive. Assumed (placeholder until the trip to the hub exists): with no
+  teammate left the player stays where they extracted (not sent to the menu, unlike a solo death).
 
 ## Gathering
 
@@ -317,10 +317,10 @@ Everything else is a placeholder until ruled; the numbers live in `Crossguard::F
 | X | Summon an extract portal (placeholder key) |
 | Space / Left Ctrl | Rise / descend while flying ([Flight]) |
 | G | Drop the stack in hand (placeholder until the inventory UI has drag-to-drop) |
-| I or Tab | Inventory screen (placeholder key) |
-| T | Trade: ask the nearest player, or open the trade window (placeholder key) |
-| U | Guild window (placeholder key) |
-| Esc | Close the open windows (placeholder key) |
+| I or Tab | Inventory screen |
+| T | Trade: ask the nearest player, or open the trade window |
+| U | Guild window |
+| Esc | Close the open windows |
 
 - Drawing a weapon set (1 / 2) takes 1 s, faster with Dexterity (`1 s ÷ (1 + Dexterity)`); an
   animation will play here. Nothing attacks while drawing.
@@ -368,13 +368,14 @@ Everything else is a placeholder until ruled; the numbers live in `Crossguard::F
 - Idea, not built: an AGI skill "Disable Friendly Fire".
 - In-game parties (details: [parties.md](parties.md)): players form a party in the hub; the party
   id is its `?Party=` key, so members are on one team (allies) at once. The leader launches the
-  raid. **(placeholder / Assumed)**: only the leader invites, kicks and promotes; inviting while
-  solo founds the party; invites expire after 60 s; a leaving leader hands over to the
-  longest-standing member and the last member disbands it; membership changes and the launch only
-  in the hub (`bIsRaid` off); logging out of the hub leaves the party; a solo player may launch
-  alone. Raid launch **(placeholder until a matchmaker exists)**: when the whole hub server is the
-  party, the server travels to the game mode's `RaidMapName` with `?Party=`; otherwise each
-  member's client travels to `RaidServerAddress` with `?Party=` (refused if a listen host would
+  raid. Ruled (owner): only the leader invites, kicks and promotes; invites expire after **180 s**;
+  membership changes and the launch only in the hub (`bIsRaid` off); a solo player may launch
+  alone; players can delete invites from their inbox, one or all. **(placeholder / Assumed)**:
+  inviting while solo founds the party; a leaving leader hands over to the longest-standing member
+  and the last member disbands it; logging out of the hub leaves the party; decline and promote
+  work in a raid too. Raid launch **(placeholder until a matchmaker exists)**: when the whole hub
+  server is the party, the server travels to the game mode's `RaidMapName` with `?Party=`; otherwise
+  each member's client travels to `RaidServerAddress` with `?Party=` (refused if a listen host would
   have to leave). Parties live in hub memory only. Until a hub map exists, `?Hub` on a map URL plays
   that map as the hub (placeholder).
 

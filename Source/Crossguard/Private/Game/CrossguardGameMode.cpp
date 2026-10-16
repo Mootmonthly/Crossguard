@@ -280,7 +280,7 @@ void ACrossguardGameMode::HandleExtraction(ACrossguardCharacter* Character)
 	// portal alive, and nothing it would touch reaches the save (the record now holds the gear carried
 	// out). Unpossessed first, like a death, so the controller is not left waiting to respawn; the pawn
 	// goes next tick (this can run inside its own overlap event). The player watches a teammate still
-	// in the raid. Placeholder until the trip to the hub exists (docs/design-decisions.md, Extraction).
+	// in the raid (ruled; docs/design-decisions.md, Extraction). The trip to the hub does not exist yet.
 	Character->MarkLeftRaid();
 	Character->SetActorHiddenInGame(true);
 	if (APlayerController* Player = Character->GetController<APlayerController>())

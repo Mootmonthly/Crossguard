@@ -137,7 +137,7 @@ void ACrossguardHUD::EnsureDefaultInput()
 	{
 		return;
 	}
-	// Placeholder keys (docs/design-decisions.md, Controls).
+	// The ruled keys (docs/design-decisions.md, Controls).
 	UInputMappingContext* Context = NewObject<UInputMappingContext>(this, TEXT("IMC_UI"));
 	Context->MapKey(ToggleInventoryAction, EKeys::I);
 	Context->MapKey(ToggleInventoryAction, EKeys::Tab);

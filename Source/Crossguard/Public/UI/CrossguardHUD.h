@@ -57,7 +57,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|UI")
 	bool bReplaceDebugHud = true;
 
-	// Input. Leave empty for the defaults (placeholder keys, docs/design-decisions.md, Controls):
+	// Input. Leave empty for the defaults (the ruled keys, docs/design-decisions.md, Controls):
 	// I or Tab inventory, T trade, U guild, Esc closes windows.
 	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
 	TObjectPtr<UInputMappingContext> UIMappingContext;

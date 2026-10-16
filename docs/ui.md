@@ -23,10 +23,10 @@ Code: `Source/Crossguard/Public/UI`, `Source/Crossguard/Private/UI`. Test:
 
 | Key | What | Status |
 | --- | --- | --- |
-| I or Tab | Inventory screen (opens by itself when F opens a body or chest) | Placeholder (no ruling) |
-| T | Trade: asks the nearest player within 5 m and opens the trade window; with a trade or request, opens / closes it | Placeholder (no ruling) |
-| U | Guild window | Placeholder (no ruling) |
-| Esc | Closes every window (in the editor, Esc also ends Play-In-Editor: use the X button there) | Placeholder |
+| I or Tab | Inventory screen (opens by itself when F opens a body or chest) | Ruled (Controls) |
+| T | Trade: asks the nearest player within 5 m and opens the trade window; with a trade or request, opens / closes it | Ruled (Controls) |
+| U | Guild window | Ruled (Controls) |
+| Esc | Closes every window (in the editor, Esc also ends Play-In-Editor: use the X button there) | Ruled (Controls) |
 | Hold Q | Skill wheel: hover a skill to select it, release; E casts it | Ruled (Controls) |
 | 1–7, E, F, G, X | Unchanged (the character's bindings) | Ruled |
 
@@ -119,8 +119,18 @@ Read `ACrossguardPlayerState::GetParty()` (`UCrossguardPartyComponent`): `IsInPa
 `OnPartyChanged`, show refusals from `OnPartyRefused`. Buttons: invite a player (`RequestInvite`
 with their player state), accept / decline an invite, leave, kick and make leader (leader only;
 greyed otherwise), and "Start raid" (`RequestStartRaid`, leader only, hub only). Console stand-ins
-until then: `PartyInvite`, `PartyAccept`, `PartyDecline`, `PartyLeave`, `PartyKick`,
-`PartyPromote`, `PartyInfo`, `PartyStartRaid`.
+until then: `PartyInvite`, `PartyAccept`, `PartyInvites`, `PartyDecline`, `PartyDeclineAll`,
+`PartyLeave`, `PartyKick`, `PartyPromote`, `PartyInfo`, `PartyStartRaid`.
+
+## To do: party invite inbox panel
+
+Ruled: players can delete invites from their inbox. Built in code, no panel yet. List
+`GetParty()->GetInvites()` (owner only: inviter's name and id, party id, member count; it refreshes
+with `OnPartyChanged`), each row with **Accept** (`RequestAccept(PartyId)`) and **Delete**
+(`RequestDecline(PartyId)`), plus **Delete all** (`RequestDeclineAll()`). Invites last 180 s; one
+can expire while listed (Accept is then refused with `InviteExpired` and the row drops off), so the
+panel may grey a row out after 180 s on its own. Decline works in a raid too. Console stand-ins:
+`PartyInvites`, `PartyDecline <number, inviter's name or party id>`, `PartyDeclineAll`.
 
 ## Engine calls to check on the first compile (UE 5.8)
 
