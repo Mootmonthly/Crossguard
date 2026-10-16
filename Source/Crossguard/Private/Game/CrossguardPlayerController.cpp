@@ -66,9 +66,10 @@ void ACrossguardPlayerController::ApplyFieldOfView() const
 		return;
 	}
 	const APawn* ControlledPawn = GetPawn();
-	if (UCameraComponent* Camera = ControlledPawn != nullptr ? ControlledPawn->FindComponentByClass<UCameraComponent>() : nullptr)
+	// Not "Camera": APlayerController has an exec function of that name.
+	if (UCameraComponent* PawnCamera = ControlledPawn != nullptr ? ControlledPawn->FindComponentByClass<UCameraComponent>() : nullptr)
 	{
-		Camera->SetFieldOfView(SettingsFieldOfView);
+		PawnCamera->SetFieldOfView(SettingsFieldOfView);
 	}
 }
 

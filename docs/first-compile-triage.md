@@ -417,3 +417,31 @@ New `Combat/CrossguardCosmetics` (structs `FCrossguardAttackCue`, `FCrossguardPr
 | AH9 | `CrossguardProjectile.cpp` | `DOREPLIFETIME_CONDITION(..., Visual, COND_InitialOnly)` with `TSoftObjectPtr` members; `MulticastImpact` (Reliable) right before `Destroy()` | Assumed: the initial bunch carries `Visual` before the client's `BeginPlay`, and a reliable multicast sent before `Destroy` arrives. If clients show no mesh / impact: | Use `ReplicatedUsing` with an `OnRep_Visual` calling `ApplyVisual`; for impacts, `SetLifeSpan(0.1f)` + hide instead of `Destroy`. |
 | AH10 | Runtime: `Scenario.Art.WeaponMeshes` | The character Blueprint's mesh has `hand_r` / `hand_l` | An unknown socket attaches to the mesh origin (the test still passes). | — |
 | AH11 | Runtime: `Scenario.Art.AttackAndDamageEvents` | The scenario dummy has no guard; the 1.5 m sword swing lands | If "dummy's OnDamageTaken fired" is 0: the swing missed (see `Raid.KillDummyLeavesBody`). | — |
+
+### Review (batch 3, by reading)
+
+A second pass over batch 3 (commits after `2305549`, except the return-to-hub code): UHT rules
+(UFUNCTION parameters vs UPROPERTY names, BlueprintImplementableEvent / native delegate pairs, RPC
+`_Implementation`s, `Replicated` props vs `GetLifetimeReplicatedProps`, soft pointers in rows),
+includes, shadowing (scripted: locals and parameters vs own and inherited members, nested scopes,
+locals vs anonymous-namespace names of other files in a unity blob), unity names (anonymous
+namespaces vs `using namespace`), brace narrowing, the HUD's window members and keys (K, P new; no
+key used twice; `CloseAllWindows` closes every open window; the stash and vendor screens close the
+others first), the row structs against the exporters (`Tools/check_table_types.py`: OK).
+
+| # | Where | What | Status |
+| --- | --- | --- | --- |
+| RV1 | `CrossguardAICharacter.cpp` `ApplyBodyVisual` | Local `Body` hid `ACrossguardCharacter::Body` (the loot body; C4458 is an error) | **Applied**: renamed `BodyMeshComponent`. |
+| RV2 | `CrossguardWeaponVisualsComponent.cpp` | `PI` (deprecated macro since 5.1, maybe gone in 5.8) | **Applied**: `UE_PI`, as the skill wheel. |
+| RV3 | `CrossguardWeaponVisualsComponent.h` | `ClearHand(FHandVisual& Hand)`: parameter named like the member function `Hand` | **Applied**: renamed `Visual` (as the definition). |
+| RV4 | `CrossguardPlayerController.cpp` `ApplyFieldOfView` | Local `Camera` named like `APlayerController::Camera` (exec) | **Applied**: renamed `PawnCamera` (in case C4458 counts member functions). |
+| RV5 | `CrossguardPlayerState.cpp` `OnSetUniqueId` | Local `Guilds` named like the anonymous-namespace function `Guilds` in `CrossguardGuildComponent.cpp`: C4459 if a unity blob holds both (new files move the blob edges) | **Applied**: renamed `GuildSubsystem`. |
+| RV6 | `CrossguardPlayerController.h` | `AddYawInput` / `AddPitchInput` / `SetPawn` overrides | Kept: virtual in every 5.x header known. If "does not override" (C3668): HM2's fix (scale `Axis` in `ACrossguardCharacter::Look`, `CrossguardCharacter.cpp:235`, by the controller's sensitivity) and move the field of view call to `OnPossess` / `BeginPlay`. |
+| RV7 | `CrossguardPartyComponent.cpp` | AP3 (`GetRealTimeSeconds` float or double) | No risk: `double - float` is `double`, so `FMath::Max(0.0, ...)` compiles either way. |
+| RV8 | Runtime: `Crossguard.Scenario.UI.PanelsBind`, `Visual.UI` | `ACrossguardPlayerController::BeginPlay` loads the settings slot and sets the pawn camera's FOV to the saved value (default 90) | If a picture's framing changed: the character camera's own FOV was not 90. Set the saved FOV (main menu Settings) or leave it. |
+| RV9 | Runtime: `GameDefaultMap` | `-CreateMenu` sets it to L_MainMenu: a standalone `-game` run and a packaged game start on the menu | Intended. The editor startup map and PIE are unchanged. |
+
+Not found: UFUNCTION parameter / UPROPERTY name clashes, unity clashes in the new namespaces
+(`CrossguardStashWidgetLocal::ItemsIn` and `CrossguardVendorWidgetLocal::ItemsIn` are named and only
+pulled in by their own file), missing `_Implementation`s, brace narrowing. Still unverified against
+5.8 headers: SV1-SV8, AP1, AP4-AP8, HM1-HM10, AH1-AH11, ST1-ST8 above.
