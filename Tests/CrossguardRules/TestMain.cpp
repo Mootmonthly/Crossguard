@@ -599,6 +599,34 @@ static void TestExperience()
 	CHECK(CanRespec(false, 1) == ERespecError::None);
 	CHECK(CanRespec(false, 0) == ERespecError::NoRespecToken);
 	CHECK(CanRespec(true, 5) == ERespecError::InRaid);
+
+	// Ruled price: 1000 banked gold or one respec token, the player's choice.
+	const FEconomyConfig Economy;
+	CHECK(Economy.RespecGoldPrice == 1000);
+	int Tokens = 1;
+	int Gold = 2500;
+	CHECK(PayRespec(Economy, false, ERespecPayment::Gold, Tokens, Gold) == ERespecError::None);
+	CHECK(Tokens == 1 && Gold == 1500);
+	CHECK(PayRespec(Economy, false, ERespecPayment::Token, Tokens, Gold) == ERespecError::None);
+	CHECK(Tokens == 0 && Gold == 1500);
+	CHECK(PayRespec(Economy, false, ERespecPayment::Token, Tokens, Gold) == ERespecError::NoRespecToken);
+	CHECK(Tokens == 0 && Gold == 1500);
+	CHECK(PayRespec(Economy, true, ERespecPayment::Gold, Tokens, Gold) == ERespecError::InRaid);
+	CHECK(Gold == 1500);
+	CHECK(PayRespec(Economy, false, ERespecPayment::Gold, Tokens, Gold) == ERespecError::None);
+	CHECK(Gold == 500);
+	// Short of the price: refused, nothing taken; exactly the price is enough.
+	CHECK(CanPayRespec(Economy, false, ERespecPayment::Gold, 0, 999) == ERespecError::NotEnoughGold);
+	CHECK(PayRespec(Economy, false, ERespecPayment::Gold, Tokens, Gold) == ERespecError::NotEnoughGold);
+	CHECK(Gold == 500);
+	Gold = 1000;
+	CHECK(PayRespec(Economy, false, ERespecPayment::Gold, Tokens, Gold) == ERespecError::None);
+	CHECK(Gold == 0);
+	// Gold never pays for a token payment, nor a token for gold.
+	Tokens = 3;
+	CHECK(CanPayRespec(Economy, false, ERespecPayment::Gold, Tokens, 0) == ERespecError::NotEnoughGold);
+	CHECK(CanPayRespec(Economy, false, ERespecPayment::Token, 0, 5000) == ERespecError::NoRespecToken);
+	CHECK(CanPayRespec(Economy, true, ERespecPayment::Token, Tokens, 5000) == ERespecError::InRaid);
 }
 
 static void TestInventoryGrid()
