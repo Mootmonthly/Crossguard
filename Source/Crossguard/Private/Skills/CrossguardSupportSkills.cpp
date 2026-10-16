@@ -11,6 +11,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Game/CrossguardTeamLibrary.h"
+#include "Items/CrossguardEquipmentComponent.h"
 #include "Skills/CrossguardLightOrb.h"
 #include "Skills/CrossguardWall.h"
 #include "TimerManager.h"
@@ -389,19 +390,59 @@ UCrossguardImmutableAbility::UCrossguardImmutableAbility()
 void UCrossguardImmutableAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
 	Super::OnGiveAbility(ActorInfo, Spec);
-	// The always-on part (server; immunity is only checked there).
-	if (ActorInfo != nullptr && ActorInfo->IsNetAuthority() && ActorInfo->AbilitySystemComponent.IsValid())
+	// The always-on part (server; immunity is only checked there). On the instance (per actor), which
+	// keeps the state.
+	if (IsInstantiated() && ActorInfo != nullptr && ActorInfo->IsNetAuthority() && ActorInfo->AbilitySystemComponent.IsValid())
 	{
-		ActorInfo->AbilitySystemComponent->AddLooseGameplayTag(CrossguardTags::Passive_Immutable);
+		ImmunityASC = ActorInfo->AbilitySystemComponent.Get();
+		AActor* Avatar = ActorInfo->AvatarActor.Get();
+		ImmunityEquipment = Avatar != nullptr ? Avatar->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
+		if (ImmunityEquipment.IsValid())
+		{
+			// [The Mithril Knight]'s Immutable: on and off with Plate in every slot.
+			ImmunityEquipment->OnEquipmentChanged.AddUniqueDynamic(this, &UCrossguardImmutableAbility::UpdatePassiveImmunity);
+		}
+		UpdatePassiveImmunity();
+	}
+}
+
+void UCrossguardImmutableAbility::UpdatePassiveImmunity()
+{
+	UAbilitySystemComponent* ASC = ImmunityASC.Get();
+	if (ASC == nullptr)
+	{
+		return;
+	}
+	const bool bWanted = IsSwitchedOnByLoadout(ASC->GetAvatarActor(), SkillId);
+	if (bWanted == bPassiveImmunity)
+	{
+		return;
+	}
+	bPassiveImmunity = bWanted;
+	if (bWanted)
+	{
+		ASC->AddLooseGameplayTag(CrossguardTags::Passive_Immutable);
+	}
+	else
+	{
+		ASC->RemoveLooseGameplayTag(CrossguardTags::Passive_Immutable);
 	}
 }
 
 void UCrossguardImmutableAbility::OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
-	if (ActorInfo != nullptr && ActorInfo->IsNetAuthority() && ActorInfo->AbilitySystemComponent.IsValid())
+	if (UCrossguardEquipmentComponent* Equipment = ImmunityEquipment.Get())
 	{
-		ActorInfo->AbilitySystemComponent->RemoveLooseGameplayTag(CrossguardTags::Passive_Immutable);
+		Equipment->OnEquipmentChanged.RemoveDynamic(this, &UCrossguardImmutableAbility::UpdatePassiveImmunity);
 	}
+	ImmunityEquipment.Reset();
+	UAbilitySystemComponent* ASC = ImmunityASC.Get();
+	if (ASC != nullptr && bPassiveImmunity)
+	{
+		ASC->RemoveLooseGameplayTag(CrossguardTags::Passive_Immutable);
+	}
+	bPassiveImmunity = false;
+	ImmunityASC.Reset();
 	Super::OnRemoveAbility(ActorInfo, Spec);
 }
 

@@ -181,6 +181,14 @@ FCrossguardRiderAttack FCrossguardRiderAttack::ForWeapon(const FCrossguardWeapon
 	return Attack;
 }
 
+FCrossguardRiderAttack FCrossguardRiderAttack::ForThrown(ECrossguardWeaponType WeaponType)
+{
+	FCrossguardRiderAttack Attack;
+	Attack.bThrown = true;
+	Attack.WeaponType = WeaponType;
+	return Attack;
+}
+
 FCrossguardRiderAttack FCrossguardRiderAttack::ForAIMelee(const TOptional<ECrossguardWeaponType>& WeaponType)
 {
 	FCrossguardRiderAttack Attack;
@@ -263,7 +271,9 @@ FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCros
 		Riders.MagicAdd += ShadeBlowMagicDamage;
 		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeStatusSpec(ASC, CrossguardTags::State_HealBlocked, ShadeBlowHealBlockSeconds));
 	}
-	if (Ready(CrossguardTags::State_NextAttack_Gouge, MeleeWith({ECrossguardWeaponType::Dagger})))
+	// [Gouge]: a dagger attack, a thrown throwing knife included (owner ruling).
+	if (Ready(CrossguardTags::State_NextAttack_Gouge,
+			MeleeWith({ECrossguardWeaponType::Dagger}) || (Attack.bThrown && Wields(ECrossguardWeaponType::Dagger))))
 	{
 		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeDamageOverTimeSpec(ASC, GougeDamagePerSecond, 0.0f, GougeSeconds));
 		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeSlowSpec(ASC, GougeSlow, GougeSeconds));
@@ -280,8 +290,8 @@ FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCros
 		Riders.OnHitSpecs.Add(UCrossguardSkillAbility::MakeStatusSpec(ASC, CrossguardTags::State_Silenced, NeckbiteSilenceSeconds));
 		Riders.bSilence = true;
 	}
-	// A parry's riposte: any attack.
-	if (Ready(CrossguardTags::State_NextAttack_Riposte, true))
+	// A parry's riposte: any weapon attack (assumed: not a throw).
+	if (Ready(CrossguardTags::State_NextAttack_Riposte, !Attack.bThrown))
 	{
 		Riders.AttackBonusAdd += static_cast<float>(CrossguardGuard::Config().ParryAttackDamageBonus);
 	}
@@ -290,7 +300,8 @@ FCrossguardAttackRiders UCrossguardWeaponAttackAbility::GatherRiders(const FCros
 		ASC->RemoveActiveEffectsWithGrantedTags(UsedUp);
 	}
 
-	// Always-on: [Arcane Arrows] while active, [Splinter of Winter] while equipped and not Muted.
+	// Always-on: [Arcane Arrows] while active, [Splinter of Winter] while equipped and not Muted (on a
+	// thrown throwing knife too).
 	if (Wields(ECrossguardWeaponType::Bow) && ASC->HasMatchingGameplayTag(CrossguardTags::State_ArcaneArrows))
 	{
 		Riders.MagicAdd += ArcaneArrowsMagicDamage;

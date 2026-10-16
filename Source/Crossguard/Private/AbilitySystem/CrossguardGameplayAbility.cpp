@@ -5,6 +5,7 @@
 #include "Character/CrossguardAICharacter.h"
 #include "Items/CrossguardEquipmentComponent.h"
 #include "CrossguardRules/Combat.h"
+#include "Skills/CrossguardLoadoutComponent.h"
 
 UCrossguardGameplayAbility::UCrossguardGameplayAbility()
 {
@@ -32,6 +33,13 @@ bool UCrossguardGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHa
 	{
 		return true;
 	}
+	// A bundle's requirement switches off the skills it includes. Passives activate regardless and
+	// switch their own effects off instead.
+	if (SkillCategory != ECrossguardSkillCategory::Passive
+		&& !IsSwitchedOnByLoadout(ActorInfo != nullptr ? ActorInfo->AvatarActor.Get() : nullptr, SkillId))
+	{
+		return false;
+	}
 	// Every Spell needs a casting weapon in hand (a Wand or a Two-Handed Staff), except in dragon
 	// form, where Flare Breath and Flight are cast without hands.
 	TArray<ECrossguardWeaponType> Weapons = RequiredWeapons;
@@ -48,6 +56,16 @@ bool UCrossguardGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHa
 	const AActor* Avatar = ActorInfo != nullptr ? ActorInfo->AvatarActor.Get() : nullptr;
 	const UCrossguardEquipmentComponent* Equipment = Avatar != nullptr ? Avatar->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
 	return Equipment != nullptr && Equipment->SatisfiesWeaponRequirement(Weapons) && Equipment->SatisfiesArmorRequirement(RequiredArmor);
+}
+
+bool UCrossguardGameplayAbility::IsSwitchedOnByLoadout(const AActor* Avatar, FName PlayedSkill)
+{
+	if (Avatar == nullptr || PlayedSkill.IsNone() || Avatar->IsA<ACrossguardAICharacter>())
+	{
+		return true;
+	}
+	const UCrossguardLoadoutComponent* Loadout = Avatar->FindComponentByClass<UCrossguardLoadoutComponent>();
+	return Loadout == nullptr || Loadout->IsSkillSwitchedOn(PlayedSkill);
 }
 
 const UCrossguardAbilitySystemComponent* UCrossguardGameplayAbility::GetCrossguardAbilitySystemComponent() const

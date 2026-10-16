@@ -99,9 +99,13 @@ Code and data must follow it.
 - Mortal Strike requires a melee weapon. Arcane Arrows requires a Bow.
 - A Passive's own requirement (Armor Mastery: Plate; The Mithril Knight: Plate in every slot; Spear
   of Liscor: a Spear in hand) works like a mastery's weapon: the skill can be equipped without it, and
-  its own bonuses count only while the requirement is met. **Assumed**: a bundle's requirement does not
-  switch off the skills it includes (they keep their own rules: Multiscale needs some Plate, Immutable
-  and Antimagic Garb nothing). Open question in the roadmap. Per-skill status:
+  its own bonuses count only while the requirement is met. **A bundle's requirement also switches off
+  the skills it includes**: The Mithril Knight without Plate in every slot gives no Multiscale,
+  Immutable (neither its immunity nor its activation) or Antimagic Garb; Spear of Liscor without a
+  Spear gives no Antimagic Garb. They come back on as soon as the requirement is met again (checked on
+  every equipment change). A component shared by two bundles is on while either bundle's requirement is
+  met. A skill cannot be equipped on its own next to a bundle that includes it (see above), so that
+  case does not arise. AI characters skip requirements. Per-skill status:
   [skill-coverage.md](skill-coverage.md).
 
 ### Skill numbers filled in
@@ -138,7 +142,7 @@ Rulings for the first skills built in C++ (defaults proposed and accepted, plus 
 | Flight | Spell (Skill Forge change). 20 s. Space rises, Left Ctrl descends, fly speed = walk speed. You fall when it ends, when Dragonification ends, or when Grounded. |
 | Summon Skeletons | 5 Warriors (40 HP, 10 Attack Damage per second in melee) and 1 Mage (30 HP, Fireball every 8 s, stops 8 m from its target) for 60 s. Recasting dismisses the old ones. Targets: nearest enemy player within 30 m, else nearest enemy non-player, else follow you. On your team; their kills give you the XP; killing them gives none. |
 
-| Slash, Mortal Strike, Shade Blow, Gouge, Purge Shot | "Next attack" skills: ready for 10 s, used up by the next qualifying attack hit or miss: a melee attack with the skill's own weapon (Slash: sword or dagger, Shade Blow: sword or axe, Gouge: dagger, Mortal Strike: any melee); Purge Shot: a bow or crossbow shot. Several readied at once all apply to that attack. Mortal Strike's cooldown comes back on a kill. Shade Blow blocks all healing (potions too) for 5 s. Gouge: 5 Attack Damage per second for 5 s and -5% speed. Purge Shot: +10 Magic Damage and a 3 s Mute. |
+| Slash, Mortal Strike, Shade Blow, Gouge, Purge Shot | "Next attack" skills: ready for 10 s, used up by the next qualifying attack hit or miss: a melee attack with the skill's own weapon (Slash: sword or dagger, Shade Blow: sword or axe, Gouge: dagger, a thrown throwing knife included, Mortal Strike: any melee); Purge Shot: a bow or crossbow shot. Several readied at once all apply to that attack. Mortal Strike's cooldown comes back on a kill. Shade Blow blocks all healing (potions too) for 5 s. Gouge: 5 Attack Damage per second for 5 s and -5% speed. Purge Shot: +10 Magic Damage and a 3 s Mute. |
 | Greater Heal | As Heal, 55. |
 | Benediction | Target under the crosshair within 15 m is healed to full, ally or enemy. Aimed at a body still in its revive window: a full revive (unlooted gear back); if both a character and a body are in line, the nearer one. Nobody: yourself. Shade Blow's heal block stops the heal but not a revive. |
 | Quickshot, Arcane Arrows, Unleash | Self buffs. Unleash doubles STR / AGI / INT (gear and buffs included) for 15 s. Arcane Arrows' dropoff part waits until arrows have damage dropoff. |
@@ -151,7 +155,7 @@ Rulings for the first skills built in C++ (defaults proposed and accepted, plus 
 | Wall | 4 m wide, 3 m tall, 0.5 m thick, 3 m in front, across your view. Indestructible, 15 s. |
 | Stealth | Invisible to everyone outside your party (and to minions) for 12 s. Attacking, casting or taking damage ends it early. The exit bonus (+10% speed, +25% Attack Bonus for 3 s) applies however it ends, except death or Mute. Later (with visual assets): party members see a purple outline around you while you are stealthed. Anti-cheat: enemies' clients do not receive a stealthed player's position at all (the character despawns there); no reveal radius. Enemies lose it at once when stealth starts (the server closes their channel instead of waiting out the engine's 5 s relevancy timeout; owner's fix A). Placeholder switch `crossguard.StealthHidesFromEnemies`, default on, until the two-client play test. Assumed: classic net driver (no Iris or Replication Graph); the test's 0.5 s limit is a placeholder. |
 | Immutable | Crowd control = Slow, Blind, knock-up, Grounding, Silence, Stun, Root. **Mute is not crowd control.** Equipped (and not Muted): permanently immune. Activated: you and party members within 10 m immune for 5 s. Existing crowd control is not removed. |
-| Splinter of Winter | Dagger attacks: +5 Magic Damage and -10% speed for 3 s. |
+| Splinter of Winter | Dagger attacks: +5 Magic Damage and -10% speed for 3 s. A thrown throwing knife is a dagger attack (not a throwing axe). |
 | Multiscale | Requires Plate armor (Skill Forge). +15% Attack and Magic Resistance to you, every party member and party minions, at any distance. Two Multiscales do not stack. Off while you are Muted or dead. Also comes with The Mithril Knight. |
 | Silence | (Crowd control.) A Silenced character cannot activate skills; a skill already running is interrupted. Basic attacks and passives keep working (unlike Mute, which also switches passives off). Affects players, minions and monsters alike. |
 | Root | (Crowd control.) A Rooted character cannot walk, jump or use movement skills (Hunter's Leap, Like A Lion, Flight); attacks, guarding and other skills still work. Movement Speed × 0 for the duration. **Assumed** (no skill applies it yet): flying when rooted is not cancelled; rooting a moving leap does not stop it. |
@@ -341,6 +345,10 @@ Everything else is a placeholder until ruled; the numbers live in `Crossguard::F
 - All are 1 × 3 and stack to 3. Friendly fire applies, the thrower included.
 - "Counts as a Dagger / Axe" while in hand: mastery bonuses apply to the throw, on-hit skill
   effects of that weapon type trigger on its hits, and skills requiring that weapon can be used.
+- **A thrown throwing knife is a dagger attack**: Splinter of Winter's +5 Magic Damage and slow ride on
+  it, and it uses up a readied Gouge (hit or miss) like a dagger stab. Assumed (placeholder): other
+  next-attack skills still need a melee attack or a bow shot (Slash, Mortal Strike, ...), and a throw
+  does not use up a parry's riposte.
 - Weapon stats, affixes, masteries and weapon requirements count only for the weapon set that is
   drawn and in hand (from the end of the draw). Put-away and stowed weapons give nothing. Throwables
   are not in weapon sets and count only while in hand. Armor always counts.

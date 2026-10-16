@@ -4,11 +4,13 @@
 #include "AbilitySystem/CrossguardGameplayAbility.h"
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemGlobals.h"
+#include "Character/CrossguardAICharacter.h"
 #include "Character/CrossguardCharacter.h"
 #include "Crossguard.h"
 #include "CrossguardRules/Loadout.h"
 #include "CrossguardRules/Progression.h"
 #include "Game/CrossguardPlayerState.h"
+#include "Items/CrossguardEquipmentComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Skills/CrossguardDataPassiveAbility.h"
 #include "Skills/CrossguardSkillCatalog.h"
@@ -137,7 +139,75 @@ void UCrossguardLoadoutComponent::ClientLoadoutRejected_Implementation(const FCr
 
 void UCrossguardLoadoutComponent::OnRep_EquippedSkills()
 {
+	RebuildSkillSources(EquippedSkills);
 	OnLoadoutChanged.Broadcast();
+}
+
+void UCrossguardLoadoutComponent::RebuildSkillSources(const TArray<FName>& Skills)
+{
+	SkillSources.Reset();
+	if (SkillCatalog == nullptr)
+	{
+		return;
+	}
+	std::vector<std::string> Ids;
+	Ids.reserve(Skills.Num());
+	for (const FName& Skill : Skills)
+	{
+		Ids.push_back(ToRulesId(Skill));
+	}
+	for (const auto& Source : Crossguard::ResolveLoadoutSources(SkillCatalog->BuildRulesCatalog(), Ids))
+	{
+		TArray<TArray<FName>>& Chains = SkillSources.FindOrAdd(FName(UTF8_TO_TCHAR(Source.first.c_str())));
+		for (const std::vector<std::string>& Chain : Source.second)
+		{
+			TArray<FName>& Bundles = Chains.AddDefaulted_GetRef();
+			for (const std::string& Bundle : Chain)
+			{
+				Bundles.Add(FName(UTF8_TO_TCHAR(Bundle.c_str())));
+			}
+		}
+	}
+}
+
+bool UCrossguardLoadoutComponent::AreSkillRequirementsMet(const FCrossguardSkillRequirements& Requirements, const UCrossguardEquipmentComponent* Equipment)
+{
+	if (Requirements.Weapons.IsEmpty() && Requirements.Armor == ECrossguardArmorRequirement::None)
+	{
+		return true;
+	}
+	return Equipment != nullptr && (Requirements.Weapons.IsEmpty() || Equipment->SatisfiesWeaponRequirement(Requirements.Weapons))
+		&& Equipment->SatisfiesArmorRequirement(Requirements.Armor);
+}
+
+bool UCrossguardLoadoutComponent::IsSkillSwitchedOn(FName SkillId) const
+{
+	const TArray<TArray<FName>>* Chains = SkillSources.Find(SkillId);
+	// Not from this loadout, or an AI's (no requirements).
+	if (Chains == nullptr || SkillCatalog == nullptr || Cast<ACrossguardAICharacter>(GetOwner()) != nullptr)
+	{
+		return true;
+	}
+	const UCrossguardEquipmentComponent* Equipment = GetOwner() != nullptr ? GetOwner()->FindComponentByClass<UCrossguardEquipmentComponent>() : nullptr;
+	for (const TArray<FName>& Bundles : *Chains)
+	{
+		bool bMet = true;
+		for (const FName& Bundle : Bundles)
+		{
+			const FCrossguardSkillRow* Row = SkillCatalog->FindSkill(Bundle);
+			if (Row != nullptr && !AreSkillRequirementsMet(Row->Requirements, Equipment))
+			{
+				bMet = false;
+				break;
+			}
+		}
+		// Equipped itself (no bundles), or every bundle on the way has its requirement.
+		if (bMet)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 void UCrossguardLoadoutComponent::ApplyLoadout(const TArray<FName>& Skills)
@@ -161,6 +231,9 @@ void UCrossguardLoadoutComponent::ApplyLoadout(const TArray<FName>& Skills)
 	{
 		Ids.push_back(ToRulesId(Skill));
 	}
+
+	// Before granting: abilities ask IsSkillSwitchedOn as they are given.
+	RebuildSkillSources(Skills);
 
 	// Bundle components are granted as their own abilities; a component shared by two bundles once.
 	// Sorted so grant order is deterministic.

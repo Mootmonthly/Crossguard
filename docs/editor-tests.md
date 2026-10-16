@@ -255,10 +255,12 @@ damage is computed from the characters' actual stats, so they work at any level.
 | Test | Checks |
 | --- | --- |
 | `Crossguard.Scenario.Skills.ArmorMasteryNeedsPlate` | Without plate the knight's AR and Movement Speed equal a squire's; both in a `plate_cuirass`: the knight's AR is the squire's x1.10 and its speed +0.05. Skipped without `DA_SkillCatalog` or `DT_Armor`. |
-| `Crossguard.Scenario.Skills.MithrilKnightNeedsFullPlate` | Level 15 (Capacity 20). Four plate pieces: no +5 STR; the fifth (head, chest, hands, legs, feet): +5 STR; helm off: gone again. |
-| `Crossguard.Scenario.Skills.SpearOfLiscorNeedsSpear` | Sword in hand: no +7 STR / +3 AGI; `spear_two_handed`: both; sword again: gone. |
+| `Crossguard.Scenario.Skills.MithrilKnightNeedsFullPlate` | Level 15 (Capacity 20). Knight and squire (no party) in the same plate. Four pieces: no +5 STR, and the included skills off too: MR equal to the squire's, no `State.Multiscale`, no `Passive.Immutable`, Immutable cannot activate. The fifth (head, chest, hands, legs, feet): +5 STR, MR +0.30 over the squire (Antimagic Garb + Multiscale), both tags on, Immutable activates; helm off: all gone again. |
+| `Crossguard.Scenario.Skills.SpearOfLiscorNeedsSpear` | Sword in hand: no +7 STR / +3 AGI and no +0.15 MR (included Antimagic Garb); `spear_two_handed`: all three; sword again: gone. |
 | `Crossguard.Scenario.Skills.CorLeonisEmptySlots` | ADB and MDB +0.05 per empty armor slot (count read from the equipment); a `plate_helm` takes one slot's worth off. |
 | `Crossguard.Scenario.Skills.SplinterOfWinter` | Dagger hit on a dummy: +5 Magic Damage on top of the dagger (formula), `State.Slowed` and Movement Speed −0.1; both gone after 3 s. |
+| `Crossguard.Scenario.Skills.ThrownKnifeSplinterOfWinter` | A `throwing_knife` thrown (key 3, left click) at a dummy 4 m away with Splinter of Winter: knife damage +5 Magic Damage (formula), `State.Slowed`, Movement Speed −0.1. Needs `DT_Items`. |
+| `Crossguard.Scenario.Skills.ThrownKnifeGouge` | Gouge activated with knives in hand (they count as a dagger), then a throw: `State.NextAttack.Gouge` used up at once; the hit is plain knife damage, Movement Speed −0.05, one 5 AD tick 1.5 s later. Needs `DT_Items`. |
 
 **`CrossguardScenarioCombatTests.cpp`**
 

@@ -1,5 +1,29 @@
 #include "CrossguardRules/Loadout.h"
 
+#include <algorithm>
+
+namespace CrossguardLoadoutSources
+{
+	// Adds Id's chain and walks into what it includes. Chain: the bundles above Id. A skill already on
+	// the chain is a cycle and is skipped.
+	void Visit(const Crossguard::FSkillCatalog& Catalog, const std::string& Id, std::vector<std::string>& Chain,
+		Crossguard::FLoadoutSources& Sources)
+	{
+		const Crossguard::FSkillDefinition* Skill = Catalog.Find(Id);
+		if (Skill == nullptr || std::find(Chain.begin(), Chain.end(), Id) != Chain.end())
+		{
+			return;
+		}
+		Sources[Id].push_back(Chain);
+		Chain.push_back(Id);
+		for (const std::string& Included : Skill->Includes)
+		{
+			Visit(Catalog, Included, Chain, Sources);
+		}
+		Chain.pop_back();
+	}
+}
+
 namespace Crossguard
 {
 	bool FSkillCatalog::Add(const FSkillDefinition& Skill)
@@ -140,5 +164,16 @@ namespace Crossguard
 			Result.insert(Effective.begin(), Effective.end());
 		}
 		return Result;
+	}
+
+	FLoadoutSources ResolveLoadoutSources(const FSkillCatalog& Catalog, const std::vector<std::string>& Equipped)
+	{
+		FLoadoutSources Sources;
+		for (const std::string& Id : Equipped)
+		{
+			std::vector<std::string> Chain;
+			CrossguardLoadoutSources::Visit(Catalog, Id, Chain, Sources);
+		}
+		return Sources;
 	}
 }

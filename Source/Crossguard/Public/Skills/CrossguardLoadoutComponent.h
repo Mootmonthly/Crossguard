@@ -7,8 +7,10 @@
 #include "CrossguardLoadoutComponent.generated.h"
 
 class UCrossguardAbilitySystemComponent;
+class UCrossguardEquipmentComponent;
 class UCrossguardSkillCatalog;
 class UCrossguardSkillGrant;
+struct FCrossguardSkillRequirements;
 
 // Mirrors Crossguard::ELoadoutError.
 UENUM(BlueprintType)
@@ -57,6 +59,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardLoadoutRejected, const FC
 // skills plus their bundle components, each once. A Passive skill with no ability class in the
 // catalog is played from its data by UCrossguardDataPassiveAbility.
 //
+// A bundle's requirement also switches off the skills it includes ([The Mithril Knight] without Plate
+// in every slot: no Multiscale, Immutable or Antimagic Garb either; [Spear of Liscor] without a
+// Spear: no Antimagic Garb). The granted abilities ask IsSkillSwitchedOn and recheck on equipment
+// changes.
+//
 // Players can only equip skills in their Skill Library (ACrossguardPlayerState).
 // Not yet checked: whether equipping is allowed at the current moment (e.g. only outside a raid).
 UCLASS(ClassGroup = (Crossguard), meta = (BlueprintSpawnableComponent))
@@ -83,6 +90,16 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Loadout")
 	const TArray<FName>& GetEquippedSkills() const { return EquippedSkills; }
+
+	// Whether the loadout has this granted skill on: always when it is equipped itself; a skill that
+	// comes only with bundles needs one of them (every bundle on the way) to have its requirement met.
+	// True for skills the loadout did not grant and for AI characters (their skills have no
+	// requirements). Server and clients (built from the replicated loadout).
+	bool IsSkillSwitchedOn(FName SkillId) const;
+
+	// A skill's own weapon and armor requirements (Skills.json) against the equipment. Without
+	// equipment only a skill with no requirements passes.
+	static bool AreSkillRequirementsMet(const FCrossguardSkillRequirements& Requirements, const UCrossguardEquipmentComponent* Equipment);
 
 	// Skill Capacity at the owner's current level.
 	UFUNCTION(BlueprintPure, Category = "Loadout")
@@ -137,6 +154,8 @@ protected:
 private:
 	void ApplyLoadout(const TArray<FName>& Skills);
 	void ClearGrantedAbilities(UCrossguardAbilitySystemComponent& ASC);
+	// Rebuilds SkillSources for this loadout.
+	void RebuildSkillSources(const TArray<FName>& Skills);
 	UCrossguardAbilitySystemComponent* GetAbilitySystem() const;
 
 	UPROPERTY(ReplicatedUsing = OnRep_EquippedSkills)
@@ -144,6 +163,10 @@ private:
 
 	// Server only.
 	TArray<FGameplayAbilitySpecHandle> GrantedAbilities;
+
+	// Each granted skill: the bundle chains it comes through (Crossguard::ResolveLoadoutSources); an
+	// empty chain when equipped itself.
+	TMap<FName, TArray<TArray<FName>>> SkillSources;
 
 	FName SelectedSkill;
 	bool bSkillWheelOpen = false;

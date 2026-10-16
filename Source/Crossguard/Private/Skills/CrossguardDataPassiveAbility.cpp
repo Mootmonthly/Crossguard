@@ -7,6 +7,7 @@
 #include "Character/CrossguardAICharacter.h"
 #include "Crossguard.h"
 #include "Items/CrossguardEquipmentComponent.h"
+#include "Skills/CrossguardLoadoutComponent.h"
 #include "Skills/CrossguardSkillCatalog.h"
 
 namespace
@@ -72,22 +73,6 @@ namespace
 			return {};
 		}
 		return {};
-	}
-}
-
-namespace CrossguardDataPassiveRequirements
-{
-	// The skill's own requirements (Skills.json: [Armor Mastery] Plate, [The Mithril Knight] Plate in
-	// every slot, [Spear of Liscor] a Spear in hand). Its bonuses count only while they are met, as an
-	// active skill can only be used while they are.
-	bool AreMet(const FCrossguardSkillRequirements& Requirements, const UCrossguardEquipmentComponent* Equipment)
-	{
-		if (Requirements.Weapons.IsEmpty() && Requirements.Armor == ECrossguardArmorRequirement::None)
-		{
-			return true;
-		}
-		return Equipment != nullptr && (Requirements.Weapons.IsEmpty() || Equipment->SatisfiesWeaponRequirement(Requirements.Weapons))
-			&& Equipment->SatisfiesArmorRequirement(Requirements.Armor);
 	}
 }
 
@@ -160,9 +145,12 @@ void UCrossguardDataPassiveAbility::Refresh()
 	{
 		return;
 	}
-	// Requirements not met: bonuses off until the equipment changes. An AI's skills come with it (no
-	// requirements).
-	if (AICharacter == nullptr && !CrossguardDataPassiveRequirements::AreMet(Row->Requirements, Equipment))
+	// The skill's own requirements ([Armor Mastery] Plate, [The Mithril Knight] Plate in every slot,
+	// [Spear of Liscor] a Spear in hand) count as an active skill's do, and a bundle's requirement
+	// switches off what it includes ([Spear of Liscor]'s Antimagic Garb): bonuses off until the
+	// equipment changes. An AI's skills come with it (no requirements).
+	if (AICharacter == nullptr
+		&& (!UCrossguardLoadoutComponent::AreSkillRequirementsMet(Row->Requirements, Equipment) || !IsSwitchedOnByLoadout(Avatar, PlayedSkillId)))
 	{
 		return;
 	}

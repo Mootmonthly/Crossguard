@@ -36,8 +36,9 @@ public:
 //
 // The skill's own requirements (Skills.json `requirements`: weapons, armor) gate all of its
 // bonuses: [Armor Mastery] needs Plate, [The Mithril Knight] Plate in every slot, [Spear of Liscor]
-// a Spear in hand. Not for AI characters (their skills come with them). A bundle's components are
-// their own abilities and are not gated by the bundle's requirement.
+// a Spear in hand. A bundle's requirement also gates the skills it includes (owner ruling): [Spear
+// of Liscor]'s Antimagic Garb only with a Spear (UCrossguardLoadoutComponent::IsSkillSwitchedOn).
+// Not for AI characters (their skills come with them).
 //
 // While Muted the bonuses are off.
 //

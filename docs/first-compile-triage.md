@@ -229,3 +229,18 @@ world (hidden and unpossessed at once, destroyed next tick); `ACrossguardCharact
 refuses while `HasLeftRaid()`; extract portals ignore it as a keeper. `Raid.ExtractionZone` and
 `Raid.ExtractPortal` now read the player state they remembered instead of the (gone) pawn; new test
 `Crossguard.Scenario.Save.ExtractedPlayerLeavesRaid`.
+
+### Bundle requirements and thrown knives (rulings)
+
+A bundle's requirement switches off its included skills (`UCrossguardLoadoutComponent::IsSkillSwitchedOn`,
+`Crossguard::ResolveLoadoutSources`; gates in `UCrossguardGameplayAbility::CanActivateAbility`, the
+data passive, Multiscale and Immutable) and a thrown throwing knife gathers dagger riders
+(`UCrossguardInventoryComponent::Throw`, `FCrossguardRiderAttack::ForThrown`). Reviewed by reading;
+rules part unit tested.
+
+| # | Where | What | Why it may fail | Suggested fix |
+| --- | --- | --- | --- | --- |
+| B1 | `Private/Skills/CrossguardSupportSkills.cpp` `UCrossguardImmutableAbility::OnGiveAbility` | Binds `OnEquipmentChanged` and keeps state on the instance; guarded by `IsInstantiated()` | Assumes 5.8 calls `OnGiveAbility` / `OnRemoveAbility` on the per-actor instance (as 5.x does). If only the CDO gets it, `Passive.Immutable` is never added (`MithrilKnightNeedsFullPlate` and `Immutable` fail on the tag). | Move the binding to `OnAvatarSet`, or let the loadout component add / remove the tag itself on `OnEquipmentChanged`. |
+| B2 | `Private/Skills/CrossguardLoadoutComponent.cpp` `RebuildSkillSources` | `TMap<FName, TArray<TArray<FName>>>` (not a `UPROPERTY`), range-for over the returned `std::unordered_map` | Nested containers are fine outside reflection. | — |
+| B3 | `Private/Items/CrossguardInventoryComponent.cpp` `Throw` | `FGameplayEffectSpec::GetSetByCallerMagnitude(FGameplayTag, bool, float)` then `SetSetByCallerMagnitude` | Same calls as `CrossguardGuard.cpp`. | — |
+| B4 | `Private/Skills/CrossguardAuraSkills.cpp`, `CrossguardSupportSkills.cpp` | `AddUniqueDynamic` / `RemoveDynamic` on `OnEquipmentChanged` with new `UFUNCTION()`s (`OnOwnerEquipmentChanged`, `UpdatePassiveImmunity`) | UHT needs the `UFUNCTION()` (present). | — |

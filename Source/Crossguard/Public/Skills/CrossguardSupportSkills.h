@@ -9,6 +9,7 @@
 class ACrossguardCharacter;
 class ACrossguardLightOrb;
 class ACrossguardWall;
+class UCrossguardEquipmentComponent;
 struct FOnAttributeChangeData;
 
 // [Greater Heal] (Spell, 20 s): as Heal, 55 Magical Healing.
@@ -139,6 +140,8 @@ private:
 
 // [Immutable] (Active, 60 s): while equipped (and not Muted) you are immune to crowd control.
 // Activate: you and party members within 10 m are immune for 5 s (State.CCImmune).
+// From [The Mithril Knight]: both parts only with Plate in every slot (a bundle's requirement switches
+// off what it includes); the always-on part is rechecked on equipment changes.
 UCLASS()
 class CROSSGUARD_API UCrossguardImmutableAbility : public UCrossguardSkillAbility
 {
@@ -154,6 +157,15 @@ public:
 	virtual void OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+private:
+	// Server: Passive.Immutable on the owner while the loadout has the skill switched on.
+	UFUNCTION()
+	void UpdatePassiveImmunity();
+
+	TWeakObjectPtr<UAbilitySystemComponent> ImmunityASC;
+	TWeakObjectPtr<UCrossguardEquipmentComponent> ImmunityEquipment;
+	bool bPassiveImmunity = false;
 };
 
 // [Splinter of Winter] (Passive): dagger attacks deal +5 Magic Damage and slow 10% for 3 s (applied

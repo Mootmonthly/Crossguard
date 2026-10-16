@@ -12,7 +12,9 @@
 // BaseCooldownSeconds after CDR and grants the CooldownTags below, so one effect serves every skill.
 // Weapon requirements: activation fails unless the owner's equipment satisfies RequiredWeapons.
 // Spells with no RequiredWeapons need a Wand or a Two-Handed Staff in hand (not in dragon form).
-// AI characters skip both: their skills come with them.
+// A skill that comes only with a bundle cannot be activated while the bundle's requirement is unmet
+// ([The Mithril Knight]'s Immutable without Plate in every slot): UCrossguardLoadoutComponent.
+// AI characters skip all of these: their skills come with them.
 UCLASS(Abstract)
 class CROSSGUARD_API UCrossguardGameplayAbility : public UGameplayAbility
 {
@@ -68,6 +70,11 @@ protected:
 	const UCrossguardAbilitySystemComponent* GetCrossguardAbilitySystemComponent() const;
 
 	float ReducedCooldownFor(const UCrossguardAbilitySystemComponent* ASC) const;
+
+	// Whether Avatar's loadout has PlayedSkill switched on (UCrossguardLoadoutComponent::
+	// IsSkillSwitchedOn): off while every bundle it comes with lacks its requirement. True without a
+	// loadout and for AI characters.
+	static bool IsSwitchedOnByLoadout(const AActor* Avatar, FName PlayedSkill);
 
 private:
 	// Parent cooldown tags plus CooldownTags. Rebuilt on each GetCooldownTags call.

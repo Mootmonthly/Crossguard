@@ -42,8 +42,14 @@ struct FCrossguardRiderAttack
 	// Unset: an unarmed AI's natural attack (a tiger's claws), which counts as every melee weapon for
 	// next-attack skills but as no weapon for always-on effects (Splinter of Winter, Arcane Arrows).
 	TOptional<ECrossguardWeaponType> WeaponType;
+	// A thrown weapon (UCrossguardInventoryComponent's throw). A thrown throwing knife is a dagger
+	// attack (owner ruling): [Splinter of Winter] and a readied [Gouge] ride on it. Other next-attack
+	// skills want a melee attack or a bow shot, and a parry's riposte waits for a weapon attack.
+	bool bThrown = false;
 
 	static FCrossguardRiderAttack ForWeapon(const FCrossguardWeaponRow& Weapon);
+	// A throwable that counts as WeaponType (throwing knife: Dagger, throwing axe: Axe).
+	static FCrossguardRiderAttack ForThrown(ECrossguardWeaponType WeaponType);
 	// AI basic attacks (ACrossguardAICharacter): melee, with WeaponType if it wields one.
 	static FCrossguardRiderAttack ForAIMelee(const TOptional<ECrossguardWeaponType>& WeaponType);
 	// Ranged AI: a shot with its weapon (a bow when unset).
@@ -76,6 +82,8 @@ struct FCrossguardRiderAttack
 // - Bow / crossbow: [Purge Shot] +10 Magic Damage and a 3 s Mute.
 // Always on: [Arcane Arrows] +5 Magic Damage on bow attacks while active; [Splinter of Winter]
 // +5 Magic Damage and -10% speed 3 s on dagger attacks.
+// A thrown throwing knife is a dagger attack too: it uses up a readied [Gouge] and carries
+// [Splinter of Winter] (FCrossguardRiderAttack::ForThrown).
 //
 // Hit detection runs on the server. Placeholder until animations and weapon collision exist.
 UCLASS()

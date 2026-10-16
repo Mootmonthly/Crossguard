@@ -256,6 +256,20 @@ static void TestLoadout()
 
 	// Superseded is reported before capacity.
 	CHECK(ValidateLoadout(Catalog, {"spear_of_liscor", "antimagic_garb"}, 1).Error == ELoadoutError::SupersededSkill);
+
+	// Sources: an equipped skill comes by itself (empty chain); a component through its bundle, whose
+	// requirement switches it off; a shared component through either bundle.
+	const FLoadoutSources Sources = ResolveLoadoutSources(Catalog, Knight);
+	CHECK(Sources.size() == Effects.size());
+	CHECK(Sources.at("the_mithril_knight").size() == 1);
+	CHECK(Sources.at("the_mithril_knight")[0].empty());
+	CHECK(Sources.at("immutable").size() == 1);
+	CHECK(Sources.at("immutable")[0] == std::vector<std::string>{"the_mithril_knight"});
+	CHECK(Sources.at("triple_thrust")[0] == std::vector<std::string>{"spear_of_liscor"});
+	CHECK(Sources.at("antimagic_garb").size() == 2);
+	const FLoadoutSources Alone = ResolveLoadoutSources(Catalog, {"antimagic_garb", "fireball"});
+	CHECK(Alone.size() == 2);
+	CHECK(Alone.at("antimagic_garb").size() == 1 && Alone.at("antimagic_garb")[0].empty());
 }
 
 static void TestRarityAndWeapons()
@@ -535,6 +549,19 @@ static void TestIncludeCycle()
 	Catalog.Add({"b", 1, {"a"}, {}});
 	CHECK(Catalog.EffectiveSkills("a").size() == 2);
 	CHECK(Catalog.ProvidedSkills("a").size() == 1);
+
+	// Chains stop at a cycle: a by itself, b through a.
+	const FLoadoutSources Sources = ResolveLoadoutSources(Catalog, {"a"});
+	CHECK(Sources.size() == 2);
+	CHECK(Sources.at("a").size() == 1 && Sources.at("a")[0].empty());
+	CHECK(Sources.at("b").size() == 1 && Sources.at("b")[0] == std::vector<std::string>{"a"});
+
+	// Nested bundles: c comes through both, outermost first.
+	FSkillCatalog Nested;
+	Nested.Add({"outer", 1, {"inner"}, {}});
+	Nested.Add({"inner", 1, {"c"}, {}});
+	Nested.Add({"c", 1, {}, {}});
+	CHECK(ResolveLoadoutSources(Nested, {"outer"}).at("c")[0] == (std::vector<std::string>{"outer", "inner"}));
 }
 
 static void TestExperience()
@@ -712,6 +739,18 @@ static void TestInventoryGrid()
 	Target = 3;
 	CHECK(MergeStacks(Target, Source, 20) == 7);
 	CHECK(Target == 10 && Source == 0);
+	// Gemstones stack to 3 (Items.json; same item and rarity, checked by the game's inventory): four
+	// rubies fill a stack of 3, the fourth starts another.
+	{
+		int GemStack = 0;
+		int Rubies = 4;
+		CHECK(MergeStacks(GemStack, Rubies, 3) == 3);
+		CHECK(GemStack == 3 && Rubies == 1);
+		CHECK(MergeStacks(GemStack, Rubies, 3) == 0);
+		int SecondStack = 0;
+		CHECK(MergeStacks(SecondStack, Rubies, 3) == 1);
+		CHECK(SecondStack == 1 && Rubies == 0);
+	}
 	CHECK(!ContainerAccepts(EContainerKind::Quiver, EItemCategory::Throwable));
 
 	// Stash tabs: 3000 gold each, at most 3 bought.

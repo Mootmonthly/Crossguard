@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Combat/CrossguardThrownProjectile.h"
+#include "Combat/CrossguardWeaponAttackAbility.h"
 #include "Crossguard.h"
 #include "Engine/DataTable.h"
 #include "Engine/World.h"
@@ -1623,6 +1624,19 @@ FCrossguardInventoryResult UCrossguardInventoryComponent::Throw(int32 Index, con
 	}
 	Projectile->DamageSpec = MakeDamageSpec(Row.ThrowDamage + Row.ThrowDamagePerRarity * RarityLevel);
 	Projectile->ExplosionRadius = Row.ThrowRadiusMeters * 100.0f;
+	// A thrown weapon is an attack with its type (owner ruling: a throwing knife is a dagger attack):
+	// [Splinter of Winter] rides on it and a readied [Gouge] is used up, hit or miss.
+	if (Row.bHasCountsAsWeapon && Projectile->ExplosionRadius <= 0.0f && Projectile->DamageSpec.IsValid())
+	{
+		const FCrossguardAttackRiders Riders = UCrossguardWeaponAttackAbility::GatherRiders(FCrossguardRiderAttack::ForThrown(Row.CountsAsWeapon), ASC);
+		FGameplayEffectSpec& Damage = *Projectile->DamageSpec.Data;
+		Damage.SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack,
+			Damage.GetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, false, 0.0f) + Riders.AttackAdd);
+		Damage.SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic,
+			Damage.GetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, false, 0.0f) + Riders.MagicAdd);
+		Projectile->OnHitSpecs = Riders.OnHitSpecs;
+		Projectile->bCancelSkillsOnHit = Riders.bCancelSkills;
+	}
 	// Guards (block and parry) stop a thrown weapon by its Impact Power; never an explosion.
 	Projectile->ImpactPower = Projectile->ExplosionRadius > 0.0f ? 0 : Row.ImpactPower;
 	if (Row.ThrowDotPerSecond > 0.0f && Row.ThrowDotSeconds > 0.0f)

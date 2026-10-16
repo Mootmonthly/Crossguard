@@ -9,7 +9,9 @@ class UAbilitySystemComponent;
 
 // [Multiscale] (Passive): you and every party member (and party minions) have +15% Attack and Magic
 // Resistance, wherever they are, while you wear Plate armor. Two Multiscales do not stack
-// (State.Multiscale). Off while you are Muted or dead. Also part of [The Mithril Knight]. Server: rechecked every second (joins, deaths, Mute).
+// (State.Multiscale). Off while you are Muted or dead. Also part of [The Mithril Knight], and then
+// off without Plate in every slot (a bundle's requirement switches off what it includes). Server:
+// rechecked every second (joins, deaths, Mute) and on equipment changes.
 UCLASS()
 class CROSSGUARD_API UCrossguardMultiscaleAbility : public UCrossguardPassiveAbility
 {
@@ -26,6 +28,8 @@ public:
 private:
 	void RefreshAura();
 	void RemoveAll();
+	UFUNCTION()
+	void OnOwnerEquipmentChanged();
 
 	FTimerHandle RefreshTimer;
 	TMap<TWeakObjectPtr<UAbilitySystemComponent>, FActiveGameplayEffectHandle> Applied;

@@ -105,4 +105,13 @@ namespace Crossguard
 	// The permanent skill effects a loadout applies, each once.
 	CROSSGUARDRULES_API std::unordered_set<std::string> ResolveLoadoutEffects(
 		const FSkillCatalog& Catalog, const std::vector<std::string>& Equipped);
+
+	// How each permanent effect of a loadout comes to it: one chain per way. An empty chain: the
+	// skill is equipped itself. Otherwise the bundles it comes through, from the equipped one down to
+	// the one that includes it. A bundle's requirement also switches off the skills it includes, so an
+	// effect is on while one of its chains has every bundle's requirement met (checked by the caller:
+	// the rules know no equipment). Two bundles sharing a component give it two chains. The keys are
+	// ResolveLoadoutEffects' result.
+	using FLoadoutSources = std::unordered_map<std::string, std::vector<std::vector<std::string>>>;
+	CROSSGUARDRULES_API FLoadoutSources ResolveLoadoutSources(const FSkillCatalog& Catalog, const std::vector<std::string>& Equipped);
 }

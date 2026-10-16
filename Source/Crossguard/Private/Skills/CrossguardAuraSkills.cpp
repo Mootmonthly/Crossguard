@@ -8,6 +8,7 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Game/CrossguardTeamLibrary.h"
+#include "Items/CrossguardEquipmentComponent.h"
 #include "TimerManager.h"
 
 namespace
@@ -40,6 +41,13 @@ void UCrossguardMultiscaleAbility::ActivateAbility(const FGameplayAbilitySpecHan
 			.AddWeakLambda(this, Refresh);
 		PlateHandle = ActorInfo->AbilitySystemComponent->RegisterGameplayTagEvent(CrossguardTags::Equipment_Armor_Plate, EGameplayTagEventType::NewOrRemoved)
 			.AddWeakLambda(this, Refresh);
+		// Plate in every slot for [The Mithril Knight]'s Multiscale.
+		if (UCrossguardEquipmentComponent* Equipment = ActorInfo->AvatarActor.IsValid()
+				? ActorInfo->AvatarActor->FindComponentByClass<UCrossguardEquipmentComponent>()
+				: nullptr)
+		{
+			Equipment->OnEquipmentChanged.AddUniqueDynamic(this, &UCrossguardMultiscaleAbility::OnOwnerEquipmentChanged);
+		}
 		RefreshAura();
 		GetWorld()->GetTimerManager().SetTimer(RefreshTimer, FTimerDelegate::CreateUObject(this, &UCrossguardMultiscaleAbility::RefreshAura),
 			MultiscaleRefreshSeconds, true);
@@ -54,10 +62,12 @@ void UCrossguardMultiscaleAbility::RefreshAura()
 	{
 		return;
 	}
-	// Off while Muted or dead, and without Plate armor (Skills.json requirement; an AI's skills have
-	// no requirements).
+	// Off while Muted or dead, without Plate armor (Skills.json requirement), and while the bundle it
+	// comes with lacks its requirement ([The Mithril Knight]: Plate in every slot). An AI's skills have
+	// no requirements.
 	if (ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted) || ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead)
-		|| (!ASC->HasMatchingGameplayTag(CrossguardTags::Equipment_Armor_Plate) && !Avatar->IsA<ACrossguardAICharacter>()))
+		|| (!ASC->HasMatchingGameplayTag(CrossguardTags::Equipment_Armor_Plate) && !Avatar->IsA<ACrossguardAICharacter>())
+		|| !IsSwitchedOnByLoadout(Avatar, SkillId))
 	{
 		RemoveAll();
 		return;
@@ -120,6 +130,11 @@ void UCrossguardMultiscaleAbility::RefreshAura()
 	}
 }
 
+void UCrossguardMultiscaleAbility::OnOwnerEquipmentChanged()
+{
+	RefreshAura();
+}
+
 void UCrossguardMultiscaleAbility::RemoveAll()
 {
 	for (const TPair<TWeakObjectPtr<UAbilitySystemComponent>, FActiveGameplayEffectHandle>& Pair : Applied)
@@ -144,6 +159,12 @@ void UCrossguardMultiscaleAbility::EndAbility(const FGameplayAbilitySpecHandle H
 		ASC->RegisterGameplayTagEvent(CrossguardTags::State_Muted, EGameplayTagEventType::NewOrRemoved).Remove(MutedHandle);
 		ASC->RegisterGameplayTagEvent(CrossguardTags::State_Dead, EGameplayTagEventType::NewOrRemoved).Remove(DeadHandle);
 		ASC->RegisterGameplayTagEvent(CrossguardTags::Equipment_Armor_Plate, EGameplayTagEventType::NewOrRemoved).Remove(PlateHandle);
+	}
+	if (UCrossguardEquipmentComponent* Equipment = ActorInfo != nullptr && ActorInfo->AvatarActor.IsValid()
+			? ActorInfo->AvatarActor->FindComponentByClass<UCrossguardEquipmentComponent>()
+			: nullptr)
+	{
+		Equipment->OnEquipmentChanged.RemoveDynamic(this, &UCrossguardMultiscaleAbility::OnOwnerEquipmentChanged);
 	}
 	MutedHandle.Reset();
 	DeadHandle.Reset();
