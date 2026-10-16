@@ -681,8 +681,9 @@ bool FCrossguardScenarioMonsterTeam::RunTest(const FString& Parameters)
 		{
 			return;
 		}
-		// Off the monsters' line: with no NavMesh it walks straight at the player and would push into M1's back.
-		ACrossguardMinion* Minion = C.SpawnMinion(TEXT("Minion"), M1, FVector(-250.0f, SceneY + 300.0f, 0.0f));
+		// Behind M1 on the monsters' line: with crowd avoidance on it goes round M1 (it used to push into
+		// its back and never reach the player).
+		ACrossguardMinion* Minion = C.SpawnMinion(TEXT("Minion"), M1, FVector(-250.0f, SceneY, 0.0f));
 		if (!C.Require(Minion != nullptr && Minion->GetController() != nullptr, TEXT("M1's minion spawned with its controller")))
 		{
 			return;

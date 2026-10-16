@@ -16,8 +16,13 @@
 #include "Engine/DataTable.h"
 #include "Game/CrossguardGameMode.h"
 #include "Interaction/CrossguardGatherNode.h"
+#include "Items/CrossguardInventoryComponent.h"
 #include "Items/CrossguardLoot.h"
 #include "Items/CrossguardLootContainer.h"
+#include "UI/CrossguardGuildWidget.h"
+#include "UI/CrossguardHUD.h"
+#include "UI/CrossguardInventoryWidget.h"
+#include "UI/CrossguardTradeWidget.h"
 
 namespace CrossguardScenarioVisual
 {
@@ -366,6 +371,111 @@ bool FCrossguardVisualStealthViews::RunTest(const FString& Parameters)
 	{
 		C.Screenshot(TEXT("enemy_after"), 2);
 		C.Screenshot(TEXT("ally_after"), 0);
+	});
+
+	Scenario.Run();
+	return true;
+}
+
+// --- Placeholder UI --------------------------------------------------------------------------------
+
+// docs/ui.md: the PIE player's own screen (its HUD draws on its viewport; no camera actor here).
+// hud.png: the HUD with items, a sword and Fireball; inventory_body.png: the inventory window with a
+// dead dummy's body open beside it; trade.png: the trade window after asking a partner 2 m away;
+// guild.png: the guild window. Layout is the point (overlap, unreadable text, off-screen parts).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardVisualUI, "Crossguard.Visual.UI", CROSSGUARD_VISUAL_FLAGS)
+
+bool FCrossguardVisualUI::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioVisual;
+
+	static const FVector PlayerSpot(0.0f, 9000.0f, 0.0f);
+	static const FVector DummySpot(150.0f, 9000.0f, 0.0f);
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("The PIE player with items, a sword and Fireball; a partner 2 m off; a dummy with a ruby"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = C.LocalPlayer();
+		APlayerController* Controller = Player != nullptr ? Cast<APlayerController>(Player->GetController()) : nullptr;
+		if (!C.Require(Player != nullptr && Controller != nullptr && Controller->GetLocalPlayer() != nullptr, TEXT("the PIE player has a local player controller")))
+		{
+			return;
+		}
+		if (!C.Require(Cast<ACrossguardHUD>(Controller->GetHUD()) != nullptr, FString::Printf(TEXT("the player's HUD is ACrossguardHUD (is %s)"), *GetNameSafe(Controller->GetHUD()))))
+		{
+			return;
+		}
+		C.Place(Player, PlayerSpot, 0.0f);
+		ACrossguardCharacter* Partner = C.SpawnPlayer(TEXT("Partner"), PlayerSpot + FVector(0.0f, 200.0f, 0.0f), -90.0f);
+		ACrossguardCharacter* Dummy = C.SpawnDummy(TEXT("Dummy"), DummySpot, 180.0f);
+		if (!C.Require(Partner != nullptr && Dummy != nullptr, TEXT("partner and dummy spawned")) || !C.Equip(Player, TEXT("sword_one_handed")))
+		{
+			return;
+		}
+		C.Require(C.GiveItem(Player, TEXT("healing_potion"), 2) == 0 && C.GiveItem(Player, TEXT("bandage"), 1) == 0 && C.GiveItem(Player, TEXT("ruby"), 1) == 0,
+			TEXT("the player's items fit"));
+		C.Require(C.GiveItem(Dummy, TEXT("ruby"), 1, ECrossguardRarity::Rare) == 0, TEXT("the dummy's ruby fits"));
+		C.GrantSkills(Player, {TEXT("fireball")});
+		C.AimAt(Player, EyesAt(DummySpot));
+		C.Kill(Dummy, Player);
+	});
+	Scenario.Wait(1.0f);
+	Scenario.Step(TEXT("hud.png"), [](FScenarioContext& C) { C.Screenshot(TEXT("hud")); });
+
+	Scenario.Step(TEXT("The inventory window with the body open"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = C.LocalPlayer();
+		ACrossguardHUD* Hud = Player != nullptr ? Cast<ACrossguardHUD>(Cast<APlayerController>(Player->GetController())->GetHUD()) : nullptr;
+		ACrossguardLootContainer* Body = C.FindNearest<ACrossguardLootContainer>(DummySpot, 400.0f);
+		if (!C.Require(Hud != nullptr && Body != nullptr, TEXT("the HUD and the body")))
+		{
+			return;
+		}
+		C.Require(Player->GetInventoryComponent()->OpenLootContainer(Body), TEXT("the player opens the body"));
+		if (!Hud->IsWindowOpen(Hud->GetInventoryWidget()))
+		{
+			Hud->ToggleInventory();
+		}
+		C.Test.TestTrue(TEXT("The inventory window is open"), Hud->IsWindowOpen(Hud->GetInventoryWidget()));
+	});
+	Scenario.Wait(SettleSeconds);
+	Scenario.Step(TEXT("inventory_body.png; then the trade window"), [](FScenarioContext& C)
+	{
+		C.Screenshot(TEXT("inventory_body"));
+		ACrossguardCharacter* Player = C.LocalPlayer();
+		ACrossguardHUD* Hud = Player != nullptr ? Cast<ACrossguardHUD>(Cast<APlayerController>(Player->GetController())->GetHUD()) : nullptr;
+		if (Hud == nullptr)
+		{
+			return;
+		}
+		Hud->CloseAllWindows();
+		Hud->ToggleTrade();
+		C.Test.TestTrue(TEXT("The trade window is open"), Hud->IsWindowOpen(Hud->GetTradeWidget()));
+	});
+	Scenario.Wait(SettleSeconds);
+	Scenario.Step(TEXT("trade.png; then the guild window"), [](FScenarioContext& C)
+	{
+		C.Screenshot(TEXT("trade"));
+		ACrossguardCharacter* Player = C.LocalPlayer();
+		ACrossguardHUD* Hud = Player != nullptr ? Cast<ACrossguardHUD>(Cast<APlayerController>(Player->GetController())->GetHUD()) : nullptr;
+		if (Hud == nullptr)
+		{
+			return;
+		}
+		Hud->CloseAllWindows();
+		Hud->ToggleGuild();
+		C.Test.TestTrue(TEXT("The guild window is open"), Hud->IsWindowOpen(Hud->GetGuildWidget()));
+	});
+	Scenario.Wait(SettleSeconds);
+	Scenario.Step(TEXT("guild.png"), [](FScenarioContext& C)
+	{
+		C.Screenshot(TEXT("guild"));
+		ACrossguardCharacter* Player = C.LocalPlayer();
+		if (ACrossguardHUD* Hud = Player != nullptr ? Cast<ACrossguardHUD>(Cast<APlayerController>(Player->GetController())->GetHUD()) : nullptr)
+		{
+			Hud->CloseAllWindows();
+		}
 	});
 
 	Scenario.Run();

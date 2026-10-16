@@ -41,7 +41,9 @@
 #include "ImageUtils.h"
 #include "Misc/App.h"
 #include "Misc/Paths.h"
+#include "Framework/Application/SlateApplication.h"
 #include "Slate/SceneViewport.h"
+#include "Widgets/SWindow.h"
 #include "Engine/NetDriver.h"
 #include "Engine/PackageMapClient.h"
 #include "Engine/StaticMesh.h"
@@ -1149,12 +1151,25 @@ namespace CrossguardScenario
 			Test.AddError(FString::Printf(TEXT("Screenshot '%s': %s has no game viewport"), *Name, ClientIndex < 0 ? TEXT("the server world") : *FString::Printf(TEXT("client %d"), ClientIndex)));
 			return false;
 		}
-		// ReadPixels flushes rendering and reads the viewport's back buffer: what the last frame drew.
+		// Slate's screenshot of the PIE window draws the scene and the UMG widgets (the HUD, open windows)
+		// together; the viewport's own ReadPixels is the scene alone, so it is only the fallback.
 		TArray<FColor> Pixels;
-		if (!Viewport->ReadPixels(Pixels) || Pixels.Num() != Size.X * Size.Y)
+		FIntPoint Captured = Size;
+		const TSharedPtr<SWindow> Window = ViewportClient->GetWindow();
+		FIntVector SlateSize = FIntVector::ZeroValue;
+		if (Window.IsValid() && FSlateApplication::IsInitialized() && FSlateApplication::Get().TakeScreenshot(Window.ToSharedRef(), Pixels, SlateSize)
+			&& Pixels.Num() == SlateSize.X * SlateSize.Y && SlateSize.X > 0)
 		{
-			Test.AddError(FString::Printf(TEXT("Screenshot '%s': ReadPixels failed (%d pixels for %d x %d)"), *Name, Pixels.Num(), Size.X, Size.Y));
-			return false;
+			Captured = FIntPoint(SlateSize.X, SlateSize.Y);
+		}
+		else
+		{
+			Pixels.Reset();
+			if (!Viewport->ReadPixels(Pixels) || Pixels.Num() != Size.X * Size.Y)
+			{
+				Test.AddError(FString::Printf(TEXT("Screenshot '%s': ReadPixels failed (%d pixels for %d x %d)"), *Name, Pixels.Num(), Size.X, Size.Y));
+				return false;
+			}
 		}
 		for (FColor& Pixel : Pixels)
 		{
@@ -1165,12 +1180,12 @@ namespace CrossguardScenario
 		const FString Directory = FPaths::ProjectSavedDir() / TEXT("EditorTests") / TEXT("Screenshots") / Folder;
 		IFileManager::Get().MakeDirectory(*Directory, true);
 		const FString Path = Directory / Name + TEXT(".png");
-		if (!FImageUtils::SaveImageByExtension(*Path, FImageView(Pixels.GetData(), Size.X, Size.Y, EGammaSpace::sRGB)))
+		if (!FImageUtils::SaveImageByExtension(*Path, FImageView(Pixels.GetData(), Captured.X, Captured.Y, EGammaSpace::sRGB)))
 		{
 			Test.AddError(FString::Printf(TEXT("Screenshot '%s': could not write %s"), *Name, *Path));
 			return false;
 		}
-		Test.AddInfo(FString::Printf(TEXT("Screenshot: %s (%d x %d)"), *FPaths::ConvertRelativePathToFull(Path), Size.X, Size.Y));
+		Test.AddInfo(FString::Printf(TEXT("Screenshot: %s (%d x %d)"), *FPaths::ConvertRelativePathToFull(Path), Captured.X, Captured.Y));
 		return true;
 	}
 

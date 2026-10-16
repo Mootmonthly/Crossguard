@@ -386,6 +386,7 @@ each asserts just the state behind the picture)
 | `Crossguard.Visual.MonsterAttack` | `approach.png` a built-in melee monster and a player 3 m apart; `attack.png` the frame of its first hit. |
 | `Crossguard.Visual.Dragonification` | `before.png` a player; `dragon.png` the same player in `State.Dragonified` (no form art yet, so alike). |
 | `Crossguard.Visual.StealthViews` | Listen server + 2 clients: from the enemy client's and the ally host's screen, `*_before.png`, `*_stealth.png` 1 s into Stealth (gone from the enemy's, still on the ally's), `*_after.png` when it ends. |
+| `Crossguard.Visual.UI` | The PIE player's own screen with the placeholder UI ([ui.md](ui.md)): `hud.png` (Health, level, gold, weapon sets, hotbar, skills, "F: Loot body"), `inventory_body.png` (the inventory window with a dead dummy's body open beside it), `trade.png` (after asking a partner 2 m away), `guild.png`. Asserts each window is open. |
 
 ### Checklist coverage
 
@@ -648,7 +649,7 @@ when the editor can render) and its floor casts no shadow (a 200× scaled cube s
 | Call | Does |
 | --- | --- |
 | `C.LookFrom(Eye, LookAt, Client = -1)` | A camera actor at `Eye` looking at `LookAt` becomes the view target of the PIE player (standalone) or of client `Client`'s local player (spawned in that world). Kept as the view target every frame (the game mode's `SetViewTargetWithBlend` and possession would take it back). Pawns stay put. Wait a frame before shooting. |
-| `C.Screenshot(Name, Client = -1)` | Reads the viewport's last frame (`FSceneViewport::ReadPixels`) and writes `Screenshots\<Test>\<Name>.png`. Adds an error under `-nullrhi`. |
+| `C.Screenshot(Name, Client = -1)` | Writes `Screenshots\<Test>\<Name>.png`: Slate's screenshot of the PIE window (`FSlateApplication::TakeScreenshot`), so the scene and the UMG widgets (HUD, open windows) are in it, the window's title bar included; falls back to the viewport's `ReadPixels` (scene only). Adds an error under `-nullrhi`. |
 
 Scenes must stay on the floor (within ±100 m of the origin): characters off it fall forever, and a
 falling actor drops out of relevancy.
@@ -656,7 +657,8 @@ falling actor drops out of relevancy.
 What the frames show today (2026-10-16): characters are the engine mannequin in its rest pose (no
 animations), monsters a dark checkered cylinder and gather nodes a checkered sphere (placeholder
 meshes), the native chest nothing, the dragon form the plain mannequin; equipped weapons have no
-mesh.
+mesh. The placeholder UI lays out within a 1280 × 720 window; its one readability problem is the
+inventory grid's item labels, tiny and truncated in one-square cells ("Healing Po… x2").
 
 ### API reference (`CrossguardScenario.h`)
 
