@@ -1,5 +1,8 @@
 # Next Build Checklist
 
+**Unattended PC session:** [pc-session.md](pc-session.md) is the command-line runbook (build with
+compact errors, `Tools\editor_setup.bat` for sections 2–3 without clicking, editor tests, triage).
+
 Rows marked automated (**auto**) in [editor-tests.md](editor-tests.md#checklist-coverage) run via
 `Tools\run_editor_tests.bat`; do those manually only if a test fails or is skipped.
 

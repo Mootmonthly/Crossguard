@@ -18,6 +18,8 @@ python3 Tools/validate_mobs.py
 python3 Tools/export_loot_table.py --check
 python3 Tools/export_mob_table.py --check
 python3 Tools/check_table_types.py
+# Unreal-only script: syntax check only (it imports the editor's `unreal` module at run time).
+python3 -m py_compile Tools/editor_setup.py
 
 cmake -S Tests/CrossguardRules -B build/rules-tests >/dev/null
 cmake --build build/rules-tests

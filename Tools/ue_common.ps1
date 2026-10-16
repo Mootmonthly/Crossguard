@@ -119,7 +119,7 @@ function Invoke-CgEditorBuild([string]$EngineRoot, [string]$LogFile) {
     Remove-Item -Path $LogFile, $errLog -Force -ErrorAction SilentlyContinue
     $start = Get-Date
     # cmd /c ""bat" args": cmd strips the outer quotes, so paths with spaces stay quoted.
-    $buildArgs = "/c `"`"$buildBat`" CrossguardEditor Win64 Development `"-Project=$($script:CgProjectFile)`" -WaitMutex -NoHotReloadFromIDE`""
+    $buildArgs = "/c `"`"$buildBat`" CrossguardEditor Win64 Development `"-Project=$($script:CgProjectFile)`" -WaitMutex`""
     $proc = Start-Process -FilePath "cmd.exe" -ArgumentList $buildArgs -NoNewWindow -PassThru `
         -RedirectStandardOutput $LogFile -RedirectStandardError $errLog
     $null = $proc.Handle   # keeps ExitCode readable after exit (Windows PowerShell quirk)
@@ -163,7 +163,7 @@ function Enable-CgProjectPlugins([string[]]$Names) {
         } else {
             $entry = "`n`t`t{`n`t`t`t`"Name`": `"$name`",`n`t`t`t`"Enabled`": true`n`t`t},"
             if ($text -match '"Plugins"\s*:\s*\[') {
-                $text = [regex]::Replace($text, '("Plugins"\s*:\s*\[)', '${1}' + $entry.Replace('$', '$$'), 1)
+                $text = ([regex]'("Plugins"\s*:\s*\[)').Replace($text, '${1}' + $entry.Replace('$', '$$'), 1)
                 # A list that was empty ends up with a trailing comma before ']'.
                 $text = [regex]::Replace($text, ',(\s*\])', '${1}')
             } else {

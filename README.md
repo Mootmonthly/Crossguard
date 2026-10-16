@@ -5,7 +5,7 @@ Fantasy extraction game. Unreal Engine 5 with the Gameplay Ability System.
 
 | Path | Contents |
 | --- | --- |
-| `Crossguard.uproject` | Unreal project (GameplayAbilities and PCG plugins enabled). |
+| `Crossguard.uproject` | Unreal project (GameplayAbilities, PCG and, for editor scripting, PythonScriptPlugin / EditorScriptingUtilities enabled). |
 | `Source/Crossguard` | Primary game module. |
 | `Source/CrossguardRules` | Engine-free game rules: progression, derived stats, damage, cooldowns, loadout validation. |
 | `Tests/CrossguardRules` | Standalone unit tests for `CrossguardRules`. |
@@ -23,6 +23,12 @@ Fantasy extraction game. Unreal Engine 5 with the Gameplay Ability System.
    `CrossguardEditor` target.
 
 The `CrossguardServer` target needs a source build of the engine.
+
+## PC session (Unreal on Windows)
+
+[docs/pc-session.md](docs/pc-session.md): build (`Tools\build_editor.bat`), editor set-up without
+clicking (`Tools\editor_setup.bat`: data tables, skill catalog, Blueprint references), editor tests
+(`Tools\run_editor_tests.bat`) and triage, in order.
 
 ## Checks
 
