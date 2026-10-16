@@ -478,3 +478,32 @@ Not found: UFUNCTION parameter / UPROPERTY name clashes, unity clashes in the ne
 (`CrossguardStashWidgetLocal::ItemsIn` and `CrossguardVendorWidgetLocal::ItemsIn` are named and only
 pulled in by their own file), missing `_Implementation`s, brace narrowing. Still unverified against
 5.8 headers: SV1-SV8, AP1, AP4-AP8, HM1-HM10, AH1-AH11, ST1-ST8 above.
+
+## Batch 4 (unbuilt)
+
+### Nakama backend: REST client, save backend, player identity, menu login
+
+New `Game/CrossguardNakamaClient` (plain C++), `Game/CrossguardNakamaSubsystem`,
+`Game/CrossguardNakamaSaveBackend`, `Game/CrossguardLocalPlayer`, `Tests/CrossguardNakamaTests.cpp`
+(namespace `CrossguardNakamaTestsLocal`); edits to `CrossguardGameMode` (`PreLoginAsync`,
+`NakamaUserIdFor`), `CrossguardPlayerState` (`NakamaUserId`), `CrossguardGuildSubsystem::PlayerIdOf`,
+`CrossguardSaveSubsystem` (backend selection, `FlushWrites`), `CrossguardMainMenuWidget` (Log in),
+`ICrossguardSaveBackend::FlushWrites`, `Crossguard.Build.cs` (`HTTP`, `Json`), `DefaultEngine.ini`
+(`LocalPlayerClassName`), `DefaultGame.ini`. The Go module and the RPCs were run here (unit tests and
+`Tools/backend_smoke.py` against Nakama 3.41.0 in Docker); the Unreal side was reviewed by reading only.
+How to test after it builds: [backend-setup.md](backend-setup.md).
+
+| # | Where | Call | Why it may fail | Suggested fix |
+| --- | --- | --- | --- | --- |
+| N1 | `CrossguardGameMode.h/.cpp` | `virtual void PreLoginAsync(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, const FOnPreLoginCompleteDelegate& OnComplete) override`; `Self->AGameModeBase::PreLoginAsync(...)` inside the lambda | Signature from the 5.x docs (delegate takes `const FString& ErrorMessage`); the exact parameter list was not checked against 5.8's `GameModeBase.h`. | Copy the declaration from `GameModeBase.h`. If `PreLoginAsync` is missing: drop the override, verify in `PostLogin` instead (accept, then `GameSession->KickPlayer` if the RPC refuses within ~10 s), and keep `NakamaUserId` empty until verified (no save load before). |
+| N2 | `CrossguardLocalPlayer.h` | `virtual FString GetGameLoginOptions() const override` | Documented in `Engine/LocalPlayer.h`; assumed the engine adds its result to the login URL the server's `PreLogin` / `InitNewPlayer` get as `Options`. | If the server never sees `NakamaToken` (log "Log in first"): add the option to the travel URLs instead (menu Join, `ClientTravel` URLs from hub / match servers). |
+| N3 | `Config/DefaultEngine.ini` | `LocalPlayerClassName=/Script/Crossguard.CrossguardLocalPlayer` under `[/Script/Engine.Engine]` | Assumed key name (`UEngine::LocalPlayerClassName`, a `FSoftClassPath`). | Project Settings → Engine → General Settings → Default Classes → Local Player Class. |
+| N4 | `CrossguardNakamaClient.cpp` | `FHttpModule::Get().CreateRequest()` (`TSharedRef<IHttpRequest, ESPMode::ThreadSafe>`), `OnProcessRequestComplete().BindLambda(... (FHttpRequestPtr, FHttpResponsePtr, bool))`, `SetTimeout(float)`, `GetContentAsString` | Stable since 4.26; 5.x callbacks still default to the game thread. | If `SetTimeout` is missing, drop it (global `[HTTP] HttpTotalTimeout`). If the callback signature changed, match `FHttpRequestCompleteDelegate`. |
+| N5 | `CrossguardNakamaSaveBackend.cpp` `FlushWrites` | `FHttpModule::Get().GetHttpManager().Tick(0.05f)` (`#include "HttpManager.h"`) | Assumed `FHttpManager::Tick` is public and completes requests (game-thread callbacks) when called by hand during shutdown. | Use `GetHttpManager().Flush(EHttpFlushReason::Shutdown)` once per loop instead. If saves at shutdown still go to `NakamaUnsaved`, raise `ShutdownFlushSeconds` or flush before the world ends. |
+| N6 | `CrossguardNakamaSaveBackend.h/.cpp` | `FTSTicker::FDelegateHandle`, `FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(...), Delay)`, `RemoveTicker`, `Handle.Reset()` / `IsValid()` | UE 5 ticker API (`Containers/Ticker.h`). | If `IsValid`/`Reset` are missing on the handle: keep a separate `bool bRetryScheduled`. |
+| N7 | `CrossguardNakamaClient.cpp` | `FBase64::Encode(const FString&)`, `FBase64::Decode(const FString&, TArray<uint8>&)`, `FUTF8ToTCHAR(const ANSICHAR*, int32)`, `FString(int32, const TCHAR*)` | Assumed overloads; `Encode(FString)` encodes the string as ANSI/UTF-8 (keys are ASCII). | Convert by hand: `FTCHARToUTF8` to bytes, `FBase64::Encode(Bytes.GetData(), Len)`. |
+| N8 | `CrossguardNakamaClient.cpp`, `...Subsystem.cpp`, `...SaveBackend.cpp` | `FJsonObject::TryGetStringField` / `TryGetNumberField(…, double&)` / `TryGetBoolField`, `HasTypedField<EJson::Object>`, `TJsonReaderFactory<>::Create(FString)` | 5.4+ take `FStringView` keys; `TEXT()` literals convert. | Usually compiles. If an overload is ambiguous, pass `FString(TEXT("key"))`. |
+| N9 | `CrossguardNakamaSubsystem.cpp` | `FPlatformMisc::GetLoginId()`, `FPlatformMisc::GetEnvironmentVariable(TEXT(...))` | `GetLoginId` might be deprecated in 5.8 (C4996 only). | Use `FPlatformMisc::GetDeviceId()` or `FGuid` saved in `GameUserSettings` for the dev device id. |
+| N10 | Runtime: main menu test `Crossguard.Scenario.Hub.MainMenuBinds` | Log in is a separate row, not a main button | The main-button list stays Play, Join, Settings, Quit. If the test counts all buttons: | Update the expectation to include the account row's button. |
+| N11 | Runtime: dedicated server with `-NakamaHttpKey=` | `IsNakamaLoginRequired` refuses remote logins without a token unless `-AllowDevPlayerIds` | `Tools\run_local_cluster.ps1` starts servers with `-AllowDevPlayerIds` and no Nakama flags, so nothing changes there. With the flags and no Log in, clients get "Log in first". | Log in from the menu first (backend running), or start the servers with `-AllowDevPlayerIds`. |
+| N12 | Runtime: PIE / tests | Saving is off in tests; the local backend stays the default; no test talks to Nakama | `Crossguard.Nakama.*` are pure (no network). | — |

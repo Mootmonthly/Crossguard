@@ -1,8 +1,9 @@
 # Persistence (character saves)
 
 How characters are saved between sessions. Rulings and placeholders: [design-decisions.md](design-decisions.md),
-"Saving". The backend (a database, platform cloud, ...) is not chosen yet; everything below works
-behind an interface so that choice changes one class.
+"Saving". Everything below works behind a backend interface: local files (the default, for
+development, PIE and tests) or **Nakama** on dedicated servers (`-SaveBackend=Nakama`; section "Nakama
+backend", set-up in [backend-setup.md](backend-setup.md)).
 
 | Part | Where |
 | --- | --- |
@@ -10,6 +11,7 @@ behind an interface so that choice changes one class.
 | JSON reader / writer (no dependencies) | `Source/CrossguardRules/Public/CrossguardRules/Json.h` (`Crossguard::FJsonNode`) |
 | Backend interface | `Source/Crossguard/Public/Game/CrossguardSaveBackend.h` (`ICrossguardSaveBackend`) |
 | Local file backend (default) | `UCrossguardLocalSaveBackend`: `Saved/Crossguard/Characters/<PlayerId>.json` |
+| Nakama backend (dedicated servers) | `UCrossguardNakamaSaveBackend`; RPCs in `Backend/nakama/modules/saves.go` |
 | Load, apply, save, debounce | `UCrossguardSaveSubsystem` (game instance subsystem, server only) |
 | Tests | Rules: `Tests/CrossguardRules` (`TestJson`, `TestSave*`). Game: `Crossguard.Scenario.Save.*` ([editor-tests.md](editor-tests.md)) |
 
@@ -85,8 +87,10 @@ default; a Blueprint game mode that sets its own must use a child of it).
 
 ## Player id
 
-`UCrossguardGuildSubsystem::PlayerIdOf`: the online id (a Steam id with Steam), else in development
-builds the server-set `ACrossguardPlayerState::DevPlayerId` (below), else `session-<PlayerId>`.
+`UCrossguardGuildSubsystem::PlayerIdOf`: the **Nakama user id** verified by the server at login
+(`ACrossguardPlayerState::NakamaUserId`; [anti-cheat.md](anti-cheat.md) "Player identity"), else the
+online id (a Steam id with Steam), else in development builds the server-set
+`ACrossguardPlayerState::DevPlayerId` (below), else `session-<PlayerId>`.
 An id from the **Null** online subsystem (`DESKTOP-…-<guid>`, what PIE hands out without Steam) does
 not count as an online id (`IsOnlineId`): it is new on every Play, which is why the first smoke
 test on the PC (2026-10-16) wrote a fresh file each time instead of loading the last one.
@@ -220,11 +224,38 @@ most 2048 items (oldest dropped first).
 3. The document is opaque to the backend: store it as a string/blob keyed by player id. Querying
    fields (leaderboards) can read the JSON; writes go through the game only.
 4. With several servers the backend must stop two servers saving one character at once (the hub and
-   a raid server): per-player leases or a version check on write. Not built: the local backend
-   assumes one server.
+   a raid server): per-player leases or a version check on write. The local backend assumes one
+   server; the Nakama backend checks versions (below).
+5. An asynchronous backend implements `FlushWrites(TimeoutSeconds)`: the subsystem calls it at
+   shutdown (`Deinitialize`, after the debounced saves), and it must block until the last writes are
+   answered, keeping what did not make it.
 
 Settings (`Config/DefaultGame.ini`, `[/Script/Crossguard.CrossguardSaveSubsystem]`): `bSavingEnabled`
-(default true), `bSaveSessionIds` (true), `SaveDebounceSeconds` (2.0).
+(default true), `bSaveSessionIds` (true), `SaveDebounceSeconds` (2.0), `SaveBackend` (`Local`;
+`-SaveBackend=` overrides), `ShutdownFlushSeconds` (10.0).
+
+## Nakama backend
+
+`UCrossguardNakamaSaveBackend`, on a dedicated server started with `-SaveBackend=Nakama
+-NakamaUrl=<url> -NakamaHttpKey=<key>` (or the key in `CROSSGUARD_NAKAMA_HTTP_KEY`). Set-up, keys and
+the console: [backend-setup.md](backend-setup.md).
+
+| Topic | How |
+| --- | --- |
+| Where | Nakama storage object `characters/<character id>` owned by the player's Nakama user id. Character id `main` (placeholder: one character per account until character select). Value: the save document above (stored as JSONB: key order and spacing change, content does not) |
+| Who writes | Only game servers, through the server-to-server RPCs `crossguard_save_load` / `crossguard_save_write` / `crossguard_save_quarantine` (HTTP key). Clients may read their own object, never write it (`permission_write` 0 and a before-hook that refuses client writes to the collection) |
+| Player id | Must be a Nakama user id (a verified `?NakamaToken=` login). Any other id loads as `Failed` (the player is not saved this session) |
+| Versions | The load returns the storage version (`"*"` when there is no save); every write sends it as `expected_version` and gets the new one. A write from a server whose version is stale is refused (HTTP 409); the refused record is kept in `characters_conflicts`. That server then stops writing the player until they load again. This replaces "two servers overwrite each other" with "the stale server cannot write" |
+| Unchanged saves | A document equal to the newest one written (or being written) except for `savedAt` is not written again: a travel's pre-travel save plus the logout save would otherwise move the version under the server the player just joined |
+| Order | One write per player in flight; saves made meanwhile merge into the next write (the newest document carries them). A load for a player with writes pending waits for them |
+| Failures | No answer, 5xx, 429: retried after 1, 2, 4, 8, 16 s (loads: 2 retries). Then, and on any other refusal: the document is kept in `Saved/Crossguard/NakamaUnsaved/<user id>.json` and logged as an error ("not stored in Nakama ... kept in ..."). A load that fails answers `Failed` |
+| Refused saves | `QuarantineCharacter` copies the stored document to `characters_quarantine` (server-only); the next write replaces the original |
+| Shutdown | `FlushWrites`: waiting writes go at once, the server waits up to `ShutdownFlushSeconds` for answers, anything unanswered is kept on disk too |
+| Size | 8 MB per record (same cap as the loader; Nakama `socket.max_request_size_bytes` raised to 9 MB) |
+
+Not built: per-player save leases (the hand-off risk in [backend-setup.md](backend-setup.md) "Known
+limits"), scenario tests against a live Nakama (the pure helpers are tested: `Crossguard.Nakama.*`;
+the RPCs end to end: `Tools/backend_smoke.py`).
 
 ## Tests
 

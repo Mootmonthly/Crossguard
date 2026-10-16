@@ -591,8 +591,8 @@ Players trade face to face, in raids or between them: ask within 5 m, both offer
 
 ## Saving
 
-Characters are saved by the server behind a backend interface; the backend itself is not chosen
-(local JSON files until then). How it works: [persistence.md](persistence.md).
+Characters are saved by the server behind a backend interface: local JSON files in development,
+Nakama on dedicated servers (see "Online architecture"). How it works: [persistence.md](persistence.md).
 
 - Saved: banked XP and level, attribute allocation, respec tokens, Skill Library, equipped skills,
   banked gold, bought stash tabs and every stash item (rarity, affixes, stack counts), and the gear
@@ -705,6 +705,16 @@ Everything here is cosmetic: no rule depends on it.
   builds use a second working copy with the source engine; local cluster ports 7777 (hub) and 7778
   (match) (placeholders); one server process per match (fits GameLift; to confirm); `ServerDefaultMap` = `L_Hub` when set
   (placeholder).
+- Nakama backend, steps 1-2 ([backend-setup.md](backend-setup.md)). **Assumed**: Nakama 3.41.0 with
+  PostgreSQL 16 (not CockroachDB); character saves are the storage object `characters/main` per
+  account (placeholder: one character per account until character select); writes are versioned
+  (a stale server is refused and its record kept, not merged); saves Nakama does not take are kept on
+  the server's disk (`Saved/Crossguard/NakamaUnsaved`); a server with the Nakama HTTP key requires a
+  verified Nakama login from remote players, except development servers with `-AllowDevPlayerIds`;
+  the Nakama user id is the player id ahead of Steam ids; device-id login is development only
+  (`CROSSGUARD_DEV_AUTH`), every login method but Steam is off; a misconfigured `-SaveBackend=Nakama`
+  (no URL or key) falls back to local files with an error (placeholder); retries 1-2-4-8-16 s, session
+  2 h, refresh token 7 days, shutdown flush 10 s (placeholders).
 
 ## Open questions
 

@@ -15,6 +15,9 @@ watch.
 - Git with Git LFS (`git lfs install` once).
 - Python plugins: `Crossguard.uproject` enables `PythonScriptPlugin` and `EditorScriptingUtilities`
   (Editor targets only). `Tools\editor_setup.bat` re-adds them if someone removed them.
+- **Docker Desktop** (WSL 2 backend) for the local backend (Nakama + PostgreSQL):
+  `Tools\run_local_backend.bat` ([backend-setup.md](backend-setup.md)). Only needed to test online
+  logins and Nakama saves; PIE and the editor tests use local saves and need no backend.
 - `python3` (or `python`) on PATH only for the repository checks (`Tools/run_checks.sh` needs bash,
   CMake and a C++ compiler; optional on the PC).
 
