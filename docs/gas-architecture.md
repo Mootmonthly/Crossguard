@@ -256,7 +256,7 @@ the hub and saved progression); the character stays in the map, now between raid
 - Revive window: 120 s after death (`Crossguard::FDeathConfig`). When it runs out the character is
   `IsPermanentlyDead()`, and `ACrossguardGameMode::HandlePermanentDeath` ends its player's raid as a
   failure, unpossesses the body and makes the player spectate a teammate still in the raid. With no
-  teammate left (or solo) the player goes back to the menu (`ClientReturnToMainMenuWithTextReason`).
+  teammate left (or solo) the player goes back to the menu (`ACrossguardGameMode::ReturnToMenu`: `MenuMapName`, [hub-and-menu.md](hub-and-menu.md)).
   Spectators are re-targeted whenever a watched teammate extracts or dies for good.
 - `Revive(HealthFraction)` (server, for revive spells) clears `State.Dead`, stands the character up
   and gives back what is still on the body: worn items go back on, the rest into the inventory.

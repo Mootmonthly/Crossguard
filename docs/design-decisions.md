@@ -270,6 +270,21 @@ Independent of category, a skill is:
 - Each season: five respec tokens, a shared stash tab (usable by all of the account's characters),
   several stacks of common healing items, some throwables and lockpicks.
 
+## Hub and main menu
+
+Details: [hub-and-menu.md](hub-and-menu.md). Nothing here is ruled; all **(placeholder, Assumed)**:
+
+- Title screen `L_MainMenu` (Game Default Map): Play hosts the hub `L_Hub` as a listen server, Join
+  connects to a typed address, Settings (mouse sensitivity 0.1–5, field of view 60–120°, master volume;
+  saved per machine), Quit. No character select until saves are per account.
+- `L_Hub`: plaza with stash chest, vendor NPC, party board (opens the party window) and a raid portal.
+  F at the portal launches the raid exactly as the party window's Start raid (leader or solo, hub
+  only); others get "Only your party's leader can start the raid.".
+- The raid map is `L_DevSandbox` until a real one exists.
+- A player dead for the raid with no teammate left goes to `L_MainMenu` ("Your raid is over.").
+  Extracting does not yet lead back to the hub (open question for the owner: the listen-server hub
+  is gone while its host raids).
+
 ## Extraction
 
 From the design doc: after 10 minutes, players can summon an extract portal anywhere inside a
@@ -405,8 +420,8 @@ Everything else is a placeholder until ruled; the numbers live in `Crossguard::F
   work in a raid too. Raid launch **(placeholder until a matchmaker exists)**: when the whole hub
   server is the party, the server travels to the game mode's `RaidMapName` with `?Party=`; otherwise
   each member's client travels to `RaidServerAddress` with `?Party=` (refused if a listen host would
-  have to leave). Parties live in hub memory only. Until a hub map exists, `?Hub` on a map URL plays
-  that map as the hub (placeholder).
+  have to leave). Parties live in hub memory only. `?Hub` on a map URL, or a placed
+  `ACrossguardHubMarker` (the scripted `L_Hub` has one), plays that map as the hub (placeholder).
 
 ## Items and weapons
 

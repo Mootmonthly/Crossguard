@@ -70,7 +70,14 @@ All from the project folder in `cmd` or PowerShell (`.bat` wrappers call the `.p
    Options: `-CreateMap` also creates `/Game/Maps/Dev/L_DevSandbox` (floor, light, player start,
    nav mesh bounds, `gather_herb` / `gather_ore` nodes, a `chest_common` container, a skeleton mob
    spawner, a dummy, game mode override) if it does not exist; open it once in the editor (or
-   Build → Build Paths) for the nav mesh. `-CreateBlueprints` creates missing
+   Build → Build Paths) for the nav mesh. `-CreateHub` creates `/Game/Maps/L_Hub` (plaza, lighting,
+   four player starts, nav bounds, hub marker, stash chest, vendor NPC, party board, raid portal;
+   `BP_CrossguardGameMode` override) and `-CreateMenu` creates `/Game/Maps/L_MainMenu`
+   (`CrossguardMenuGameMode` override) and sets `GameDefaultMap` to it in `Config\DefaultEngine.ini`
+   (commit that change; the editor startup map is left alone); both skip a map that exists
+   ([hub-and-menu.md](hub-and-menu.md)). After the next build run
+   `Tools\editor_setup.bat -SkipBuild -CreateHub -CreateMenu` once and open `L_Hub` (Build Paths).
+   `-CreateBlueprints` creates missing
    `BP_CrossguardGameMode` / `BP_CrossguardCharacter` in `/Game/Blueprints` (native parents, Default
    Pawn Class set) instead of skipping them; only with the user's OK. **The owner's PC already has both
    Blueprints: do not pass `-CreateBlueprints`.** If a step reports them missing, look for a different

@@ -116,8 +116,10 @@ The URL is built by `Crossguard::BuildRaidTravelUrl` (`UCrossguardPartySubsystem
 
 ### Dev flow now: listen server
 
-1. PC 1 hosts the hub. Until a hub map exists, any map opened with `?Hub` plays as the hub
-   (`ACrossguardGameMode::HubOption` turns `bIsRaid` off; placeholder): start the game with
+1. PC 1 hosts the hub: the main menu's Play, or `open /Game/Maps/L_Hub?listen` (L_Hub holds an
+   `ACrossguardHubMarker`, [hub-and-menu.md](hub-and-menu.md)); the leader can use the hub's raid
+   portal instead of `PartyStartRaid`. Any other map opened with `?Hub` also plays as the hub
+   (`ACrossguardGameMode::HubOption` turns `bIsRaid` off): start the game with
    `-RaidMap=/Game/L_Test` (or set `RaidMapName` on the game mode) and `open /Game/L_Test?listen?Hub`.
 2. PC 2 joins (`open <PC 1 address>`).
 3. PC 1 `PartyInvite <PC 2's name>` (`PartyInfo` lists names), PC 2 `PartyAccept`. Both are allies.
@@ -170,7 +172,8 @@ Still assumed:
    whole server. Both settings are placeholders until a matchmaker exists.
 7. Seamless travel is on for the game mode (needed to carry `PartyKey` through a ServerTravel).
 8. Party ids are 32-hex-digit GUIDs; the party view (id included) replicates to its owner only.
-9. `?Hub` on a server's map URL makes that map the hub (`bIsRaid` off), until a hub map exists.
+9. `?Hub` on a server's map URL, or an `ACrossguardHubMarker` placed in the map (L_Hub), makes that
+   map the hub (`bIsRaid` off). `RaidMapName` defaults to `/Game/Maps/Dev/L_DevSandbox` (placeholder).
 
 ## Not covered
 

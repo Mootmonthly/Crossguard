@@ -85,6 +85,7 @@ are described in their own section below.
 | `Crossguard.World.AICharacters` | a transient world | Spawns an `ACrossguardMonster` (Fixed Health 50) and an `ACrossguardMinion` (a native skill in `SkillIds`): both are possessed by their AI controller; Max Health is the Fixed Health; the skill is granted on possession and `GrantSkills` replaces it; a 10-damage hit through `UCrossguardDamageEffect` lowers Health; lethal damage leaves 0 Health, `State.Dead` and `IsAlive() == false`, and further hits keep it at 0; two monsters are allies, a monster's minion is on the monster team, a player-less character is nobody's ally; a minion dies the same way. |
 | `Crossguard.Data.RepoTables` | the repository's `Data/` | Imports every generated `…Table.json` with its real row struct (as the editor import does) and fails on import problems; native skills' category and cooldown match their rows; loot entries point at existing weapons, armor, items and skills; every loot table rolls 16 times with the real data without dropping anything unresolvable; every mob's skills and loot table exist. |
 | `Crossguard.UI.RarityContrast` | nothing | Every rarity's item text colour on its item background (also hovered, +0.05) and on a window's panel is at least 4.5:1 (WCAG AA), and white on the default grey button (also hovered); logs each ratio ([ui.md](ui.md), "Contrast"). |
+| `Crossguard.Menu.Urls` | nothing | The main menu's URLs (`ACrossguardMenuGameMode`): Play = `<hub>?listen?Hub` (parsed back: map, `listen`, `Hub`), Join trims an address and refuses empty / spaces / options / map paths, the trip back = `<menu>?MenuReason=RaidOver` (key sanitised), reason messages. Flags `EditorContext \| ProductFilter`. |
 | `Crossguard.Data.EditorAssets` | `Content/Data/DT_*`, `DA_SkillCatalog` | For each imported asset the checklist asks for (`DT_Skills`, `DT_Weapons`, `DT_Affixes`, `DT_Armor`, `DT_Items`, `DT_Loot`, `DT_Mobs` in `/Game/Data/`): right row struct and the same rows as the JSON (else: reimport). `DA_SkillCatalog` (looked for in `/Game/Data`, `/Game`, `/Game/Data/Skills`, `/Game/Skills`): `SkillTable` set to `DT_Skills`, every `AbilityClasses` entry's `SkillId` matches and is a row. Missing assets are skipped with a warning, so the test passes on a fresh checkout. |
 
 The world test runs in a world with no level and no game mode, and nothing ticks: actors spawned there
@@ -155,9 +156,10 @@ damage is computed from the characters' actual stats, so they work at any level.
 
 ### The scenarios
 
-148 tests in 23 files (130 `Crossguard.Scenario.*`, 10 `Crossguard.Net.*`, 8 `Crossguard.Visual.*`;
+151 tests in 24 files (133 `Crossguard.Scenario.*`, 10 `Crossguard.Net.*`, 8 `Crossguard.Visual.*`;
 2026-10-16; `Net.SeamlessTravelHubToRaid`, `Scenario.UI.StashAndVendor`, `Visual.HubUI`,
-`Scenario.UI.PanelsBind` and `Net.ReconnectShowsDisconnected` not yet built). Grouped by file; the name is the full test name.
+`Scenario.UI.PanelsBind`, `Net.ReconnectShowsDisconnected` and `Scenario.Hub.MainMenuBinds` /
+`HubMarker` / `RaidPortal` not yet built). Grouped by file; the name is the full test name.
 
 **`CrossguardScenarioRaidTests.cpp`**
 
@@ -400,6 +402,15 @@ game mode's Mob Table is unset.
 | `Crossguard.Scenario.Reconnect.RetakesCharacter` | A raider with a potion, raid XP and 60 % Health. A second login with the same id while connected is refused ("You are already in this match."). The connection closes: the character stays, unpossessed, with its player state (in the raid, same raid XP, potion, Health), held under its id. Another id logs in: a player state and pawn of its own, the raider still held. The same id logs in: the held player state is back on the new controller, the same character is possessed (no new pawn), same raid XP, team, potion and Health. |
 | `Crossguard.Net.ReconnectShowsDisconnected` | Dedicated server + 1 client (the teammate). A raider on the client's team: its player state reaches the client not disconnected. The raider's connection closes: held, marked disconnected on the server, and the client's copy says `IsDisconnected` (what the party window and team list show). The same id logs in again: the held player state is back, the mark clears on the server and on the client. |
 | `Crossguard.Scenario.Reconnect.DiedWhileAway` | A raider disconnects; its waiting character is killed and its revive window ends (`HandlePermanentDeath` called directly): no longer held, the raid is over for that id, the body is not the player's any more and a body container lies there; logging in again with the id is refused ("Your raid is over."). |
+
+**`CrossguardScenarioHubMenuTests.cpp`** (main menu, hub marker, raid portal and party board,
+[hub-and-menu.md](hub-and-menu.md); nothing travels. Also holds `Crossguard.Menu.Urls`, above)
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Hub.MainMenuBinds` | `UCrossguardMainMenuWidget` builds for the PIE player in C++; main buttons Play, Join, Settings, Quit in that order; Play's URL is `/Game/Maps/L_Hub?listen?Hub` (no menu game mode in the test world: the default); Join's URL is the trimmed field, none when empty, and clicking Join then refuses with a status line; Settings opens and closes, a field of view step changes it, volume clamps at 100 % (not saved). |
+| `Crossguard.Scenario.Hub.HubMarker` | On a raid map with no marker `IsHubMap` is false (`?Hub` alone true); a spawned `ACrossguardHubMarker` makes `IsHubWorld` and `IsHubMap` true and, applied as `InitGame` does, `bIsRaid` off; destroyed, false again. Skipped if the test map already holds a marker. `InitGame` itself is not re-run. |
+| `Crossguard.Scenario.Hub.RaidPortal` | Hub (`bIsRaid` off): A leads a party with B, Solo alone, a raid server address set; a plan-only portal (`bPlanOnly`): B refused `NotLeader` (no URL), A plans a client travel to `127.0.0.1:7777?Party=<id>`, Solo to `127.0.0.1:7777`; in a raid A is refused `OnlyInHub`. The party board: prompt, and with a game viewport the PIE player's party window opens. |
 
 **`CrossguardScenarioNetworkTests.cpp`** (networked: a server and real PIE clients, see
 [Networked scenarios](#networked-scenarios))

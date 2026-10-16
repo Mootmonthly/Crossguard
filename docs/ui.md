@@ -56,6 +56,7 @@ not attack.
 | Guild window | `UCrossguardGuildWidget` | Create a guild (name field) and answer invites; name, your rank and what it allows; roster with rank and online state, promote / demote / make leader / kick (greyed when your rank cannot); invite nearest player; leave; bank gold with deposit / withdraw; bank stacks with withdraw; your stacks with deposit. |
 | Stash screen | `UCrossguardStashWidget` | The inventory grids beside one stash tab (10 × 30, 32 px squares, scrolls), tab buttons, "Buy tab: 3000 gold (n / 3 bought)" (greyed without the gold, in a raid or at the cap; tooltip says why), banked gold, the selected item's actions (take to inventory, store, learn a Skill Gem). Opened by F on a stash chest (`ACrossguardStashChest`) or `OpenStash`. |
 | Vendor screen | `UCrossguardVendorWidget` | The inventory grids, a sell box to drop stacks on, banked gold, "Sell all gemstones: n gold", and one row per inventory stack with its price and a Sell button (greyed, "not bought", for what vendors do not take). Opened by F on a vendor NPC (`ACrossguardVendorNPC`) or `OpenVendor`. Selling only: buying from vendors is not ruled. |
+| Main menu | `UCrossguardMainMenuWidget` (shown by `ACrossguardMenuHUD` on `L_MainMenu`) | Title screen: Play (host the hub), Join (address field), Settings (mouse sensitivity, field of view, master volume; Save settings), Quit; the reason the player came back ("Your raid is over.") in the status line. Not a window: the menu map has no `ACrossguardHUD`. See [hub-and-menu.md](hub-and-menu.md). |
 | Building blocks | `UCrossguardWidgetBase`, `UCrossguardWindowWidget`, `UCrossguardUIButton`, `UCrossguardItemGridWidget`, `UCrossguardItemDragOperation`, `CrossguardUI::*` helpers | Tree built in code, periodic refresh, a full-screen window frame that swallows stray clicks, a click/right-click/hover box that can start a drag and take a drop, the item grid (its cells drag; a drop anywhere on it reports the square the item's top-left lands on), the drag payload (item, source, grabbed square). |
 
 ### How to use the inventory
@@ -203,7 +204,8 @@ for the next skill" fallback for the HUD's player. Turn it off on the HUD to get
 - Drag and drop (click-to-select-then-click works), splitting stacks, the
   Skill Library / loadout editor, guild redistribution ("Give" to a member)
   and the guild bank log, rearranging the guild bank, a chat.
-- A main menu and a spectator camera switcher (spectating shows the name only).
+- A spectator camera switcher (spectating shows the name only); character select; a "back to menu"
+  button in the game (the main menu exists: [hub-and-menu.md](hub-and-menu.md)).
 - Gamepad navigation.
 
 ## Engine calls to check on the first compile (UE 5.8)

@@ -145,6 +145,17 @@ Passive skills: put `heroic_might` (or a mastery) in `DebugSkills` and check
 
 These are called from Blueprint (e.g. a debug widget or the Level Blueprint) until the UI exists.
 
+## 5b. Main menu and hub ([hub-and-menu.md](hub-and-menu.md))
+
+| Test | Expected |
+| --- | --- |
+| `Tools\editor_setup.bat -SkipBuild -CreateHub -CreateMenu` | PASS lines for `Hub map /Game/Maps/L_Hub`, `Menu map /Game/Maps/L_MainMenu`, `GameDefaultMap`; `Config\DefaultEngine.ini` has `GameDefaultMap=/Game/Maps/L_MainMenu.L_MainMenu` (commit it). Open `L_Hub` once, Build → Build Paths, save. |
+| Play `L_MainMenu` (Standalone Game) | Title, Play / Join / Settings / Quit, cursor on, no pawn. Settings: change all three, Save settings, Play: the view's FOV and mouse speed match; restart: the values are kept. |
+| Menu → Play | `L_Hub` loads as a listen server with `?Hub`; stash chest, vendor and party board ("F: Party board" opens the party window) next to the start; the raid portal across the plaza ("F: Enter the raid"). |
+| Open `L_Hub` directly (no `?Hub`) | Still a hub: the stash opens (it is refused in a raid). |
+| Raid portal alone | Travels to `L_DevSandbox`, a raid (monsters, XP held). As a party member (second PC joined with Join): refused, HUD "Only your party's leader can start the raid."; the leader's F takes both. |
+| Die for the raid as a client with no teammate left | The client lands on `L_MainMenu` with "Your raid is over.". |
+
 ## 6. Two players (PIE, 2 clients, Listen Server)
 
 - Both see each other's bodies ragdoll.
