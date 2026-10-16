@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"math/rand/v2"
 	"sort"
+	"time"
 
 	"github.com/heroiclabs/nakama-common/runtime"
 )
@@ -23,7 +25,8 @@ import (
 //   party_members/current         owned by the player: {"party_id"}
 //   party_invites/inbox           owned by the player: {"invites": [{"party_id", "invited_by", "expires_at_ms"}]}
 // Each operation reads what it needs with versions and writes everything it changed in one transaction
-// (MultiUpdate); a concurrent change elsewhere refuses it and it runs again (a few times).
+// (MultiUpdate); a concurrent change elsewhere refuses it and it runs again after a short random pause
+// (up to partyOpAttempts times; Nakama logs each refused transaction as an error, which is expected).
 //
 // Members who have been on no game server (their save lease: leases.go) for PartyOfflineGraceSec leave
 // their party when it is next read (placeholder rule; the hub's "logout leaves the party" for everyone
@@ -39,7 +42,7 @@ const (
 	// Ruled (owner): up to 8 (the match's team cap) and invites last 180 s (FPartyConfig).
 	partyMaxMembers          = 8
 	partyInviteExpirySec     = 180
-	partyOpAttempts          = 4
+	partyOpAttempts          = 8
 	maxPartyStateUserIDs     = 256
 	systemUserID             = ""
 	partyResultNone          = "None"
@@ -713,6 +716,12 @@ func (tx *partyTx) state(userIDs []string) (partyStateResponse, error) {
 	return response, nil
 }
 
+// backOff: a short random pause before running a refused transaction again (spreads out the retries
+// of operations that collided).
+func backOff(attempt int) {
+	time.Sleep(time.Duration(rand.IntN(10*attempt)+1) * time.Millisecond)
+}
+
 func partyOfflineGraceSec(ctx context.Context) int {
 	return envInt(ctx, envPartyOfflineGrace, partyOfflineGraceDefault, 0, 86400)
 }
@@ -784,6 +793,7 @@ func RpcPartyFn(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 		}
 		if err != nil {
 			if isRejected(err) || errors.Is(err, errPartyContended) {
+				backOff(attempt)
 				continue
 			}
 			var runtimeErr *runtime.Error
@@ -835,6 +845,7 @@ func RpcPartyGetFn(ctx context.Context, logger runtime.Logger, db *sql.DB, nk ru
 		}
 		if err != nil {
 			if isRejected(err) {
+				backOff(attempt)
 				continue
 			}
 			logger.Error("party get failed: %v", err)

@@ -275,6 +275,8 @@ func decodeServerRequest(ctx context.Context, payload string) (serverRequest, er
 type registerResponse struct {
 	HeartbeatSec int `json:"heartbeat_sec"`
 	Capacity     int `json:"capacity"`
+	// For tools and logs (Tools/backend_smoke.py checks ticket expiry when it is short).
+	TicketTTLSec int `json:"ticket_ttl_sec"`
 }
 
 type heartbeatResponse struct {
@@ -303,7 +305,7 @@ func newCluster(config clusterConfig) *cluster {
 type rpcFn = func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error)
 
 // RpcServerRegister: crossguard_server_register. {"server_id", "kind", "address", "capacity" (0: 48 for
-// match servers, 64 for hubs)} -> {"heartbeat_sec", "capacity"}.
+// match servers, 64 for hubs)} -> {"heartbeat_sec", "capacity", "ticket_ttl_sec"}.
 func (c *cluster) RpcServerRegister(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
 	request, err := decodeServerRequest(ctx, payload)
 	if err != nil {
@@ -321,7 +323,7 @@ func (c *cluster) RpcServerRegister(ctx context.Context, logger runtime.Logger, 
 	c.fleet.register(request.ServerID, request.Kind, request.Address, request.Capacity, nowMs())
 	server, _ := c.fleet.get(request.ServerID)
 	logger.Info("game server registered: %s %s at %s (capacity %d)", request.Kind, request.ServerID, request.Address, server.Capacity)
-	out, _ := json.Marshal(registerResponse{HeartbeatSec: c.config.HeartbeatSec, Capacity: server.Capacity})
+	out, _ := json.Marshal(registerResponse{HeartbeatSec: c.config.HeartbeatSec, Capacity: server.Capacity, TicketTTLSec: c.config.TicketTTLSec})
 	return string(out), nil
 }
 

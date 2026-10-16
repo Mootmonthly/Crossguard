@@ -42,6 +42,12 @@ services:
       STEAM_APP_ID: ${STEAM_APP_ID:-}
       STEAM_PUBLISHER_KEY: ${STEAM_PUBLISHER_KEY:-}
       CROSSGUARD_DEV_AUTH: ${CROSSGUARD_DEV_AUTH:-0}
+      # Matchmaking and parties (placeholders; empty = the module's default). docs/backend-setup.md.
+      CROSSGUARD_MATCH_MIN_TEAMS: ${CROSSGUARD_MATCH_MIN_TEAMS:-}
+      CROSSGUARD_MATCH_MAX_WAIT_SEC: ${CROSSGUARD_MATCH_MAX_WAIT_SEC:-}
+      CROSSGUARD_MATCH_TICKET_TTL_SEC: ${CROSSGUARD_MATCH_TICKET_TTL_SEC:-}
+      CROSSGUARD_SERVER_HEARTBEAT_SEC: ${CROSSGUARD_SERVER_HEARTBEAT_SEC:-}
+      CROSSGUARD_PARTY_OFFLINE_GRACE_SEC: ${CROSSGUARD_PARTY_OFFLINE_GRACE_SEC:-}
     # Secrets go in as flags (Nakama does not read env vars in local.yml). No `sh -x`: it would log them.
     entrypoint:
       - /bin/sh
@@ -58,6 +64,11 @@ services:
           --console.password "$$NAKAMA_CONSOLE_PASSWORD" \
           --console.signing_key "$$NAKAMA_CONSOLE_SIGNING_KEY" \
           --runtime.env "CROSSGUARD_DEV_AUTH=$$CROSSGUARD_DEV_AUTH" \
+          --runtime.env "CROSSGUARD_MATCH_MIN_TEAMS=$$CROSSGUARD_MATCH_MIN_TEAMS" \
+          --runtime.env "CROSSGUARD_MATCH_MAX_WAIT_SEC=$$CROSSGUARD_MATCH_MAX_WAIT_SEC" \
+          --runtime.env "CROSSGUARD_MATCH_TICKET_TTL_SEC=$$CROSSGUARD_MATCH_TICKET_TTL_SEC" \
+          --runtime.env "CROSSGUARD_SERVER_HEARTBEAT_SEC=$$CROSSGUARD_SERVER_HEARTBEAT_SEC" \
+          --runtime.env "CROSSGUARD_PARTY_OFFLINE_GRACE_SEC=$$CROSSGUARD_PARTY_OFFLINE_GRACE_SEC" \
           $${STEAM_APP_ID:+--social.steam.app_id "$$STEAM_APP_ID"} \
           $${STEAM_PUBLISHER_KEY:+--social.steam.publisher_key "$$STEAM_PUBLISHER_KEY"}
     ports:
