@@ -58,6 +58,7 @@ void ACrossguardPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 
 	// Everyone knows everyone's team (nameplates, party skills).
 	DOREPLIFETIME(ACrossguardPlayerState, TeamId);
+	DOREPLIFETIME(ACrossguardPlayerState, DevPlayerId);
 
 	// Level is public through the character; the rest is the owner's business.
 	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, TotalXp, COND_OwnerOnly);
@@ -80,6 +81,11 @@ void ACrossguardPlayerState::SetTeamId(int32 NewTeamId)
 
 void ACrossguardPlayerState::CopyProperties(APlayerState* PlayerState)
 {
+	// Before Super, whose SetUniqueId runs OnSetUniqueId: the save and party view key by PlayerIdOf.
+	if (ACrossguardPlayerState* Travelled = Cast<ACrossguardPlayerState>(PlayerState))
+	{
+		Travelled->DevPlayerId = DevPlayerId;
+	}
 	Super::CopyProperties(PlayerState);
 
 	if (ACrossguardPlayerState* Next = Cast<ACrossguardPlayerState>(PlayerState))

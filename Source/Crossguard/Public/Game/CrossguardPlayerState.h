@@ -79,6 +79,13 @@ public:
 	// map's game mode can re-register the team.
 	FString PartyKey;
 
+	// Development only (never set in Shipping): a stable stand-in player id for a player without an
+	// online id, set by the server at login (ACrossguardGameMode::InitNewPlayer; docs/persistence.md,
+	// "Player id"). Empty otherwise. UCrossguardGuildSubsystem::PlayerIdOf prefers it to "session-<n>".
+	// Replicated so the owner's UI computes the same id.
+	UPROPERTY(Replicated)
+	FString DevPlayerId;
+
 	// Seamless travel: carry the team, party key and progression to the new player state.
 	virtual void CopyProperties(APlayerState* PlayerState) override;
 	// The online id arrives after BeginPlay for joining players: guilds know players by it.

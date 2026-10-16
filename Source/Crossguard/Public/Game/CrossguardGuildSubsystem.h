@@ -20,8 +20,9 @@ class CROSSGUARD_API UCrossguardGuildSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
 public:
-	// The id guilds know a player by: their online id (a Steam id with Steam), else a stand-in
-	// for this session only (PIE without an online subsystem).
+	// The id guilds know a player by: their online id (a Steam id with Steam), else in development
+	// builds the server-set stand-in ACrossguardPlayerState::DevPlayerId ("pie-<n>", "dev-<name>"),
+	// else a stand-in for this session only ("session-<n>").
 	static FString PlayerIdOf(const APlayerState* PlayerState);
 
 	ECrossguardGuildResult Create(ACrossguardPlayerState* Actor, const FString& Name);

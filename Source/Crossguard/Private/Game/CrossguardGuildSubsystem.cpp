@@ -50,7 +50,17 @@ FString UCrossguardGuildSubsystem::PlayerIdOf(const APlayerState* PlayerState)
 		return FString();
 	}
 	const FUniqueNetIdRepl& UniqueId = PlayerState->GetUniqueId();
-	return UniqueId.IsValid() ? UniqueId.ToString() : FString::Printf(TEXT("session-%d"), PlayerState->GetPlayerId());
+	if (UniqueId.IsValid())
+	{
+		return UniqueId.ToString();
+	}
+	// Development stand-in, set by the server at login (never in Shipping).
+	const ACrossguardPlayerState* WithDevId = Cast<ACrossguardPlayerState>(PlayerState);
+	if (WithDevId != nullptr && !WithDevId->DevPlayerId.IsEmpty())
+	{
+		return WithDevId->DevPlayerId;
+	}
+	return FString::Printf(TEXT("session-%d"), PlayerState->GetPlayerId());
 }
 
 double UCrossguardGuildSubsystem::Now()
