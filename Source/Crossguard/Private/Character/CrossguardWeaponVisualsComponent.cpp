@@ -240,7 +240,7 @@ void UCrossguardWeaponVisualsComponent::TickComponent(float DeltaTime, ELevelTic
 		return;
 	}
 	// Out and back: 0 -> 1 -> 0 over the swing.
-	const float Wave = FMath::Sin(SwingElapsed / SwingDuration * PI);
+	const float Wave = FMath::Sin(SwingElapsed / SwingDuration * UE_PI);
 	FTransform Pose = Visual.FirstPersonRest;
 	if (bSwingRanged)
 	{

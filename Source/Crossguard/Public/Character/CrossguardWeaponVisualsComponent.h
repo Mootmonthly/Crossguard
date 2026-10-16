@@ -106,7 +106,7 @@ private:
 	void OnAttackStarted(ACrossguardCharacter* Character, const FCrossguardAttackCue& Cue);
 
 	void RefreshHand(ECrossguardEquipmentSlot Slot, bool bShow);
-	void ClearHand(FHandVisual& Hand);
+	void ClearHand(FHandVisual& Visual);
 	void EndSwing();
 	FHandVisual& Hand(ECrossguardEquipmentSlot Slot) { return Slot == ECrossguardEquipmentSlot::MainHand ? MainHand : OffHand; }
 	const FHandVisual& Hand(ECrossguardEquipmentSlot Slot) const { return Slot == ECrossguardEquipmentSlot::MainHand ? MainHand : OffHand; }

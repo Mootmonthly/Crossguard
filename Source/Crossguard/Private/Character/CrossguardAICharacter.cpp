@@ -91,8 +91,8 @@ void ACrossguardAICharacter::OnRep_BodyVisual()
 
 void ACrossguardAICharacter::ApplyBodyVisual()
 {
-	USkeletalMeshComponent* Body = GetMesh();
-	if (!BodyVisual.HasMesh() || Body == nullptr)
+	USkeletalMeshComponent* BodyMeshComponent = GetMesh();
+	if (!BodyVisual.HasMesh() || BodyMeshComponent == nullptr)
 	{
 		return;
 	}
@@ -103,19 +103,19 @@ void ACrossguardAICharacter::ApplyBodyVisual()
 		UE_LOG(LogCrossguard, Warning, TEXT("%s: body mesh '%s' not found"), *GetName(), *BodyVisual.Mesh.ToString());
 		return;
 	}
-	Body->SetSkeletalMeshAsset(LoadedMesh);
+	BodyMeshComponent->SetSkeletalMeshAsset(LoadedMesh);
 	if (!BodyVisual.AnimClass.IsNull())
 	{
 		if (UClass* AnimClass = BodyVisual.AnimClass.LoadSynchronous())
 		{
-			Body->SetAnimInstanceClass(AnimClass);
+			BodyMeshComponent->SetAnimInstanceClass(AnimClass);
 		}
 	}
 	// Feet at the capsule's bottom (unscaled: the actor's scale applies on top), then the data's offset.
 	const float HalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
 	SetBodyMeshRelativeTransform(FTransform(FRotator(0.0f, BodyVisual.MeshYaw, 0.0f),
 		FVector(0.0f, 0.0f, -HalfHeight) + BodyVisual.MeshOffset, FVector(FMath::Max(BodyVisual.MeshScale, 0.01f))));
-	Body->SetVisibility(true);
+	BodyMeshComponent->SetVisibility(true);
 	PlaceholderMesh->SetVisibility(false);
 }
 
