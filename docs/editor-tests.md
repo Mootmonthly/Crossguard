@@ -156,10 +156,10 @@ damage is computed from the characters' actual stats, so they work at any level.
 
 ### The scenarios
 
-157 tests in 26 files (139 `Crossguard.Scenario.*`, 10 `Crossguard.Net.*`, 8 `Crossguard.Visual.*`;
+161 tests in 27 files (143 `Crossguard.Scenario.*`, 10 `Crossguard.Net.*`, 8 `Crossguard.Visual.*`;
 2026-10-16; `Net.SeamlessTravelHubToRaid`, `Scenario.UI.StashAndVendor`, `Visual.HubUI`,
 `Scenario.UI.PanelsBind`, `Net.ReconnectShowsDisconnected`, `Scenario.Hub.MainMenuBinds` /
-`HubMarker` / `RaidPortal`, `Scenario.Art.*` and `Scenario.HubReturn.*` not yet built). Grouped by file; the name is the full test name.
+`HubMarker` / `RaidPortal`, `Scenario.Art.*` and `Scenario.HubReturn.*` (team returns included) not yet built). Grouped by file; the name is the full test name.
 
 **`CrossguardScenarioRaidTests.cpp`**
 
@@ -418,8 +418,20 @@ plan only: `bHubReturnPlanOnly`, nothing travels. `Net.SeamlessTravelHubToRaid` 
 
 | Test | Checks |
 | --- | --- |
-| `Crossguard.Scenario.HubReturn.LastExtractionStartsCountdown` | The PIE player and another raider; the other extracts: no countdown, and none after longer than the countdown (a remaining raider keeps the raid going). The PIE player extracts too: the countdown runs (the short one, not waiting for anyone away), log "Raid over: returning to the hub in 1 s", the PIE player's HUD message line "Returning to the hub in 1 s" (warning if it has no HUD widget). At its end the return starts: the planned URL is `BuildHubReturnUrl(HubMapName, listen?)` (the hub map, `?Hub`), log "Return to the hub planned". Skipped if the game mode's Hub Map Name is empty. |
+| `Crossguard.Scenario.HubReturn.LastExtractionStartsCountdown` | The PIE player and another raider; the other extracts: no whole-server countdown, and none after longer than the countdown (a remaining raider keeps the raid going; the other's team of one goes back early on its own meanwhile, plan only). The PIE player extracts too: the countdown runs (the short one, not waiting for anyone away), log "Raid over: returning to the hub in 1 s", the PIE player's HUD message line "Returning to the hub in 1 s" (warning if it has no HUD widget). At its end the return starts: the planned URL is `BuildHubReturnUrl(HubMapName, listen?)` (the hub map, `?Hub`), log "Return to the hub planned". Skipped if the game mode's Hub Map Name is empty. |
 | `Crossguard.Scenario.HubReturn.HeldOnlyWaitsForGrace` | A raider with a development id; the PIE player extracts (no countdown). The raider's connection closes: held, the countdown runs and waits for them (the grace, longer than the countdown). They log in again: the countdown is called off (log), and nothing starts past the grace. Disconnected again: the grace starts over; when it runs out (not before), they are released: no longer held, their raid here over (a failed extraction), log "was still away when the raid ended", the character left behind no longer theirs; the planned URL targets the hub. Skipped without `ACrossguardPlayerController`. |
+
+**`CrossguardScenarioTeamReturnTests.cpp`** (a finished team goes back to the hub early while others
+raid, [hub-and-menu.md](hub-and-menu.md) "A team goes back early"; countdown 1 s, plan only:
+`bHubReturnPlanOnly`, the plan is read back per member (`GetTeamHubReturnPlan`); the leader's address is
+`TeamHubTestLeaderAddress` = `198.51.100.7`, scenario players having no connection. Skipped if the
+game mode's Hub Map Name is empty)
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.HubReturn.TeamFinishesEarly` | Team A (A1, A2: `?Party=teamreturnA`, development ids) and team B (the PIE player). A2 dies for the raid: watches A1, no countdown. A1 extracts: A2 is **not** sent to the menu (`WasSentToMenu`) and watches its body; team A's countdown runs (the short one), team B has none, no whole-server return; log "returning to the hub in 1 s while others raid". At its end, A's plan: two members; A1 leads and hosts (`HostHub`, URL starts with `BuildTeamHubHostUrl(HubMap, key)`: `?listen`, `?Hub`, `?Party=teamreturnA`, ends with `?DevPlayerId=teamreturn-a1`, no delay); A2 joins the leader (`JoinLeader`, `198.51.100.7:<TeamHubListenPort>?Party=teamreturnA`, delay = `TeamHubJoinDelaySeconds`); both `IsLeavingForHub`; log "Team N return to the hub planned". B unaffected: the PIE player in the raid, no team-B countdown, no whole-server return, the PIE HUD line is not a countdown. `HoldForReconnect` refuses both; A2's controller is destroyed (disconnect): not held, its raid here over. Then the PIE player extracts: the whole server's countdown (no team-B countdown), and the return plans the usual `BuildHubReturnUrl`. |
+| `Crossguard.Scenario.HubReturn.TeamToHubServer` | `HubServerAddress` = `203.0.113.9:7777` (skipped if `-HubServer=` is set); A1 and A2 extract while the PIE player raids: team A's countdown, then both members' plan is `HubServer`, URL starts with `203.0.113.9:7777?Party=teamreturnA`, no delay; the PIE player still raids. |
+| `Crossguard.Scenario.HubReturn.SoloFinisherHostsHub` | A solo raider dies for the raid while the PIE player raids: not sent to the menu; its team of one counts down; the plan: one member, leader, `HostHub`, URL = `BuildTeamHubHostUrl(HubMap, "")` + `?DevPlayerId=teamreturn-solo` (no `?Party=`); no whole-server return. |
 
 **`CrossguardScenarioArtHookTests.cpp`** (art hooks, [art-placeholder-plan.md](art-placeholder-plan.md#how-the-art-hooks-into-the-code).
 The data has no art yet: a weapon or mob row's mesh is set in memory around the equip or spawn and put

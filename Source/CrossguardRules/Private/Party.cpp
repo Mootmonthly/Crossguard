@@ -242,6 +242,35 @@ namespace Crossguard
 		return EPartyError::None;
 	}
 
+	EPartyError FPartyRegistry::Join(const std::string& PartyId, const std::string& PlayerId)
+	{
+		if (PlayerId.empty())
+		{
+			return EPartyError::InvalidPlayer;
+		}
+		const auto Found = Parties.find(PartyId);
+		if (Found == Parties.end())
+		{
+			return EPartyError::UnknownParty;
+		}
+		if (PlayerParties.count(PlayerId) != 0)
+		{
+			return EPartyError::AlreadyInParty;
+		}
+		FParty& Party = Found->second;
+		if (static_cast<int>(Party.Members.size()) >= Config.MaxMembers)
+		{
+			return EPartyError::PartyFull;
+		}
+		for (auto& Entry : Parties)
+		{
+			PartyRulesDetail::RemovePartyInvite(Entry.second, PlayerId);
+		}
+		Party.Members.push_back(PlayerId);
+		PlayerParties.emplace(PlayerId, PartyId);
+		return EPartyError::None;
+	}
+
 	EPartyError FPartyRegistry::Decline(const std::string& PartyId, const std::string& PlayerId)
 	{
 		const auto Found = Parties.find(PartyId);

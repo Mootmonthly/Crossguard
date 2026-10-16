@@ -52,12 +52,15 @@ L_MainMenu --Play--> L_Hub (listen server) --raid portal / Start raid--> raid ma
 3. **Raid**: `RaidMapName` defaults to `/Game/Maps/Dev/L_DevSandbox` (**placeholder**: it has monsters,
    chests and gather nodes) until a real raid map exists. The hub's ServerTravel is absolute, so
    `?Hub` does not carry over and the sandbox plays as a raid (`bIsRaid` on).
-4. **After the raid**: a player dead for the raid with no teammate left goes to the menu:
-   `ACrossguardGameMode::ReturnToMenu` → `ClientTravel("<MenuMapName>?MenuReason=RaidOver")`; the
-   menu shows "Your raid is over.". `MenuMapName` defaults to `/Game/Maps/L_MainMenu`; empty or a map
-   that does not exist falls back to the engine's `ClientReturnToMainMenuWithTextReason` (the Game
-   Default Map). The listen-server host is never sent away (it would end the match for everyone).
-   Those players are gone: they do not come back with the server.
+4. **After the raid**: ruled (owner): a player dead for the raid with no teammate left to watch is
+   **not** sent to the menu any more: they keep spectating (the camera goes back to their body) and
+   travel back to the hub with their team (6 below, or the whole server: 5). The menu
+   (`ACrossguardGameMode::ReturnToMenu` → `ClientTravel("<MenuMapName>?MenuReason=RaidOver")`, "Your
+   raid is over.") stays for when there is no hub (`HubMapName` empty), a team's trip back has nowhere
+   to go, and later explicit menu requests. `MenuMapName` defaults to `/Game/Maps/L_MainMenu`; empty
+   or a map that does not exist falls back to the engine's `ClientReturnToMainMenuWithTextReason`
+   (the Game Default Map). The listen-server host is never sent away (it would end the match for
+   everyone). Players sent to the menu are gone: they do not come back with the server.
 5. **Back to the hub** (ruled, owner: option 1, the whole server goes back; dedicated hub servers
    are option 2, later: [roadmap.md](roadmap.md) Milestone 5). An extracted player spectates a
    teammate still in the raid, or stays where they left. After every extraction, death for the raid,
@@ -91,6 +94,49 @@ L_MainMenu --Play--> L_Hub (listen server) --raid portal / Start raid--> raid ma
    (`PlayerJoined` / `PlayerReady`); parties are untouched (the subsystem lives with the game
    instance), and the leader can launch the next raid.
    The raid launch saves its travellers the same way before its `ServerTravel` / `ClientTravel`.
+   With teams still raiding, a finished team does not wait: 6.
+6. **A team goes back early** (ruled, owner): a team (one party key = one team; solo = a team of
+   one) whose members have all extracted or died for the raid goes back to the hub without waiting
+   for the other teams ("end of match" for them). `UpdateHubReturn` counts per team too:
+   - **Nobody left in the raid at all** (that team was the last, or the server is that team): the
+     whole-server return of 5, unchanged; any team countdown is dropped (they go together).
+   - **Other teams still raid**: the finished team gets its own `HubReturnCountdownSeconds` (10 s,
+     the held-teammate grace if a teammate is away), shown on **that team's** HUD only
+     ("Returning to the hub in N s"). A teammate reconnecting calls it off. The other teams see
+     nothing and play on.
+   - **The team holds the server's own player** (listen-server host; standalone): it cannot leave
+     early (Assumed: that would close the raid for everyone). Its HUD says so once; it goes with
+     the whole server when the last team is done.
+   At the end (`ReturnTeamToHub`): (1) its members are marked as leaving for the hub
+   (`IsLeavingForHub`): they no longer count for the raid, and their connections closing is a
+   deliberate travel, never a hold for a reconnect (`HoldForReconnect` skips them); teammates still
+   away fail the raid as at the whole-server return; (2) each member is saved (`SaveNow`,
+   `FlushPendingSaves`); extracted pawns are gone already, the dead's bodies stay lootable;
+   (3) the plan, per member (`GetTeamHubReturnPlan`, `FCrossguardTeamHubTravel`), then (4) each
+   client travels (`ACrossguardPlayerController::ClientTravelToHub`); the raid server stays:
+   - **`HubServerAddress` set** (`-HubServer=<address>`; a future dedicated hub, option 2): every
+     member travels there at once, `<address>?Party=<key>`.
+   - **Otherwise (listen-server era)**: the leader (the party's leader if this server knows the
+     party, else the longest-standing member here) opens the hub on its own machine as a listen
+     server, `<HubMapName>?listen?Hub?Party=<key>` (`BuildTeamHubHostUrl`); the others connect to
+     `<leader ip>:<TeamHubListenPort>?Party=<key>` after `TeamHubJoinDelaySeconds` (**5 s,
+     placeholder**; port **7777, placeholder**). The leader's IP is the one this server sees on its
+     connection (`APlayerController::GetPlayerNetworkAddress`), sent in the client RPC; the member's
+     HUD shows "Joining your team's hub in N s". A solo player just opens the hub (no `?Party=`).
+     Development ids travel along as `?DevPlayerId=<name>`.
+   - No leader address (should not happen) or no hub map to host: that member / the team goes to
+     the menu.
+   On the leader's hub the party comes back from the key (`UCrossguardPartySubsystem::
+   JoinReturningParty`, [parties.md](parties.md) "Back from the raid early"): the leader leads, the
+   others join by key, all on one team.
+   **Known limitation until dedicated hubs (option 2):** the members must reach the leader's
+   machine: the leader's router must forward the port (7777, UDP) to it and its firewall allow the
+   game; a leader behind NAT without that, or two players behind the same NAT seen from outside
+   (the raid server sees their public IP), cannot be joined: the members' join fails and they land
+   on the menu. Saves are per machine with the local file backend ([persistence.md](persistence.md)):
+   on the leader's hub the members' characters come from the leader's disk, not the raid server's,
+   until a shared save backend exists. A member still on the raid server (its join delay) when the
+   last team finishes is taken along by the whole-server travel instead.
 
 ## Placeholders and assumptions
 
@@ -107,3 +153,9 @@ L_MainMenu --Play--> L_Hub (listen server) --raid portal / Start raid--> raid ma
   held teammate who is released at the return comes along instead of going to the menu (Assumed).
 - A separate raid server (`RaidServerAddress`, clients travelled there) would also travel to its own
   `HubMapName` and become a hub; set `HubMapName` empty there until option 2 (dedicated hubs) exists.
+- A team going back early: 10 s countdown per team (the same `HubReturnCountdownSeconds`), members
+  join the leader's hub after 5 s (`TeamHubJoinDelaySeconds`) on port 7777 (`TeamHubListenPort`),
+  all placeholders. Assumed: the team holding the listen-server host (or standalone player) cannot
+  leave early; the leader is the party's leader when the raid server knows the party, else the
+  longest-standing member; a team countdown running when the last team finishes is dropped for the
+  whole-server countdown (restarts at 10 s).

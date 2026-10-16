@@ -158,6 +158,27 @@ The raid server should then accept only the parties the matchmaker announced: to
 whatever `?Party=` a client sends (see [anti-cheat.md](anti-cheat.md)). Parties need the backend too
 to outlive a hub server (and to come back from a raid as a party).
 
+### Back from the raid early
+
+A team that finishes while other teams still raid goes back to the hub on its own (ruled, owner;
+[hub-and-menu.md](hub-and-menu.md) "A team goes back early"; `ACrossguardGameMode::ReturnTeamToHub`).
+The team is the party: one `?Party=` key (a solo player is a team of one, no key).
+
+- With a hub server set (`HubServerAddress` / `-HubServer=`; option 2, later) each member's client
+  travels to `<address>?Party=<key>`; that hub puts them on one team from the key (`InitNewPlayer`),
+  but rebuilding the party there needs the backend / matchmaker to announce it (not built).
+- Listen-server era: the leader's client opens `<HubMapName>?listen?Hub?Party=<key>` and becomes the
+  hub; the others connect to `<leader ip>:7777?Party=<key>` 5 s later (placeholders). On that hub
+  `UCrossguardPartySubsystem::JoinReturningParty` (called from `InitNewPlayer` on a hub login with
+  `?Party=`) rebuilds the party: the hub's own player (the leader: its own travel URL carried the
+  key) founds it under that key (`FPartyRegistry::Create`) and leads; each later login with the same
+  key joins it without an invite (`FPartyRegistry::Join`), up to the 8 cap. Only parties founded
+  this way can be joined by key; a key no such party has gives only the team, as before. The leader
+  is the party's leader when the raid server knew the party (it was the hub), else the
+  longest-standing member on the raid server.
+- Risk (accepted for the listen-server era, [anti-cheat.md](anti-cheat.md)): anyone who knows the
+  key and the leader's address can join the rebuilt party.
+
 ## Assumptions and placeholders
 
 Ruled (no longer placeholders): only the leader invites, kicks and promotes; invites expire after
@@ -182,10 +203,15 @@ Still assumed:
 8. Party ids are 32-hex-digit GUIDs; the party view (id included) replicates to its owner only.
 9. `?Hub` on a server's map URL, or an `ACrossguardHubMarker` placed in the map (L_Hub), makes that
    map the hub (`bIsRaid` off). `RaidMapName` defaults to `/Game/Maps/Dev/L_DevSandbox` (placeholder).
+10. A team back from the raid early rebuilds its party on its leader's hub from the `?Party=` key:
+    the hub's own player founds and leads it, others join it by key without an invite (above).
+    Teams that went back early leave their parties on the raid server's registry when the rest of
+    the server returns (`DropAbsentMembers`).
 
 ## Not covered
 
-Persistence (parties live in hub memory), coming back from a raid as a party on another server
-(the whole-server return keeps parties: [hub-and-menu.md](hub-and-menu.md)), a matchmaker and raid
+Persistence (parties live in hub memory), coming back from a raid as a party on a dedicated hub
+server (the whole-server return keeps parties; a team going back early rebuilds its party only on a
+hub its leader hosts: above), a matchmaker and raid
 server allocation, raid servers checking `?Party=` against the matchmaker, party chat, a ready
 check, and invite by friends list (Steam). A member held for a reconnect shows as "(disconnected)" in the panel (`ACrossguardPlayerState::IsDisconnected`).

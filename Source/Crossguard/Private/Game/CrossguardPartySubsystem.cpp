@@ -268,6 +268,49 @@ void UCrossguardPartySubsystem::DropAbsentMembers(const UWorld* World, const TSe
 	}
 }
 
+bool UCrossguardPartySubsystem::JoinReturningParty(ACrossguardPlayerState* PlayerState, const FString& PartyKey, bool bServerOwnPlayer)
+{
+	if (PlayerState == nullptr || PartyKey.IsEmpty() || !IsInHub(PlayerState))
+	{
+		return false;
+	}
+	const std::string Key = CrossguardPartyLocal::StdOf(PartyKey);
+	const std::string PlayerId = CrossguardPartyLocal::StdOf(CrossguardPartyLocal::IdOf(PlayerState));
+	if (const Crossguard::FParty* Current = Registry.PartyOf(PlayerId))
+	{
+		// Already in a party here (e.g. this hub kept it): no change.
+		return Current->Id == Key;
+	}
+	Crossguard::EPartyError Error = Crossguard::EPartyError::UnknownParty;
+	if (Registry.Find(Key) == nullptr)
+	{
+		// Only the hub's own player founds it: its own travel URL carried the key.
+		if (bServerOwnPlayer)
+		{
+			Error = Registry.Create(Key, PlayerId);
+			if (Error == Crossguard::EPartyError::None)
+			{
+				ReturningPartyKeys.Add(PartyKey);
+			}
+		}
+	}
+	else if (ReturningPartyKeys.Contains(PartyKey))
+	{
+		Error = Registry.Join(Key, PlayerId);
+	}
+	if (Error != Crossguard::EPartyError::None)
+	{
+		UE_LOG(LogCrossguard, Log, TEXT("%s did not rejoin party %s by key (error %d): team only"), *PlayerState->GetPlayerName(), *PartyKey,
+			static_cast<int32>(Error));
+		return false;
+	}
+	UE_LOG(LogCrossguard, Log, TEXT("%s is back in party %s (%s)"), *PlayerState->GetPlayerName(), *PartyKey,
+		bServerOwnPlayer ? TEXT("leader, hosting the hub") : TEXT("joined by key"));
+	DisplayNames.Add(CrossguardPartyLocal::IdOf(PlayerState), PlayerState->GetPlayerName());
+	SyncParty(Key);
+	return true;
+}
+
 // --- Raid launch ----------------------------------------------------------------------------------
 
 TArray<ACrossguardPlayerState*> UCrossguardPartySubsystem::TravellersFor(ACrossguardPlayerState* Actor) const

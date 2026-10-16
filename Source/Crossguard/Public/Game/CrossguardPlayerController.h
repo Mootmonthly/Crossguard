@@ -15,8 +15,9 @@ class UCrossguardSettingsSave;
 // PawnLeavingGame) nor its player state (CleanupPlayerState) as it goes.
 //
 // Local player: applies the saved settings (UCrossguardSettingsSave: mouse sensitivity, field of
-// view, master volume), shows server messages on the HUD (ClientShowMessage) and opens the party
-// window when asked (ClientOpenPartyPanel).
+// view, master volume), shows server messages on the HUD (ClientShowMessage), opens the party
+// window when asked (ClientOpenPartyPanel) and travels back to the hub with its team when told
+// (ClientTravelToHub).
 UCLASS()
 class CROSSGUARD_API ACrossguardPlayerController : public APlayerController
 {
@@ -41,6 +42,13 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientOpenPartyPanel();
 
+	// Server -> owning client: the player's team finished the raid early and goes back to the hub
+	// (ACrossguardGameMode::ReturnTeamToHub): after DelaySeconds (a member waiting for the leader's hub
+	// to load) the client travels to Url (the hub server, or the leader's address; the leader's own
+	// "<hub map>?listen?Hub?Party=<key>"). The HUD counts down meanwhile.
+	UFUNCTION(Client, Reliable)
+	void ClientTravelToHub(const FString& Url, float DelaySeconds);
+
 	// Server: the game mode holds this player's character and player state for a reconnect.
 	bool IsHeldForReconnect() const { return bHeldForReconnect; }
 
@@ -51,6 +59,11 @@ public:
 
 private:
 	void ApplyFieldOfView() const;
+	// Local player: the travel ClientTravelToHub asked for.
+	void TravelToHubNow();
+
+	FString PendingHubUrl;
+	FTimerHandle HubTravelTimer;
 
 	bool bHeldForReconnect = false;
 	float SettingsLookSensitivity = 1.0f;

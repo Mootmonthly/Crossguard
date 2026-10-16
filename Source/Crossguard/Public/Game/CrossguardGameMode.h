@@ -11,6 +11,7 @@
 
 class ACrossguardCharacter;
 class ACrossguardPlayerState;
+class APlayerController;
 class UCrossguardSkillCatalog;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardPlayerExtracted, ACrossguardCharacter*, Character);
@@ -23,6 +24,42 @@ struct FCrossguardHeldPlayer
 	TWeakObjectPtr<ACrossguardCharacter> Character;
 	// Their FTeamRegistry key: the team slot stays theirs while they are away.
 	FString TeamKey;
+};
+
+// How one member of a team that finished early goes back to the hub (ACrossguardGameMode::ReturnTeamToHub).
+enum class ECrossguardTeamHubTravel : uint8
+{
+	// To the dedicated hub server (HubServerAddress) with ?Party=<key>.
+	HubServer,
+	// The team leader: opens the hub map on its own machine as a listen server, ?Party=<key>.
+	HostHub,
+	// Another member: connects to the leader's hub (the leader's address as the raid server sees it)
+	// after TeamHubJoinDelaySeconds.
+	JoinLeader,
+	// Nowhere to go (no leader address, no hub map): the main menu.
+	Menu,
+};
+
+// One member's part of a team's trip back.
+struct FCrossguardTeamHubTravel
+{
+	FString PlayerId;
+	TWeakObjectPtr<APlayerController> Player;
+	ECrossguardTeamHubTravel Mode = ECrossguardTeamHubTravel::Menu;
+	FString Url;
+	// Seconds the client waits before travelling.
+	float DelaySeconds = 0.0f;
+	bool bLeader = false;
+};
+
+// A team's countdown to its early trip back.
+struct FCrossguardTeamHubCountdown
+{
+	// World time of the travel.
+	double At = 0.0;
+	// The last whole second shown on the team's HUD.
+	int32 ShownSeconds = -1;
+	bool bWaitsForHeld = false;
 };
 
 // Match game mode. Assigns teams on login from the "Party" URL option: players joining with the
@@ -72,8 +109,9 @@ public:
 	virtual void HandleExtraction(ACrossguardCharacter* Character);
 
 	// Server. The character's revive window ran out: its player's raid ends as a failure. The player
-	// spectates a teammate still in the raid, or goes back to the menu if none is left (or solo). A
-	// player away (held for a reconnect) is let go: the raid failed, and they cannot log in to it again.
+	// spectates a teammate still in the raid; with none left (or solo) they keep watching their body
+	// and go back to the hub with their team (ruled; the menu only when there is no hub map). A player
+	// away (held for a reconnect) is let go: the raid failed, and they cannot log in to it again.
 	virtual void HandlePermanentDeath(ACrossguardCharacter* Character);
 
 	// --- Reconnecting (docs/persistence.md, "Reconnecting"). Server. ---
@@ -81,7 +119,8 @@ public:
 	// The player's connection is closing (ACrossguardPlayerController::PawnLeavingGame). On a raid map,
 	// a character still in the raid (alive or downed, not extracted) stays where it is, unpossessed and
 	// vulnerable, and its player state (progression, raid XP, team, party) is kept, so the same player
-	// id can log in again and take it back. Returns true if held.
+	// id can log in again and take it back. Returns true if held. Never for a player leaving with their
+	// team (IsLeavingForHub): a deliberate travel.
 	virtual bool HoldForReconnect(APlayerController* Leaving);
 	// The held player state of PlayerId (UCrossguardGuildSubsystem::PlayerIdOf), or null.
 	ACrossguardPlayerState* FindHeldPlayer(const FString& PlayerId) const;
@@ -146,6 +185,60 @@ public:
 	bool bHubReturnPlanOnly = false;
 	bool bHubReturnTravelInTests = false;
 
+	// --- A team going back early (docs/hub-and-menu.md, "A team goes back early"). Server. ---
+	//
+	// Ruled (owner): a team (one party key; solo: a team of one) whose members have all extracted or
+	// died for the raid goes back to the hub at once (after its own HubReturnCountdownSeconds, shown to
+	// that team only), without waiting for the teams still raiding. If no other team is left raiding,
+	// the whole server goes instead (above). The other teams play on. The server's own player (a
+	// listen-server host, standalone) cannot leave early: its team waits for the whole-server return
+	// (Assumed: the host leaving would close the raid for everyone).
+
+	// A dedicated hub server ("203.0.113.5:7777") finished teams connect to. The -HubServer=<address>
+	// command line option overrides it. Empty (the listen-server era): the team's leader opens the hub
+	// map on its own machine as a listen server and the others join it (known limitation: the leader's
+	// machine must accept connections, NAT / port forwarding; docs/hub-and-menu.md).
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Hub Return")
+	FString HubServerAddress;
+
+	// Seconds a member waits before joining the leader's hub (the leader's map has to load and listen
+	// first). Placeholder.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Hub Return", meta = (ClampMin = "0"))
+	float TeamHubJoinDelaySeconds = 5.0f;
+
+	// The port the leader's hub listens on (the engine's default port; the leader's game is not told
+	// another). Placeholder.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Hub Return", meta = (ClampMin = "1", ClampMax = "65535"))
+	int32 TeamHubListenPort = 7777;
+
+	FString GetHubServerAddress() const;
+
+	// The team's countdown to its own trip back runs.
+	bool IsTeamHubReturnPending(int32 TeamId) const { return TeamHubReturns.Contains(TeamId); }
+	// Seconds until the team leaves (0 when not pending).
+	float GetTeamHubReturnSecondsLeft(int32 TeamId) const;
+	// The plan ReturnTeamToHub made for the team (followed, or plan only); null before.
+	const TArray<FCrossguardTeamHubTravel>* GetTeamHubReturnPlan(int32 TeamId) const { return TeamHubPlans.Find(TeamId); }
+	// The player is leaving with their team (ReturnTeamToHub): their connection closing is not a
+	// disconnect (no hold for a reconnect), and they no longer count for this raid.
+	bool IsLeavingForHub(const FString& PlayerId) const { return LeavingForHubIds.Contains(PlayerId); }
+	// The player was sent to the main menu (ReturnToMenu).
+	bool WasSentToMenu(const FString& PlayerId) const { return SentToMenuIds.Contains(PlayerId); }
+
+	// Server. The team's countdown ended: its raiders away fail the raid, every member is saved and
+	// marked as leaving, then each member's client travels (unless plan only, bHubReturnPlanOnly).
+	void ReturnTeamToHub(int32 TeamId);
+
+	// "<HubMap>?listen?Hub?Party=<key>" (no ?Party= for an empty key); empty if HubMap is empty or the
+	// key is not URL-safe.
+	static FString BuildTeamHubHostUrl(const FString& HubMap, const FString& Party);
+	// "<Address>?Party=<key>", e.g. a hub server or "<leader ip>:<port>"; empty if Address is empty or
+	// the key is not URL-safe.
+	static FString BuildTeamHubJoinUrl(const FString& Address, const FString& Party);
+
+	// Tests: stands in for the leader's network address (scenario players have no connection).
+	FString TeamHubTestLeaderAddress;
+
 	virtual void StartPlay() override;
 
 	// Seconds into the raid before extract portals can be summoned. Lower it to test.
@@ -190,9 +283,9 @@ public:
 
 	// --- Main menu (docs/hub-and-menu.md) ---
 
-	// Where a player whose raid is over goes (no teammate left to spectate): the main menu map
-	// (ACrossguardMenuGameMode). Empty, or a map that does not exist: the engine's own "return to
-	// main menu" (the project's Game Default Map).
+	// Where a player whose raid is over goes when there is no hub to go back to (no Hub Map Name), or a
+	// team's trip back has nowhere to go: the main menu map (ACrossguardMenuGameMode). Empty, or a map
+	// that does not exist: the engine's own "return to main menu" (the project's Game Default Map).
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Menu")
 	FString MenuMapName = TEXT("/Game/Maps/L_MainMenu");
 
@@ -226,8 +319,8 @@ private:
 	// Registers the player and sets their team. Returns an error message, or empty on success.
 	FString JoinTeam(AController* Controller, const std::string& Key, const FString& Party);
 
-	// Re-targets every spectator whose teammate left the raid; sends them to the menu when none is
-	// left.
+	// Re-targets every spectator whose teammate left the raid. With none left they wait for their
+	// team's trip back (to the menu only without a hub map).
 	void UpdateSpectators();
 	// A teammate of Player still in the raid; null if none.
 	APawn* FindSpectateTarget(const APlayerController* Player) const;
@@ -236,6 +329,8 @@ private:
 	TArray<TWeakObjectPtr<APlayerController>> Spectators;
 	// Players who extracted from this raid: they spectate, but are never sent to the menu.
 	TArray<TWeakObjectPtr<APlayerController>> ExtractedPlayers;
+	// Players dead for the raid -> their body: watched once no teammate is left in the raid.
+	TMap<TWeakObjectPtr<APlayerController>, TWeakObjectPtr<APawn>> DeadBodies;
 	float RaidStartSeconds = 0.0f;
 	// Controller -> registry key, so Logout can find the player.
 	TMap<TWeakObjectPtr<const AController>, FString> PlayerKeys;
@@ -274,6 +369,24 @@ private:
 	// travellers.
 	TSet<FString> SentToMenuIds;
 	FTimerHandle HubReturnTimer;
+
+	// Teams counting down (team id), the plans made, the players leaving with their team (player id).
+	TMap<int32, FCrossguardTeamHubCountdown> TeamHubReturns;
+	TMap<int32, TArray<FCrossguardTeamHubTravel>> TeamHubPlans;
+	TSet<FString> LeavingForHubIds;
+	// Finished teams that hold the server's own player: told once that they wait for everyone.
+	TSet<int32> TeamsWaitingForServer;
+	FTimerHandle TeamHubReturnTimer;
+	// Every HubReturnTickSeconds while a team counts down: its HUD line, and ReturnTeamToHub on time.
+	void TeamHubReturnTick();
+	// Calls off a team's countdown (bTell: its members see it).
+	void CancelTeamHubReturn(int32 TeamId, bool bTell);
+	// The HUD line for every member of the team here.
+	void TellTeam(int32 TeamId, const FString& Message) const;
+	// This server process's own player (listen-server host, standalone): it has a ULocalPlayer.
+	static bool IsServerOwnPlayer(const APlayerController* Player);
+	// The player's IP address as this server sees its connection (empty without one).
+	FString RemoteAddressOf(APlayerController* Player) const;
 	// World time of the travel.
 	double HubReturnAt = 0.0;
 	// The last whole second shown on the HUD.

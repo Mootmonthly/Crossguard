@@ -5,6 +5,7 @@
 #include "AbilitySystem/CrossguardAttributeSet.h"
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
+#include "Camera/PlayerCameraManager.h"
 #include "Crossguard.h"
 #include "Engine/Engine.h"
 #include "Engine/LocalPlayer.h"
@@ -208,7 +209,18 @@ FString ACrossguardGameMode::InitNewPlayer(APlayerController* NewPlayerControlle
 																						 : UCrossguardGuildSubsystem::PlayerIdOf(NewPlayerController->PlayerState));
 		}
 	}
-	return JoinTeam(NewPlayerController, PlayerKey(UniqueId, NewPlayerController), Party);
+	const FString TeamError = JoinTeam(NewPlayerController, PlayerKey(UniqueId, NewPlayerController), Party);
+	// A team back from the raid early, on the hub its leader hosts: the party comes back under its key
+	// (the host founds it, the others join; docs/parties.md "Back from the raid early").
+	if (TeamError.IsEmpty() && !bIsRaid && UGameplayStatics::HasOption(Options, PartyOption))
+	{
+		UGameInstance* GameInstance = GetGameInstance();
+		if (UCrossguardPartySubsystem* Parties = GameInstance != nullptr ? GameInstance->GetSubsystem<UCrossguardPartySubsystem>() : nullptr)
+		{
+			Parties->JoinReturningParty(NewPlayerController->GetPlayerState<ACrossguardPlayerState>(), Party, bLoggingInLocalPlayer);
+		}
+	}
+	return TeamError;
 }
 
 void ACrossguardGameMode::SetPlayerParty(AController* Controller, const FString& Party)
@@ -482,6 +494,8 @@ void ACrossguardGameMode::HandlePermanentDeath(ACrossguardCharacter* Character)
 	Player->UnPossess();
 	PlayerState->EndRaid(false);
 	UE_LOG(LogCrossguard, Log, TEXT("%s is dead for the raid"), *Character->GetName());
+	// Watched again once no teammate is left to watch (UpdateSpectators).
+	DeadBodies.Add(TWeakObjectPtr<APlayerController>(Player), TWeakObjectPtr<APawn>(Character));
 	Spectators.AddUnique(Player);
 	UpdateSpectators();
 	UpdateHubReturn();
@@ -502,7 +516,8 @@ bool ACrossguardGameMode::HoldForReconnect(APlayerController* Leaving)
 		return false;
 	}
 	const FString PlayerId = UCrossguardGuildSubsystem::PlayerIdOf(PlayerState);
-	if (PlayerId.IsEmpty() || HeldPlayers.Contains(PlayerId))
+	// Leaving with their team (ReturnTeamToHub): a deliberate travel, not a disconnect.
+	if (PlayerId.IsEmpty() || HeldPlayers.Contains(PlayerId) || LeavingForHubIds.Contains(PlayerId))
 	{
 		return false;
 	}
@@ -730,12 +745,20 @@ void ACrossguardGameMode::UpdateSpectators()
 			// the hub.
 			continue;
 		}
-		if (bHubReturnStarted)
+		if (bHubReturnStarted || !GetHubMapName().IsEmpty())
 		{
-			// The server is about to travel back to the hub (held raiders released on the way): they
-			// come along instead of going to the menu.
+			// Ruled (owner): dead for the raid with nobody left to watch, they stay where they are
+			// (watching their body) and go back to the hub with their team: the team's own early return
+			// or the whole server's (UpdateHubReturn). Not to the menu.
+			APawn* Body = DeadBodies.FindRef(TWeakObjectPtr<APlayerController>(Player)).Get();
+			const APlayerCameraManager* Camera = Player->PlayerCameraManager;
+			if (Body != nullptr && Player->GetViewTarget() != Body && (Camera == nullptr || Camera->PendingViewTarget.Target.Get() != Body))
+			{
+				Player->SetViewTargetWithBlend(Body, 0.5f);
+			}
 			continue;
 		}
+		// No hub to go back to: the main menu.
 		if (Player->IsLocalController() && GetNetMode() == NM_ListenServer)
 		{
 			// Sending the listen-server host to the menu would end the match for everyone; it keeps
@@ -777,11 +800,18 @@ void ACrossguardGameMode::UpdateHubReturn()
 	{
 		return;
 	}
-	// Who is still in the raid: connected raiders (alive or downed, also a reconnecting one) and
-	// raiders away (held). And whether anyone connected is left to bring back.
-	int32 Live = 0;
-	int32 Away = 0;
-	int32 Connected = 0;
+	// Who is still in the raid, server-wide and per team: connected raiders (alive or downed, also a
+	// reconnecting one) and raiders away (held). And whether anyone connected is left to bring back.
+	// Players leaving with their team (ReturnTeamToHub) count for nothing here.
+	struct FRaidCount
+	{
+		int32 Live = 0;
+		int32 Away = 0;
+		int32 Connected = 0;
+		bool bHasServerPlayer = false;
+	};
+	FRaidCount All;
+	TMap<int32, FRaidCount> ByTeam;
 	for (const APlayerState* Listed : GameState->PlayerArray)
 	{
 		const ACrossguardPlayerState* PlayerState = Cast<ACrossguardPlayerState>(Listed);
@@ -789,22 +819,35 @@ void ACrossguardGameMode::UpdateHubReturn()
 		{
 			continue;
 		}
-		const bool bAway = !HeldIdOf(PlayerState).IsEmpty();
-		if (!bAway && PlayerState->GetOwner() != nullptr && !SentToMenuIds.Contains(UCrossguardGuildSubsystem::PlayerIdOf(PlayerState)))
+		const FString PlayerId = UCrossguardGuildSubsystem::PlayerIdOf(PlayerState);
+		if (LeavingForHubIds.Contains(PlayerId))
 		{
-			++Connected;
+			continue;
+		}
+		const int32 TeamId = PlayerState->GetTeamId();
+		// Unassigned (should not happen): counted server-wide only.
+		FRaidCount Unused;
+		FRaidCount& Team = TeamId >= 0 ? ByTeam.FindOrAdd(TeamId) : Unused;
+		const bool bAway = !HeldIdOf(PlayerState).IsEmpty();
+		if (!bAway && PlayerState->GetOwner() != nullptr && !SentToMenuIds.Contains(PlayerId))
+		{
+			++All.Connected;
+			++Team.Connected;
+			Team.bHasServerPlayer |= IsServerOwnPlayer(Cast<APlayerController>(PlayerState->GetOwner()));
 		}
 		if (PlayerState->IsInRaid() && bAway)
 		{
-			++Away;
+			++All.Away;
+			++Team.Away;
 		}
 		else if (PlayerState->IsInRaid())
 		{
-			++Live;
+			++All.Live;
+			++Team.Live;
 		}
 	}
 
-	if (Live > 0 || Connected == 0)
+	if (All.Live > 0 || All.Connected == 0)
 	{
 		// Someone is still raiding (a reconnect, a late joiner), or nobody is here to bring back (a
 		// lone raider away waits for their reconnect as before).
@@ -812,36 +855,112 @@ void ACrossguardGameMode::UpdateHubReturn()
 		{
 			bHubReturnPending = false;
 			GetWorldTimerManager().ClearTimer(HubReturnTimer);
-			UE_LOG(LogCrossguard, Log, TEXT("Return to the hub called off: %d player(s) in the raid, %d here"), Live, Connected);
+			UE_LOG(LogCrossguard, Log, TEXT("Return to the hub called off: %d player(s) in the raid, %d here"), All.Live, All.Connected);
 			for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 			{
-				if (ACrossguardPlayerController* Player = Cast<ACrossguardPlayerController>(It->Get()))
+				ACrossguardPlayerController* Player = Cast<ACrossguardPlayerController>(It->Get());
+				if (Player != nullptr && !LeavingForHubIds.Contains(UCrossguardGuildSubsystem::PlayerIdOf(Player->PlayerState)))
 				{
 					Player->ClientShowMessage(TEXT("Return to the hub called off: a raider is back."), CrossguardGameModeLocal::HubReturnColor);
 				}
 			}
 		}
+	}
+	else
+	{
+		// Nobody left in the raid: the whole server goes back together, teams counting down included.
+		TArray<int32> Counting;
+		TeamHubReturns.GetKeys(Counting);
+		for (const int32 TeamId : Counting)
+		{
+			CancelTeamHubReturn(TeamId, false);
+		}
+
+		// The short countdown. Only raiders away: their grace (placeholders).
+		const bool bWaitsForHeld = All.Away > 0;
+		const double Delay = FMath::Max(0.0f, bWaitsForHeld ? HeldPlayerReturnGraceSeconds : HubReturnCountdownSeconds);
+		const double At = World->GetTimeSeconds() + Delay;
+		if (bHubReturnPending)
+		{
+			// Already counting: a raider away who died meanwhile can only bring the travel closer.
+			HubReturnAt = FMath::Min(HubReturnAt, At);
+			bHubReturnWaitsForHeld = bWaitsForHeld;
+			return;
+		}
+		bHubReturnPending = true;
+		bHubReturnWaitsForHeld = bWaitsForHeld;
+		HubReturnAt = At;
+		HubReturnShownSeconds = -1;
+		UE_LOG(LogCrossguard, Log, TEXT("Raid over: returning to the hub in %.0f s (%d disconnected raider(s) still away)"), Delay, All.Away);
+		GetWorldTimerManager().SetTimer(HubReturnTimer, this, &ACrossguardGameMode::HubReturnTick, CrossguardGameModeLocal::HubReturnTickSeconds, true);
+		HubReturnTick();
 		return;
 	}
 
-	// Nobody left: the short countdown. Only raiders away: their grace (placeholders).
-	const bool bWaitsForHeld = Away > 0;
-	const double Delay = FMath::Max(0.0f, bWaitsForHeld ? HeldPlayerReturnGraceSeconds : HubReturnCountdownSeconds);
-	const double At = World->GetTimeSeconds() + Delay;
-	if (bHubReturnPending)
+	// Others still raid: each team that has finished goes back on its own (ruled, owner).
+	TArray<int32> Counting;
+	TeamHubReturns.GetKeys(Counting);
+	for (const int32 TeamId : Counting)
 	{
-		// Already counting: a raider away who died meanwhile can only bring the travel closer.
-		HubReturnAt = FMath::Min(HubReturnAt, At);
-		bHubReturnWaitsForHeld = bWaitsForHeld;
-		return;
+		const FRaidCount* Team = ByTeam.Find(TeamId);
+		if (Team == nullptr || Team->Connected == 0)
+		{
+			// Nobody of the team is here any more.
+			CancelTeamHubReturn(TeamId, false);
+		}
+		else if (Team->Live > 0)
+		{
+			// A teammate reconnected.
+			CancelTeamHubReturn(TeamId, true);
+		}
 	}
-	bHubReturnPending = true;
-	bHubReturnWaitsForHeld = bWaitsForHeld;
-	HubReturnAt = At;
-	HubReturnShownSeconds = -1;
-	UE_LOG(LogCrossguard, Log, TEXT("Raid over: returning to the hub in %.0f s (%d disconnected raider(s) still away)"), Delay, Away);
-	GetWorldTimerManager().SetTimer(HubReturnTimer, this, &ACrossguardGameMode::HubReturnTick, CrossguardGameModeLocal::HubReturnTickSeconds, true);
-	HubReturnTick();
+	for (const TPair<int32, FRaidCount>& Pair : ByTeam)
+	{
+		const int32 TeamId = Pair.Key;
+		const FRaidCount& Team = Pair.Value;
+		if (Team.Live > 0 || Team.Connected == 0)
+		{
+			// Still raiding, or nobody to bring back (a lone teammate away waits for their reconnect).
+			TeamsWaitingForServer.Remove(TeamId);
+			continue;
+		}
+		if (Team.bHasServerPlayer)
+		{
+			// Assumed: the server's own player cannot leave while others raid (that would close the
+			// raid): the team waits for the whole server's return.
+			if (!TeamsWaitingForServer.Contains(TeamId))
+			{
+				TeamsWaitingForServer.Add(TeamId);
+				UE_LOG(LogCrossguard, Log, TEXT("Team %d finished but holds the host: waiting for the other teams"), TeamId);
+				TellTeam(TeamId, TEXT("Your team is done. The host cannot leave early: back to the hub when every team is done."));
+			}
+			continue;
+		}
+		const bool bWaitsForHeld = Team.Away > 0;
+		const double Delay = FMath::Max(0.0f, bWaitsForHeld ? HeldPlayerReturnGraceSeconds : HubReturnCountdownSeconds);
+		const double At = World->GetTimeSeconds() + Delay;
+		if (FCrossguardTeamHubCountdown* Pending = TeamHubReturns.Find(TeamId))
+		{
+			// Already counting: a teammate away who died meanwhile can only bring it closer.
+			Pending->At = FMath::Min(Pending->At, At);
+			Pending->bWaitsForHeld = bWaitsForHeld;
+			continue;
+		}
+		FCrossguardTeamHubCountdown& Countdown = TeamHubReturns.Add(TeamId);
+		Countdown.At = At;
+		Countdown.bWaitsForHeld = bWaitsForHeld;
+		UE_LOG(LogCrossguard, Log, TEXT("Team %d finished: returning to the hub in %.0f s while others raid (%d teammate(s) away)"), TeamId, Delay,
+			Team.Away);
+	}
+	if (!TeamHubReturns.IsEmpty() && !GetWorldTimerManager().IsTimerActive(TeamHubReturnTimer))
+	{
+		GetWorldTimerManager().SetTimer(TeamHubReturnTimer, this, &ACrossguardGameMode::TeamHubReturnTick, CrossguardGameModeLocal::HubReturnTickSeconds,
+			true);
+	}
+	if (!TeamHubReturns.IsEmpty())
+	{
+		TeamHubReturnTick();
+	}
 }
 
 void ACrossguardGameMode::HubReturnTick()
@@ -866,7 +985,9 @@ void ACrossguardGameMode::HubReturnTick()
 	const FString Message = FString::Printf(TEXT("Returning to the hub in %d s"), Shown);
 	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 	{
-		if (ACrossguardPlayerController* Player = Cast<ACrossguardPlayerController>(It->Get()))
+		ACrossguardPlayerController* Player = Cast<ACrossguardPlayerController>(It->Get());
+		// Not those already leaving with their team.
+		if (Player != nullptr && !LeavingForHubIds.Contains(UCrossguardGuildSubsystem::PlayerIdOf(Player->PlayerState)))
 		{
 			Player->ClientShowMessage(Message, CrossguardGameModeLocal::HubReturnColor);
 		}
@@ -883,6 +1004,9 @@ void ACrossguardGameMode::ReturnToHub()
 	bHubReturnStarted = true;
 	bHubReturnPending = false;
 	GetWorldTimerManager().ClearTimer(HubReturnTimer);
+	// The whole server goes: no team leaves on its own any more.
+	TeamHubReturns.Reset();
+	GetWorldTimerManager().ClearTimer(TeamHubReturnTimer);
 
 	// 1. Raiders still away: the raid ends without them, a failed extraction (Assumed rule,
 	// docs/design-decisions.md "Reconnecting"), released the way a death while away is: raid XP lost,
@@ -898,7 +1022,8 @@ void ACrossguardGameMode::ReturnToHub()
 	// out of the hub does; the travellers' parties stay (the subsystem lives with the game instance).
 	if (UCrossguardPartySubsystem* Parties = GetGameInstance() != nullptr ? GetGameInstance()->GetSubsystem<UCrossguardPartySubsystem>() : nullptr)
 	{
-		Parties->DropAbsentMembers(World, SentToMenuIds);
+		// Teams that went back early are on another hub now.
+		Parties->DropAbsentMembers(World, SentToMenuIds.Union(LeavingForHubIds));
 	}
 
 	// 3. Every traveller's record is current before the map changes: extracted players' gear carried
@@ -935,5 +1060,283 @@ void ACrossguardGameMode::ReturnToHub()
 	if (!World->ServerTravel(HubReturnUrl, true))
 	{
 		UE_LOG(LogCrossguard, Error, TEXT("Return to the hub: server travel to %s refused"), *HubReturnUrl);
+	}
+}
+
+// --- A team going back early -----------------------------------------------------------------------
+
+FString ACrossguardGameMode::GetHubServerAddress() const
+{
+	FString FromCommandLine;
+	return FParse::Value(FCommandLine::Get(), TEXT("HubServer="), FromCommandLine) ? FromCommandLine : HubServerAddress;
+}
+
+FString ACrossguardGameMode::BuildTeamHubHostUrl(const FString& HubMap, const FString& Party)
+{
+	const FString HostUrl = ACrossguardMenuGameMode::BuildHostUrl(HubMap);
+	return HostUrl.IsEmpty() ? FString() : UCrossguardPartySubsystem::RaidTravelUrl(HostUrl, Party);
+}
+
+FString ACrossguardGameMode::BuildTeamHubJoinUrl(const FString& Address, const FString& Party)
+{
+	const FString Destination = ACrossguardMenuGameMode::BuildJoinUrl(Address);
+	return Destination.IsEmpty() ? FString() : UCrossguardPartySubsystem::RaidTravelUrl(Destination, Party);
+}
+
+bool ACrossguardGameMode::IsServerOwnPlayer(const APlayerController* Player)
+{
+	// A remote player's controller has a UNetConnection instead.
+	return Player != nullptr && Cast<ULocalPlayer>(Player->Player) != nullptr;
+}
+
+FString ACrossguardGameMode::RemoteAddressOf(APlayerController* Player) const
+{
+	// The IP only (no port): the connection's port is the client's, not the one its hub will listen on.
+	FString Address = Player != nullptr ? Player->GetPlayerNetworkAddress() : FString();
+	if (Address.IsEmpty() && GIsAutomationTesting)
+	{
+		Address = TeamHubTestLeaderAddress;
+	}
+	return Address;
+}
+
+float ACrossguardGameMode::GetTeamHubReturnSecondsLeft(int32 TeamId) const
+{
+	const FCrossguardTeamHubCountdown* Pending = TeamHubReturns.Find(TeamId);
+	const UWorld* World = GetWorld();
+	return Pending != nullptr && World != nullptr ? static_cast<float>(FMath::Max(0.0, Pending->At - World->GetTimeSeconds())) : 0.0f;
+}
+
+void ACrossguardGameMode::TellTeam(int32 TeamId, const FString& Message) const
+{
+	const UWorld* World = GetWorld();
+	if (World == nullptr)
+	{
+		return;
+	}
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		ACrossguardPlayerController* Player = Cast<ACrossguardPlayerController>(It->Get());
+		const ACrossguardPlayerState* PlayerState = Player != nullptr ? Player->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+		if (PlayerState != nullptr && PlayerState->GetTeamId() == TeamId)
+		{
+			Player->ClientShowMessage(Message, CrossguardGameModeLocal::HubReturnColor);
+		}
+	}
+}
+
+void ACrossguardGameMode::CancelTeamHubReturn(int32 TeamId, bool bTell)
+{
+	if (TeamHubReturns.Remove(TeamId) == 0)
+	{
+		return;
+	}
+	if (bTell)
+	{
+		UE_LOG(LogCrossguard, Log, TEXT("Team %d's return to the hub called off: a teammate is back in the raid"), TeamId);
+		TellTeam(TeamId, TEXT("Return to the hub called off: a teammate is back."));
+	}
+	if (TeamHubReturns.IsEmpty())
+	{
+		GetWorldTimerManager().ClearTimer(TeamHubReturnTimer);
+	}
+}
+
+void ACrossguardGameMode::TeamHubReturnTick()
+{
+	const UWorld* World = GetWorld();
+	if (World == nullptr || TeamHubReturns.IsEmpty())
+	{
+		GetWorldTimerManager().ClearTimer(TeamHubReturnTimer);
+		return;
+	}
+	// Collected first: a team's return changes the map (and can count the raid again).
+	TArray<int32> Due;
+	for (TPair<int32, FCrossguardTeamHubCountdown>& Pair : TeamHubReturns)
+	{
+		const float SecondsLeft = static_cast<float>(FMath::Max(0.0, Pair.Value.At - World->GetTimeSeconds()));
+		if (SecondsLeft <= KINDA_SMALL_NUMBER)
+		{
+			Due.Add(Pair.Key);
+			continue;
+		}
+		const int32 Shown = FMath::CeilToInt(SecondsLeft);
+		if (Shown != Pair.Value.ShownSeconds)
+		{
+			Pair.Value.ShownSeconds = Shown;
+			// That team only: the others play on.
+			TellTeam(Pair.Key, FString::Printf(TEXT("Returning to the hub in %d s"), Shown));
+		}
+	}
+	for (const int32 TeamId : Due)
+	{
+		ReturnTeamToHub(TeamId);
+	}
+	if (TeamHubReturns.IsEmpty())
+	{
+		GetWorldTimerManager().ClearTimer(TeamHubReturnTimer);
+	}
+}
+
+void ACrossguardGameMode::ReturnTeamToHub(int32 TeamId)
+{
+	TeamHubReturns.Remove(TeamId);
+	UWorld* World = GetWorld();
+	if (!bIsRaid || bHubReturnStarted || World == nullptr || GameState == nullptr)
+	{
+		return;
+	}
+
+	// 1. Who goes: the team's members here. Teammates still away fail the raid, as at the whole server's
+	// return (ReturnToHub).
+	TArray<ACrossguardPlayerState*> Members;
+	TArray<FString> AwayIds;
+	for (APlayerState* Listed : GameState->PlayerArray)
+	{
+		ACrossguardPlayerState* PlayerState = Cast<ACrossguardPlayerState>(Listed);
+		if (PlayerState == nullptr || PlayerState->IsActorBeingDestroyed() || PlayerState->GetTeamId() != TeamId)
+		{
+			continue;
+		}
+		if (const FString HeldId = HeldIdOf(PlayerState); !HeldId.IsEmpty())
+		{
+			AwayIds.Add(HeldId);
+			continue;
+		}
+		const FString PlayerId = UCrossguardGuildSubsystem::PlayerIdOf(PlayerState);
+		if (PlayerState->GetOwner() == nullptr || SentToMenuIds.Contains(PlayerId) || LeavingForHubIds.Contains(PlayerId))
+		{
+			continue;
+		}
+		if (PlayerState->IsInRaid() || IsServerOwnPlayer(Cast<APlayerController>(PlayerState->GetOwner())))
+		{
+			// UpdateHubReturn calls the team's return off before this can happen.
+			UE_LOG(LogCrossguard, Warning, TEXT("Team %d cannot leave early: %s is still in the raid or hosts it"), TeamId, *PlayerId);
+			return;
+		}
+		Members.Add(PlayerState);
+	}
+	if (Members.IsEmpty())
+	{
+		return;
+	}
+	// Marked first: their connections closing (and the releases below) are a deliberate travel, not a
+	// disconnect (HoldForReconnect), and they no longer count for this raid (UpdateHubReturn).
+	for (const ACrossguardPlayerState* Member : Members)
+	{
+		LeavingForHubIds.Add(UCrossguardGuildSubsystem::PlayerIdOf(Member));
+	}
+	TeamsWaitingForServer.Remove(TeamId);
+	for (const FString& AwayId : AwayIds)
+	{
+		ReleaseHeldPlayer(AwayId, true);
+	}
+
+	// 2. Every member's record is current before they go (extracted: the gear carried out; the dead:
+	// none). Their pawns are gone already (extracted) or stay as lootable bodies (dead), as before.
+	if (UCrossguardSaveSubsystem* Saves = UCrossguardSaveSubsystem::Get(this))
+	{
+		for (ACrossguardPlayerState* Member : Members)
+		{
+			Saves->SaveNow(Member);
+		}
+		Saves->FlushPendingSaves();
+	}
+
+	// 3. The plan. The leader: the party's leader when this server knows the party (it was the hub),
+	// else the longest-standing member here.
+	const FString TeamParty = Members[0]->PartyKey;
+	const ACrossguardPlayerState* Leader = Members[0];
+	const UCrossguardPartySubsystem* Parties = GetGameInstance() != nullptr ? GetGameInstance()->GetSubsystem<UCrossguardPartySubsystem>() : nullptr;
+	if (Parties != nullptr && !TeamParty.IsEmpty())
+	{
+		if (const Crossguard::FParty* Party = Parties->GetRegistry().Find(std::string(TCHAR_TO_UTF8(*TeamParty))))
+		{
+			const FString PartyLeaderId(UTF8_TO_TCHAR(Party->LeaderId.c_str()));
+			for (const ACrossguardPlayerState* Member : Members)
+			{
+				if (UCrossguardGuildSubsystem::PlayerIdOf(Member) == PartyLeaderId)
+				{
+					Leader = Member;
+				}
+			}
+		}
+	}
+	const FString HubServer = GetHubServerAddress();
+	const FString HubMap = GetHubMapName();
+	// Listen-server era: the members join the leader's machine at the address this server sees.
+	const FString LeaderAddress = HubServer.IsEmpty() && Members.Num() > 1 ? RemoteAddressOf(Cast<APlayerController>(Leader->GetOwner())) : FString();
+	TArray<FCrossguardTeamHubTravel> Plan;
+	for (ACrossguardPlayerState* Member : Members)
+	{
+		FCrossguardTeamHubTravel& Travel = Plan.AddDefaulted_GetRef();
+		Travel.PlayerId = UCrossguardGuildSubsystem::PlayerIdOf(Member);
+		Travel.Player = Cast<APlayerController>(Member->GetOwner());
+		Travel.bLeader = Member == Leader;
+		if (!HubServer.IsEmpty())
+		{
+			Travel.Mode = ECrossguardTeamHubTravel::HubServer;
+			Travel.Url = BuildTeamHubJoinUrl(HubServer, TeamParty);
+		}
+		else if (Travel.bLeader)
+		{
+			Travel.Mode = ECrossguardTeamHubTravel::HostHub;
+			Travel.Url = BuildTeamHubHostUrl(HubMap, TeamParty);
+		}
+		else if (!LeaderAddress.IsEmpty())
+		{
+			Travel.Mode = ECrossguardTeamHubTravel::JoinLeader;
+			Travel.Url = BuildTeamHubJoinUrl(FString::Printf(TEXT("%s:%d"), *LeaderAddress, TeamHubListenPort), TeamParty);
+			Travel.DelaySeconds = FMath::Max(0.0f, TeamHubJoinDelaySeconds);
+		}
+		if (Travel.Url.IsEmpty())
+		{
+			Travel.Mode = ECrossguardTeamHubTravel::Menu;
+		}
+		else if (Member->DevPlayerId.StartsWith(TEXT("dev-")))
+		{
+			// Development ids travel along (honoured where the hub allows them: -AllowDevPlayerIds).
+			Travel.Url += FString::Printf(TEXT("?%s=%s"), DevPlayerIdOption, *Member->DevPlayerId.RightChop(4));
+		}
+		UE_LOG(LogCrossguard, Log, TEXT("Team %d back to the hub: %s%s %s %s (in %.0f s)"), TeamId, *Travel.PlayerId, Travel.bLeader ? TEXT(" (leader)") : TEXT(""),
+			Travel.Mode == ECrossguardTeamHubTravel::HubServer ? TEXT("travels to the hub server") :
+			Travel.Mode == ECrossguardTeamHubTravel::HostHub ? TEXT("hosts the hub") :
+			Travel.Mode == ECrossguardTeamHubTravel::JoinLeader ? TEXT("joins the leader's hub") : TEXT("goes to the menu"),
+			*Travel.Url, Travel.DelaySeconds);
+	}
+
+	TeamHubPlans.Add(TeamId, Plan);
+
+	// 4. Go (each client travels; the server stays for the teams still raiding).
+	const bool bPlanOnly = bHubReturnPlanOnly || (GIsAutomationTesting && !bHubReturnTravelInTests);
+	if (bPlanOnly)
+	{
+		UE_LOG(LogCrossguard, Log, TEXT("Team %d return to the hub planned (not travelling)"), TeamId);
+		return;
+	}
+	const bool bLeaderCannotHost = HubServer.IsEmpty() && !FPackageName::DoesPackageExist(HubMap);
+	if (bLeaderCannotHost)
+	{
+		UE_LOG(LogCrossguard, Error, TEXT("Team %d cannot host the hub: map '%s' does not exist (Hub Map Name, -HubMap=); to the menu"), TeamId, *HubMap);
+	}
+	for (const FCrossguardTeamHubTravel& Travel : Plan)
+	{
+		APlayerController* Player = Travel.Player.Get();
+		if (Player == nullptr)
+		{
+			continue;
+		}
+		if (Travel.Mode == ECrossguardTeamHubTravel::Menu || bLeaderCannotHost)
+		{
+			ReturnToMenu(Player, ACrossguardMenuGameMode::RaidOverReason);
+		}
+		else if (ACrossguardPlayerController* CrossguardPlayer = Cast<ACrossguardPlayerController>(Player))
+		{
+			CrossguardPlayer->ClientTravelToHub(Travel.Url, Travel.DelaySeconds);
+		}
+		else
+		{
+			Player->ClientTravel(Travel.Url, TRAVEL_Absolute);
+		}
 	}
 }

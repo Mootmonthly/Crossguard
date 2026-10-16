@@ -395,6 +395,31 @@ prefixed `HubReturn`); the travel test's way back. Reviewed by reading; nothing 
 | HR8 | Runtime: `Net.SeamlessTravelHubToRaid` way back | The extracted pawns are destroyed next tick; the save record keeps their gear (no pawn: `Last.Carried`) | If "carried items (gold coins banked)" fails in the hub: the extraction save or `ReturnToHub`'s `SaveNow` lost the gear. | Compare the record built right after `HandleExtraction` (`BuildRecord`) with the hub's inventory to see which step dropped it. |
 | HR9 | `CrossguardPartySubsystem.cpp` `DropAbsentMembers` | Iterates `Registry.All()` (an `std::unordered_map`), then leaves; `SyncParty` on a raid map (`SetPlayerParty`) | Collected before changing. Moves remaining members' teams just before the travel (harmless; `HandleSeamlessTravelPlayer` joins them again). | — |
 
+### Team return (`Crossguard.Scenario.HubReturn.TeamFinishesEarly` / `TeamToHubServer` / `SoloFinisherHostsHub`)
+
+`ACrossguardGameMode`: per-team counting in `UpdateHubReturn`, `TeamHubReturnTick`, `ReturnTeamToHub`,
+`CancelTeamHubReturn`, `TellTeam`, `IsServerOwnPlayer`, `RemoteAddressOf`, `HubServerAddress` /
+`GetHubServerAddress` (`-HubServer=`), `TeamHubJoinDelaySeconds`, `TeamHubListenPort`,
+`BuildTeamHubHostUrl` / `BuildTeamHubJoinUrl`, `FCrossguardTeamHubTravel` /
+`ECrossguardTeamHubTravel` / `FCrossguardTeamHubCountdown` (plain C++ at file scope), `DeadBodies`,
+`WasSentToMenu`, `HoldForReconnect` skipping `LeavingForHubIds`, `InitNewPlayer` calling
+`UCrossguardPartySubsystem::JoinReturningParty`; `ACrossguardPlayerController::ClientTravelToHub`
+(Client, Reliable) / `TravelToHubNow`; `Crossguard::FPartyRegistry::Join` (rules lib, unit-tested);
+new `Tests/CrossguardScenarioTeamReturnTests.cpp` (namespace `CrossguardScenarioTeamReturn`,
+helpers prefixed `TeamReturn`). Reviewed by reading; nothing built or run.
+
+| # | Where | Call | Why it may fail | Suggested fix |
+| --- | --- | --- | --- | --- |
+| TR1 | `CrossguardGameMode.cpp` `RemoteAddressOf` | `APlayerController::GetPlayerNetworkAddress()` (non-const; IP without port via `UNetConnection::LowLevelGetRemoteAddress(false)`) | Long-standing 5.x API; if 5.8 removed or renamed it: | `if (UNetConnection* Connection = Player->GetNetConnection()) Address = Connection->LowLevelGetRemoteAddress(false);` (`#include "Engine/NetConnection.h"`), or `Connection->GetRemoteAddr()->ToString(false)`. |
+| TR2 | Runtime: two-PC test | The address the raid server sees may be IPv6 or carry a `::ffff:` prefix | Then `<ip>:7777` is not a valid join URL. | Strip `::ffff:`; wrap IPv6 in `[...]`. |
+| TR3 | `CrossguardGameMode.cpp` `UpdateSpectators`, test `TeamReturnWatches` | `APlayerController::PlayerCameraManager` (`TObjectPtr`) → `APlayerCameraManager::PendingViewTarget.Target.Get()` (`Camera/PlayerCameraManager.h`) | `FTViewTarget::Target` assumed a `TObjectPtr<AActor>` (5.x). If a raw pointer (C2228 on `.Get()`): | Drop `.Get()`. |
+| TR4 | `CrossguardGameMode.cpp` `IsServerOwnPlayer` | `Cast<ULocalPlayer>(Player->Player)` | `APlayerController::Player` is a public `TObjectPtr<UPlayer>` in 5.x; `Cast` takes it. | `Player->GetLocalPlayer() != nullptr`. |
+| TR5 | `CrossguardPlayerController.cpp` `TravelToHubNow` | `GEngine->SetClientTravel(World, *Url, TRAVEL_Absolute)` on the client (the engine's own `ClientTravelInternal` / `open` path), `<map>?listen?Hub?Party=` opens a listen server | If the leader's client stays in the raid world or loads without listening: | Call `ClientTravel(Url, TRAVEL_Absolute)` on the client instead, or `GetWorld()->Exec(GetWorld(), *(TEXT("open ") + Url))`. |
+| TR6 | `CrossguardGameMode.cpp` `UpdateHubReturn` | Local `struct FRaidCount` in a member function; `FRaidCount& Team = TeamId >= 0 ? ByTeam.FindOrAdd(TeamId) : Unused;` | Plain C++; `TMap::FindOrAdd` returns a reference. | Use `FindOrAdd` into a pointer and a separate unused local. |
+| TR7 | `CrossguardGameMode.cpp` `ReturnToHub` | `TSet<FString>::Union` | 5.x API (returns a new set). | Copy `SentToMenuIds` and `Append(LeavingForHubIds)`. |
+| TR8 | Runtime: `Scenario.HubReturn.TeamFinishesEarly` | Scenario players (`SpawnPlayer`) have no `ULocalPlayer`, so they count as remote: they may leave early; the PIE player (with a `ULocalPlayer`) is the server's own player and waits | If team A never counts down (log "holds the host"): `SpawnPlayer` controllers got a `UPlayer`. | Check `IsServerOwnPlayer`; compare `Player->Player` for the PIE player and a spawned one. |
+| TR9 | Runtime: leader's hub | The host's own login options carry the travel URL's `?Party=` (`ULocalPlayer::SpawnPlayActor` copies the URL options), so `JoinReturningParty` founds the party | If the leader's hub has no party (`PartyInfo` empty, log has no "is back in party"): | Read the key in `InitGame` from the map URL options and pass it to the host's login instead. |
+
 ### Art hooks (`Crossguard.Scenario.Art.*`)
 
 New `Combat/CrossguardCosmetics` (structs `FCrossguardAttackCue`, `FCrossguardProjectileVisual`,

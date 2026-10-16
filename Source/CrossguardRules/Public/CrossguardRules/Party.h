@@ -138,6 +138,10 @@ namespace Crossguard
 		EPartyError Invite(const std::string& ActorId, const std::string& InviteeId, double Now, const std::string& NewPartyId = std::string());
 		// Joins as a member. The player's invites from other parties are dropped.
 		EPartyError Accept(const std::string& PartyId, const std::string& PlayerId, double Now);
+		// Joins as a member without an invite: a party rebuilt from its key on another server (a team
+		// back from the raid early joins its leader's hub, docs/parties.md "Back from the raid early").
+		// The caller decides who may (anyone knowing the key can claim it). The player's invites go.
+		EPartyError Join(const std::string& PartyId, const std::string& PlayerId);
 		// Removes the invite, expired or not.
 		EPartyError Decline(const std::string& PartyId, const std::string& PlayerId);
 		// Removes every invite to the player, expired or not (clears their inbox). Returns how many.

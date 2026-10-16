@@ -281,7 +281,10 @@ Details: [hub-and-menu.md](hub-and-menu.md). All **(placeholder, Assumed)** exce
   F at the portal launches the raid exactly as the party window's Start raid (leader or solo, hub
   only); others get "Only your party's leader can start the raid.".
 - The raid map is `L_DevSandbox` until a real one exists.
-- A player dead for the raid with no teammate left goes to `L_MainMenu` ("Your raid is over.").
+- **Ruled (owner)**: a player dead for the raid with no teammate left to watch is **not** sent to the
+  menu: they keep spectating (their body) and travel back to the hub with their team. `L_MainMenu`
+  ("Your raid is over.") is only for when there is no hub map, a team's trip back has nowhere to go,
+  and explicit menu requests.
 - **Ruled (owner), back to the hub, option 1**: once every player in the raid is done (extracted or
   dead for the raid), the whole server travels back to the hub map (seamless ServerTravel, the
   reverse of the raid launch) and everyone still on it comes along; extracted players spectate until
@@ -297,6 +300,28 @@ Details: [hub-and-menu.md](hub-and-menu.md). All **(placeholder, Assumed)** exce
   released at the return comes along instead of going to the menu; the hub URL also carries `?Hub`
   (besides the hub marker); with nobody connected (only held raiders) there is no countdown at all;
   the trip back is off when the game mode's `HubMapName` is empty (e.g. a separate raid server).
+- **Ruled (owner), a team goes back early ("end of match")**: a team (party key; solo = a team of
+  one) whose members have all extracted or died for the raid goes back to the hub without waiting
+  for teams still raiding; the others play on unaffected; when the last team is done the whole
+  server returns as above. The finished team gets its own countdown (**10 s, placeholder**, its HUD
+  only). Each member is saved and marked as leaving (their connection closing is never "held for a
+  reconnect"), then: with a hub server set (`HubServerAddress` / `-HubServer=`, for option 2) every
+  member travels there with `?Party=<key>`; otherwise the leader's client opens the hub itself as a
+  listen server (`<HubMapName>?listen?Hub?Party=<key>`) and the others connect to the leader's
+  address as the raid server sees it, after **5 s (placeholder)**, port **7777 (placeholder)**; a solo
+  player just opens the hub. The leader's hub rebuilds the party from the key (leader leads).
+  **Known limitation (until dedicated hub servers, option 2)**: members must be able to reach the
+  leader's machine (port forwarding / NAT, firewall); otherwise their join fails. Saves are per
+  machine with the local backend: on the leader's hub, members' characters load from the leader's
+  disk. **Assumed**: a team holding the listen-server host (or the standalone player) cannot leave
+  early and waits for the whole-server return; the leader is the party's leader if the raid server
+  knows the party (it was the hub), else the longest-standing member there; teammates still away
+  when the team leaves fail their extraction (as at the whole-server return); a team countdown still
+  running when the last team finishes gives way to the whole-server countdown; on the leader's hub
+  only the hub's own player founds a party from a key and others join only such a party (anyone
+  knowing the key can: [anti-cheat.md](anti-cheat.md)); a member still on the raid server (join
+  delay) when the whole server travels goes along with it. Details: [hub-and-menu.md](hub-and-menu.md),
+  "A team goes back early".
 
 ## Extraction
 
@@ -318,8 +343,8 @@ point of interest instead of only using fixed extraction points. Ruled details:
   teammate still in the raid. Its gear is saved as carried out, then the character is removed from
   the world (nothing stays behind, unlike a death's body); it can no longer pick up, loot, open or
   trade, and keeps no portal alive. With no teammate left the player stays where they extracted (not
-  sent to the menu, unlike a solo death) until the server goes back to the hub (ruled, option 1:
-  "Hub and main menu").
+  sent to the menu; ruled, a death no longer sends anyone there either) until their team goes back
+  to the hub early, or the whole server does (ruled: "Hub and main menu").
 
 ## Gathering
 
@@ -436,6 +461,8 @@ Everything else is a placeholder until ruled; the numbers live in `Crossguard::F
   each member's client travels to `RaidServerAddress` with `?Party=` (refused if a listen host would
   have to leave). Parties live in hub memory only. `?Hub` on a map URL, or a placed
   `ACrossguardHubMarker` (the scripted `L_Hub` has one), plays that map as the hub (placeholder).
+- Team-scoped raid end (ruled, owner): a team whose members are all extracted or dead for the raid
+  goes back to the hub on its own ("Hub and main menu", "a team goes back early"); team = party key.
 
 ## Items and weapons
 
@@ -617,7 +644,8 @@ match, as long as their character has not died yet. How it works: [persistence.m
 - Assumed: if it dies for the raid while away (revive window over), it is an ordinary death: the
   body is lootable, the raid counts as a failed extraction for that player (raid XP and gear lost),
   and logging in to that raid again is refused ("Your raid is over."): they go back to the menu /
-  hub path. The same refusal applies to a player who extracted or died for the raid and then logged
+  hub path. A player leaving with their team for the hub (a team going back early) is never held:
+  it is a deliberate travel, not a disconnect (ruled, owner; "Hub and main menu"). The same refusal applies to a player who extracted or died for the raid and then logged
   out.
 - Assumed: if the raid ends or the server shuts down while the player is away, their character was
   still in the raid: a failed extraction (gear lost). The return to the hub releases such players
