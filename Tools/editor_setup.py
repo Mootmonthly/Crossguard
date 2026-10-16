@@ -813,10 +813,15 @@ def create_dev_map(game_mode_cls):
     # 100 m x 100 m floor, top at z = 0.
     if spawn_mesh(actor_subsystem, "/Engine/BasicShapes/Cube.Cube", v(0, 0, -50), v(100, 100, 1), "Floor"):
         placed.append("floor")
+    # Movable lights: no Lightmass build, so the map never says "lighting needs to be rebuilt".
     light = spawn(actor_subsystem, unreal.DirectionalLight, v(0, 0, 1000), unreal.Rotator(-45.0, 30.0, 0.0), "Sun")
     if light:
+        light.light_component.set_mobility(unreal.ComponentMobility.MOVABLE)
         placed.append("light")
-    if spawn(actor_subsystem, unreal.SkyLight, v(0, 0, 1200), label="SkyLight"):
+    sky = spawn(actor_subsystem, unreal.SkyLight, v(0, 0, 1200), label="SkyLight")
+    if sky:
+        sky.light_component.set_mobility(unreal.ComponentMobility.MOVABLE)
+        sky.light_component.set_editor_property("real_time_capture", True)
         placed.append("sky light")
     if spawn(actor_subsystem, unreal.PlayerStart, v(-1500, 0, 100), label="PlayerStart"):
         placed.append("player start")
