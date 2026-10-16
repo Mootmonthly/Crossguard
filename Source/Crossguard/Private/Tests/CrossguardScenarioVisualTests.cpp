@@ -20,7 +20,12 @@
 #include "Items/CrossguardLoot.h"
 #include "Items/CrossguardLootContainer.h"
 #include "UI/CrossguardGuildWidget.h"
+#include "Engine/GameInstance.h"
+#include "Game/CrossguardPartySubsystem.h"
+#include "Game/CrossguardPlayerState.h"
+#include "UI/CrossguardAttributesWidget.h"
 #include "UI/CrossguardHUD.h"
+#include "UI/CrossguardPartyWidget.h"
 #include "UI/CrossguardInventoryWidget.h"
 #include "UI/CrossguardTradeWidget.h"
 
@@ -493,6 +498,57 @@ bool FCrossguardVisualUI::RunTest(const FString& Parameters)
 	Scenario.Step(TEXT("guild.png"), [](FScenarioContext& C)
 	{
 		C.Screenshot(TEXT("guild"));
+		ACrossguardCharacter* Player = C.LocalPlayer();
+		if (ACrossguardHUD* Hud = Player != nullptr ? Cast<ACrossguardHUD>(Cast<APlayerController>(Player->GetController())->GetHUD()) : nullptr)
+		{
+			Hud->CloseAllWindows();
+		}
+	});
+
+	// attributes.png and party.png (K and P, docs/ui.md): in the hub, with 3 unspent points, a party
+	// with the partner, and the partner marked "(disconnected)" (also in the team list, top right).
+	Scenario.Step(TEXT("The attributes window in the hub"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = C.LocalPlayer();
+		ACrossguardHUD* Hud = Player != nullptr ? Cast<ACrossguardHUD>(Cast<APlayerController>(Player->GetController())->GetHUD()) : nullptr;
+		ACrossguardPlayerState* Progression = C.PlayerState(Player);
+		if (Hud == nullptr || Progression == nullptr)
+		{
+			return;
+		}
+		C.SetRaid(false);
+		Progression->AwardXp(ECrossguardXpSource::Quest, 100);
+		Hud->CloseAllWindows();
+		Hud->ToggleAttributes();
+		C.Test.TestTrue(TEXT("The attributes window is open"), Hud->IsWindowOpen(Hud->GetAttributesWidget()));
+	});
+	Scenario.Wait(SettleSeconds);
+	Scenario.Step(TEXT("attributes.png; then the party window"), [](FScenarioContext& C)
+	{
+		C.Screenshot(TEXT("attributes"));
+		ACrossguardCharacter* Player = C.LocalPlayer();
+		ACrossguardHUD* Hud = Player != nullptr ? Cast<ACrossguardHUD>(Cast<APlayerController>(Player->GetController())->GetHUD()) : nullptr;
+		ACrossguardPlayerState* Self = C.PlayerState(Player);
+		ACrossguardPlayerState* Partner = C.PlayerState(C.FindActor(TEXT("Partner")));
+		UGameInstance* GameInstance = C.World() != nullptr ? C.World()->GetGameInstance() : nullptr;
+		UCrossguardPartySubsystem* Parties = GameInstance != nullptr ? GameInstance->GetSubsystem<UCrossguardPartySubsystem>() : nullptr;
+		if (Hud == nullptr || Self == nullptr || Partner == nullptr || Parties == nullptr)
+		{
+			return;
+		}
+		if (Parties->Invite(Self, Partner) == ECrossguardPartyResult::None && Self->GetParty() != nullptr)
+		{
+			Parties->Accept(Partner, Self->GetParty()->GetPartyId());
+		}
+		Partner->SetDisconnected(true);
+		Hud->CloseAllWindows();
+		Hud->ToggleParty();
+		C.Test.TestTrue(TEXT("The party window is open"), Hud->IsWindowOpen(Hud->GetPartyWidget()));
+	});
+	Scenario.Wait(SettleSeconds + 0.5f);
+	Scenario.Step(TEXT("party.png"), [](FScenarioContext& C)
+	{
+		C.Screenshot(TEXT("party"));
 		ACrossguardCharacter* Player = C.LocalPlayer();
 		if (ACrossguardHUD* Hud = Player != nullptr ? Cast<ACrossguardHUD>(Cast<APlayerController>(Player->GetController())->GetHUD()) : nullptr)
 		{

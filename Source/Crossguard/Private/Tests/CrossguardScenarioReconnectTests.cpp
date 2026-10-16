@@ -299,4 +299,85 @@ bool FCrossguardScenarioReconnectDiedWhileAway::RunTest(const FString& Parameter
 	return true;
 }
 
+// A teammate sees the marker: a dedicated server with one real client (the teammate). A raider on the
+// client's team disconnects: the raider's player state, as replicated to the teammate's client, says
+// IsDisconnected (the party panel and the HUD team list show "(disconnected)" from it); after the
+// reconnect it clears there too.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardNetReconnectMarker, "Crossguard.Net.ReconnectShowsDisconnected", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardNetReconnectMarker::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioReconnect;
+
+	// Game seconds a replicated change may take to reach the client.
+	static constexpr float MarkerReplicationWait = 5.0f;
+	FScenario Scenario(*this);
+	Scenario.Clients(1, true);
+
+	Scenario.Step(TEXT("A raider on the client's team"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Teammate = C.ServerPawnOf(0);
+		if (!RequireReconnectController(C) || !C.Require(Teammate != nullptr, TEXT("the client has a server pawn")))
+		{
+			return;
+		}
+		C.Place(Teammate, FVector(0.0f, 1300.0f, 0.0f), 0.0f);
+		ACrossguardCharacter* Raider = SpawnReconnectRaider(C, TEXT("Raider"), FVector(0.0f, 1000.0f, 0.0f), ReconnectIdA);
+		if (Raider == nullptr)
+		{
+			return;
+		}
+		C.MakeAllies(Raider, Teammate);
+		C.Remember(TEXT("RaiderState"), C.PlayerState(Raider));
+		C.Test.TestFalse(TEXT("Connected: no marker on the server"), C.PlayerState(Raider)->IsDisconnected());
+	});
+
+	Scenario.WaitUntilOnClient(0, TEXT("the teammate's client has the raider's player state, not disconnected"), MarkerReplicationWait,
+		[](FScenarioContext& C, UWorld&)
+	{
+		const ACrossguardPlayerState* Copy = C.OnClient<ACrossguardPlayerState>(C.FindActor(TEXT("RaiderState")), 0);
+		return Copy != nullptr && !Copy->IsDisconnected();
+	});
+
+	Scenario.Step(TEXT("The raider's connection closes"), [](FScenarioContext& C)
+	{
+		DisconnectReconnectRaider(C, TEXT("Raider"));
+		const ACrossguardGameMode* Mode = C.GameMode();
+		const ACrossguardPlayerState* Held = Mode != nullptr ? Mode->FindHeldPlayer(ReconnectIdA) : nullptr;
+		if (C.Require(Held != nullptr, TEXT("the player is held for a reconnect")))
+		{
+			C.Test.TestTrue(TEXT("Held: marked disconnected on the server"), Held->IsDisconnected());
+		}
+	});
+
+	Scenario.WaitUntilOnClient(0, TEXT("the teammate's client sees the raider disconnected"), MarkerReplicationWait, [](FScenarioContext& C, UWorld&)
+	{
+		const ACrossguardPlayerState* Copy = C.OnClient<ACrossguardPlayerState>(C.FindActor(TEXT("RaiderState")), 0);
+		return Copy != nullptr && Copy->IsDisconnected();
+	});
+
+	Scenario.Step(TEXT("The same id logs in again"), [](FScenarioContext& C)
+	{
+		FString Error;
+		const APlayerController* Back = ReconnectLogin(C, TEXT("Raider.Controller2"), FString::Printf(TEXT("?Name=Raider?DevPlayerId=%s"), ReconnectNameA), Error);
+		if (!C.Require(Back != nullptr, FString::Printf(TEXT("the reconnect is accepted (%s)"), *Error)))
+		{
+			return;
+		}
+		const ACrossguardPlayerState* Progression = Back->GetPlayerState<ACrossguardPlayerState>();
+		C.Test.TestTrue(TEXT("The held player state is back"), Progression != nullptr && Progression == C.FindActor(TEXT("RaiderState")));
+		C.Test.TestFalse(TEXT("Back: no marker on the server"), Progression != nullptr && Progression->IsDisconnected());
+	});
+
+	Scenario.WaitUntilOnClient(0, TEXT("the marker clears on the teammate's client"), MarkerReplicationWait, [](FScenarioContext& C, UWorld&)
+	{
+		const ACrossguardPlayerState* Copy = C.OnClient<ACrossguardPlayerState>(C.FindActor(TEXT("RaiderState")), 0);
+		return Copy != nullptr && !Copy->IsDisconnected();
+	});
+
+	Scenario.Run();
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
