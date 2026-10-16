@@ -487,8 +487,8 @@ UCrossguardSummonGreaterDemonAbility::UCrossguardSummonGreaterDemonAbility()
 	// The two-handed sword's speed (Data/Items/Weapons.json: once every 1.4 s).
 	AttackInterval = 1.4f;
 	// Ruled: 3x the player's size (minions and players share the character capsule), and the reach
-	// scales with it: a player-size minion's 2 m (centre to centre) becomes 6 m.
-	AttackRange = 200.0f;
+	// scales with it: 3 m (centre to centre) becomes 9 m.
+	AttackRange = 300.0f;
 	Scale = 3.0f;
 	Seconds = 60.0f;
 	bWieldsWeapon = true;

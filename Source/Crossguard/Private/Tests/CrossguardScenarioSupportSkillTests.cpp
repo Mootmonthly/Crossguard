@@ -2247,8 +2247,8 @@ bool FCrossguardScenarioSupportSummonGreaterDemon::RunTest(const FString& Parame
 		const float WarlockFeet = static_cast<float>(Warlock->GetActorLocation().Z) - Warlock->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 		C.Test.TestEqual(TEXT("The demon stands on the warlock's floor"), DemonFeet, WarlockFeet, 10.0f);
 		C.Test.TestEqual(TEXT("The demon's sword deals 40 Attack Damage"), Demon->AttackDamage, DemonAttackDamage, 0.001f);
-		C.Test.TestEqual(TEXT("The demon's reach is 3x a player-size companion's (6 m)"), Demon->AttackRange,
-			DemonScale * CompanionBaseReach, 0.001f);
+		// Ruled: its 3 m base reach scales with its 3x size, so 9 m.
+		C.Test.TestEqual(TEXT("The demon's reach is 9 m"), Demon->AttackRange, 900.0f, 0.001f);
 		C.Test.TestTrue(TEXT("The demon wields a two-handed sword"), Demon->bWieldsWeapon && Demon->bTwoHandedWeapon
 			&& Demon->WeaponType == ECrossguardWeaponType::Sword);
 		C.Test.TestEqual(TEXT("The demon lives 60 s"), Demon->GetLifeSpan(), DemonSeconds, 0.2f);
