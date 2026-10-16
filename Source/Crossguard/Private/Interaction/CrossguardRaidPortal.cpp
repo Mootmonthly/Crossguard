@@ -87,9 +87,15 @@ FString ACrossguardRaidPortal::RefusalMessage(ECrossguardPartyResult Result)
 	case ECrossguardPartyResult::OnlyInHub:
 		return TEXT("The raid portal only works in the hub.");
 	case ECrossguardPartyResult::NoRaidDestination:
-		return TEXT("No raid server available right now (matchmaking is not available).");
+		return TEXT("No raid server available right now.");
 	case ECrossguardPartyResult::HostInParty:
 		return TEXT("The host cannot leave the hub while other players stay on it.");
+	case ECrossguardPartyResult::AlreadySearching:
+		return TEXT("Your party is already looking for a raid.");
+	case ECrossguardPartyResult::SearchCancelled:
+		return TEXT("Raid search called off: your party changed.");
+	case ECrossguardPartyResult::BackendUnavailable:
+		return TEXT("The online service did not answer. Try again.");
 	default:
 		return FString::Printf(TEXT("Cannot start the raid (%s)."),
 			*StaticEnum<ECrossguardPartyResult>()->GetNameStringByValue(static_cast<int64>(Result)));

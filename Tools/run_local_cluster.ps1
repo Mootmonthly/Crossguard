@@ -19,6 +19,13 @@
     Match server: <RaidMap> -server -port=<RaidPort> -AllowDevPlayerIds -HubServer=127.0.0.1:<HubPort> -KeepMatchServer
     Client i:     127.0.0.1:<port>?DevPlayerId=<name i> -game -windowed (tiled) -CrossguardPlayerId=<name i>
 
+    With -Backend (the local Nakama from Tools\run_local_backend.bat must be running): both servers get
+    -SaveBackend=Nakama -NakamaUrl=<url> -ServerId=local-hub / local-match -PublicAddress=127.0.0.1:<port>
+    and the HTTP key through the CROSSGUARD_NAKAMA_HTTP_KEY environment variable (read from Backend\.env;
+    not on the command line), no -RaidServer= (Nakama's matchmaking) and no -AllowDevPlayerIds (players
+    must log in; match servers take only match tickets). The servers register with the backend; the
+    clients open on the main menu: Log in, then Play (the backend names the hub). docs/backend-setup.md.
+
     Each server is started first and waited for ("listening on port" in its log) before the clients.
     Logs: Saved\LocalCluster\<name>.log; process ids: Saved\LocalCluster\pids.json (for -Stop).
     The development player ids (dev-<name>) need a development build and -AllowDevPlayerIds on the
@@ -63,6 +70,12 @@
 .PARAMETER ExtraServerArgs
     Appended to both servers' command lines (e.g. "-RaidMap=/Game/Maps/L_Raid").
 
+.PARAMETER Backend
+    Run against the local Nakama backend (see above). Start it first: Tools\run_local_backend.bat.
+
+.PARAMETER NakamaUrl
+    With -Backend: the Nakama API. Default http://127.0.0.1:7350.
+
 .PARAMETER Stop
     Close every process the last run started (from pids.json) and exit.
 
@@ -72,6 +85,8 @@
     Tools\run_local_cluster.bat -Clients 3 -ClientsTo Raid -NoHub
 .EXAMPLE
     Tools\run_local_cluster.bat -Mode Packaged -ClientBuildDir Saved\Packages\Server
+.EXAMPLE
+    Tools\run_local_cluster.bat -Backend
 .EXAMPLE
     Tools\run_local_cluster.bat -Stop
 #>
@@ -96,6 +111,8 @@ param(
     [int]$ResY = 540,
     [int]$ServerWaitSeconds = 180,
     [string]$ExtraServerArgs = "",
+    [switch]$Backend,
+    [string]$NakamaUrl = "http://127.0.0.1:7350",
     [switch]$Stop
 )
 
@@ -135,7 +152,29 @@ if ($Stop) {
     exit 0
 }
 
-if ($NoHub -and $ClientsTo -eq "Hub" -and $Clients -gt 0) { Write-SetupError "-NoHub with clients needs -ClientsTo Raid." }
+if ($NoHub -and $ClientsTo -eq "Hub" -and $Clients -gt 0 -and -not $Backend) { Write-SetupError "-NoHub with clients needs -ClientsTo Raid." }
+
+# --- Backend (-Backend) --------------------------------------------------------------------------------
+
+$BackendArgs = ""
+if ($Backend) {
+    $envFile = Join-Path $CgRepoRoot "Backend\.env"
+    if (-not (Test-Path $envFile)) { Write-SetupError "Backend\.env not found: start the backend first (Tools\run_local_backend.bat)." }
+    $httpKey = ""
+    foreach ($line in [System.IO.File]::ReadAllLines($envFile)) {
+        if ($line -match '^\s*NAKAMA_HTTP_KEY\s*=\s*(.+)$') { $httpKey = $Matches[1].Trim() }
+    }
+    if (-not $httpKey) { Write-SetupError "NAKAMA_HTTP_KEY missing in Backend\.env." }
+    try {
+        $null = Invoke-WebRequest -Uri "$NakamaUrl/healthcheck" -UseBasicParsing -TimeoutSec 5
+    } catch {
+        Write-SetupError "Nakama does not answer at $NakamaUrl. Start it first: Tools\run_local_backend.bat"
+    }
+    # Inherited by the server processes; not on their command lines (other processes can read those).
+    $env:CROSSGUARD_NAKAMA_HTTP_KEY = $httpKey
+    $BackendArgs = "-SaveBackend=Nakama -NakamaUrl=$NakamaUrl"
+    Write-Host "Backend: Nakama at $NakamaUrl (saves, leases, parties, matchmaking, tickets)." -ForegroundColor Cyan
+}
 if ($NoRaid -and $ClientsTo -eq "Raid" -and $Clients -gt 0) { Write-SetupError "-NoRaid with clients needs -ClientsTo Hub." }
 if (Test-Path $PidFile) {
     Write-Host "A previous cluster is recorded; stopping it first." -ForegroundColor Yellow
@@ -209,7 +248,9 @@ function Wait-CgListening([string]$Name, $Proc, [int]$Port) {
 }
 
 function Get-CgServerCommand([string]$MapUrl, [int]$Port, [string]$Extra) {
-    $common = "-server -log -unattended -port=$Port -AllowDevPlayerIds $Extra $ExtraServerArgs".Trim()
+    # With the backend players log in (no development ids) and match servers take only tickets.
+    $devIds = if ($Backend) { "" } else { "-AllowDevPlayerIds" }
+    $common = "-server -log -unattended -port=$Port $devIds $Extra $ExtraServerArgs".Trim() -replace "\s+", " "
     if ($Mode -eq "Packaged") {
         return @($ServerExe, "$MapUrl $common")
     }
@@ -222,7 +263,8 @@ $ok = $true
 if (-not $NoHub) {
     # Assumed (placeholder): the hub sends parties to the one local match server (-RaidServer=), the
     # development stand-in for matchmaking.
-    $raidArg = if ($NoRaid) { "" } else { "-RaidServer=127.0.0.1:$RaidPort" }
+    $raidArg = if ($NoRaid -or $Backend) { "" } else { "-RaidServer=127.0.0.1:$RaidPort" }
+    if ($Backend) { $raidArg = "$BackendArgs -ServerId=local-hub -PublicAddress=127.0.0.1:$HubPort" }
     $cmd = Get-CgServerCommand "${HubMap}?Hub" $HubPort $raidArg
     $hub = Start-CgProcess "hub" $cmd[0] $cmd[1]
     $ok = $ok -and (Wait-CgListening "hub" $hub $HubPort)
@@ -233,6 +275,7 @@ if ($ok -and -not $NoRaid) {
     $hubArg = if ($NoHub) { "" } else { "-HubServer=127.0.0.1:$HubPort" }
     # A dedicated match server exits when its match is over (one match per process); keep it up locally
     # so several raids can be tried in a row.
+    if ($Backend) { $hubArg = "$hubArg $BackendArgs -ServerId=local-match -PublicAddress=127.0.0.1:$RaidPort" }
     $cmd = Get-CgServerCommand $RaidMap $RaidPort "$hubArg -KeepMatchServer".Trim()
     $raid = Start-CgProcess "match" $cmd[0] $cmd[1]
     $ok = $ok -and (Wait-CgListening "match" $raid $RaidPort)
@@ -254,7 +297,9 @@ for ($i = 0; $i -lt $Clients; $i++) {
     $y = [Math]::Floor($i / $columns) * ($ResY + 40)
     $window = "-windowed -ResX=$ResX -ResY=$ResY -WinX=$x -WinY=$y"
     $url = "127.0.0.1:${port}?DevPlayerId=$name"
-    $clientArgs = "$url -game -log $window -CrossguardPlayerId=$name"
+    # With the backend: the main menu (Log in, then Play); the device id is crossguard-dev-<name>.
+    if ($Backend) { $url = "" }
+    $clientArgs = "$url -game -log $window -CrossguardPlayerId=$name".Trim()
     if ($ClientExe) {
         $null = Start-CgProcess "client-$name" $ClientExe $clientArgs
     } else {
@@ -267,5 +312,9 @@ Write-Host ("Cluster up: {0}{1}{2} client(s) to the {3}. Logs: {4}" -f
     $(if ($NoHub) { "" } else { "hub :$HubPort, " }),
     $(if ($NoRaid) { "" } else { "match :$RaidPort, " }),
     $Clients, $ClientsTo.ToLower(), $OutDir) -ForegroundColor Green
+if ($Backend) {
+    Write-Host "Each client: Log in, then Play (the backend picks the hub). A raid starts with 2 teams queued or after"
+    Write-Host "CROSSGUARD_MATCH_MAX_WAIT_SEC (Backend\.env; 30 s by default, 5 is handy here)."
+}
 Write-Host "Stop everything: Tools\run_local_cluster.bat -Stop"
 exit 0

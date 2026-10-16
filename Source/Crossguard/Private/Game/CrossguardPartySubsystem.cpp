@@ -17,6 +17,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/PlatformTime.h"
+#include "Interaction/CrossguardRaidPortal.h"
 #include "Misc/Guid.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
@@ -525,7 +526,9 @@ ECrossguardPartyResult UCrossguardPartySubsystem::StartRaid(ACrossguardPlayerSta
 		Answer->bAnswered = true;
 		if (Answer->bReturned && Self != nullptr && Answer->Result != ECrossguardPartyResult::None)
 		{
+			// The party window (OnPartyRefused) and a HUD line, as a refused portal launch gets.
 			Self->RefuseLater(ActorId, Answer->Result);
+			Self->ShowToPlayers({ActorId}, ACrossguardRaidPortal::RefusalMessage(Answer->Result));
 		}
 	});
 	Answer->bReturned = true;
