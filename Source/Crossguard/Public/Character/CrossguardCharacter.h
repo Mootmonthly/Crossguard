@@ -139,6 +139,33 @@ public:
 	UFUNCTION(Exec)
 	void GuildGive(const FString& PlayerId, int32 SlotId);
 
+	// Parties until a party panel exists (console; Output Log; docs/parties.md): PartyInvite <player
+	// name>; PartyAccept (your first invite); PartyDecline; PartyLeave; PartyKick <name or id>;
+	// PartyPromote <name or id>; PartyInfo; PartyStartRaid (leader, hub only).
+	UFUNCTION(Exec)
+	void PartyInvite(const FString& PlayerName);
+
+	UFUNCTION(Exec)
+	void PartyAccept();
+
+	UFUNCTION(Exec)
+	void PartyDecline();
+
+	UFUNCTION(Exec)
+	void PartyLeave();
+
+	UFUNCTION(Exec)
+	void PartyKick(const FString& Member);
+
+	UFUNCTION(Exec)
+	void PartyPromote(const FString& Member);
+
+	UFUNCTION(Exec)
+	void PartyInfo();
+
+	UFUNCTION(Exec)
+	void PartyStartRaid();
+
 	// Left click: basic attack with the main-hand weapon.
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Combat")
 	bool TryWeaponAttack();

@@ -15,11 +15,13 @@
 #include "Engine/LocalPlayer.h"
 #include "Game/CrossguardExtractPortal.h"
 #include "Game/CrossguardGuildComponent.h"
+#include "Game/CrossguardPartyComponent.h"
 #include "Game/CrossguardGameMode.h"
 #include "Game/CrossguardPlayerState.h"
 #include "Game/CrossguardPointOfInterest.h"
 #include "Game/CrossguardTeamLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
 #include "InputAction.h"
@@ -1304,6 +1306,134 @@ void ACrossguardCharacter::GuildGive(const FString& PlayerId, int32 SlotId)
 	if (UCrossguardGuildComponent* Guild = GuildComponentOf(*this))
 	{
 		Guild->RequestGiveItem(PlayerId, SlotId);
+	}
+}
+
+// --- Parties from the console (until a party panel exists) ----------------------------------------
+
+namespace CrossguardCharacterPartyConsole
+{
+	UCrossguardPartyComponent* PartyComponentOf(const APawn& Pawn)
+	{
+		const ACrossguardPlayerState* State = Pawn.GetPlayerState<ACrossguardPlayerState>();
+		return State != nullptr ? State->GetParty() : nullptr;
+	}
+
+	// A member's id by name (any case) or id; empty if none.
+	FString MemberIdOf(const UCrossguardPartyComponent& Party, const FString& NameOrId)
+	{
+		for (const FCrossguardPartyMemberView& Member : Party.GetMembers())
+		{
+			if (Member.PlayerId == NameOrId || Member.DisplayName.Equals(NameOrId, ESearchCase::IgnoreCase))
+			{
+				return Member.PlayerId;
+			}
+		}
+		return FString();
+	}
+}
+
+void ACrossguardCharacter::PartyInvite(const FString& PlayerName)
+{
+	UCrossguardPartyComponent* Party = CrossguardCharacterPartyConsole::PartyComponentOf(*this);
+	const AGameStateBase* State = GetWorld()->GetGameState();
+	if (Party == nullptr || State == nullptr)
+	{
+		return;
+	}
+	for (APlayerState* Other : State->PlayerArray)
+	{
+		if (Other != nullptr && Other != GetPlayerState() && Other->GetPlayerName().Equals(PlayerName, ESearchCase::IgnoreCase))
+		{
+			UE_LOG(LogCrossguard, Display, TEXT("Party: inviting %s"), *Other->GetPlayerName());
+			Party->RequestInvite(Other);
+			return;
+		}
+	}
+	UE_LOG(LogCrossguard, Display, TEXT("Party: no player named %s here (PartyInfo lists names)"), *PlayerName);
+}
+
+void ACrossguardCharacter::PartyAccept()
+{
+	UCrossguardPartyComponent* Party = CrossguardCharacterPartyConsole::PartyComponentOf(*this);
+	if (Party != nullptr && !Party->GetInvites().IsEmpty())
+	{
+		Party->RequestAccept(Party->GetInvites()[0].PartyId);
+	}
+}
+
+void ACrossguardCharacter::PartyDecline()
+{
+	UCrossguardPartyComponent* Party = CrossguardCharacterPartyConsole::PartyComponentOf(*this);
+	if (Party != nullptr && !Party->GetInvites().IsEmpty())
+	{
+		Party->RequestDecline(Party->GetInvites()[0].PartyId);
+	}
+}
+
+void ACrossguardCharacter::PartyLeave()
+{
+	if (UCrossguardPartyComponent* Party = CrossguardCharacterPartyConsole::PartyComponentOf(*this))
+	{
+		Party->RequestLeave();
+	}
+}
+
+void ACrossguardCharacter::PartyKick(const FString& Member)
+{
+	UCrossguardPartyComponent* Party = CrossguardCharacterPartyConsole::PartyComponentOf(*this);
+	if (Party != nullptr)
+	{
+		// An unknown name goes as is: the server refuses it (TargetNotInParty).
+		const FString Id = CrossguardCharacterPartyConsole::MemberIdOf(*Party, Member);
+		Party->RequestKick(Id.IsEmpty() ? Member : Id);
+	}
+}
+
+void ACrossguardCharacter::PartyPromote(const FString& Member)
+{
+	UCrossguardPartyComponent* Party = CrossguardCharacterPartyConsole::PartyComponentOf(*this);
+	if (Party != nullptr)
+	{
+		const FString Id = CrossguardCharacterPartyConsole::MemberIdOf(*Party, Member);
+		Party->RequestPromote(Id.IsEmpty() ? Member : Id);
+	}
+}
+
+void ACrossguardCharacter::PartyInfo()
+{
+	const UCrossguardPartyComponent* Party = CrossguardCharacterPartyConsole::PartyComponentOf(*this);
+	if (Party == nullptr)
+	{
+		return;
+	}
+	UE_LOG(LogCrossguard, Display, TEXT("Party: %s%s"), Party->IsInParty() ? *Party->GetPartyId() : TEXT("none"),
+		Party->IsLeader() ? TEXT(" (you lead)") : TEXT(""));
+	for (const FCrossguardPartyMemberView& Member : Party->GetMembers())
+	{
+		UE_LOG(LogCrossguard, Display, TEXT("  member %s (%s)%s"), *Member.DisplayName, *Member.PlayerId, Member.bLeader ? TEXT(", leader") : TEXT(""));
+	}
+	for (const FCrossguardPartyInviteView& Invite : Party->GetInvites())
+	{
+		UE_LOG(LogCrossguard, Display, TEXT("  invite from %s (%d members)"), *Invite.InvitedBy, Invite.MemberCount);
+	}
+	if (const AGameStateBase* State = GetWorld()->GetGameState())
+	{
+		for (const APlayerState* Other : State->PlayerArray)
+		{
+			if (Other != nullptr && Other != GetPlayerState())
+			{
+				UE_LOG(LogCrossguard, Display, TEXT("  here: %s"), *Other->GetPlayerName());
+			}
+		}
+	}
+}
+
+void ACrossguardCharacter::PartyStartRaid()
+{
+	if (UCrossguardPartyComponent* Party = CrossguardCharacterPartyConsole::PartyComponentOf(*this))
+	{
+		Party->RequestStartRaid();
 	}
 }
 

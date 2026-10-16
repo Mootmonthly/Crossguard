@@ -33,6 +33,9 @@ Status: **fixed** (a hole closed in this review), **ok** (checked, no change nee
 | `UCrossguardGuildComponent::ServerCreate` / `ServerInvite` / `ServerAcceptInvite` / `ServerDeclineInvite` / `ServerKick` / `ServerSetRank` / `ServerLeave` | Everything goes through `FGuildRegistry` (rank permissions, name rules, invite expiry); invalid rank bytes refused. | ok |
 | `ServerMoveGold` / `ServerGiveGold` | Between raids; `MIN_int32` and non-positive amounts refused; `CanReceiveGold` before adding. | ok |
 | `ServerDepositItem` / `ServerWithdrawItem` / `ServerGiveItem` | Between raids; the item must be in the inventory (not readied); room checked before the bank lets go. | ok |
+| `UCrossguardPartyComponent::ServerInvite` / `ServerAccept` / `ServerLeave` / `ServerKick` | Everything goes through `FPartyRegistry` (leader only for invite and kick, one party per player, 8 max, invite expiry, ids looked up on the server); hub only (`bIsRaid` off), so the raid team cannot change mid-raid. The team follows on the server (`SetPlayerParty`). | ok |
+| `ServerDecline` / `ServerPromote` | Registry checks (own invite; leader only, target a member). Allowed in raids: they change no team. | ok |
+| `ServerStartRaid` | Leader (or solo) and hub only; the destination comes from server settings (`RaidMapName`, `RaidServerAddress`), never from the client; the party id is the server's. | ok |
 
 ## Abilities
 
@@ -49,6 +52,7 @@ Status: **fixed** (a hole closed in this review), **ok** (checked, no change nee
 | --- | --- | --- |
 | `Trade*` (`TradeItems`, `TradeNearest`, `TradeRespond`, `TradeOffer`, `TradeLock`, `TradeAccept`, `TradeCancel`) | Client-side stand-ins for a trade window: they only call the request functions, so the server RPCs above validate everything. | ok (remove once the UI exists) |
 | `Guild*` (`GuildCreate`, `GuildInviteNearest`, `GuildAccept`, `GuildLeave`, `GuildInfo`, `GuildRank`, `GuildKick`, `GuildGold`, `GuildDeposit`, `GuildWithdraw`, `GuildGive`) | Same: client wrappers around the guild RPCs. | ok (remove once the UI exists) |
+| `Party*` (`PartyInvite`, `PartyAccept`, `PartyDecline`, `PartyLeave`, `PartyKick`, `PartyPromote`, `PartyInfo`, `PartyStartRaid`) | Same: client wrappers around the party RPCs. | ok (remove once the UI exists) |
 
 ## Debug options
 
@@ -59,7 +63,7 @@ Status: **fixed** (a hole closed in this review), **ok** (checked, no change nee
 | `bDebugLootTakesAll` | Same: would loot whole containers on open. | **fixed**: ignored for players in Shipping |
 | `DebugReviveDelay` | Same: free self-revives. | **fixed**: ignored for players in Shipping |
 | `bDebugHud` | Client-side on-screen text only. | ok |
-| Game mode (`bIsRaid`, `PortalUnlockSeconds`) | `EditDefaultsOnly`, server-side. | ok |
+| Game mode (`bIsRaid`, `PortalUnlockSeconds`, `RaidMapName`, `RaidServerAddress`) | `EditDefaultsOnly`, server-side; `-RaidMap=` / `-RaidServer=` are the server's own command line. | ok |
 
 ## Replicated properties
 
@@ -70,6 +74,8 @@ Status: **fixed** (a hole closed in this review), **ok** (checked, no change nee
 | Stash `Tabs` | `COND_OwnerOnly`. | ok |
 | Trade `View` (both offers) | `COND_OwnerOnly`: only the two parties get it. | ok |
 | Guild `Members`, `Invites`, `BankGold`, `BankItems` | `COND_OwnerOnly`, filled only for members. `GuildId`, `GuildName` and `Rank` are public. | ok |
+| Party `PartyId`, `LeaderId`, `bIsLeader`, `Members`, `Invites` | All `COND_OwnerOnly`: the party id is the raid's `?Party=` key, so it never reaches non-members. Allies show through the public `TeamId`. | ok |
+| `?Party=` at login | Raid servers trust the key a client sends: anyone who learns a party's id could join its team on that server. Party ids are random GUIDs sent only to members; the matchmaker should hand raid servers the parties to expect. | note |
 | Player state: XP, gold, allocation, respec tokens, Skill Library, `bInRaid` | `COND_OwnerOnly`. | ok |
 | Attributes | Only `Health`, `MaxHealth` and `AttackShield` reach everyone (health bars); the rest are `COND_OwnerOnly`. | ok |
 | Equipment `MainHand`, `OffHand`, `Armor` | Reach everyone (visible gear), including affix rolls. | note |

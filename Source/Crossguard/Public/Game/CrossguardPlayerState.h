@@ -11,6 +11,7 @@
 
 class UCrossguardSkillCatalog;
 class UCrossguardGuildComponent;
+class UCrossguardPartyComponent;
 class UCrossguardStashComponent;
 class UCrossguardVendorComponent;
 
@@ -53,8 +54,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardProgressionRejected, ECro
 // Per-player state that outlives the pawn: team, XP and level, attribute allocation, Skill Library,
 // respec tokens and the stash.
 //
-// Not persisted yet: progression lasts for the session (and across seamless travel) until a save
-// or backend exists.
+// Saved by UCrossguardSaveSubsystem (docs/persistence.md): loaded when the unique id is set, saved
+// when a raid starts and ends and after changes between raids.
 UCLASS()
 class CROSSGUARD_API ACrossguardPlayerState : public APlayerState, public IGenericTeamAgentInterface
 {
@@ -169,6 +170,11 @@ public:
 	// Server. Testing only: learns a skill without a gem, in or out of a raid.
 	void LearnSkillForTesting(FName SkillId);
 
+	// Server. Loading a save (UCrossguardSaveSubsystem, which validated it): replaces the banked
+	// progression. Raid state and raid XP are untouched.
+	void RestoreSavedProgression(int32 InTotalXp, const FCrossguardAttributeAllocation& InAllocation, int32 InRespecTokens, int32 InGold,
+		const TArray<FName>& InSkillLibrary);
+
 	// Sets the attribute allocation. Only between raids. Spending unspent points is free; lowering
 	// any attribute is a respec and uses one respec token. Clients forward the request; failures
 	// reach the owning client through OnProgressionRejected.
@@ -195,6 +201,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Guild")
 	UCrossguardGuildComponent* GetGuild() const { return Guild; }
+
+	// In-game party (docs/parties.md).
+	UFUNCTION(BlueprintPure, Category = "Crossguard|Party")
+	UCrossguardPartyComponent* GetParty() const { return Party; }
 
 protected:
 	UFUNCTION()
@@ -223,6 +233,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Guild", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCrossguardGuildComponent> Guild;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Party", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCrossguardPartyComponent> Party;
 
 	UPROPERTY(ReplicatedUsing = OnRep_TeamId)
 	int32 TeamId = -1;

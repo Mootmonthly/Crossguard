@@ -15,7 +15,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardPlayerExtracted, ACrossgu
 
 // Match game mode. Assigns teams on login from the "Party" URL option: players joining with the
 // same ?Party=<key> share a team (up to 8); players without one each get their own team.
-// Matchmaking must put the party key in the travel URL.
+// Matchmaking must put the party key in the travel URL. In the hub, in-game parties
+// (UCrossguardPartySubsystem, docs/parties.md) move their members onto one team with SetPlayerParty
+// and launch the raid with RaidMapName / RaidServerAddress.
 UCLASS()
 class CROSSGUARD_API ACrossguardGameMode : public AGameModeBase
 {
@@ -24,6 +26,8 @@ class CROSSGUARD_API ACrossguardGameMode : public AGameModeBase
 public:
 	ACrossguardGameMode();
 
+	// A "?Hub" option on the server's map URL turns bIsRaid off (a dev hub on any map).
+	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 	// Refuses a login whose party's team is already full.
 	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId, const FString& Options,
@@ -87,6 +91,27 @@ public:
 	TArray<FCrossguardInventoryItem> RollLoot(FName TableId);
 
 	static const TCHAR* PartyOption;
+	// Placeholder until a hub map exists: open any map with ?Hub to play it as the hub.
+	static const TCHAR* HubOption;
+
+	// Server. Moves the player onto the team of party key Party (empty: a team of their own), as if
+	// they had logged in with ?Party=<Party>. No-op if that is their key already.
+	void SetPlayerParty(AController* Controller, const FString& Party);
+
+	// --- Raid launch from the hub (docs/parties.md). Placeholders until a matchmaker exists. ---
+
+	// The raid map a party that is the whole server travels to (ServerTravel), e.g.
+	// "/Game/Maps/L_Raid". The -RaidMap=<path> command line option overrides it. Empty: none.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Raid Launch")
+	FString RaidMapName;
+
+	// A separate raid server ("203.0.113.5:7777") the party's clients travel to while the rest of the
+	// hub stays. The -RaidServer=<address> command line option overrides it. Empty: none.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Raid Launch")
+	FString RaidServerAddress;
+
+	FString GetRaidMapName() const;
+	FString GetRaidServerAddress() const;
 
 private:
 	static std::string PlayerKey(const FUniqueNetIdRepl& UniqueId, const AController* Controller);

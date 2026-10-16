@@ -157,3 +157,14 @@ These are called from Blueprint (e.g. a debug widget or the Level Blueprint) unt
   end, A reappears cleanly on C's screen at the right spot, with gear and tags right (`showdebug abilitysystem`),
   and can be hit; repeat a few times. With `crossguard.StealthHidesFromEnemies 0` on the server, A
   stays in C's world while hidden (the old behavior).
+- Parties and the raid launch (two PCs, or two standalone game processes; [parties.md](parties.md)).
+  PC 1: start the game with `-RaidMap=/Game/L_Test` (or set the game mode's **Raid Map Name**) and
+  `open /Game/L_Test?listen?Hub` (`?Hub` plays the map as the hub, `bIsRaid` off). PC 2
+  `open <PC 1 address>`. PC 1 `PartyInfo` (lists names), `PartyInvite <PC 2's name>`; PC 2
+  `PartyInfo` shows the invite, `PartyAccept`. Expected: both `PartyInfo` show two members, PC 1
+  leading; `multiscale` on one shows the bonus on the other (allies). PC 2 `PartyStartRaid`: refused
+  (NotLeader, Output Log). PC 1 `PartyStartRaid`: both load the raid map together, still allies
+  (`multiscale`), raid started (XP held until extraction). Note whether the travel was seamless (both
+  keep their stash and XP) and paste the Output Log lines with "starts the raid". Optional, with a
+  separate raid server: set **Raid Server Address** instead of the map and add a third player not in
+  the party: only the party's clients leave.

@@ -1,0 +1,155 @@
+# Parties and the raid launch
+
+In-game parties in the hub, and how a party leaves the hub for a raid. Rules are engine-free in
+`Source/CrossguardRules/Public/CrossguardRules/Party.h` (`FPartyRegistry`, numbers in `FPartyConfig`
+in `Config.h`), unit tested in `TestParty` (`Tests/CrossguardRules/TestMain.cpp`). The game side is
+`UCrossguardPartySubsystem` (server, game instance) and `UCrossguardPartyComponent` (on every
+`ACrossguardPlayerState`).
+
+## Ruling
+
+From [design-decisions.md](design-decisions.md), "Teams and friendly fire": players enter a match
+solo or in a premade team of **up to 8**; the party key travels as `?Party=<key>` and the game mode
+puts everyone with the same key on one team. Friendly fire is always on; the team only decides who
+counts as an ally.
+
+Everything else below is a **placeholder or an assumption** until ruled (listed at the end).
+
+## Rules
+
+- **One party per player.** A party has 1–8 members (`MaxMembers`, from the match's
+  `MaxTeamSize`) in join order and exactly one leader.
+- **Invite**: only the leader invites, and only players in no party. A player in no party who
+  invites someone founds a party with themself as leader (only if the invite would succeed: a
+  refused invite founds nothing). Invites expire after `InviteExpirySeconds` (**60 s,
+  placeholder**); an unexpired invite to the same player is refused (`AlreadyInvited`), an expired
+  one is replaced. A full party cannot invite; pending invites do not reserve a place.
+- **Accept / decline**: the invitee joins as a member. Accepting drops their invites from other
+  parties. Fails if the invite expired, the player is meanwhile in a party, or the party is full. A
+  failed accept keeps the invite (it expires on its own); declining removes it.
+- **Leave**: anyone. A leader leaving hands the lead to the longest-standing member. The last
+  member leaving disbands the party (its pending invites go with it).
+- **Kick**: leader only, any other member.
+- **Promote**: leader only; the target becomes leader (the old leader stays as a member).
+- **Raid launch**: the leader, or a player in no party (who goes alone).
+- Every operation returns an `EPartyError` (`None` on success) and changes nothing on error.
+
+## In the game
+
+- `UCrossguardPartySubsystem` (game instance subsystem, server) owns the `FPartyRegistry`. It
+  survives map travel on that server, but lives **in memory only**: parties are gone when the server
+  stops. Players are known by `UCrossguardGuildSubsystem::PlayerIdOf` (online id, else a
+  per-session stand-in), the same ids as guilds.
+- **Party id = `?Party=` key = team.** A new party gets a fresh GUID (32 hex digits, URL-safe). After
+  every change the subsystem calls `ACrossguardGameMode::SetPlayerParty` for each affected player:
+  the player state's `PartyKey` becomes the party id and the player moves onto that key's team in
+  the game mode's `FTeamRegistry`, exactly as if they had logged in with `?Party=<id>`. So members
+  are **allies in the hub at once** (party skills, spectating, kill XP), and the key is already on
+  every player state when the raid launch travels. Leaving or being kicked puts the player on a team
+  of their own.
+- **Hub only** (assumption, placeholder): invite, accept, leave, kick and the raid launch are
+  refused with `OnlyInHub` while the game mode's `bIsRaid` is on, because the party is the raid
+  team. Decline and promote work anywhere (they change no team).
+- **Leaving the server** (logout from the hub) leaves the party; the rest get a new leader if need
+  be, and the player's open invites are dropped. In a raid nothing changes on logout. A player who
+  logs in without `?Party=` to a server whose subsystem still has them in a party (same process,
+  e.g. after a non-seamless travel) gets that party's team.
+- **What replicates**: everything on `UCrossguardPartyComponent` (party id, leader id, members with
+  names and a leader flag, open invites, `IsLeader`) is **owner only**. A member sees the party
+  through their own component; nobody else sees any of it, not even the party id (it is the raid's
+  join key). Who is allied shows to everyone through the public team id, as before.
+- Refusals come back as `ECrossguardPartyResult` (the rules' errors, then `OnlyInHub`, `NoPlayer`,
+  `NoRaidDestination`, `HostInParty`, `TravelFailed`) through `OnPartyRefused`, and are logged as
+  "Party request from <player> refused: <result>".
+
+### API for a party panel (UI to do)
+
+On `UCrossguardPartyComponent` (`ACrossguardPlayerState::GetParty()`), local player's own:
+
+| Read | |
+| --- | --- |
+| `IsInParty()`, `IsLeader()`, `GetPartyId()`, `GetLeaderId()` | |
+| `GetMembers()` | `FCrossguardPartyMemberView`: `PlayerId`, `DisplayName`, `bLeader`; join order. |
+| `GetInvites()` | `FCrossguardPartyInviteView`: `PartyId`, `InvitedBy` (name), `MemberCount`. |
+| `OnPartyChanged` | Fires on the server and the owning client after every change. |
+| `OnPartyRefused(ECrossguardPartyResult)` | A request was refused. |
+
+Requests: `RequestInvite(APlayerState*)`, `RequestAccept(PartyId)`, `RequestDecline(PartyId)`,
+`RequestLeave()`, `RequestKick(PlayerId)`, `RequestPromote(PlayerId)`, `RequestStartRaid()`.
+
+### Console commands (until the panel exists)
+
+On `ACrossguardCharacter` (console, Output Log): `PartyInvite <player name>`, `PartyAccept` (your
+first invite), `PartyDecline`, `PartyLeave`, `PartyKick <name or id>`, `PartyPromote <name or id>`,
+`PartyInfo` (party, members, invites, and the names of everyone on the server), `PartyStartRaid`.
+
+## Raid launch
+
+`PartyStartRaid` → `UCrossguardPartySubsystem::StartRaid`: leader (or solo), hub only. What it does
+is decided by `PlanRaidTravel` (the same checks, no travel; the tests use it) with
+`Crossguard::PickRaidTravel`, from two **placeholder** settings on the game mode (Crossguard | Raid
+Launch):
+
+- `RaidMapName` (command line `-RaidMap=<path>` overrides it), e.g. `/Game/Maps/L_Raid`.
+- `RaidServerAddress` (command line `-RaidServer=<address>` overrides it), e.g. `203.0.113.5:7777`.
+
+| Situation | What happens |
+| --- | --- |
+| Every player on this server is in the party (or the launcher is alone on it) and `RaidMapName` is set | **ServerTravel**: the server loads `<RaidMapName>?Party=<id>` (plus `?listen` on a listen server). The game mode uses seamless travel (`bUseSeamlessTravel`, now on), so player states, and their `PartyKey`, come along; the raid map's game mode (`bIsRaid` on) puts the party on one team again (`HandleSeamlessTravelPlayer`) and begins the raid. |
+| Otherwise, `RaidServerAddress` is set | **ClientTravel**: each member's client travels to `<RaidServerAddress>?Party=<id>` (`TRAVEL_Absolute`); the raid server's game mode reads `?Party=` at login (`InitNewPlayer`) and puts them on one team. A solo player travels without the option. Refused (`HostInParty`) if the listen server's own player is in the party: the host leaving would close the hub for everyone else. |
+| Neither | Refused: `NoRaidDestination`. |
+
+The URL is built by `Crossguard::BuildRaidTravelUrl` (`UCrossguardPartySubsystem::RaidTravelUrl`):
+`<destination>?Party=<id>`; it refuses keys that are not URL-safe.
+
+### Dev flow now: listen server
+
+1. PC 1 hosts the hub. Until a hub map exists, any map opened with `?Hub` plays as the hub
+   (`ACrossguardGameMode::HubOption` turns `bIsRaid` off; placeholder): start the game with
+   `-RaidMap=/Game/L_Test` (or set `RaidMapName` on the game mode) and `open /Game/L_Test?listen?Hub`.
+2. PC 2 joins (`open <PC 1 address>`).
+3. PC 1 `PartyInvite <PC 2's name>` (`PartyInfo` lists names), PC 2 `PartyAccept`. Both are allies.
+4. PC 1 (leader) `PartyStartRaid`: the whole server is the party, so the listen server travels to the
+   raid map (an absolute travel: `?Hub` does not carry over, so it is a raid) and PC 2 follows; both
+   on one team.
+
+Seamless travel in PIE needs `net.AllowPIESeamlessTravel 1`; without it PIE falls back to a
+non-seamless travel (player states are re-created; the subsystem's fallback above still finds the
+party for each login, if the online ids stay the same). Test on two PCs or standalone processes.
+
+With a dedicated hub (or a listen host not in the party), set `RaidServerAddress` to a running raid
+server (e.g. a second process `Crossguard.exe /Game/L_Test?listen -game`, or a dedicated server):
+the party's clients travel there and the hub stays.
+
+### The future: dedicated servers and a matchmaker
+
+The hub and raids run on separate dedicated servers. `PartyStartRaid` asks a matchmaker (backend,
+not built) for a raid server with room for the party; it returns an address (and a ticket), and the
+hub sends the members' clients there with `?Party=<id>` exactly as the ClientTravel path does now.
+The raid server should then accept only the parties the matchmaker announced: today it trusts
+whatever `?Party=` a client sends (see [anti-cheat.md](anti-cheat.md)). Parties need the backend too
+to outlive a hub server (and to come back from a raid as a party).
+
+## Assumptions and placeholders
+
+1. Only the leader invites; inviting while in no party founds the party.
+2. Invites expire after 60 s (`InviteExpirySeconds`, placeholder). Pending invites do not reserve a
+   place; accepting drops the player's other invites.
+3. A leader leaving hands the lead to the longest-standing member; the last member leaving
+   disbands the party. Kicking and promoting are leader only.
+4. Membership changes and the raid launch only in the hub (game mode `bIsRaid` off); decline and
+   promote anywhere.
+5. Logging out of the hub leaves the party; logging out of a raid does not.
+6. A solo player may launch a raid alone.
+7. Raid launch: ServerTravel when the whole server is the party and `RaidMapName` is set, else
+   ClientTravel to `RaidServerAddress`, refused when the listen host is in a party that is not the
+   whole server. Both settings are placeholders until a matchmaker exists.
+8. Seamless travel is on for the game mode (needed to carry `PartyKey` through a ServerTravel).
+9. Party ids are 32-hex-digit GUIDs; the party view (id included) replicates to its owner only.
+10. `?Hub` on a server's map URL makes that map the hub (`bIsRaid` off), until a hub map exists.
+
+## Not covered
+
+Persistence (parties live in hub memory), coming back from a raid as a party, a matchmaker and raid
+server allocation, raid servers checking `?Party=` against the matchmaker, party chat, a ready
+check, invite by friends list (Steam), and the party panel UI.

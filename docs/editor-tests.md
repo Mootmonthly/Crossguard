@@ -154,7 +154,7 @@ damage is computed from the characters' actual stats, so they work at any level.
 
 ### The scenarios
 
-117 tests in 15 files (106 `Crossguard.Scenario.*`, 5 `Crossguard.Net.*`, 6 `Crossguard.Visual.*`;
+120 tests in 16 files (107 `Crossguard.Scenario.*`, 7 `Crossguard.Net.*`, 6 `Crossguard.Visual.*`;
 2026-10-16). Grouped by file; the name is the full test name.
 
 **`CrossguardScenarioRaidTests.cpp`**
@@ -348,6 +348,14 @@ game mode's Mob Table is unset.
 | --- | --- |
 | `Crossguard.Scenario.UI.WidgetsBind` | Every widget class built for the PIE player's controller (C++ tree, no assets) shows the game state: the HUD's Health and hotbar lines; one inventory cell per stack, click selects and deselects; a dead dummy's body shows its ruby, Take all moves it; one wheel entry per castable skill and picking one selects it; the trade window says no trade; the guild window shows the founder after `RequestCreate`. The player's HUD is `ACrossguardHUD` (a warning if a game mode Blueprint overrides it). |
 
+**`CrossguardScenarioPartyTests.cpp`** (parties in the hub, [parties.md](parties.md); the travel itself is never started)
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Net.PartyInviteAcceptMakesAllies` | Listen server + 2 clients, hub. The host invites client 1 (founding a party it leads), client 1 sees the invite and accepts on its own client (RPC): on the server both are allies on the party's team (`PartyKey` = party id), the outsider is not; client 1's own component shows two members and the host leading, and its copy of the host has its team; the outsider's client sees the two on one team but no party data on any component, and client 1's copy of the host's component is empty (owner only). |
+| `Crossguard.Net.PartyKickPromoteLeave` | Listen server + 2 clients, all in one party. Promote hands the lead to client 1 (its client sees it); the old leader's kick is refused NotLeader; the new leader kicks client 2 (no longer an ally; its client sees no party, another team); the leader leaving hands the lead back to the host; in a raid invite, leave and the launch are refused OnlyInHub; the last member leaving disbands it. |
+| `Crossguard.Scenario.Hub.PartyRaidLaunchPlan` | A leads B, Solo alone (standalone hub). A member cannot launch (NotLeader); no destination: NoRaidDestination; with a raid server: client travel to `127.0.0.1:7777?Party=<id>` (Party option read back with `FURL`), Solo without the option; others on the server: no server travel even with a raid map; everyone in the party and a raid map: server travel to `/Game/L_Test?Party=<id>`; in a raid: OnlyInHub. Never travels. |
+
 **`CrossguardScenarioNetworkTests.cpp`** (networked: a server and real PIE clients, see
 [Networked scenarios](#networked-scenarios))
 
@@ -448,8 +456,9 @@ use server-side players in one standalone PIE; `Crossguard.Net.*` use real PIE c
 | 6 Both see bodies ragdoll | auto | `Net.DeathRagdollsOnEveryClient`, `Visual.RagdollBody` | — |
 | 6 `showdebug` shows the other's `Equipment.Wielding.*` | auto | `Net.WieldingTagsReplicate` | The debug HUD itself. |
 | 6 Concurrent loot never duplicates | auto | `Social.ConcurrentLootNeverDuplicates`, `Net.ConcurrentLootFromTwoClients` | — |
+| 6 Parties and the raid launch | part | `Net.PartyInviteAcceptMakesAllies`, `Net.PartyKickPromoteLeave`, `Hub.PartyRaidLaunchPlan` | The travel itself (two PCs): both arrive on the raid map, still allies. |
 
-Totals: 68 rows: 65 auto, 3 script, none part or manual (2026-10-16). What the "By hand" column
+Totals: 69 rows: 65 auto, 3 script, 1 part (the party raid launch's travel), none manual (2026-10-16). What the "By hand" column
 still leaves to a person is feel, art and real internet play: looks (frames from the visual run),
 key bindings, UI, NavMesh pathing round obstacles, and play over a real network. Not checklist
 rows: `Combat.ArrowBlockedNoStun`, `SwingClash`, `AIIgnoresAllySwings`, `StunBlocksActions`,

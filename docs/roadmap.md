@@ -27,7 +27,7 @@ order changes.
 | Death | Ragdoll, lootable body for every death, F to loot, revive within 120 s returns what was not looted; spectating teammates after. |
 | Economy | Gold coins carried in raids, banked on extraction; banked gold; selling gemstones to vendors; buying stash tabs. |
 | World | Extract portals (points of interest, 60 s channel, 30 s open), extraction zones, doors, locks and lockpicking. |
-| Teams | Parties up to 8 via `?Party=`, friendly fire always on. |
+| Teams | Parties up to 8 via `?Party=`, friendly fire always on. In-game parties in the hub (invite, accept, leave, kick, promote; members allied at once) and the leader's raid launch ([parties.md](parties.md)); console commands until a party panel exists. |
 | Build and tests | Builds on UE 5.8. 118/118 headless editor tests pass, including networked tests (listen and dedicated server with clients in one process) that cover replication, ragdolls, stealth and concurrent loot; `-Visual` runs rendered scenes and saves screenshots. Every checklist row is automated (`docs/editor-tests.md`). `Tools\editor_setup.bat` imports every data table and sets the references. First-build notes: [first-compile-triage.md](first-compile-triage.md). |
 
 ## Milestone 0: Verify what is written
@@ -51,7 +51,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Spectating and menu | Editor | Built in code: 120 s revive window, then spectate teammates or return to the menu. Placeholder UI in code ([ui.md](ui.md)): the HUD shows the downed timer and whom you spectate; needs art. Needs a main menu map. |
 | Stash | Editor | Built in code: per character, 10 × 30 tabs (up to 3 more at 3000 gold), Skill Gems learnable from it. Needs the stash UI in the hub. |
 | Shared stash tabs | Code, Decision | Subscription benefit: tabs shared by all of an account's characters. Needs accounts and the backend. |
-| Hub / lobby map | Editor | Where players manage stash, Skill Library, attributes, loadout; game mode with `bIsRaid` off. |
+| Hub / lobby map | Editor | Where players manage stash, Skill Library, attributes, loadout, and form parties; game mode with `bIsRaid` off and `RaidMapName` / `RaidServerAddress` set for the raid launch ([parties.md](parties.md)). |
 | Inventory and loot UI | Editor | Placeholder UI in code ([ui.md](ui.md)), I or Tab: grids for the inventory, Backpack and Quiver, equipment slots, bodies and chests side by side; click to move, equip, take, take all. Needs art (Widget Blueprints) and drag-and-drop. |
 | Hotbar, weapon sets and skill wheel UI | Editor | Built in code (keys 1–7, hold Q, E). Placeholder UI in code ([ui.md](ui.md)): hotbar with counts, weapon set line, cooldowns, a ring of skills while Q is held. Needs art: the radial wheel and icons. |
 | Drop and pick up single items | Editor | Built in code (G drops the stack in hand, F picks up). Needs drag-to-drop in the inventory UI and item meshes. |
@@ -106,7 +106,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Item | Needs | Notes |
 | --- | --- | --- |
 | Dedicated servers | Code, Editor | Everything is server-authoritative already. |
-| Matchmaking with parties | Code | Must pass `?Party=<key>` in the travel URL. |
+| Matchmaking with parties | Code, Decision | Parties and the raid launch are built ([parties.md](parties.md)): hub parties, `?Party=<id>` in the travel URL, ServerTravel for a whole-server party or ClientTravel to a configured raid server (placeholders). Left: a matchmaker (backend) that picks a raid server, raid servers that accept only announced parties, parties that outlive the hub server. Pending local verification: two-PC launch ([next-build-checklist.md](next-build-checklist.md) section 6). |
 | Backend and accounts | Decision, Code | Persistence, purchases, auction house. |
 | Platform store | Decision, Code | Steam or other; purchases verified server-side. |
 | Anti-cheat review | Code | Reviewed: every server RPC, ability, console command, debug option and replicated property ([anti-cheat.md](anti-cheat.md)). Fixed the grid-position and attribute-allocation overflows, vendor gold overflow, interact spam, oversized trade offers, loadout changes while dead, and debug options in Shipping. Left: gear affixes are visible to everyone (the stealth position leak is fixed, pending local verification). |

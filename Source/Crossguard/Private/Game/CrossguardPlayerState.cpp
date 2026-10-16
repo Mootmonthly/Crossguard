@@ -8,6 +8,8 @@
 #include "Game/CrossguardGuildComponent.h"
 #include "Engine/GameInstance.h"
 #include "Game/CrossguardGuildSubsystem.h"
+#include "Game/CrossguardSaveSubsystem.h"
+#include "Game/CrossguardPartyComponent.h"
 #include "Items/CrossguardStashComponent.h"
 #include "Items/CrossguardVendorComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -46,6 +48,7 @@ ACrossguardPlayerState::ACrossguardPlayerState()
 	Stash = CreateDefaultSubobject<UCrossguardStashComponent>(TEXT("Stash"));
 	Vendor = CreateDefaultSubobject<UCrossguardVendorComponent>(TEXT("Vendor"));
 	Guild = CreateDefaultSubobject<UCrossguardGuildComponent>(TEXT("Guild"));
+	Party = CreateDefaultSubobject<UCrossguardPartyComponent>(TEXT("Party"));
 }
 
 void ACrossguardPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -156,6 +159,11 @@ void ACrossguardPlayerState::BeginRaid()
 		RaidXp = 0;
 		bPortalSummoned = false;
 		ProgressionChanged();
+		// The carried gear is at risk from now on: the save stops listing it.
+		if (UCrossguardSaveSubsystem* Saves = UCrossguardSaveSubsystem::Get(this))
+		{
+			Saves->SaveNow(this);
+		}
 	}
 }
 
@@ -181,6 +189,11 @@ int32 ACrossguardPlayerState::EndRaid(bool bExtracted)
 	RaidXp = 0;
 	bInRaid = false;
 	ProgressionChanged();
+	// Extracted: the banked XP, gold and the gear carried out. Failed: the gear is gone.
+	if (UCrossguardSaveSubsystem* Saves = UCrossguardSaveSubsystem::Get(this))
+	{
+		Saves->SaveNow(this);
+	}
 	return Banked;
 }
 
@@ -251,6 +264,29 @@ void ACrossguardPlayerState::LearnSkillForTesting(FName SkillId)
 		SkillLibrary.Add(Id);
 		ProgressionChanged();
 	}
+}
+
+void ACrossguardPlayerState::RestoreSavedProgression(int32 InTotalXp, const FCrossguardAttributeAllocation& InAllocation, int32 InRespecTokens,
+	int32 InGold, const TArray<FName>& InSkillLibrary)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	TotalXp = FMath::Max(0, InTotalXp);
+	AttributeAllocation = InAllocation;
+	RespecTokens = FMath::Max(0, InRespecTokens);
+	Gold = FMath::Max(0, InGold);
+	SkillLibrary.Reset();
+	for (const FName& SkillId : InSkillLibrary)
+	{
+		const FName Id = NormalizeSkillId(SkillId);
+		if (!Id.IsNone())
+		{
+			SkillLibrary.AddUnique(Id);
+		}
+	}
+	ProgressionChanged();
 }
 
 void ACrossguardPlayerState::RequestAttributeAllocation(const FCrossguardAttributeAllocation& Allocation)
@@ -335,5 +371,10 @@ void ACrossguardPlayerState::OnSetUniqueId()
 	if (Guilds != nullptr)
 	{
 		Guilds->PlayerJoined(this);
+	}
+	// Saves are keyed by the same id.
+	if (UCrossguardSaveSubsystem* Saves = HasAuthority() ? UCrossguardSaveSubsystem::Get(this) : nullptr)
+	{
+		Saves->PlayerJoined(this);
 	}
 }

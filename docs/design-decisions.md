@@ -350,6 +350,17 @@ Everything else is a placeholder until ruled; the numbers live in `Crossguard::F
 - **Friendly fire is always on.** This overrides the design doc's "no friendly fire". Teams only
   decide who counts as an ally (party skills like Multiscale, UI).
 - Idea, not built: an AGI skill "Disable Friendly Fire".
+- In-game parties (details: [parties.md](parties.md)): players form a party in the hub; the party
+  id is its `?Party=` key, so members are on one team (allies) at once. The leader launches the
+  raid. **(placeholder / Assumed)**: only the leader invites, kicks and promotes; inviting while
+  solo founds the party; invites expire after 60 s; a leaving leader hands over to the
+  longest-standing member and the last member disbands it; membership changes and the launch only
+  in the hub (`bIsRaid` off); logging out of the hub leaves the party; a solo player may launch
+  alone. Raid launch **(placeholder until a matchmaker exists)**: when the whole hub server is the
+  party, the server travels to the game mode's `RaidMapName` with `?Party=`; otherwise each
+  member's client travels to `RaidServerAddress` with `?Party=` (refused if a listen host would
+  have to leave). Parties live in hub memory only. Until a hub map exists, `?Hub` on a map URL plays
+  that map as the hub (placeholder).
 
 ## Items and weapons
 

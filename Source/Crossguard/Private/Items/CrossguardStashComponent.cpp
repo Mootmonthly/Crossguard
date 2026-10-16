@@ -70,6 +70,29 @@ void UCrossguardStashComponent::CopyFrom(const UCrossguardStashComponent& Other)
 	}
 }
 
+void UCrossguardStashComponent::RestoreTabs(const TArray<FCrossguardStashTab>& NewTabs)
+{
+	if (!IsServer())
+	{
+		return;
+	}
+	const Crossguard::FInventoryConfig Config;
+	const int32 MinTabs = FMath::Max(1, Config.StartingStashTabs);
+	Tabs = NewTabs;
+	Tabs.SetNum(FMath::Clamp(Tabs.Num(), MinTabs, MinTabs + Config.MaxPurchasedStashTabs));
+	NextItemId = 1;
+	for (FCrossguardStashTab& Tab : Tabs)
+	{
+		for (FCrossguardInventoryItem& Item : Tab.Items)
+		{
+			Item.Id = NextItemId++;
+			Item.Container = ECrossguardInventoryContainer::Main;
+			Item.bWasEquipped = false;
+		}
+	}
+	OnStashChanged.Broadcast();
+}
+
 Crossguard::FInventoryGrid UCrossguardStashComponent::BuildGrid(int32 Tab, int32 IgnoreId) const
 {
 	const FIntPoint Size = GetTabSize();

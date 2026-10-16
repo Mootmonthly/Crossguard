@@ -6,14 +6,21 @@
 #include "AbilitySystemComponent.h"
 #include "Crossguard.h"
 #include "Engine/World.h"
+#include "Engine/GameInstance.h"
+#include "Game/CrossguardGuildSubsystem.h"
+#include "Game/CrossguardPartySubsystem.h"
 #include "Game/CrossguardPlayerState.h"
+#include "Game/CrossguardSaveSubsystem.h"
 #include "Game/CrossguardTeamLibrary.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/CrossguardHUD.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 
 const TCHAR* ACrossguardGameMode::PartyOption = TEXT("Party");
+const TCHAR* ACrossguardGameMode::HubOption = TEXT("Hub");
 
 ACrossguardGameMode::ACrossguardGameMode()
 {
@@ -21,6 +28,9 @@ ACrossguardGameMode::ACrossguardGameMode()
 	PlayerStateClass = ACrossguardPlayerState::StaticClass();
 	// Placeholder UI built in C++ (docs/ui.md); a Blueprint game mode can set its own HUD Class.
 	HUDClass = ACrossguardHUD::StaticClass();
+	// A hub party's ServerTravel to the raid map keeps the player states, and with them each
+	// PartyKey (HandleSeamlessTravelPlayer puts the party on one team again).
+	bUseSeamlessTravel = true;
 }
 
 std::string ACrossguardGameMode::PlayerKey(const FUniqueNetIdRepl& UniqueId, const AController* Controller)
@@ -33,6 +43,15 @@ std::string ACrossguardGameMode::PlayerKey(const FUniqueNetIdRepl& UniqueId, con
 std::string ACrossguardGameMode::PartyKey(const FString& Options)
 {
 	return std::string(TCHAR_TO_UTF8(*UGameplayStatics::ParseOption(Options, PartyOption)));
+}
+
+void ACrossguardGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
+{
+	Super::InitGame(MapName, Options, ErrorMessage);
+	if (UGameplayStatics::HasOption(Options, HubOption))
+	{
+		bIsRaid = false;
+	}
 }
 
 void ACrossguardGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
@@ -61,8 +80,55 @@ FString ACrossguardGameMode::InitNewPlayer(APlayerController* NewPlayerControlle
 	}
 
 	// PreLogin's check can race with another login, so Join decides.
-	const FString Party = UGameplayStatics::ParseOption(Options, PartyOption);
+	FString Party = UGameplayStatics::ParseOption(Options, PartyOption);
+	if (Party.IsEmpty())
+	{
+		// No ?Party=: a party this server already knows them in (a non-seamless travel from the hub
+		// drops the player states, and the server's URL options never reach a client's login).
+		const UGameInstance* GameInstance = GetGameInstance();
+		const UCrossguardPartySubsystem* Parties = GameInstance != nullptr ? GameInstance->GetSubsystem<UCrossguardPartySubsystem>() : nullptr;
+		if (Parties != nullptr)
+		{
+			Party = Parties->PartyKeyOf(UniqueId.IsValid() ? UniqueId.ToString() : UCrossguardGuildSubsystem::PlayerIdOf(NewPlayerController->PlayerState));
+		}
+	}
 	return JoinTeam(NewPlayerController, PlayerKey(UniqueId, NewPlayerController), Party);
+}
+
+void ACrossguardGameMode::SetPlayerParty(AController* Controller, const FString& Party)
+{
+	ACrossguardPlayerState* PlayerState = Controller != nullptr ? Controller->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	if (PlayerState == nullptr || (PlayerState->PartyKey == Party && PlayerState->GetTeamId() >= 0))
+	{
+		return;
+	}
+	FString Key;
+	if (PlayerKeys.RemoveAndCopyValue(TWeakObjectPtr<const AController>(Controller), Key))
+	{
+		Teams.Leave(std::string(TCHAR_TO_UTF8(*Key)));
+	}
+	else
+	{
+		Key = FString(UTF8_TO_TCHAR(PlayerKey(PlayerState->GetUniqueId(), Controller).c_str()));
+	}
+	const std::string RegistryKey(TCHAR_TO_UTF8(*Key));
+	if (const FString Error = JoinTeam(Controller, RegistryKey, Party); !Error.IsEmpty())
+	{
+		UE_LOG(LogCrossguard, Warning, TEXT("%s could not join party %s's team (%s); on a team of their own"), *GetNameSafe(Controller), *Party, *Error);
+		JoinTeam(Controller, RegistryKey, FString());
+	}
+}
+
+FString ACrossguardGameMode::GetRaidMapName() const
+{
+	FString FromCommandLine;
+	return FParse::Value(FCommandLine::Get(), TEXT("RaidMap="), FromCommandLine) ? FromCommandLine : RaidMapName;
+}
+
+FString ACrossguardGameMode::GetRaidServerAddress() const
+{
+	FString FromCommandLine;
+	return FParse::Value(FCommandLine::Get(), TEXT("RaidServer="), FromCommandLine) ? FromCommandLine : RaidServerAddress;
 }
 
 FString ACrossguardGameMode::JoinTeam(AController* Controller, const std::string& Key, const FString& Party)
@@ -108,6 +174,22 @@ void ACrossguardGameMode::HandleSeamlessTravelPlayer(AController*& C)
 
 void ACrossguardGameMode::Logout(AController* Exiting)
 {
+	// A last save while the player state is still here.
+	UCrossguardSaveSubsystem* Saves = UCrossguardSaveSubsystem::Get(this);
+	if (ACrossguardPlayerState* LeavingState = Saves != nullptr && Exiting != nullptr ? Exiting->GetPlayerState<ACrossguardPlayerState>() : nullptr)
+	{
+		Saves->PlayerLeaving(LeavingState);
+	}
+
+	// In the hub, leaving the server leaves the party (the rest get a new leader if need be). In a
+	// raid the party stays: it is the team.
+	const UGameInstance* GameInstance = GetGameInstance();
+	UCrossguardPartySubsystem* Parties = GameInstance != nullptr ? GameInstance->GetSubsystem<UCrossguardPartySubsystem>() : nullptr;
+	if (!bIsRaid && Parties != nullptr && Exiting != nullptr)
+	{
+		Parties->PlayerLeftServer(Exiting->GetPlayerState<ACrossguardPlayerState>());
+	}
+
 	FString Key;
 	if (PlayerKeys.RemoveAndCopyValue(TWeakObjectPtr<const AController>(Exiting), Key))
 	{
@@ -123,6 +205,12 @@ void ACrossguardGameMode::HandleStartingNewPlayer_Implementation(APlayerControll
 	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
 
 	ACrossguardPlayerState* PlayerState = NewPlayer != nullptr ? NewPlayer->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	// The pawn is possessed: the loaded save goes onto it (gear carried in) before a raid begins.
+	UCrossguardSaveSubsystem* Saves = UCrossguardSaveSubsystem::Get(this);
+	if (Saves != nullptr && PlayerState != nullptr)
+	{
+		Saves->PlayerReady(PlayerState);
+	}
 	if (bIsRaid && PlayerState != nullptr)
 	{
 		PlayerState->BeginRaid();

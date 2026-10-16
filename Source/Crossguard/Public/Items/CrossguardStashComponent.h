@@ -18,7 +18,7 @@ struct CROSSGUARD_API FCrossguardStashTab
 
 // A character's stash: between-raid storage in tabs of 10 x 30 squares. Starts with one tab; up to
 // three more are bought for 3000 gold each (GrantStashTab). Lives on the player
-// state, so it survives death and travel. Not saved yet.
+// state, so it survives death and travel. Saved by UCrossguardSaveSubsystem.
 //
 // Server authoritative, between raids only. Items move between the stash and the character's
 // inventory (UCrossguardInventoryComponent on the pawn). Skill Gems can be learned from here.
@@ -66,6 +66,11 @@ public:
 
 	// Server. Seamless travel: copies the tabs from the previous player state's stash.
 	void CopyFrom(const UCrossguardStashComponent& Other);
+
+	// Server. Loading a save (UCrossguardSaveSubsystem, which validated the positions): replaces
+	// every tab. Items get new stash ids; the tab count is kept within the starting tabs plus the
+	// most that can be bought.
+	void RestoreTabs(const TArray<FCrossguardStashTab>& NewTabs);
 
 	// Client requests: run on the server (clients forward them). Failures reach the owning client
 	// through OnStashRejected.
