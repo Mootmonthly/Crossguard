@@ -13,7 +13,10 @@ solo or in a premade team of **up to 8**; the party key travels as `?Party=<key>
 puts everyone with the same key on one team. Friendly fire is always on; the team only decides who
 counts as an ally.
 
-Everything else below is a **placeholder or an assumption** until ruled (listed at the end).
+Also ruled (owner): invites expire after **180 s**; only the leader invites, kicks and promotes;
+membership changes and the raid launch happen only in the hub; a solo player may launch alone;
+players can delete invites from their inbox (one at a time or all). Everything else below is a
+**placeholder or an assumption** until ruled (listed at the end).
 
 ## Rules
 
@@ -21,12 +24,15 @@ Everything else below is a **placeholder or an assumption** until ruled (listed 
   `MaxTeamSize`) in join order and exactly one leader.
 - **Invite**: only the leader invites, and only players in no party. A player in no party who
   invites someone founds a party with themself as leader (only if the invite would succeed: a
-  refused invite founds nothing). Invites expire after `InviteExpirySeconds` (**60 s,
-  placeholder**); an unexpired invite to the same player is refused (`AlreadyInvited`), an expired
+  refused invite founds nothing). Invites expire after `InviteExpirySeconds` (**180 s,
+  ruled**); an unexpired invite to the same player is refused (`AlreadyInvited`), an expired
   one is replaced. A full party cannot invite; pending invites do not reserve a place.
 - **Accept / decline**: the invitee joins as a member. Accepting drops their invites from other
   parties. Fails if the invite expired, the player is meanwhile in a party, or the party is full. A
   failed accept keeps the invite (it expires on its own); declining removes it.
+- **Invite inbox**: a player sees every open invite to them (one per inviting party) and can delete
+  any one (`Decline`, by party) or all of them (`DeclineAll`), expired or not. Declining changes no
+  party.
 - **Leave**: anyone. A leader leaving hands the lead to the longest-standing member. The last
   member leaving disbands the party (its pending invites go with it).
 - **Kick**: leader only, any other member.
@@ -47,9 +53,9 @@ Everything else below is a **placeholder or an assumption** until ruled (listed 
   are **allies in the hub at once** (party skills, spectating, kill XP), and the key is already on
   every player state when the raid launch travels. Leaving or being kicked puts the player on a team
   of their own.
-- **Hub only** (assumption, placeholder): invite, accept, leave, kick and the raid launch are
+- **Hub only** (ruled): invite, accept, leave, kick and the raid launch are
   refused with `OnlyInHub` while the game mode's `bIsRaid` is on, because the party is the raid
-  team. Decline and promote work anywhere (they change no team).
+  team. Decline, decline all and promote work anywhere (they change no team).
 - **Leaving the server** (logout from the hub) leaves the party; the rest get a new leader if need
   be, and the player's open invites are dropped. In a raid nothing changes on logout. A player who
   logs in without `?Party=` to a server whose subsystem still has them in a party (same process,
@@ -70,17 +76,18 @@ On `UCrossguardPartyComponent` (`ACrossguardPlayerState::GetParty()`), local pla
 | --- | --- |
 | `IsInParty()`, `IsLeader()`, `GetPartyId()`, `GetLeaderId()` | |
 | `GetMembers()` | `FCrossguardPartyMemberView`: `PlayerId`, `DisplayName`, `bLeader`; join order. |
-| `GetInvites()` | `FCrossguardPartyInviteView`: `PartyId`, `InvitedBy` (name), `MemberCount`. |
+| `GetInvites()` | The invite inbox. `FCrossguardPartyInviteView`: `PartyId`, `InvitedBy` (name), `InvitedById`, `MemberCount`. Refreshed on every change to it; an invite can expire while listed (accepting it is refused with `InviteExpired` and it drops off). |
 | `OnPartyChanged` | Fires on the server and the owning client after every change. |
 | `OnPartyRefused(ECrossguardPartyResult)` | A request was refused. |
 
-Requests: `RequestInvite(APlayerState*)`, `RequestAccept(PartyId)`, `RequestDecline(PartyId)`,
-`RequestLeave()`, `RequestKick(PlayerId)`, `RequestPromote(PlayerId)`, `RequestStartRaid()`.
+Requests: `RequestInvite(APlayerState*)`, `RequestAccept(PartyId)`, `RequestDecline(PartyId)` (deletes
+one invite), `RequestDeclineAll()` (empties the inbox; `NoInvite` if it was empty), `RequestLeave()`, `RequestKick(PlayerId)`, `RequestPromote(PlayerId)`, `RequestStartRaid()`.
 
 ### Console commands (until the panel exists)
 
 On `ACrossguardCharacter` (console, Output Log): `PartyInvite <player name>`, `PartyAccept` (your
-first invite), `PartyDecline`, `PartyLeave`, `PartyKick <name or id>`, `PartyPromote <name or id>`,
+first invite), `PartyInvites` (the inbox, numbered), `PartyDecline <number, inviter's name or party
+id>` (empty: the first), `PartyDeclineAll`, `PartyLeave`, `PartyKick <name or id>`, `PartyPromote <name or id>`,
 `PartyInfo` (party, members, invites, and the names of everyone on the server), `PartyStartRaid`.
 
 ## Raid launch
@@ -132,21 +139,24 @@ to outlive a hub server (and to come back from a raid as a party).
 
 ## Assumptions and placeholders
 
-1. Only the leader invites; inviting while in no party founds the party.
-2. Invites expire after 60 s (`InviteExpirySeconds`, placeholder). Pending invites do not reserve a
-   place; accepting drops the player's other invites.
+Ruled (no longer placeholders): only the leader invites, kicks and promotes; invites expire after
+180 s (`InviteExpirySeconds`); membership changes and the raid launch only in the hub (game mode
+`bIsRaid` off); a solo player may launch a raid alone; invites can be deleted from the inbox.
+
+Still assumed:
+
+1. Inviting while in no party founds the party.
+2. Pending invites do not reserve a place; accepting drops the player's other invites.
 3. A leader leaving hands the lead to the longest-standing member; the last member leaving
-   disbands the party. Kicking and promoting are leader only.
-4. Membership changes and the raid launch only in the hub (game mode `bIsRaid` off); decline and
-   promote anywhere.
+   disbands the party.
+4. Decline and promote work anywhere, in a raid too.
 5. Logging out of the hub leaves the party; logging out of a raid does not.
-6. A solo player may launch a raid alone.
-7. Raid launch: ServerTravel when the whole server is the party and `RaidMapName` is set, else
+6. Raid launch: ServerTravel when the whole server is the party and `RaidMapName` is set, else
    ClientTravel to `RaidServerAddress`, refused when the listen host is in a party that is not the
    whole server. Both settings are placeholders until a matchmaker exists.
-8. Seamless travel is on for the game mode (needed to carry `PartyKey` through a ServerTravel).
-9. Party ids are 32-hex-digit GUIDs; the party view (id included) replicates to its owner only.
-10. `?Hub` on a server's map URL makes that map the hub (`bIsRaid` off), until a hub map exists.
+7. Seamless travel is on for the game mode (needed to carry `PartyKey` through a ServerTravel).
+8. Party ids are 32-hex-digit GUIDs; the party view (id included) replicates to its owner only.
+9. `?Hub` on a server's map URL makes that map the hub (`bIsRaid` off), until a hub map exists.
 
 ## Not covered
 

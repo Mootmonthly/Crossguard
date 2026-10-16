@@ -389,6 +389,128 @@ bool FCrossguardNetPartyLeaveKick::RunTest(const FString& Parameters)
 	return true;
 }
 
+// --- Invite inbox --------------------------------------------------------------------------------
+
+// Listen server + 2 clients, in the hub. The host and client 2 both invite client 1 (two parties):
+// client 1's own client lists both invites (owner only: the host's copy of client 1's component shows
+// none). Client 1 deletes the host's invite from its console by the inviter's name (PartyDecline);
+// client 2's stays and nobody joins anything. The host invites again; client 1 clears its inbox
+// (PartyDeclineAll); clearing an empty inbox is refused (NoInvite). Declining works in a raid too.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardNetPartyInviteInbox, "Crossguard.Net.PartyInviteInboxDecline", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardNetPartyInviteInbox::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioParty;
+
+	FScenario Scenario(*this);
+	Scenario.Clients(3);
+	Scenario.Raid(false);
+
+	Scenario.Step(TEXT("The host and client 2 both invite client 1"), [](FScenarioContext& C)
+	{
+		TArray<ACrossguardPlayerState*> States;
+		UCrossguardPartySubsystem* Parties = PartiesOf(C);
+		if (!PlacePartyClients(C) || Parties == nullptr || !GetServerStates(C, States))
+		{
+			return;
+		}
+		ExpectParty(C, TEXT("The host invites client 1"), Parties->Invite(States[0], States[1]), ECrossguardPartyResult::None);
+		ExpectParty(C, TEXT("Client 2 invites client 1"), Parties->Invite(States[2], States[1]), ECrossguardPartyResult::None);
+		const TArray<FCrossguardPartyInviteView>& Invites = PartyOf(States[1])->GetInvites();
+		C.Test.TestEqual(TEXT("Server: client 1's inbox holds two invites"), Invites.Num(), 2);
+		for (const FCrossguardPartyInviteView& Invite : Invites)
+		{
+			const ACrossguardPlayerState* Inviter = Invite.PartyId == PartyOf(States[0])->GetPartyId() ? States[0] : States[2];
+			C.Test.TestEqual(TEXT("The invite names its inviter"), Invite.InvitedBy, Inviter->GetPlayerName());
+			C.Test.TestEqual(TEXT("The invite carries the inviter's id"), Invite.InvitedById, PartyPlayerId(Inviter));
+		}
+	});
+
+	Scenario.WaitUntilOnClient(1, TEXT("client 1 sees both invites"), PartyReplicationWait, [](FScenarioContext& C, UWorld&)
+	{
+		const UCrossguardPartyComponent* Own = PartyOf(OwnStateOn(C, 1));
+		return Own != nullptr && Own->GetInvites().Num() == 2;
+	});
+
+	Scenario.Step(TEXT("Client 1 deletes the host's invite from its console"), [](FScenarioContext& C)
+	{
+		const ACrossguardPlayerState* Host = ServerStateOf(C, 0);
+		const UCrossguardPartyComponent* HostOnOne = PartyOf(C.OnClient<ACrossguardPlayerState>(Host, 1));
+		C.Test.TestTrue(TEXT("Client 1's copy of the host's component lists no invites"), HostOnOne == nullptr || HostOnOne->GetInvites().IsEmpty());
+		ACrossguardCharacter* Pawn = C.ClientPawn(1);
+		if (C.Require(Pawn != nullptr && Host != nullptr, TEXT("client 1 has its own pawn")))
+		{
+			Pawn->PartyInvites();
+			Pawn->PartyDecline(Host->GetPlayerName());
+		}
+	});
+
+	Scenario.WaitUntil(TEXT("server: client 1 holds only client 2's invite"), PartyReplicationWait, [](FScenarioContext& C)
+	{
+		const UCrossguardPartyComponent* One = PartyOf(ServerStateOf(C, 1));
+		const UCrossguardPartyComponent* Two = PartyOf(ServerStateOf(C, 2));
+		return One != nullptr && Two != nullptr && One->GetInvites().Num() == 1 && One->GetInvites()[0].PartyId == Two->GetPartyId();
+	});
+
+	Scenario.Step(TEXT("Nobody joined anything; the host invites again"), [](FScenarioContext& C)
+	{
+		TArray<ACrossguardPlayerState*> States;
+		UCrossguardPartySubsystem* Parties = PartiesOf(C);
+		if (Parties == nullptr || !GetServerStates(C, States))
+		{
+			return;
+		}
+		C.Test.TestFalse(TEXT("Client 1 is in no party"), PartyOf(States[1])->IsInParty());
+		C.Test.TestEqual(TEXT("The host's party is still just the host"), PartyOf(States[0])->GetMembers().Num(), 1);
+		ExpectParty(C, TEXT("Accepting the declined invite"), Parties->Accept(States[1], PartyOf(States[0])->GetPartyId()), ECrossguardPartyResult::NoInvite);
+		ExpectParty(C, TEXT("The host invites client 1 again"), Parties->Invite(States[0], States[1]), ECrossguardPartyResult::None);
+		C.Test.TestEqual(TEXT("Two invites again"), PartyOf(States[1])->GetInvites().Num(), 2);
+	});
+
+	Scenario.WaitUntilOnClient(1, TEXT("client 1 sees two invites again"), PartyReplicationWait, [](FScenarioContext& C, UWorld&)
+	{
+		const UCrossguardPartyComponent* Own = PartyOf(OwnStateOn(C, 1));
+		return Own != nullptr && Own->GetInvites().Num() == 2;
+	});
+
+	Scenario.Step(TEXT("Client 1 clears its inbox from its console"), [](FScenarioContext& C)
+	{
+		if (ACrossguardCharacter* Pawn = C.ClientPawn(1); C.Require(Pawn != nullptr, TEXT("client 1 has its own pawn")))
+		{
+			Pawn->PartyDeclineAll();
+		}
+	});
+
+	Scenario.WaitUntilOnClient(1, TEXT("client 1's inbox is empty"), PartyReplicationWait, [](FScenarioContext& C, UWorld&)
+	{
+		const UCrossguardPartyComponent* Own = PartyOf(OwnStateOn(C, 1));
+		return Own != nullptr && Own->GetInvites().IsEmpty();
+	});
+
+	Scenario.Step(TEXT("Server: the inbox is empty; clearing it again is refused; declining works in a raid"), [](FScenarioContext& C)
+	{
+		TArray<ACrossguardPlayerState*> States;
+		UCrossguardPartySubsystem* Parties = PartiesOf(C);
+		if (Parties == nullptr || !GetServerStates(C, States))
+		{
+			return;
+		}
+		C.Test.TestTrue(TEXT("Server: client 1 has no invites"), PartyOf(States[1])->GetInvites().IsEmpty());
+		C.Test.TestTrue(TEXT("Rules: no invite to client 1 left"),
+			Parties->GetRegistry().InvitesFor(TCHAR_TO_UTF8(*PartyPlayerId(States[1])), 0.0).empty());
+		ExpectParty(C, TEXT("Clearing an empty inbox"), Parties->DeclineAll(States[1]), ECrossguardPartyResult::NoInvite);
+		ExpectParty(C, TEXT("The host invites client 1 once more"), Parties->Invite(States[0], States[1]), ECrossguardPartyResult::None);
+		C.SetRaid(true);
+		ExpectParty(C, TEXT("Declining in a raid"), Parties->Decline(States[1], PartyOf(States[0])->GetPartyId()), ECrossguardPartyResult::None);
+		C.SetRaid(false);
+		C.Test.TestTrue(TEXT("Client 1's inbox is empty again"), PartyOf(States[1])->GetInvites().IsEmpty());
+	});
+
+	Scenario.Run();
+	return true;
+}
+
 // --- Raid launch plan ----------------------------------------------------------------------------
 
 // Standalone hub. Who may launch (leader or solo, not a member, not in a raid) and what the launch

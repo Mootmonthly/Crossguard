@@ -67,7 +67,7 @@ FString UCrossguardPartySubsystem::PartyKeyOf(const FString& PlayerId) const
 
 bool UCrossguardPartySubsystem::IsInHub(const ACrossguardPlayerState* Actor) const
 {
-	// Placeholder ruling: the party is the raid team, so it only changes between raids.
+	// Ruled: the party is the raid team, so it only changes between raids (in the hub).
 	const ACrossguardGameMode* GameMode = Actor != nullptr ? Actor->GetWorld()->GetAuthGameMode<ACrossguardGameMode>() : nullptr;
 	return GameMode != nullptr && !GameMode->bIsRaid;
 }

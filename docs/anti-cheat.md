@@ -52,7 +52,7 @@ Status: **fixed** (a hole closed in this review), **ok** (checked, no change nee
 | --- | --- | --- |
 | `Trade*` (`TradeItems`, `TradeNearest`, `TradeRespond`, `TradeOffer`, `TradeLock`, `TradeAccept`, `TradeCancel`) | Client-side stand-ins for a trade window: they only call the request functions, so the server RPCs above validate everything. | ok (remove once the UI exists) |
 | `Guild*` (`GuildCreate`, `GuildInviteNearest`, `GuildAccept`, `GuildLeave`, `GuildInfo`, `GuildRank`, `GuildKick`, `GuildGold`, `GuildDeposit`, `GuildWithdraw`, `GuildGive`) | Same: client wrappers around the guild RPCs. | ok (remove once the UI exists) |
-| `Party*` (`PartyInvite`, `PartyAccept`, `PartyDecline`, `PartyLeave`, `PartyKick`, `PartyPromote`, `PartyInfo`, `PartyStartRaid`) | Same: client wrappers around the party RPCs. | ok (remove once the UI exists) |
+| `Party*` (`PartyInvite`, `PartyAccept`, `PartyInvites`, `PartyDecline`, `PartyDeclineAll`, `PartyLeave`, `PartyKick`, `PartyPromote`, `PartyInfo`, `PartyStartRaid`) | Same: client wrappers around the party RPCs. | ok (remove once the UI exists) |
 
 ## Debug options
 
