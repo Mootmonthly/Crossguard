@@ -13,9 +13,9 @@ class ACrossguardPlayerState;
 UENUM(BlueprintType)
 enum class ECrossguardRaidTravel : uint8
 {
-	// The whole server loads the raid map (UWorld::ServerTravel).
+	// DEV-ONLY (listen server): the whole server loads the raid map (UWorld::ServerTravel).
 	ServerTravel,
-	// Each member's client travels to the raid server (APlayerController::ClientTravel).
+	// Each member's client travels to the match server matchmaking assigned (ClientTravel).
 	ClientTravel,
 	NoDestination,
 	HostInParty,
@@ -44,8 +44,9 @@ public:
 	// Leader (or a player in no party): sends the party to the raid (see PlanRaidTravel). Hub only.
 	ECrossguardPartyResult StartRaid(ACrossguardPlayerState* Actor);
 
-	// What StartRaid would do for Actor, without travelling: the mode and the URL (map or server
-	// address plus ?Party=<id>). Checks the hub and the leader too: anything but None is StartRaid's
+	// What StartRaid would do for Actor, without travelling: the mode and the URL (the match server
+	// with ?MatchTicket=<ticket>; development: the server address or, dev listen mode only, the raid
+	// map, plus ?Party=<id>). Asks matchmaking (UCrossguardMatchmakingSubsystem). Checks the hub and the leader too: anything but None is StartRaid's
 	// refusal.
 	ECrossguardPartyResult PlanRaidTravel(ACrossguardPlayerState* Actor, ECrossguardRaidTravel& OutMode, FString& OutUrl) const;
 

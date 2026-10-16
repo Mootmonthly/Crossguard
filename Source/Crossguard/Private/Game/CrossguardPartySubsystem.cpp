@@ -4,7 +4,9 @@
 #include "Engine/EngineBaseTypes.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "Game/CrossguardDevMode.h"
 #include "Game/CrossguardGameMode.h"
+#include "Game/CrossguardMatchmaking.h"
 #include "Game/CrossguardGuildSubsystem.h"
 #include "Game/CrossguardPlayerState.h"
 #include "Game/CrossguardSaveSubsystem.h"
@@ -315,32 +317,51 @@ ECrossguardPartyResult UCrossguardPartySubsystem::PlanRaidTravel(ACrossguardPlay
 	const AGameStateBase* GameState = World->GetGameState();
 	const TArray<ACrossguardPlayerState*> Travellers = TravellersFor(Actor);
 	const bool bListenServer = World->GetNetMode() == NM_ListenServer;
+	const Crossguard::FParty* Party = Registry.PartyOf(ActorId);
+	const FString PartyId = Party != nullptr ? CrossguardPartyLocal::TextOf(Party->Id) : FString();
+
+	// The real path: matchmaking assigns a match server (a stub until the backend exists; development
+	// builds fake it from RaidServerAddress / -RaidServer=).
+	FCrossguardMatchAssignment Assignment;
+	if (const UCrossguardMatchmakingSubsystem* Matchmaking = UCrossguardMatchmakingSubsystem::Get(World))
+	{
+		FCrossguardMatchRequest Request;
+		Request.PartyKey = PartyId;
+		for (const ACrossguardPlayerState* Traveller : Travellers)
+		{
+			Request.PlayerIds.Add(CrossguardPartyLocal::IdOf(Traveller));
+		}
+		Assignment = Matchmaking->GetMatchmaking().RequestMatch(World, Request);
+	}
 
 	Crossguard::FRaidTravelSituation Situation;
+	// DEV-ONLY (listen server): the whole-server launch.
+	Situation.bDevListenMode = Crossguard::IsDevListenMode(World);
 	Situation.bWholeServerInParty = GameState != nullptr && GameState->PlayerArray.Num() == Travellers.Num();
 	Situation.bHasRaidMap = !GameMode->GetRaidMapName().IsEmpty();
-	Situation.bHasRaidServer = !GameMode->GetRaidServerAddress().IsEmpty();
+	Situation.bHasRaidServer = Assignment.Status == ECrossguardMatchStatus::Assigned;
 	for (const ACrossguardPlayerState* Traveller : Travellers)
 	{
 		const APlayerController* Controller = Cast<APlayerController>(Traveller->GetOwner());
 		Situation.bListenHostInParty |= bListenServer && Controller != nullptr && Controller->IsLocalController();
 	}
 
-	const Crossguard::FParty* Party = Registry.PartyOf(ActorId);
-	const FString PartyId = Party != nullptr ? CrossguardPartyLocal::TextOf(Party->Id) : FString();
 	OutMode = static_cast<ECrossguardRaidTravel>(static_cast<uint8>(Crossguard::PickRaidTravel(Situation)));
 	switch (OutMode)
 	{
 	case ECrossguardRaidTravel::ServerTravel:
-		// A listen server keeps listening on the raid map.
+		// DEV-ONLY (listen server): the whole server loads the raid map; a listen server keeps listening.
 		OutUrl = RaidTravelUrl(GameMode->GetRaidMapName(), PartyId, bListenServer ? TEXT("listen") : TEXT(""));
 		break;
 	case ECrossguardRaidTravel::ClientTravel:
-		OutUrl = RaidTravelUrl(GameMode->GetRaidServerAddress(), PartyId);
+		// The match server with the backend's ticket; a development assignment carries ?Party= instead.
+		OutUrl = Assignment.bDevPartyOption ? RaidTravelUrl(Assignment.ServerAddress, PartyId)
+											: UCrossguardMatchmakingSubsystem::BuildMatchTravelUrl(Assignment.ServerAddress, Assignment.Ticket);
 		break;
 	case ECrossguardRaidTravel::NoDestination:
 		return ECrossguardPartyResult::NoRaidDestination;
 	case ECrossguardRaidTravel::HostInParty:
+		// DEV-ONLY (listen server): the host cannot leave its own hub.
 		return ECrossguardPartyResult::HostInParty;
 	}
 	return OutUrl.IsEmpty() ? ECrossguardPartyResult::TravelFailed : ECrossguardPartyResult::None;
@@ -372,12 +393,13 @@ ECrossguardPartyResult UCrossguardPartySubsystem::StartRaid(ACrossguardPlayerSta
 
 	if (Mode == ECrossguardRaidTravel::ServerTravel)
 	{
+		// DEV-ONLY (listen server): PlanRaidTravel only picks this in development mode.
 		// Seamless travel carries each player state's PartyKey (set when they joined the party) to
 		// the raid map, where the game mode puts the party on one team again. Absolute: the hub's
 		// own options (?Hub) must not carry over.
 		return World->ServerTravel(Url, true) ? ECrossguardPartyResult::None : ECrossguardPartyResult::TravelFailed;
 	}
-	// Each member's client connects to the raid server with ?Party=<id> in its login URL.
+	// Each member's client connects to the match server with the ticket (development: ?Party=<id>).
 	for (ACrossguardPlayerState* Traveller : Travellers)
 	{
 		if (APlayerController* Controller = Cast<APlayerController>(Traveller->GetOwner()))

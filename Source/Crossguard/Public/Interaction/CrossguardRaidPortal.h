@@ -12,8 +12,8 @@ class UStaticMeshComponent;
 
 // The hub's way into a raid (docs/hub-and-menu.md): F at the portal launches the raid for the
 // user's party, exactly as the party window's "Start raid" (UCrossguardPartySubsystem::StartRaid:
-// the leader, or a player in no party who goes alone; hub only; the game mode's RaidMapName /
-// RaidServerAddress). Anyone else is refused with a HUD message ("Only your party's leader can start
+// the leader, or a player in no party who goes alone; hub only; a match server from matchmaking, or
+// in development the whole server to RaidMapName). Anyone else is refused with a HUD message ("Only your party's leader can start
 // the raid."). Server-authoritative: the portal decides nothing itself. Placeholder look: a flat
 // glowing disc (set PortalMesh in a Blueprint subclass).
 UCLASS()

@@ -87,7 +87,7 @@ FString ACrossguardRaidPortal::RefusalMessage(ECrossguardPartyResult Result)
 	case ECrossguardPartyResult::OnlyInHub:
 		return TEXT("The raid portal only works in the hub.");
 	case ECrossguardPartyResult::NoRaidDestination:
-		return TEXT("No raid to go to (the game mode has no Raid Map Name or Raid Server Address).");
+		return TEXT("No raid server available right now (matchmaking is not available).");
 	case ECrossguardPartyResult::HostInParty:
 		return TEXT("The host cannot leave the hub while other players stay on it.");
 	default:

@@ -30,9 +30,10 @@ enum class ECrossguardPartyResult : uint8
 	OnlyInHub,
 	// No player state to act for.
 	NoPlayer,
-	// No raid map (for a whole-server party) and no raid server address are set.
+	// Matchmaking assigned no match server (not available until the backend exists; development:
+	// no -RaidServer=), and not the development whole-server launch (raid map, dev listen mode).
 	NoRaidDestination,
-	// The listen server's host is in the party, but only a whole-server party can travel with it.
+	// DEV-ONLY (listen server): the host is in the party, but only a whole-server party can travel with it.
 	HostInParty,
 	// The travel URL could not be built or the travel did not start.
 	TravelFailed,
