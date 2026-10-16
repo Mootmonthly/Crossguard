@@ -5,6 +5,7 @@
 #include "GameFramework/Controller.h"
 #include "GameFramework/GameModeBase.h"
 #include "Items/CrossguardLoot.h"
+#include "TimerManager.h"
 
 #include "CrossguardGameMode.generated.h"
 
@@ -93,10 +94,57 @@ public:
 	// tests): it is the client's word.
 	static const TCHAR* DevPlayerIdOption;
 
-	// After a successful extraction. Hook the trip back to the hub here (not built:
-	// docs/hub-and-menu.md).
+	// After a successful extraction (the trip back to the hub: UpdateHubReturn).
 	UPROPERTY(BlueprintAssignable, Category = "Crossguard")
 	FCrossguardPlayerExtracted OnPlayerExtracted;
+
+	// --- Back to the hub after the raid (docs/hub-and-menu.md, "After the raid"). Server. ---
+	//
+	// Ruled (owner): once nobody is left in the raid (everyone extracted or dead for the raid), the
+	// whole server travels back to the hub map (seamless ServerTravel, the reverse of the hub's raid
+	// launch); extracted players spectate meanwhile. Disconnected raiders held for a reconnect still
+	// count as in the raid, but only for HeldPlayerReturnGraceSeconds once nobody else is.
+
+	// The hub map the server travels back to: "<HubMapName>?listen?Hub" on a listen server,
+	// "<HubMapName>?Hub" otherwise. The -HubMap=<path> command line option overrides it (as on the
+	// menu's game mode). Empty: no trip back (extracted players stay where they left).
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Hub Return")
+	FString HubMapName = TEXT("/Game/Maps/L_Hub");
+
+	// Seconds from the last player leaving the raid to the travel (HUD: "Returning to the hub in N s").
+	// Placeholder.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Hub Return", meta = (ClampMin = "0"))
+	float HubReturnCountdownSeconds = 10.0f;
+
+	// When only disconnected raiders (held for a reconnect) are left in the raid: seconds the server
+	// waits for them before travelling anyway. A held character still in the raid then fails its
+	// extraction (released as if it died while away). Placeholder.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Hub Return", meta = (ClampMin = "0"))
+	float HeldPlayerReturnGraceSeconds = 120.0f;
+
+	FString GetHubMapName() const;
+
+	// "<HubMap>?listen?Hub" (bListen) or "<HubMap>?Hub"; empty if HubMap is empty.
+	static FString BuildHubReturnUrl(const FString& HubMap, bool bListen);
+
+	// The countdown to the trip back runs.
+	bool IsHubReturnPending() const { return bHubReturnPending; }
+	// Seconds until the travel (0 when not pending).
+	float GetHubReturnSecondsLeft() const;
+	// The countdown waits for disconnected raiders only (HeldPlayerReturnGraceSeconds).
+	bool IsHubReturnWaitingForHeldPlayers() const { return bHubReturnPending && bHubReturnWaitsForHeld; }
+	// ReturnToHub ran: the URL the server travelled to (or, plan only, would have).
+	bool HasHubReturnStarted() const { return bHubReturnStarted; }
+	const FString& GetHubReturnUrl() const { return HubReturnUrl; }
+
+	// Server. The countdown's end: held raiders fail their raid, everyone's save is written, absent
+	// players leave their parties, then the server travels to the hub (unless plan only).
+	void ReturnToHub();
+
+	// Tests: ReturnToHub does everything but the ServerTravel. During automation tests it is plan only
+	// anyway unless bHubReturnTravelInTests is set (Net.SeamlessTravelHubToRaid travels for real).
+	bool bHubReturnPlanOnly = false;
+	bool bHubReturnTravelInTests = false;
 
 	virtual void StartPlay() override;
 
@@ -202,8 +250,9 @@ private:
 	// The reconnecting controller takes over the held player state (before Super::InitNewPlayer).
 	FString RestoreHeldPlayer(APlayerController* Controller, const FString& PlayerId, const FUniqueNetIdRepl& UniqueId, const FString& Options,
 		const FString& Portal);
-	// The held player's character died for the raid: their raid fails and the player state goes.
-	void ReleaseHeldPlayer(const FString& PlayerId);
+	// The held player's character died for the raid (or bRaidOver: the server returns to the hub
+	// while they are away): their raid fails and the player state goes.
+	void ReleaseHeldPlayer(const FString& PlayerId, bool bRaidOver = false);
 	// Possesses the waiting character again, keeping its Health.
 	void ResumeHeldCharacter(APlayerController* Player, ACrossguardCharacter* Character);
 
@@ -215,4 +264,21 @@ private:
 	TSet<FString> FinishedPlayerIds;
 	// During Login of this process's own player (a ULocalPlayer: standalone, listen-server host).
 	bool bLoggingInLocalPlayer = false;
-};
+
+	// After anyone's raid state changes (extraction, death for the raid, a held player's release, a
+	// logout, a reconnect, a new raider): starts, shortens or cancels the countdown to the hub.
+	void UpdateHubReturn();
+	// Every HubReturnTickSeconds while pending: the HUD line, and ReturnToHub when time is up.
+	void HubReturnTick();
+	// Players sent to the menu (ReturnToMenu): leaving, so they keep no raid going and do not count as
+	// travellers.
+	TSet<FString> SentToMenuIds;
+	FTimerHandle HubReturnTimer;
+	// World time of the travel.
+	double HubReturnAt = 0.0;
+	// The last whole second shown on the HUD.
+	int32 HubReturnShownSeconds = -1;
+	bool bHubReturnPending = false;
+	bool bHubReturnWaitsForHeld = false;
+	bool bHubReturnStarted = false;
+	FString HubReturnUrl;

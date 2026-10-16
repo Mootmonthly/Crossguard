@@ -62,6 +62,10 @@ public:
 	// The player left this server (logout from the hub): they leave their party, and the rest are
 	// refreshed (a leader hands over).
 	void PlayerLeftServer(ACrossguardPlayerState* PlayerState);
+	// The server is going back to the hub after a raid (ACrossguardGameMode::ReturnToHub): every party
+	// member not on this server (World's player states), or in Leaving (sent to the menu), leaves
+	// their party as PlayerLeftServer would. Assumed: they left the server during the raid.
+	void DropAbsentMembers(const UWorld* World, const TSet<FString>& Leaving);
 
 	// Read-only view of every party (tests, a future backend).
 	const Crossguard::FPartyRegistry& GetRegistry() const { return Registry; }

@@ -7,6 +7,7 @@
 #include "Game/CrossguardGameMode.h"
 #include "Game/CrossguardGuildSubsystem.h"
 #include "Game/CrossguardPlayerState.h"
+#include "Game/CrossguardSaveSubsystem.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/PlatformTime.h"
@@ -240,6 +241,33 @@ void UCrossguardPartySubsystem::PlayerLeftServer(ACrossguardPlayerState* PlayerS
 	}
 }
 
+void UCrossguardPartySubsystem::DropAbsentMembers(const UWorld* World, const TSet<FString>& Leaving)
+{
+	std::vector<std::string> Absent;
+	for (const auto& Pair : Registry.All())
+	{
+		for (const std::string& Member : Pair.second.Members)
+		{
+			const FString MemberId = CrossguardPartyLocal::TextOf(Member);
+			if (Leaving.Contains(MemberId) || FindOnline(World, MemberId) == nullptr)
+			{
+				Absent.push_back(Member);
+			}
+		}
+	}
+	// Collected first: leaving changes the registry.
+	for (const std::string& PlayerId : Absent)
+	{
+		Registry.DeclineAll(PlayerId);
+		const Crossguard::FPartyLeaveResult Left = Registry.Leave(PlayerId);
+		UE_LOG(LogCrossguard, Log, TEXT("%s is not coming back to the hub: left their party"), *CrossguardPartyLocal::TextOf(PlayerId));
+		if (Left.IsValid() && !Left.bDisbanded)
+		{
+			SyncParty(Left.PartyId);
+		}
+	}
+}
+
 // --- Raid launch ----------------------------------------------------------------------------------
 
 TArray<ACrossguardPlayerState*> UCrossguardPartySubsystem::TravellersFor(ACrossguardPlayerState* Actor) const
@@ -330,6 +358,17 @@ ECrossguardPartyResult UCrossguardPartySubsystem::StartRaid(ACrossguardPlayerSta
 	const TArray<ACrossguardPlayerState*> Travellers = TravellersFor(Actor);
 	UE_LOG(LogCrossguard, Log, TEXT("%s starts the raid for %d player(s): %s %s"), *Actor->GetPlayerName(), Travellers.Num(),
 		Mode == ECrossguardRaidTravel::ServerTravel ? TEXT("server travel to") : TEXT("client travel to"), *Url);
+
+	// Every traveller's record is current before the map changes (the carried gear crosses a seamless
+	// travel in the save subsystem's record, not on the pawn), not only what the watcher caught.
+	if (UCrossguardSaveSubsystem* Saves = UCrossguardSaveSubsystem::Get(World))
+	{
+		for (ACrossguardPlayerState* Traveller : Travellers)
+		{
+			Saves->SaveNow(Traveller);
+		}
+		Saves->FlushPendingSaves();
+	}
 
 	if (Mode == ECrossguardRaidTravel::ServerTravel)
 	{
