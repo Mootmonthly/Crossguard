@@ -1,18 +1,32 @@
 #include "Game/CrossguardMatchmaking.h"
 
+#include "Crossguard.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 #include "Game/CrossguardGameMode.h"
 #include "Game/CrossguardMenuGameMode.h"
+#include "Game/CrossguardNakamaMatchmaking.h"
+#include "Game/CrossguardNakamaSubsystem.h"
 
 const TCHAR* UCrossguardMatchmakingSubsystem::MatchTicketOption = TEXT("MatchTicket");
 
-FCrossguardMatchAssignment FCrossguardNoMatchmaking::RequestMatch(const UWorld* HubWorld, const FCrossguardMatchRequest& Request) const
+void FCrossguardNoMatchmaking::RequestMatch(const UWorld* HubWorld, const FCrossguardMatchRequest& Request, FMatchCallback OnDone)
 {
-	return FCrossguardMatchAssignment();
+	if (OnDone)
+	{
+		OnDone(FCrossguardMatchAssignment());
+	}
 }
 
-FCrossguardMatchAssignment FCrossguardDevMatchmaking::RequestMatch(const UWorld* HubWorld, const FCrossguardMatchRequest& Request) const
+void FCrossguardNoMatchmaking::FindHubServer(const FString& PlayerId, const FString& PartyKey, FHubCallback OnDone)
+{
+	if (OnDone)
+	{
+		OnDone(FString());
+	}
+}
+
+void FCrossguardDevMatchmaking::RequestMatch(const UWorld* HubWorld, const FCrossguardMatchRequest& Request, FMatchCallback OnDone)
 {
 	FCrossguardMatchAssignment Assignment;
 	const ACrossguardGameMode* GameMode = HubWorld != nullptr ? HubWorld->GetAuthGameMode<ACrossguardGameMode>() : nullptr;
@@ -23,19 +37,42 @@ FCrossguardMatchAssignment FCrossguardDevMatchmaking::RequestMatch(const UWorld*
 		Assignment.ServerAddress = Address;
 		Assignment.bDevPartyOption = true;
 	}
-	return Assignment;
+	if (OnDone)
+	{
+		OnDone(Assignment);
+	}
 }
 
-const ICrossguardMatchmaking& UCrossguardMatchmakingSubsystem::GetMatchmaking() const
+void FCrossguardDevMatchmaking::FindHubServer(const FString& PlayerId, const FString& PartyKey, FHubCallback OnDone)
+{
+	if (OnDone)
+	{
+		OnDone(FString());
+	}
+}
+
+void UCrossguardMatchmakingSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	Collection.InitializeDependency<UCrossguardNakamaSubsystem>();
+	UCrossguardNakamaSubsystem* Nakama = GetGameInstance()->GetSubsystem<UCrossguardNakamaSubsystem>();
+	if (Nakama != nullptr && Nakama->IsBackendEnabled())
+	{
+		SetMatchmaking(MakeShared<FCrossguardNakamaMatchmaking>(Nakama));
+		UE_LOG(LogCrossguard, Log, TEXT("Matchmaking: %s"), *GetMatchmaking().Describe());
+	}
+}
+
+ICrossguardMatchmaking& UCrossguardMatchmakingSubsystem::GetMatchmaking() const
 {
 	if (Matchmaking.IsValid())
 	{
 		return *Matchmaking;
 	}
 #if UE_BUILD_SHIPPING
-	static const FCrossguardNoMatchmaking Default;
+	static FCrossguardNoMatchmaking Default;
 #else
-	static const FCrossguardDevMatchmaking Default;
+	static FCrossguardDevMatchmaking Default;
 #endif
 	return Default;
 }

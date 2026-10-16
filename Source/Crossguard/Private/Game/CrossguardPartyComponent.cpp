@@ -37,12 +37,13 @@ void UCrossguardPartyComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 void UCrossguardPartyComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	// Joining (or travelling to) a server: the party it already knows you in.
+	// Joining (or travelling to) a server: the party it already knows you in (with the backend: the
+	// party Nakama has for you, e.g. back from a raid).
 	if (GetOwner() != nullptr && GetOwner()->HasAuthority())
 	{
 		if (UCrossguardPartySubsystem* Subsystem = CrossguardPartyComponentLocal::PartiesFor(*this))
 		{
-			Subsystem->RefreshPlayer(Cast<ACrossguardPlayerState>(GetOwner()));
+			Subsystem->PlayerArrived(Cast<ACrossguardPlayerState>(GetOwner()));
 		}
 	}
 }

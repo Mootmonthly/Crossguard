@@ -244,9 +244,34 @@ void UCrossguardMainMenuWidget::Play()
 	using namespace CrossguardMainMenuLocal;
 	if (!Crossguard::IsDevListenMode(GetWorld()))
 	{
-		// The real game never hosts on a player's PC: Play will connect to a hub server once the
-		// backend exists.
-		ShowStatus(TEXT("Online play is not available yet (no hub server)."), Refusal);
+		// The real game never hosts on a player's PC: the backend names a hub server (the party's hub
+		// first, else the one with the most room) and this machine joins it.
+		UCrossguardNakamaSubsystem* Nakama = UCrossguardNakamaSubsystem::Get(this);
+		if (Nakama == nullptr || !Nakama->IsLoggedIn())
+		{
+			ShowStatus(TEXT("Log in first (above), then Play."), Refusal);
+			return;
+		}
+		ShowStatus(TEXT("Finding a hub server..."), Success);
+		TWeakObjectPtr<UCrossguardMainMenuWidget> WeakThis(this);
+		Nakama->FindMyHub([WeakThis](const FString& Address, const FString& Error)
+		{
+			UCrossguardMainMenuWidget* Self = WeakThis.Get();
+			if (Self == nullptr)
+			{
+				return;
+			}
+			const FString Url = ACrossguardMenuGameMode::BuildJoinUrl(Address);
+			if (Url.IsEmpty())
+			{
+				Self->ShowStatus(FString::Printf(TEXT("Online play is not available right now (%s)."), Error.IsEmpty() ? TEXT("bad hub address") : *Error),
+					CrossguardMainMenuLocal::Refusal);
+				return;
+			}
+			Self->ShowStatus(FString::Printf(TEXT("Joining the hub at %s..."), *Url), CrossguardMainMenuLocal::Success);
+			// Development builds: the server keeps this machine's player id (-CrossguardPlayerId=).
+			Self->TravelTo(ACrossguardMenuGameMode::WithLocalDevPlayerId(Url));
+		});
 		return;
 	}
 	// DEV-ONLY (listen server): this PC hosts the hub.

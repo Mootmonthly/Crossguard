@@ -522,3 +522,27 @@ FString UCrossguardNakamaSubsystem::GetLoginOption() const
 	// then an expired session sends no token and the player logs in again from the menu.
 	return IsLoggedIn() ? FString::Printf(TEXT("%s=%s"), TokenOption, *SessionToken) : FString();
 }
+
+void UCrossguardNakamaSubsystem::FindMyHub(FHubCallback OnDone)
+{
+	if (!IsLoggedIn() || !Client.IsValid())
+	{
+		OnDone(FString(), TEXT("not logged in"));
+		return;
+	}
+	Client->CallClientRpc(SessionToken, TEXT("crossguard_hub_find_mine"), TEXT("{}"), [OnDone = MoveTemp(OnDone)](const FCrossguardNakamaResponse& Response)
+	{
+		FString Address;
+		TSharedPtr<FJsonObject> Object;
+		if (Response.IsOk() && FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Response.Body), Object) && Object.IsValid())
+		{
+			Object->TryGetStringField(TEXT("address"), Address);
+		}
+		if (Address.IsEmpty())
+		{
+			OnDone(FString(), Response.HttpStatus == 404 ? FString(TEXT("no hub server is running")) : Response.Describe());
+			return;
+		}
+		OnDone(Address, FString());
+	});
+}

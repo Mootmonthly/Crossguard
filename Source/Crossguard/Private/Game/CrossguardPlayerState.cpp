@@ -413,12 +413,13 @@ void ACrossguardPlayerState::OnSetUniqueId()
 	{
 		Saves->PlayerJoined(this);
 	}
-	// The party view too. Seamless travel creates this player state (and runs its components'
-	// BeginPlay) before CopyProperties gives it the id, so the party component's own refresh can
-	// miss.
+	// The party view too (with the backend: read from Nakama under this id). Seamless travel creates
+	// this player state (and runs its components' BeginPlay) before CopyProperties gives it the id, and
+	// a login's Nakama id is set after the player state began play, so the party component's own
+	// refresh can miss.
 	UCrossguardPartySubsystem* Parties = HasAuthority() && GameInstance != nullptr ? GameInstance->GetSubsystem<UCrossguardPartySubsystem>() : nullptr;
 	if (Parties != nullptr)
 	{
-		Parties->RefreshPlayer(this);
+		Parties->PlayerArrived(this);
 	}
 }

@@ -23,6 +23,7 @@
 #include "Game/CrossguardSaveSubsystem.h"
 #include "Game/CrossguardTeamLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/GameSession.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
@@ -75,6 +76,42 @@ void ACrossguardGameMode::InitGame(const FString& MapName, const FString& Option
 	{
 		bIsRaid = false;
 	}
+	// The engine's own cap (GameSession MaxPlayers, 16 by default) would refuse a 48-player raid.
+	if (GameSession != nullptr && IsRunningDedicatedServer())
+	{
+		GameSession->MaxPlayers = GetServerCapacity();
+	}
+}
+
+int32 ACrossguardGameMode::GetServerCapacity() const
+{
+	int32 Capacity = bIsRaid ? RaidCapacity : HubCapacity;
+	FParse::Value(FCommandLine::Get(), bIsRaid ? TEXT("RaidCapacity=") : TEXT("HubCapacity="), Capacity);
+	return FMath::Max(1, Capacity);
+}
+
+bool ACrossguardGameMode::RequiresMatchTicket() const
+{
+	const UCrossguardNakamaSubsystem* Nakama = UCrossguardNakamaSubsystem::Get(this);
+	// DEV-ONLY (listen server): the whole-server launch brings no tickets.
+	return bIsRaid && Nakama != nullptr && Nakama->IsBackendEnabled() && !Crossguard::IsDevListenMode(GetWorld());
+}
+
+void ACrossguardGameMode::RegisterWithBackend()
+{
+	UCrossguardNakamaSubsystem* Nakama = UCrossguardNakamaSubsystem::Get(this);
+	UWorld* World = GetWorld();
+	if (Nakama == nullptr || !Nakama->IsBackendEnabled() || World == nullptr || GetNetMode() != NM_DedicatedServer)
+	{
+		return;
+	}
+	TWeakObjectPtr<ACrossguardGameMode> WeakThis(this);
+	Nakama->RegisterServer(bIsRaid ? TEXT("match") : TEXT("hub"), UCrossguardNakamaSubsystem::GetPublicAddress(World->URL.Port), GetServerCapacity(),
+		[WeakThis]()
+		{
+			const ACrossguardGameMode* Self = WeakThis.Get();
+			return Self != nullptr && Self->GameState != nullptr ? Self->GameState->PlayerArray.Num() : 0;
+		});
 }
 
 bool ACrossguardGameMode::IsHubMap(const FString& Options) const
@@ -187,13 +224,45 @@ void ACrossguardGameMode::PreLoginAsync(const FString& Options, const FString& A
 	}
 	// The HTTP timeout (UCrossguardNakamaSubsystem::RequestTimeoutSeconds) bounds the wait.
 	TWeakObjectPtr<ACrossguardGameMode> WeakThis(this);
-	Nakama->VerifySessionToken(Token, [WeakThis, Options, Address, UniqueId, OnComplete](bool bVerified, const FString& /*UserId*/, const FString& Error)
+	Nakama->VerifySessionToken(Token, [WeakThis, Options, Address, UniqueId, OnComplete](bool bVerified, const FString& UserId, const FString& Error)
 	{
 		ACrossguardGameMode* Self = WeakThis.Get();
 		if (!bVerified || Self == nullptr)
 		{
 			UE_LOG(LogCrossguard, Warning, TEXT("Login from %s refused: Nakama session not verified (%s)"), *Address, Self != nullptr ? *Error : TEXT("map changed"));
 			OnComplete.ExecuteIfBound(TEXT("Your login could not be verified. Log in again."));
+			return;
+		}
+		// A match server with the backend: the backend's ticket decides who comes in (and their team).
+		const FString Ticket = UGameplayStatics::ParseOption(Options, UCrossguardMatchmakingSubsystem::MatchTicketOption);
+		UCrossguardNakamaSubsystem* Link = UCrossguardNakamaSubsystem::Get(Self);
+		if (Self->RequiresMatchTicket() && Link != nullptr)
+		{
+			if (Ticket.IsEmpty())
+			{
+				if (!Link->IsNakamaLoginRequired())
+				{
+					// DEV-ONLY: -AllowDevPlayerIds servers let a login without a ticket in (?Party= applies).
+					Self->AGameModeBase::PreLoginAsync(Options, Address, UniqueId, OnComplete);
+					return;
+				}
+				UE_LOG(LogCrossguard, Warning, TEXT("Login of %s to this match server refused: no match ticket"), *UserId);
+				OnComplete.ExecuteIfBound(TEXT("No match ticket: start the raid from the hub."));
+				return;
+			}
+			TWeakObjectPtr<ACrossguardGameMode> WeakSelf(Self);
+			Link->VerifyMatchTicket(Ticket, UserId, [WeakSelf, Options, Address, UniqueId, OnComplete, UserId](bool bValid, const FString& /*PartyId*/, const FString& TicketError)
+			{
+				ACrossguardGameMode* Verified = WeakSelf.Get();
+				if (!bValid || Verified == nullptr)
+				{
+					UE_LOG(LogCrossguard, Warning, TEXT("Login of %s to this match server refused: match ticket not valid (%s)"), *UserId,
+						Verified != nullptr ? *TicketError : TEXT("map changed"));
+					OnComplete.ExecuteIfBound(TEXT("Your match ticket is not valid for this raid (expired, or for another server)."));
+					return;
+				}
+				Verified->AGameModeBase::PreLoginAsync(Options, Address, UniqueId, OnComplete);
+			});
 			return;
 		}
 		// Verified (kept for InitNewPlayer): the usual checks (PreLogin), then the engine goes on.
@@ -267,7 +336,15 @@ FString ACrossguardGameMode::InitNewPlayer(APlayerController* NewPlayerControlle
 
 	// PreLogin's check can race with another login, so Join decides.
 	FString Party = UGameplayStatics::ParseOption(Options, PartyOption);
-	if (Party.IsEmpty())
+	FString TicketParty;
+	UCrossguardNakamaSubsystem* TicketCheck = UCrossguardNakamaSubsystem::Get(this);
+	if (RequiresMatchTicket() && TicketCheck != nullptr && !NakamaId.IsEmpty()
+		&& TicketCheck->TakeVerifiedTicket(UGameplayStatics::ParseOption(Options, UCrossguardMatchmakingSubsystem::MatchTicketOption), NakamaId, TicketParty))
+	{
+		// The backend's ticket says the team; the client's ?Party= is not trusted here.
+		Party = TicketParty;
+	}
+	else if (Party.IsEmpty())
 	{
 		// No ?Party=: a party this server already knows them in (a non-seamless travel from the hub
 		// drops the player states, and the server's URL options never reach a client's login).
@@ -279,8 +356,9 @@ FString ACrossguardGameMode::InitNewPlayer(APlayerController* NewPlayerControlle
 																						 : UCrossguardGuildSubsystem::PlayerIdOf(NewPlayerController->PlayerState));
 		}
 	}
-	// A team arriving from a match server (?Party=<key>) gets the key's team only: the party itself comes
-	// back from the backend (not built yet; docs/parties.md "Back from the raid").
+	// A team arriving from a match server (?Party=<key>) gets the key's team at once; with the backend the
+	// party itself comes back from Nakama when the player state gets its id (UCrossguardPartySubsystem::
+	// PlayerArrived; docs/parties.md "Back from the raid").
 	return JoinTeam(NewPlayerController, PlayerKey(UniqueId, NewPlayerController), Party);
 }
 
@@ -524,6 +602,7 @@ void ACrossguardGameMode::HandleExtraction(ACrossguardCharacter* Character)
 void ACrossguardGameMode::StartPlay()
 {
 	Super::StartPlay();
+	RegisterWithBackend();
 	RaidStartSeconds = GetWorld()->GetTimeSeconds();
 	// The raid's time limit; the development listen server has none (DEV-ONLY (listen server)).
 	if (bIsRaid && MaxRaidDurationSeconds > 0.0f && !Crossguard::IsDevListenMode(GetWorld()))
@@ -607,6 +686,11 @@ void ACrossguardGameMode::CheckMatchOver()
 	GetWorldTimerManager().ClearTimer(MatchTimeLimitTimer);
 	UE_LOG(LogCrossguard, Log, TEXT("Match over: every team has left"));
 	OnMatchOver.Broadcast();
+	// The backend may hand this server to the next match (a server that exits deregisters instead).
+	if (UCrossguardNakamaSubsystem* Nakama = UCrossguardNakamaSubsystem::Get(this))
+	{
+		Nakama->ReportMatchOver();
+	}
 	if (ShouldExitWhenMatchOver())
 	{
 		UE_LOG(LogCrossguard, Log, TEXT("Match server exits in %.0f s (one match per process)"), MatchOverExitDelaySeconds);
@@ -947,17 +1031,12 @@ FString ACrossguardGameMode::BuildHubReturnUrl(const FString& HubMap, bool bList
 	return bListen ? ACrossguardMenuGameMode::BuildHostUrl(HubMap) : FString::Printf(TEXT("%s?%s"), *HubMap, HubOption);
 }
 
-FCrossguardHubDestination ACrossguardGameMode::GetHubDestination(const APlayerController* Player) const
+FCrossguardHubDestination ACrossguardGameMode::GetHubDestination(const APlayerController* Player, const FString& BackendHubAddress) const
 {
 	FCrossguardHubDestination Destination;
-	// 1. The backend's pick for this player (a stub until the backend exists: none).
-	const ACrossguardPlayerState* PlayerState = Player != nullptr ? Player->GetPlayerState<ACrossguardPlayerState>() : nullptr;
-	if (const UCrossguardMatchmakingSubsystem* Matchmaking = UCrossguardMatchmakingSubsystem::Get(GetWorld()))
-	{
-		const FString PlayerId = PlayerState != nullptr ? UCrossguardGuildSubsystem::PlayerIdOf(PlayerState) : FString();
-		Destination.Address = Matchmaking->GetMatchmaking().FindHubServer(PlayerId, PlayerState != nullptr ? PlayerState->PartyKey : FString());
-		Destination.Source = TEXT("backend");
-	}
+	// 1. The backend's pick for the team (ReturnTeamToHub asks it: ICrossguardMatchmaking::FindHubServer).
+	Destination.Address = BackendHubAddress;
+	Destination.Source = TEXT("backend");
 	// 2. The hub server this match server is configured with.
 	if (Destination.Address.IsEmpty())
 	{
@@ -1456,16 +1535,48 @@ void ACrossguardGameMode::ReturnTeamToHub(int32 TeamId)
 		Saves->FlushPendingSaves();
 	}
 
-	// 3. The plan: each member's hub destination (the backend's hub server, else HubServerAddress),
-	// with the team's party key; none: the main menu with a message.
+	// 3. The backend's hub for the team (its party's hub first; asked once, for the first member). Without
+	// a backend the answer comes at once (none) and the rest runs now.
 	const FString TeamParty = Members[0]->PartyKey;
-	TArray<FCrossguardTeamHubTravel> Plan;
+	TArray<TWeakObjectPtr<ACrossguardPlayerState>> WeakMembers;
 	for (ACrossguardPlayerState* Member : Members)
 	{
+		WeakMembers.Add(Member);
+	}
+	UCrossguardMatchmakingSubsystem* Matchmaking = UCrossguardMatchmakingSubsystem::Get(World);
+	if (Matchmaking == nullptr)
+	{
+		FinishTeamHubReturn(TeamId, WeakMembers, TeamParty, FString());
+		return;
+	}
+	TWeakObjectPtr<ACrossguardGameMode> WeakThis(this);
+	Matchmaking->GetMatchmaking().FindHubServer(UCrossguardGuildSubsystem::PlayerIdOf(Members[0]), TeamParty,
+		[WeakThis, TeamId, WeakMembers, TeamParty](const FString& HubAddress)
+		{
+			if (ACrossguardGameMode* Self = WeakThis.Get())
+			{
+				Self->FinishTeamHubReturn(TeamId, WeakMembers, TeamParty, HubAddress);
+			}
+		});
+}
+
+void ACrossguardGameMode::FinishTeamHubReturn(int32 TeamId, const TArray<TWeakObjectPtr<ACrossguardPlayerState>>& Members, const FString& TeamParty,
+	const FString& BackendHubAddress)
+{
+	// The plan: each member's hub destination (the backend's hub server, else HubServerAddress), with the
+	// team's party key; none: the main menu with a message.
+	TArray<FCrossguardTeamHubTravel> Plan;
+	for (const TWeakObjectPtr<ACrossguardPlayerState>& WeakMember : Members)
+	{
+		ACrossguardPlayerState* Member = WeakMember.Get();
+		if (Member == nullptr)
+		{
+			continue;
+		}
 		FCrossguardTeamHubTravel& Travel = Plan.AddDefaulted_GetRef();
 		Travel.PlayerId = UCrossguardGuildSubsystem::PlayerIdOf(Member);
 		Travel.Player = Cast<APlayerController>(Member->GetOwner());
-		const FCrossguardHubDestination Destination = GetHubDestination(Travel.Player.Get());
+		const FCrossguardHubDestination Destination = GetHubDestination(Travel.Player.Get(), BackendHubAddress);
 		if (Destination.Kind == ECrossguardHubDestination::HubServer)
 		{
 			Travel.Url = BuildTeamHubJoinUrl(Destination.Address, TeamParty);

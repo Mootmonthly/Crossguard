@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "Templates/Function.h"
 
 #include "CrossguardMatchmaking.generated.h"
 
@@ -9,11 +10,14 @@ class UWorld;
 
 // Matchmaking: the backend service's part in getting players onto servers (docs/hub-and-menu.md,
 // docs/parties.md "Raid launch"). Owner's architecture: raids run on dedicated match servers many
-// teams join; the hub on dedicated hub servers; the backend (being chosen) places players on both.
+// teams join; the hub on dedicated hub servers; the backend (Nakama) places players on both.
 //
-// The backend module does not exist yet: the default is FCrossguardNoMatchmaking ("not available"),
-// and in development builds FCrossguardDevMatchmaking, which fakes an assignment from the hub game
-// mode's RaidServerAddress (-RaidServer=). Only the server asks.
+// Implementations: FCrossguardNakamaMatchmaking (Game/CrossguardNakamaMatchmaking.h; installed when the
+// backend is on, UCrossguardNakamaSubsystem::IsBackendEnabled), FCrossguardDevMatchmaking (development
+// builds: a fake assignment from the hub game mode's RaidServerAddress, -RaidServer=), and
+// FCrossguardNoMatchmaking ("not available"). Only the server asks. Answers are asynchronous: the
+// development and stub implementations answer at once (before RequestMatch returns), Nakama when its
+// queue has placed the party.
 
 // A party (or a solo player) asking for a raid.
 struct FCrossguardMatchRequest
@@ -22,14 +26,21 @@ struct FCrossguardMatchRequest
 	FString PartyKey;
 	// Every traveller's player id (UCrossguardGuildSubsystem::PlayerIdOf).
 	TArray<FString> PlayerIds;
+
+	// What CancelMatch / IsSearching take: the party key, or the solo player's id.
+	FString SearchKey() const { return !PartyKey.IsEmpty() ? PartyKey : (PlayerIds.Num() > 0 ? PlayerIds[0] : FString()); }
 };
 
 enum class ECrossguardMatchStatus : uint8
 {
-	// ServerAddress (and Ticket) hold the match server to travel to.
+	// ServerAddress (and the tickets) hold the match server to travel to.
 	Assigned,
-	// No matchmaking here (no backend yet, or none configured).
+	// No matchmaking here (no backend, or none configured).
 	NotAvailable,
+	// The backend could not place the party (no answer, refused, waited too long); Error says why.
+	Failed,
+	// The search was called off (CancelMatch: the party changed).
+	Cancelled,
 };
 
 struct FCrossguardMatchAssignment
@@ -37,51 +48,68 @@ struct FCrossguardMatchAssignment
 	ECrossguardMatchStatus Status = ECrossguardMatchStatus::NotAvailable;
 	// The match server ("203.0.113.5:7777").
 	FString ServerAddress;
-	// The backend's match ticket / session token: the client logs in with ?MatchTicket=<ticket> and
-	// the match server checks it with the backend (which says the player's team). Letters, digits,
-	// '-' and '_'.
-	FString Ticket;
-	// Development assignment (no ticket): the client logs in with ?Party=<key> instead, as the
+	// Player id -> the backend's match ticket for them: each client logs in with ?MatchTicket=<ticket>
+	// and the match server checks it with the backend, which also says the player's party (their team).
+	// Letters, digits, '-' and '_'.
+	TMap<FString, FString> PlayerTickets;
+	// The backend's match id (logs).
+	FString MatchId;
+	// Development assignment (no tickets): the client logs in with ?Party=<key> instead, as the
 	// development flow always did.
 	bool bDevPartyOption = false;
+	// Failed: why (logs).
+	FString Error;
+
+	FString TicketFor(const FString& PlayerId) const
+	{
+		const FString* Ticket = PlayerTickets.Find(PlayerId);
+		return Ticket != nullptr ? *Ticket : FString();
+	}
 };
 
 class CROSSGUARD_API ICrossguardMatchmaking
 {
 public:
+	using FMatchCallback = TFunction<void(const FCrossguardMatchAssignment& Assignment)>;
+	using FHubCallback = TFunction<void(const FString& HubAddress)>;
+
 	virtual ~ICrossguardMatchmaking() = default;
 
-	// Asks for a match server for the request. HubWorld: the hub asking (the development
-	// implementation reads its game mode's settings).
-	// Assumed: synchronous for now (the development one answers at once); the backend's will answer
-	// later (a queue), which turns this into a callback.
-	virtual FCrossguardMatchAssignment RequestMatch(const UWorld* HubWorld, const FCrossguardMatchRequest& Request) const = 0;
+	// Asks for a match server for the request. HubWorld: the hub asking (the development implementation
+	// reads its game mode's settings). OnDone runs exactly once, on the game thread: before this returns
+	// (development, no backend) or later (the backend's queue). A second request with the same search
+	// key while one runs is answered Failed.
+	virtual void RequestMatch(const UWorld* HubWorld, const FCrossguardMatchRequest& Request, FMatchCallback OnDone) = 0;
+	// Calls off a running search (its OnDone gets Cancelled). Nothing if none runs.
+	virtual void CancelMatch(const FString& SearchKey) {}
+	virtual bool IsSearching(const FString& SearchKey) const { return false; }
 
-	// The hub server a player leaving a match goes to (the backend's pick: their party's hub, one with
-	// room); empty if none is known. Checked before the match server's own HubServerAddress.
-	virtual FString FindHubServer(const FString& PlayerId, const FString& PartyKey) const = 0;
+	// The hub server a player leaving a match goes to (the backend's pick: their party's hub, else one
+	// with room); empty if none is known. OnDone runs once on the game thread (at once without a
+	// backend). Checked before the match server's own HubServerAddress.
+	virtual void FindHubServer(const FString& PlayerId, const FString& PartyKey, FHubCallback OnDone) = 0;
 
-	// For logs: "no backend", "development (-RaidServer=)".
+	// For logs: "no backend", "development (-RaidServer=)", "Nakama".
 	virtual FString Describe() const = 0;
 };
 
-// The backend stub: nothing is available until the backend module exists.
+// The stub: nothing is available.
 class CROSSGUARD_API FCrossguardNoMatchmaking : public ICrossguardMatchmaking
 {
 public:
-	virtual FCrossguardMatchAssignment RequestMatch(const UWorld* HubWorld, const FCrossguardMatchRequest& Request) const override;
-	virtual FString FindHubServer(const FString& PlayerId, const FString& PartyKey) const override { return FString(); }
+	virtual void RequestMatch(const UWorld* HubWorld, const FCrossguardMatchRequest& Request, FMatchCallback OnDone) override;
+	virtual void FindHubServer(const FString& PlayerId, const FString& PartyKey, FHubCallback OnDone) override;
 	virtual FString Describe() const override { return TEXT("no backend"); }
 };
 
 // Development builds only (never Shipping): the "assignment" is the hub game mode's RaidServerAddress
 // (-RaidServer=<address>), with ?Party=<key> instead of a ticket. No hub assignment (the match
-// server's HubServerAddress / -HubServer= applies).
+// server's HubServerAddress / -HubServer= applies). Answers at once.
 class CROSSGUARD_API FCrossguardDevMatchmaking : public ICrossguardMatchmaking
 {
 public:
-	virtual FCrossguardMatchAssignment RequestMatch(const UWorld* HubWorld, const FCrossguardMatchRequest& Request) const override;
-	virtual FString FindHubServer(const FString& PlayerId, const FString& PartyKey) const override { return FString(); }
+	virtual void RequestMatch(const UWorld* HubWorld, const FCrossguardMatchRequest& Request, FMatchCallback OnDone) override;
+	virtual void FindHubServer(const FString& PlayerId, const FString& PartyKey, FHubCallback OnDone) override;
 	virtual FString Describe() const override { return TEXT("development (-RaidServer=)"); }
 };
 
@@ -92,9 +120,12 @@ class CROSSGUARD_API UCrossguardMatchmakingSubsystem : public UGameInstanceSubsy
 	GENERATED_BODY()
 
 public:
-	// The one set (the backend module, tests), else FCrossguardDevMatchmaking in development builds,
-	// else FCrossguardNoMatchmaking.
-	const ICrossguardMatchmaking& GetMatchmaking() const;
+	// With the backend on (UCrossguardNakamaSubsystem::IsBackendEnabled), installs Nakama's matchmaking.
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+
+	// The one set (the backend, tests), else FCrossguardDevMatchmaking in development builds, else
+	// FCrossguardNoMatchmaking.
+	ICrossguardMatchmaking& GetMatchmaking() const;
 	// Null: back to the default.
 	void SetMatchmaking(TSharedPtr<ICrossguardMatchmaking> NewMatchmaking) { Matchmaking = MoveTemp(NewMatchmaking); }
 

@@ -159,6 +159,11 @@ public:
 	// For a login URL (UCrossguardLocalPlayer::GetGameLoginOptions): "NakamaToken=<token>", or empty.
 	FString GetLoginOption() const;
 
+	using FHubCallback = TFunction<void(const FString& Address, const FString& Error)>;
+	// Client, logged in: the hub server to join (crossguard_hub_find_mine: the party's hub first, else
+	// the one with the most room). Address empty on failure (Error says why). The menu's Play.
+	void FindMyHub(FHubCallback OnDone);
+
 private:
 	struct FVerifiedSession
 	{

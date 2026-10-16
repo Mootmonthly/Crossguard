@@ -29,20 +29,52 @@ namespace CrossguardScenarioParty
 	// Game seconds a replicated change may take to show on a client.
 	constexpr float PartyReplicationWait = 5.0f;
 
-	// A backend's answer, for the real launch path: a match server and a ticket.
+	// A backend's answer, for the real launch path: a match server and a ticket per player (answered at once).
 	class FPartyTestMatchmaking : public ICrossguardMatchmaking
 	{
 	public:
-		virtual FCrossguardMatchAssignment RequestMatch(const UWorld* HubWorld, const FCrossguardMatchRequest& Request) const override
+		virtual void RequestMatch(const UWorld* HubWorld, const FCrossguardMatchRequest& Request, FMatchCallback OnDone) override
 		{
 			FCrossguardMatchAssignment Assignment;
 			Assignment.Status = ECrossguardMatchStatus::Assigned;
 			Assignment.ServerAddress = TEXT("198.51.100.20:7777");
-			Assignment.Ticket = TEXT("ticket-123");
-			return Assignment;
+			for (const FString& PlayerId : Request.PlayerIds)
+			{
+				Assignment.PlayerTickets.Add(PlayerId, TEXT("ticket-123"));
+			}
+			OnDone(Assignment);
 		}
-		virtual FString FindHubServer(const FString& PlayerId, const FString& PartyKey) const override { return FString(); }
+		virtual void FindHubServer(const FString& PlayerId, const FString& PartyKey, FHubCallback OnDone) override { OnDone(FString()); }
 		virtual FString Describe() const override { return TEXT("party test"); }
+	};
+
+	// A backend that answers later (Nakama's queue): requests wait until answered or called off.
+	class FPartyTestDeferredMatchmaking : public ICrossguardMatchmaking
+	{
+	public:
+		int32 Requests = 0;
+		int32 Cancels = 0;
+		TMap<FString, FMatchCallback> Waiting;
+
+		virtual void RequestMatch(const UWorld* HubWorld, const FCrossguardMatchRequest& Request, FMatchCallback OnDone) override
+		{
+			++Requests;
+			Waiting.Add(Request.SearchKey(), MoveTemp(OnDone));
+		}
+		virtual void CancelMatch(const FString& SearchKey) override
+		{
+			FMatchCallback OnDone;
+			if (Waiting.RemoveAndCopyValue(SearchKey, OnDone))
+			{
+				++Cancels;
+				FCrossguardMatchAssignment Cancelled;
+				Cancelled.Status = ECrossguardMatchStatus::Cancelled;
+				OnDone(Cancelled);
+			}
+		}
+		virtual bool IsSearching(const FString& SearchKey) const override { return Waiting.Contains(SearchKey); }
+		virtual void FindHubServer(const FString& PlayerId, const FString& PartyKey, FHubCallback OnDone) override { OnDone(FString()); }
+		virtual FString Describe() const override { return TEXT("party test (deferred)"); }
 	};
 
 	FString PartyEnumName(ECrossguardPartyResult Value)
@@ -674,6 +706,42 @@ bool FCrossguardScenarioPartyRaidLaunch::RunTest(const FString& Parameters)
 		Crossguard::SetDevListenModeOverrideForTests(C.World(), TOptional<bool>());
 
 		C.Test.TestTrue(TEXT("A bad ticket builds no URL"), UCrossguardMatchmakingSubsystem::BuildMatchTravelUrl(TEXT("host:7777"), TEXT("a?b")).IsEmpty());
+	});
+
+	Scenario.Step(TEXT("A backend that answers later: searching, one search at a time, a party change calls it off"), [](FScenarioContext& C)
+	{
+		UCrossguardPartySubsystem* Parties = PartiesOf(C);
+		UCrossguardMatchmakingSubsystem* Matchmaking = UCrossguardMatchmakingSubsystem::Get(C.World());
+		ACrossguardPlayerState* A = C.PlayerState(C.Get<ACrossguardCharacter>(TEXT("A")));
+		ACrossguardPlayerState* Solo = C.PlayerState(C.Get<ACrossguardCharacter>(TEXT("Solo")));
+		if (Parties == nullptr || !C.Require(A != nullptr && Solo != nullptr && Matchmaking != nullptr, TEXT("A, Solo and matchmaking exist")))
+		{
+			return;
+		}
+		Crossguard::SetDevListenModeOverrideForTests(C.World(), false);
+		const TSharedRef<FPartyTestDeferredMatchmaking> Deferred = MakeShared<FPartyTestDeferredMatchmaking>();
+		Matchmaking->SetMatchmaking(Deferred);
+		const FString PartyId = PartyOf(A)->GetPartyId();
+
+		ExpectParty(C, TEXT("The search starts (answered later)"), Parties->StartRaid(A), ECrossguardPartyResult::None);
+		C.Test.TestTrue(TEXT("Searching under the party key"), Deferred->IsSearching(PartyId));
+		ExpectParty(C, TEXT("A second launch while searching"), Parties->StartRaid(A), ECrossguardPartyResult::AlreadySearching);
+		C.Test.TestEqual(TEXT("One request"), Deferred->Requests, 1);
+
+		// Solo (in A's party since the whole-server step) leaves: the search is called off, nobody travels.
+		C.Require(Parties->Leave(Solo) == ECrossguardPartyResult::None, TEXT("Solo leaves A's party"));
+		C.Test.TestFalse(TEXT("Search called off"), Deferred->IsSearching(PartyId));
+		C.Test.TestEqual(TEXT("Cancelled once"), Deferred->Cancels, 1);
+
+		// A plan only takes answers that come at once: a deferred search is called off.
+		ECrossguardRaidTravel Mode = ECrossguardRaidTravel::ClientTravel;
+		FString Url;
+		ExpectParty(C, TEXT("Plan with a backend that answers later"), Parties->PlanRaidTravel(A, Mode, Url), ECrossguardPartyResult::NoRaidDestination);
+		C.Test.TestFalse(TEXT("The plan's search was called off"), Deferred->IsSearching(PartyId));
+		C.Test.TestEqual(TEXT("Two requests, two cancels"), Deferred->Requests * 10 + Deferred->Cancels, 22);
+
+		Matchmaking->SetMatchmaking(nullptr);
+		Crossguard::SetDevListenModeOverrideForTests(C.World(), TOptional<bool>());
 	});
 
 	Scenario.Step(TEXT("In a raid the launch is refused"), [](FScenarioContext& C)

@@ -37,6 +37,12 @@ enum class ECrossguardPartyResult : uint8
 	HostInParty,
 	// The travel URL could not be built or the travel did not start.
 	TravelFailed,
+	// The party is already looking for a raid (matchmaking answers later).
+	AlreadySearching,
+	// The raid search was called off: the party changed while it ran.
+	SearchCancelled,
+	// The backend (Nakama) did not answer or refused the request; nothing changed.
+	BackendUnavailable,
 };
 
 USTRUCT(BlueprintType)
