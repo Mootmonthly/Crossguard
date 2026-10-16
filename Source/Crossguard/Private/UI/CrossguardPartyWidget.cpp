@@ -10,6 +10,7 @@
 #include "Game/CrossguardGuildSubsystem.h"
 #include "Game/CrossguardPlayerState.h"
 #include "GameFramework/GameStateBase.h"
+#include "Interaction/CrossguardRaidPortal.h"
 #include "UI/CrossguardUIButton.h"
 #include "UI/CrossguardUIHelpers.h"
 
@@ -118,9 +119,47 @@ void UCrossguardPartyWidget::BindParty()
 	BoundParty = Party;
 }
 
+FString UCrossguardPartyWidget::RefusalText(ECrossguardPartyResult Result)
+{
+	switch (Result)
+	{
+	case ECrossguardPartyResult::InvalidPlayer:
+		return TEXT("No player by that name is here.");
+	case ECrossguardPartyResult::NotInParty:
+		return TEXT("You are not in a party.");
+	case ECrossguardPartyResult::AlreadyInParty:
+		return TEXT("That player is already in a party.");
+	case ECrossguardPartyResult::TargetNotInParty:
+		return TEXT("That player is not in your party.");
+	case ECrossguardPartyResult::CannotTargetSelf:
+		return TEXT("You cannot do that to yourself.");
+	case ECrossguardPartyResult::PartyFull:
+		return TEXT("The party is full.");
+	case ECrossguardPartyResult::AlreadyInvited:
+		return TEXT("That player already has your invite.");
+	case ECrossguardPartyResult::NoInvite:
+		return TEXT("No invite to answer.");
+	case ECrossguardPartyResult::InviteExpired:
+		return TEXT("The invite has expired.");
+	case ECrossguardPartyResult::NotLeader:
+		return TEXT("Only the party's leader can do that.");
+	case ECrossguardPartyResult::OnlyInHub:
+		return TEXT("Party changes happen in the hub.");
+	// The raid launch's own (the raid portal says the same).
+	case ECrossguardPartyResult::NoRaidDestination:
+	case ECrossguardPartyResult::HostInParty:
+	case ECrossguardPartyResult::AlreadySearching:
+	case ECrossguardPartyResult::SearchCancelled:
+	case ECrossguardPartyResult::BackendUnavailable:
+		return ACrossguardRaidPortal::RefusalMessage(Result);
+	default:
+		return FString::Printf(TEXT("Party: refused (%s)"), *CrossguardUI::UIEnumName(Result));
+	}
+}
+
 void UCrossguardPartyWidget::HandlePartyRefused(ECrossguardPartyResult Result)
 {
-	ShowStatus(FString::Printf(TEXT("Party: refused (%s)"), *CrossguardUI::UIEnumName(Result)), CrossguardPartyWidgetLocal::RefusalColor);
+	ShowStatus(RefusalText(Result), CrossguardPartyWidgetLocal::RefusalColor);
 }
 
 APlayerState* UCrossguardPartyWidget::FindPlayerState(const FString& PlayerId) const

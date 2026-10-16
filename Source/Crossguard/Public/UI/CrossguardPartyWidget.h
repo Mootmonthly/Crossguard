@@ -25,6 +25,9 @@ class CROSSGUARD_API UCrossguardPartyWidget : public UCrossguardWindowWidget
 public:
 	UCrossguardPartyWidget(const FObjectInitializer& ObjectInitializer);
 
+	// The status line for a refused party request ("Your party is already looking for a raid.").
+	static FString RefusalText(ECrossguardPartyResult Result);
+
 	// Rows drawn by the last redraw (tests).
 	UFUNCTION(BlueprintPure, Category = "Crossguard|UI")
 	int32 GetMemberRowCount() const { return MemberRows; }

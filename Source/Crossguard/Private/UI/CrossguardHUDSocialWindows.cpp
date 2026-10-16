@@ -6,7 +6,9 @@
 
 #include "Blueprint/UserWidget.h"
 #include "EnhancedInputComponent.h"
+#include "Game/CrossguardPlayerState.h"
 #include "GameFramework/PlayerController.h"
+#include "GameMapsSettings.h"
 #include "InputAction.h"
 #include "InputMappingContext.h"
 #include "UI/CrossguardAttributesWidget.h"
@@ -75,6 +77,7 @@ void ACrossguardHUD::MakeSocialInputActions()
 	};
 	MakeAction(ToggleAttributesAction, TEXT("IA_ToggleAttributes"));
 	MakeAction(TogglePartyAction, TEXT("IA_ToggleParty"));
+	MakeAction(LeaveToMenuAction, TEXT("IA_LeaveToMenu"));
 }
 
 void ACrossguardHUD::MapSocialKeys(UInputMappingContext* Context)
@@ -84,6 +87,7 @@ void ACrossguardHUD::MapSocialKeys(UInputMappingContext* Context)
 	{
 		Context->MapKey(ToggleAttributesAction, EKeys::K);
 		Context->MapKey(TogglePartyAction, EKeys::P);
+		Context->MapKey(LeaveToMenuAction, EKeys::F10);
 	}
 }
 
@@ -91,6 +95,27 @@ void ACrossguardHUD::BindSocialInput(UEnhancedInputComponent& Input)
 {
 	Input.BindAction(ToggleAttributesAction, ETriggerEvent::Started, this, &ACrossguardHUD::ToggleAttributes);
 	Input.BindAction(TogglePartyAction, ETriggerEvent::Started, this, &ACrossguardHUD::ToggleParty);
+	Input.BindAction(LeaveToMenuAction, ETriggerEvent::Started, this, &ACrossguardHUD::LeaveToMenu);
+}
+
+void ACrossguardHUD::LeaveToMenu()
+{
+	if (PlayerOwner == nullptr)
+	{
+		return;
+	}
+	const ACrossguardPlayerState* PlayerState = PlayerOwner->GetPlayerState<ACrossguardPlayerState>();
+	if (PlayerState != nullptr && PlayerState->IsInRaid())
+	{
+		ShowHudMessage(TEXT("You cannot leave in the middle of a raid: extract first."), FLinearColor(1.0f, 0.5f, 0.3f));
+		return;
+	}
+	const FString MenuMap = UGameMapsSettings::GetGameDefaultMap();
+	if (MenuMap.IsEmpty())
+	{
+		return;
+	}
+	PlayerOwner->ClientTravel(MenuMap, TRAVEL_Absolute);
 }
 
 void ACrossguardHUD::ToggleAttributes()

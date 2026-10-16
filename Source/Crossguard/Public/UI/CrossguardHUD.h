@@ -114,6 +114,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|UI")
 	void ToggleParty();
 
+	// F10 (placeholder): back to the main menu (GameDefaultMap), between raids only; in a raid it is
+	// refused (leaving there is a disconnect: extract first).
+	UPROPERTY(EditDefaultsOnly, Category = "Crossguard|Input")
+	TObjectPtr<UInputAction> LeaveToMenuAction;
+
+	UFUNCTION(BlueprintCallable, Category = "Crossguard|UI")
+	void LeaveToMenu();
+
 	UFUNCTION(BlueprintPure, Category = "Crossguard|UI")
 	UCrossguardAttributesWidget* GetAttributesWidget() const { return AttributesWidget; }
 

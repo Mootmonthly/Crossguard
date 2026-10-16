@@ -32,6 +32,9 @@ public class Crossguard : ModuleRules
 		// Nakama REST client (Game/CrossguardNakamaClient, docs/backend-setup.md): HTTP requests, JSON answers.
 		PrivateDependencyModuleNames.AddRange(new string[] { "HTTP", "Json" });
 
+		// UGameMapsSettings (the HUD's F10 back to the main menu: GameDefaultMap).
+		PrivateDependencyModuleNames.Add("EngineSettings");
+
 		// Editor builds only: the scenario tests (Private/Tests/CrossguardScenario.*) create a map,
 		// find the game mode / character Blueprints and run Play-In-Editor. That code is compiled only
 		// with WITH_EDITOR, so game and server builds do not need these modules.
