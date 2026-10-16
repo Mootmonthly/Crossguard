@@ -29,18 +29,29 @@
 .PARAMETER TimeoutMinutes
     Kill the editor if the run takes longer. Default 30.
 
+.PARAMETER Visual
+    Rendering run: no -nullrhi, so the PIE windows draw (1280 x 720 each) and the visual scenarios
+    (Crossguard.Visual.*, which only exist when the editor can render) take screenshots into
+    Saved\EditorTests\Screenshots\<Test>\<Name>.png (cleared first). Default filter: Crossguard.Visual.
+    The windows appear on the desktop while it runs; do not click into them.
+
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File Tools\run_editor_tests.ps1
 .EXAMPLE
     Tools\run_editor_tests.bat -Filter Crossguard.Loot -SkipBuild
+.EXAMPLE
+    Tools\run_editor_tests.bat -Visual -SkipBuild
 #>
 [CmdletBinding()]
 param(
     [string]$EngineDir = "",
     [string]$Filter = "Crossguard",
     [switch]$SkipBuild,
-    [int]$TimeoutMinutes = 30
+    [int]$TimeoutMinutes = 30,
+    [switch]$Visual
 )
+
+if ($Visual -and -not $PSBoundParameters.ContainsKey("Filter")) { $Filter = "Crossguard.Visual" }
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
@@ -54,6 +65,7 @@ $BuildErrLog = Join-Path $ReportDir "build-stderr.log"
 $EditorLog = Join-Path $ReportDir "editor.log"
 $EditorErrLog = Join-Path $ReportDir "editor-stderr.log"
 $IndexJson = Join-Path $ReportDir "index.json"
+$ScreenshotDir = Join-Path $ReportDir "Screenshots"
 
 $script:SummaryLines = New-Object System.Collections.Generic.List[string]
 
@@ -227,7 +239,8 @@ function Show-LogTail([string]$Path, [int]$Lines = 60) {
 # ---------------------------------------------------------------------------------------------------
 
 New-Item -ItemType Directory -Force -Path $ReportDir | Out-Null
-Write-Summary ("Crossguard editor tests, " + (Get-Date -Format "yyyy-MM-dd HH:mm:ss") + ", filter '$Filter'")
+$modeText = if ($Visual) { ", visual run (rendering on, screenshots in $ScreenshotDir)" } else { "" }
+Write-Summary ("Crossguard editor tests, " + (Get-Date -Format "yyyy-MM-dd HH:mm:ss") + ", filter '$Filter'$modeText")
 
 if (-not (Test-Path $ProjectFile)) {
     Write-Summary "SETUP ERROR: $ProjectFile not found." "Red"
@@ -293,17 +306,23 @@ if (-not (Test-Path $EditorCmd)) {
 foreach ($stale in @($IndexJson, (Join-Path $ReportDir "index.html"), $EditorLog, $EditorErrLog)) {
     Remove-Item -Path $stale -Force -ErrorAction SilentlyContinue
 }
+if ($Visual) {
+    Remove-Item -Path $ScreenshotDir -Recurse -Force -ErrorAction SilentlyContinue
+}
 
-$editorArgs = @(
+# -nullrhi: no GPU, no drawing. The visual run leaves it out so the PIE windows render for screenshots.
+$rhiArgs = @()
+if (-not $Visual) { $rhiArgs = @("-nullrhi") }
+$editorArgs = (@(
     "`"$ProjectFile`"",
     "-ExecCmds=`"Automation RunTests $Filter;Quit`"",
-    "-unattended", "-nullrhi", "-nosplash", "-nosound", "-NoP4",
+    "-unattended") + $rhiArgs + @("-nosplash", "-nosound", "-NoP4",
     "-stdout", "-FullStdOutLogOutput",
     "-ReportExportPath=`"$ReportDir`"",
     "-log"
-) -join " "
+)) -join " "
 
-Write-Host "Running tests headlessly (log: $EditorLog) ..."
+if ($Visual) { Write-Host "Running tests with rendering (log: $EditorLog) ..." } else { Write-Host "Running tests headlessly (log: $EditorLog) ..." }
 Write-Host "  $EditorCmd $editorArgs"
 $runStart = Get-Date
 $proc = Start-Process -FilePath $EditorCmd -ArgumentList $editorArgs -NoNewWindow -PassThru `
@@ -369,8 +388,20 @@ foreach ($t in ($tests | Sort-Object { [string](Get-Prop $_ "fullTestPath" "") }
     foreach ($m in $messages) { Write-Summary "        $m" }
 }
 
+if ($Visual) {
+    $shots = @()
+    if (Test-Path $ScreenshotDir) { $shots = @(Get-ChildItem -Path $ScreenshotDir -Recurse -Filter *.png | Sort-Object FullName) }
+    Write-Summary ""
+    Write-Summary "Screenshots ($($shots.Count)):"
+    foreach ($shot in $shots) { Write-Summary ("  " + $shot.FullName.Substring($ScreenshotDir.Length + 1)) }
+}
+
 if ($tests.Count -eq 0) {
-    Write-Summary "No test matched '$Filter'. Was the editor built after the tests were added (Source\Crossguard\Private\Tests)?" "Yellow"
+    if ($Visual) {
+        Write-Summary "No test matched '$Filter'. Visual tests only exist when the editor can render; was it built after Source\Crossguard\Private\Tests changed?" "Yellow"
+    } else {
+        Write-Summary "No test matched '$Filter'. Was the editor built after the tests were added (Source\Crossguard\Private\Tests)?" "Yellow"
+    }
     Exit-With 1
 }
 if ($failed.Count -gt 0) {

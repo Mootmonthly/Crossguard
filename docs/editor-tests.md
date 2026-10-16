@@ -37,6 +37,7 @@ Options (PowerShell style, after the `.bat` or with
 | `-Filter Crossguard.Loot` | Only tests whose name starts with this. Several: `Crossguard.Loot+Crossguard.Teams`. |
 | `-EngineDir "D:\UE_5.8"` | Engine folder. Default: the `UE_ENGINE_DIR` environment variable, else the engine `Crossguard.uproject` is associated with (registry / Epic launcher), else `C:\Program Files\Epic Games\UE_5.8`. |
 | `-TimeoutMinutes 30` | Stop the editor if the run hangs. |
+| `-Visual` | The [visual run](#visual-run): rendering on (no `-nullrhi`), PIE windows on the desktop, screenshots from `Crossguard.Visual.*` into `Saved\EditorTests\Screenshots\`. Default filter `Crossguard.Visual`. |
 
 Exit code: 0 all passed, 1 a test failed (or none matched), 2 the build failed (the last build
 errors are printed), 3 the editor wrote no report (crash, timeout: the end of `editor.log` is
@@ -330,6 +331,18 @@ game mode's Mob Table is unset.
 | `Crossguard.Net.ConcurrentLootFromTwoClients` | Listen server + 2 clients. A dummy with 3 potions, 2 bandages and a Rare ruby dies between them; both open the body (server) and both clients request every stack by RPC in the same frame: the body empties, totals across the body and both inventories unchanged, the number of stacks unchanged (whoever's packets the server reads first takes them; the late requests are refused UnknownItem), and client 1's replicated inventory matches the server's. |
 | `Crossguard.Net.TrackingMarksOnTrackerOnly` | Listen server + 1 client (enemies). Client 1 has `hunters_tracking`; the host moves 1.2 m a step: footprints (instances of the client pawn's `UCrossguardTrackingComponent`) appear on the tracker's client, none on the host's own component, the server's copy of the tracker, or client 1's copy of the host. |
 
+**`CrossguardScenarioVisualTests.cpp`** (visual: screenshots, only in the [visual run](#visual-run);
+each asserts just the state behind the picture)
+
+| Test | Frames (`Saved\EditorTests\Screenshots\<Test>\`) |
+| --- | --- |
+| `Crossguard.Visual.RagdollBody` | `before.png` a dummy standing; `ragdoll.png` its body 1.5 s after a lethal hit (physics on). |
+| `Crossguard.Visual.GatherNode` | `before.png` a `gather_herb` node with a player at it; `depleted.png` after the player gathered it (the node should be gone). Skipped without the gather loot table. |
+| `Crossguard.Visual.Chest` | `chest.png` a native `chest_common` container (no mesh of its own yet: a Blueprint adds it). |
+| `Crossguard.Visual.MonsterAttack` | `approach.png` a built-in melee monster and a player 3 m apart; `attack.png` the frame of its first hit. |
+| `Crossguard.Visual.Dragonification` | `before.png` a player; `dragon.png` the same player in `State.Dragonified` (no form art yet, so alike). |
+| `Crossguard.Visual.StealthViews` | Listen server + 2 clients: from the enemy client's and the ally host's screen, `*_before.png`, `*_stealth.png` 1 s into Stealth (gone from the enemy's, still on the ally's), `*_after.png` when it ends. |
+
 ### Checklist coverage
 
 Against [next-build-checklist.md](next-build-checklist.md). **auto**: the tests check the row's
@@ -348,14 +361,14 @@ use server-side players in one standalone PIE; `Crossguard.Net.*` use real PIE c
 | 4 Next knife; empty hands after the last | auto | `Raid.ThrowingKnife` | — |
 | 4 Bow 45 shots, runs out | auto | `Raid.BowRunsOutOfArrows` | — |
 | 4 Potion 15 over 10 s; bandage 10 over 2 s held | auto | `Raid.PotionAndBandage` | — |
-| 4 Kill the dummy: body, 5 XP | auto | `Raid.KillDummyLeavesBody` | The ragdoll. |
+| 4 Kill the dummy: body, 5 XP | auto | `Raid.KillDummyLeavesBody` | The ragdoll's look: `Visual.RagdollBody`. |
 | 4 Loot a geared dummy's body | auto | `Raid.LootBody` | — |
-| 4 Die and revive with gear | auto | `Raid.DeathAndRevive` | The ragdoll. |
+| 4 Die and revive with gear | auto | `Raid.DeathAndRevive` | The ragdoll's look: `Visual.RagdollBody`. |
 | 4 Looted before revive | auto | `Raid.LootedBeforeRevive` | — |
 | 4 Extraction zone 5 s, XP and 250 gold banked | auto | `Raid.ExtractionZone` | — |
 | 4 Portal: 60 s, extract; walk away collapses | auto | `Raid.ExtractPortal` | `BeamMesh` look. |
 | 4 X refused outside / twice | auto | `Raid.PortalRefusals` | — |
-| 4 `chest_common` chest | auto | `Raid.ChestCommonLoot` | — |
+| 4 `chest_common` chest | auto | `Raid.ChestCommonLoot` | Its look: `Visual.Chest` (no mesh yet). |
 | 4 Monster: aggro 15 m, 12 per 1.5 s, 30 m leash, shot from 40 m, kill XP and body | part | `Monsters.AggroSightAndAttack`, `LeashReturnsHome`, `LeashRetargets`, `ReactsToDamageFromAnyRange`, `DeathBodyLootXp` | NavMesh pathing; the 30 m leash (tests use 6 m) and 40 m (tests 25 m). |
 | 4 `boss_monster` dummy: 3–5 extra items | auto | `Raid.BossLootOnDummy` | — |
 | 4 Door snaps open / closed | auto | `Raid.DoorOpenClose` | The mesh moving. |
@@ -366,7 +379,7 @@ use server-side players in one standalone PIE; `Crossguard.Net.*` use real PIE c
 | 4 `eldritch_shield` | auto | `Skills.EldritchShield` | — |
 | 4 `chop_down`, flier falls | auto | `Skills.ChopDown` | — |
 | 4 `shooting_star` | auto | `Skills.ShootingStar` | — |
-| 4 `dragonification` | auto | `Skills.Dragonification` | Q selector UI. |
+| 4 `dragonification` | auto | `Skills.Dragonification` | Q selector UI; the form's look: `Visual.Dragonification` (no art yet). |
 | 4 `flight` Space / Left Ctrl | part | `Skills.Flight` | Descending (Left Ctrl), the key bindings. |
 | 4 Next-attack stack; Mortal Strike kill refresh | auto | `Skills.NextAttackStack`, `Skills.MortalStrikeKillRefresh` | States display. |
 | 4 `gouge` | auto | `Skills.Gouge` | — |
@@ -376,14 +389,14 @@ use server-side players in one standalone PIE; `Crossguard.Net.*` use real PIE c
 | 4 `parting_the_land` | auto | `Skills.PartingTheLand` | The pop-up and walls' look. |
 | 4 `hunters_leap` | auto | `Skills.HuntersLeap` | — |
 | 4 `wall`, `light` | auto | `Skills.Wall`, `Skills.Light` | The light itself. |
-| 4 `stealth` vanish on the other screen | auto | `Skills.Stealth`, `Status.StealthNetRelevancy`, `Net.StealthHidesFromEnemyClient` | — (the drop takes ~4.4 s: `RelevantTimeout`, owner's call, [anti-cheat.md](anti-cheat.md)). |
+| 4 `stealth` vanish on the other screen | auto | `Skills.Stealth`, `Status.StealthNetRelevancy`, `Net.StealthHidesFromEnemyClient`, `Visual.StealthViews` | The drop takes ~4.4 s (`RelevantTimeout`, owner's call, [anti-cheat.md](anti-cheat.md)). |
 | 4 `immutable` | auto | `Skills.Immutable` | — |
 | 4 `unleash` | auto | `Skills.Unleash` | — |
 | 4 `benediction` on a body | auto | `Skills.Benediction` | — |
 | 4 `multiscale` with a party member | auto | `Skills.Multiscale` | — |
 | 4 `hunters_tracking` grey marks | auto | `Skills.HuntersTracking`, `Net.TrackingMarksOnTrackerOnly` | Their look. |
 | 4 Drop with G, pick up with F | auto | `Raid.DropAndPickUp` | The box's look. |
-| 4 Gather node: 2 s, herbs, +10 XP, depleted, refused again | auto | `Raid.GatherNode` | The node's mesh hiding. |
+| 4 Gather node: 2 s, herbs, +10 XP, depleted, refused again | auto | `Raid.GatherNode`, `Visual.GatherNode` | — |
 | 4 Gather node: walking, attacking or damage breaks the channel | part | `Raid.GatherNodeMoveInterrupts` | Attacking and taking damage (rules unit tested: `CheckGatherInterrupt`). |
 | 4 `summon_skeletons` | part | `Skills.SummonSkeletons` | Following you; NavMesh pathing. |
 | 4 `summon_tiger` leap, riders, hits for 20 | part | `Skills.SummonTiger` | Leap, the +7 / +10 Magic riders (only "it hits" is checked). |
@@ -404,7 +417,7 @@ use server-side players in one standalone PIE; `Crossguard.Net.*` use real PIE c
 | 5 Vendor ruby +150 | auto | `Hub.VendorSellsRareRuby` | — |
 | 5 Stash tabs | auto | `Hub.BuyStashTabs` | — |
 | 5 Respec token | auto | `Hub.LoweringAttributeNeedsRespecToken` | — |
-| 6 Both see bodies ragdoll | auto | `Net.DeathRagdollsOnEveryClient` | The ragdoll's look. |
+| 6 Both see bodies ragdoll | auto | `Net.DeathRagdollsOnEveryClient`, `Visual.RagdollBody` | — |
 | 6 `showdebug` shows the other's `Equipment.Wielding.*` | auto | `Net.WieldingTagsReplicate` | The debug HUD itself. |
 | 6 Concurrent loot never duplicates | auto | `Social.ConcurrentLootNeverDuplicates`, `Net.ConcurrentLootFromTwoClients` | — |
 
@@ -424,7 +437,8 @@ Totals: 66 rows: 49 auto, 12 part, 5 manual. Not checklist rows: `Combat.ArrowBl
   Blueprint event, sound and effect are not checked.
 - AI guard chance (50%) is checked loosely: over 20 swings, at least one parried and one landed.
 - No NavMesh in the test map: monsters steer straight; pathing round obstacles is untested.
-- Visuals and audio (ragdolls, meshes, arcs, effects, sounds, animations) are never checked.
+- Visuals: the [visual run](#visual-run) only takes pictures; nothing judges them. Audio, arcs and
+  effects are never checked.
 - Data-dependent tests skip (pass with a warning) when `DT_Mobs`, `DT_Loot`, `DA_SkillCatalog` or
   `DT_Armor` are not set: a skip is not a pass for the checklist row.
 
@@ -566,6 +580,35 @@ Rules of thumb:
   the last one it ticked); the framework uses PIE instance 0.
 - Each instance gets a 1280 × 720 window (nothing is drawn under `-nullrhi`).
 
+### Visual run
+
+```
+Tools\run_editor_tests.bat -Visual -SkipBuild
+```
+
+Runs without `-nullrhi`, so the PIE windows (1280 × 720 each, on the desktop: leave them alone)
+draw, and the visual scenarios `Crossguard.Visual.*` (`CrossguardScenarioVisualTests.cpp`) take
+screenshots into `Saved\EditorTests\Screenshots\<Test>\<Name>.png` (the folder is cleared first; the
+summary lists the files). They carry `CROSSGUARD_VISUAL_FLAGS` (`NonNullRHI`), so a headless run does
+not list them at all: they never run by default. Each asserts only what it can read back; a person
+looks at the frames.
+
+Rendering needs light: the scenario map gets a movable sun, a sky atmosphere and a sky light (only
+when the editor can render) and its floor casts no shadow (a 200× scaled cube shadows its own top).
+
+| Call | Does |
+| --- | --- |
+| `C.LookFrom(Eye, LookAt, Client = -1)` | A camera actor at `Eye` looking at `LookAt` becomes the view target of the PIE player (standalone) or of client `Client`'s local player (spawned in that world). Kept as the view target every frame (the game mode's `SetViewTargetWithBlend` and possession would take it back). Pawns stay put. Wait a frame before shooting. |
+| `C.Screenshot(Name, Client = -1)` | Reads the viewport's last frame (`FSceneViewport::ReadPixels`) and writes `Screenshots\<Test>\<Name>.png`. Adds an error under `-nullrhi`. |
+
+Scenes must stay on the floor (within ±100 m of the origin): characters off it fall forever, and a
+falling actor drops out of relevancy.
+
+What the frames show today (2026-10-16): characters are the engine mannequin in its rest pose (no
+animations), monsters a dark checkered cylinder and gather nodes a checkered sphere (placeholder
+meshes), the native chest nothing, the dragon form the plain mannequin; equipped weapons have no
+mesh.
+
 ### API reference (`CrossguardScenario.h`)
 
 `FScenario` (built in `RunTest`):
@@ -602,6 +645,7 @@ Rules of thumb:
 | | `BasicAttack(Character)`, `RaiseGuard(Character)`, `LowerGuard(Character)` | Left click (false while the last attack recovers); right click held / released. |
 | | `ActivateSkill(Character, SkillId)`, `IsOnCooldown(Character, SkillId)`, `HasSkill(Character, SkillId)` | Activates a granted active skill (as E); its `CooldownTags` are on; it is granted. |
 | Net | `ClientCount()`, `ClientWorld(i)`, `ClientPawn(i)`, `ClientController(i)`, `ServerPawnOf(i)`, `ServerControllerOf(i)`, `OnClient<T>(ServerActor, i)`, `MakeAllies(Player, Ally)` | Networked scenarios only: see [Networked scenarios](#networked-scenarios). |
+| Visual | `LookFrom(Eye, LookAt, Client = -1)`, `Screenshot(Name, Client = -1)` | Visual scenarios only: see [Visual run](#visual-run). |
 | | `SetHealth(A, Value)`, `ApplyStatus(A, CrossguardTags::State_Silenced, Seconds)` | Health base value; a status through `UCrossguardSkillAbility::ApplyStatus` (self-applied, so CC immunity still counts). |
 | | `Kill(Victim, Killer = nullptr)` | Lethal damage through the damage effect: death, body and kill XP as in play. |
 | | `Damage(Source, Victim, Attack, Magic = 0)` | One hit of these base amounts through the damage effect (as `Kill`): stats and the victim's damage reactions apply (a monster turns on `Source`), guards do not. No Source: the victim's own. Returns the Health it took off. |

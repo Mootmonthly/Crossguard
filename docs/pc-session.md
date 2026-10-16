@@ -87,7 +87,11 @@ All from the project folder in `cmd` or PowerShell (`.bat` wrappers call the `.p
    Tools\run_editor_tests.bat -SkipBuild
    ```
 
-   Narrow with `-Filter Crossguard.Data` (then `Crossguard.Scenario.Raid`, …) while iterating. See
+   Narrow with `-Filter Crossguard.Data` (then `Crossguard.Scenario.Raid`, …) while iterating;
+   `-Filter Crossguard.Net` runs the networked scenarios (a server and real PIE clients). The visual
+   run, `Tools\run_editor_tests.bat -Visual -SkipBuild`, renders (PIE windows open on the desktop:
+   leave them alone) and writes `Crossguard.Visual.*` screenshots to
+   `Saved\EditorTests\Screenshots\`; look at them, it checks nothing visual itself. See
    [editor-tests.md](editor-tests.md).
 
 6. **Triage** each `FAIL` in `Saved\EditorTests\summary.txt`: data not set up (rerun step 4),
