@@ -106,7 +106,13 @@ bool FCrossguardScenarioUIWidgetsBind::RunTest(const FString& Parameters)
 		UCrossguardInventoryComponent* Inventory = Player->GetInventoryComponent();
 
 		// The game mode's HUD class (a Blueprint game mode may override it).
-		if (const ACrossguardHUD* Hud = Cast<ACrossguardHUD>(Controller->GetHUD()))
+		const bool bHasViewport = C.World()->GetGameViewport() != nullptr;
+		if (!bHasViewport)
+		{
+			// Headless (-nullrhi): the HUD makes no widgets without a game viewport; the widgets are built by hand below.
+			C.Test.AddInfo(TEXT("No game viewport: skipping the HUD's own widget checks"));
+		}
+		else if (const ACrossguardHUD* Hud = Cast<ACrossguardHUD>(Controller->GetHUD()))
 		{
 			C.Test.TestNotNull(TEXT("The HUD made its HUD widget"), Hud->GetHudWidget());
 			C.Test.TestNotNull(TEXT("The HUD made its inventory window"), Hud->GetInventoryWidget());
