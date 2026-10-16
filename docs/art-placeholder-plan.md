@@ -147,7 +147,8 @@ UE 5 imports WAV directly. Assumed: 5.8 also imports OGG; if it doesn't, convert
 ## Direct-download list for a local Claude session
 
 Put downloads outside the repo (e.g. `%TEMP%\CrossguardArt\<pack>`), extract each pack into its own
-empty folder, then import into `Content/Placeholder/<Pack>/` with Unreal Python
+empty folder, then import into `Content/ThirdParty/<Pack>/` (`Tools/import_art.py`, done 2026-10-16:
+see `Content/ThirdParty/LICENSES.md`) with Unreal Python
 (`unreal.AssetImportTask` + `unreal.FbxImportUI`, or Interchange for GLB). Import only what's used.
 `*.fbx`, `*.png`, `*.wav` and `*.uasset` go through Git LFS here; don't commit the raw zips.
 

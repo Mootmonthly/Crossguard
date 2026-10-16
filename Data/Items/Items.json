@@ -7,7 +7,8 @@
     "gridHeight": 3,
     "maxStack": 20,
     "sellValue": 0,
-    "sellPerRarity": 0
+    "sellPerRarity": 0,
+    "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactWood.S_ImpactWood"
   },
   {
     "id": "bandage",
@@ -31,7 +32,8 @@
     "gridHeight": 2,
     "maxStack": 20,
     "sellValue": 0,
-    "sellPerRarity": 0
+    "sellPerRarity": 0,
+    "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactWood.S_ImpactWood"
   },
   {
     "id": "emerald",
@@ -59,7 +61,9 @@
     "throwDotPerSecond": 3,
     "throwDotSeconds": 5,
     "countsAsWeapon": null,
-    "impactPower": 0
+    "impactPower": 0,
+    "projectileMesh": "/Game/ThirdParty/Kenney/SurvivalKit/SM_Bottle.SM_Bottle",
+    "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactGlass.S_ImpactGlass"
   },
   {
     "id": "gold_coin",
@@ -181,7 +185,9 @@
     "throwDotPerSecond": 0,
     "throwDotSeconds": 0,
     "countsAsWeapon": "Axe",
-    "impactPower": 3
+    "impactPower": 3,
+    "projectileMesh": "/Game/ThirdParty/Kenney/SurvivalKit/SM_ToolAxe.SM_ToolAxe",
+    "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactMetal.S_ImpactMetal"
   },
   {
     "id": "throwing_knife",
@@ -199,6 +205,8 @@
     "throwDotPerSecond": 0,
     "throwDotSeconds": 0,
     "countsAsWeapon": "Dagger",
-    "impactPower": 1
+    "impactPower": 1,
+    "projectileMesh": "/Game/ThirdParty/PolyHaven/OrnateMedievalDagger/SM_OrnateMedievalDagger.SM_OrnateMedievalDagger",
+    "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactMetal.S_ImpactMetal"
   }
 ]

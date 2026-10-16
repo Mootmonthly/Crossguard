@@ -24,7 +24,7 @@
 		"ProjectileMesh": "",
 		"TrailVfx": "",
 		"ImpactVfx": "",
-		"ImpactSound": ""
+		"ImpactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactWood.S_ImpactWood"
 	},
 	{
 		"Name": "bandage",
@@ -78,7 +78,7 @@
 		"ProjectileMesh": "",
 		"TrailVfx": "",
 		"ImpactVfx": "",
-		"ImpactSound": ""
+		"ImpactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactWood.S_ImpactWood"
 	},
 	{
 		"Name": "emerald",
@@ -129,10 +129,10 @@
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
-		"ProjectileMesh": "",
+		"ProjectileMesh": "/Game/ThirdParty/Kenney/SurvivalKit/SM_Bottle.SM_Bottle",
 		"TrailVfx": "",
 		"ImpactVfx": "",
-		"ImpactSound": ""
+		"ImpactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactGlass.S_ImpactGlass"
 	},
 	{
 		"Name": "gold_coin",
@@ -426,10 +426,10 @@
 		"CountsAsWeapon": "Axe",
 		"bHasCountsAsWeapon": true,
 		"ImpactPower": 3,
-		"ProjectileMesh": "",
+		"ProjectileMesh": "/Game/ThirdParty/Kenney/SurvivalKit/SM_ToolAxe.SM_ToolAxe",
 		"TrailVfx": "",
 		"ImpactVfx": "",
-		"ImpactSound": ""
+		"ImpactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactMetal.S_ImpactMetal"
 	},
 	{
 		"Name": "throwing_knife",
@@ -453,9 +453,9 @@
 		"CountsAsWeapon": "Dagger",
 		"bHasCountsAsWeapon": true,
 		"ImpactPower": 1,
-		"ProjectileMesh": "",
+		"ProjectileMesh": "/Game/ThirdParty/PolyHaven/OrnateMedievalDagger/SM_OrnateMedievalDagger.SM_OrnateMedievalDagger",
 		"TrailVfx": "",
 		"ImpactVfx": "",
-		"ImpactSound": ""
+		"ImpactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactMetal.S_ImpactMetal"
 	}
 ]

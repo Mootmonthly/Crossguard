@@ -150,8 +150,8 @@ bool FCrossguardScenarioArtWeaponMeshes::RunTest(const FString& Parameters)
 		C.Test.TestTrue(TEXT("drawn: shown again"), FirstPerson != nullptr && FirstPerson->IsVisible());
 		C.Unequip(Player, ECrossguardEquipmentSlot::OffHand);
 		C.Test.TestNull(TEXT("unequipped shield: no mesh"), Visuals->GetWeaponMesh(ECrossguardEquipmentSlot::OffHand, false));
-		// The data's dagger has no mesh (Data/Items/Weapons.json): nothing, as before art.
-		C.Equip(Player, TEXT("dagger_one_handed"));
+		// The data's wand has no mesh (Data/Items/Weapons.json): nothing, as before art.
+		C.Equip(Player, TEXT("wand_one_handed"));
 		C.Test.TestNull(TEXT("a weapon without a mesh: nothing (first person)"), Visuals->GetWeaponMesh(ECrossguardEquipmentSlot::MainHand, true));
 		C.Test.TestNull(TEXT("a weapon without a mesh: nothing (third person)"), Visuals->GetWeaponMesh(ECrossguardEquipmentSlot::MainHand, false));
 	});

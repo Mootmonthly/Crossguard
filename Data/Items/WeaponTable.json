@@ -16,7 +16,7 @@
 		"AmmoId": "None",
 		"bCanParry": false,
 		"ImpactPower": 4,
-		"Mesh": "",
+		"Mesh": "/Game/ThirdParty/PolyHaven/WoodenAxe/SM_WoodenAxe.SM_WoodenAxe",
 		"AttachSocket": "None",
 		"MeshOffset": {
 			"X": 0,
@@ -51,7 +51,7 @@
 		"AmmoId": "None",
 		"bCanParry": true,
 		"ImpactPower": 6,
-		"Mesh": "",
+		"Mesh": "/Game/ThirdParty/PolyHaven/WoodenAxe/SM_WoodenAxe.SM_WoodenAxe",
 		"AttachSocket": "None",
 		"MeshOffset": {
 			"X": 0,
@@ -64,9 +64,9 @@
 			"Roll": 0
 		},
 		"MeshScale": {
-			"X": 1,
-			"Y": 1,
-			"Z": 1
+			"X": 1.5,
+			"Y": 1.5,
+			"Z": 1.5
 		}
 	},
 	{
@@ -121,7 +121,7 @@
 		"AmmoId": "None",
 		"bCanParry": false,
 		"ImpactPower": 1,
-		"Mesh": "",
+		"Mesh": "/Game/ThirdParty/PolyHaven/OrnateMedievalDagger/SM_OrnateMedievalDagger.SM_OrnateMedievalDagger",
 		"AttachSocket": "None",
 		"MeshOffset": {
 			"X": 0,
@@ -156,7 +156,7 @@
 		"AmmoId": "None",
 		"bCanParry": false,
 		"ImpactPower": 4,
-		"Mesh": "",
+		"Mesh": "/Game/ThirdParty/PolyHaven/KiteShield/SM_KiteShield.SM_KiteShield",
 		"AttachSocket": "None",
 		"MeshOffset": {
 			"X": 0,
@@ -169,9 +169,9 @@
 			"Roll": 0
 		},
 		"MeshScale": {
-			"X": 1,
-			"Y": 1,
-			"Z": 1
+			"X": 0.6,
+			"Y": 0.6,
+			"Z": 0.6
 		}
 	},
 	{
@@ -191,7 +191,7 @@
 		"AmmoId": "None",
 		"bCanParry": true,
 		"ImpactPower": 5,
-		"Mesh": "",
+		"Mesh": "/Game/ThirdParty/Kenney/MiniDungeon/SM_Spear.SM_Spear",
 		"AttachSocket": "None",
 		"MeshOffset": {
 			"X": 0,
@@ -204,9 +204,9 @@
 			"Roll": 0
 		},
 		"MeshScale": {
-			"X": 1,
-			"Y": 1,
-			"Z": 1
+			"X": 3.3,
+			"Y": 3.3,
+			"Z": 3.3
 		}
 	},
 	{
@@ -261,7 +261,7 @@
 		"AmmoId": "None",
 		"bCanParry": false,
 		"ImpactPower": 3,
-		"Mesh": "",
+		"Mesh": "/Game/ThirdParty/Kenney/MiniDungeon/SM_Sword.SM_Sword",
 		"AttachSocket": "None",
 		"MeshOffset": {
 			"X": 0,
@@ -274,9 +274,9 @@
 			"Roll": 0
 		},
 		"MeshScale": {
-			"X": 1,
-			"Y": 1,
-			"Z": 1
+			"X": 1.8,
+			"Y": 1.8,
+			"Z": 1.8
 		}
 	},
 	{
@@ -296,7 +296,7 @@
 		"AmmoId": "None",
 		"bCanParry": true,
 		"ImpactPower": 5,
-		"Mesh": "",
+		"Mesh": "/Game/ThirdParty/Kenney/MiniDungeon/SM_Sword.SM_Sword",
 		"AttachSocket": "None",
 		"MeshOffset": {
 			"X": 0,
@@ -309,9 +309,9 @@
 			"Roll": 0
 		},
 		"MeshScale": {
-			"X": 1,
-			"Y": 1,
-			"Z": 1
+			"X": 2.6,
+			"Y": 2.6,
+			"Z": 2.6
 		}
 	},
 	{

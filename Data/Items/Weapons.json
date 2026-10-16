@@ -17,7 +17,8 @@
     "delivery": "MeleeSwing",
     "ammo": null,
     "canParry": false,
-    "impactPower": 4
+    "impactPower": 4,
+    "mesh": "/Game/ThirdParty/PolyHaven/WoodenAxe/SM_WoodenAxe.SM_WoodenAxe"
   },
   {
     "id": "axe_two_handed",
@@ -37,7 +38,11 @@
     "delivery": "MeleeSwing",
     "ammo": null,
     "canParry": true,
-    "impactPower": 6
+    "impactPower": 6,
+    "mesh": "/Game/ThirdParty/PolyHaven/WoodenAxe/SM_WoodenAxe.SM_WoodenAxe",
+    "relativeTransform": {
+      "scale": 1.5
+    }
   },
   {
     "id": "bow",
@@ -77,7 +82,8 @@
     "delivery": "MeleeSwing",
     "ammo": null,
     "canParry": false,
-    "impactPower": 1
+    "impactPower": 1,
+    "mesh": "/Game/ThirdParty/PolyHaven/OrnateMedievalDagger/SM_OrnateMedievalDagger.SM_OrnateMedievalDagger"
   },
   {
     "id": "shield_one_handed",
@@ -94,7 +100,11 @@
     "delivery": "None",
     "ammo": null,
     "canParry": false,
-    "impactPower": 4
+    "impactPower": 4,
+    "mesh": "/Game/ThirdParty/PolyHaven/KiteShield/SM_KiteShield.SM_KiteShield",
+    "relativeTransform": {
+      "scale": 0.6
+    }
   },
   {
     "id": "spear_two_handed",
@@ -114,7 +124,11 @@
     "delivery": "MeleeSwing",
     "ammo": null,
     "canParry": true,
-    "impactPower": 5
+    "impactPower": 5,
+    "mesh": "/Game/ThirdParty/Kenney/MiniDungeon/SM_Spear.SM_Spear",
+    "relativeTransform": {
+      "scale": 3.3
+    }
   },
   {
     "id": "staff_two_handed",
@@ -154,7 +168,11 @@
     "delivery": "MeleeSwing",
     "ammo": null,
     "canParry": false,
-    "impactPower": 3
+    "impactPower": 3,
+    "mesh": "/Game/ThirdParty/Kenney/MiniDungeon/SM_Sword.SM_Sword",
+    "relativeTransform": {
+      "scale": 1.8
+    }
   },
   {
     "id": "sword_two_handed",
@@ -174,7 +192,11 @@
     "delivery": "MeleeSwing",
     "ammo": null,
     "canParry": true,
-    "impactPower": 5
+    "impactPower": 5,
+    "mesh": "/Game/ThirdParty/Kenney/MiniDungeon/SM_Sword.SM_Sword",
+    "relativeTransform": {
+      "scale": 2.6
+    }
   },
   {
     "id": "wand_one_handed",

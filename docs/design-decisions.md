@@ -373,6 +373,7 @@ Everything else is a placeholder until ruled; the numbers live in `Crossguard::F
 | U | Guild window |
 | K | Attributes window: unspent points, Apply, respec (placeholder key) |
 | P | Party window: members, invite, invite inbox, Start raid (placeholder key) |
+| F10 | Back to the main menu, between raids only; refused in a raid ("extract first"). Assumed (placeholder key, 2026-10-16) |
 | Esc | Close the open windows |
 
 - Drawing a weapon set (1 / 2) takes 1 s, faster with Dexterity (`1 s ÷ (1 + Dexterity)`); an
@@ -676,6 +677,18 @@ Everything here is cosmetic: no rule depends on it.
   projectile's impact is reliable (it is sent just before the projectile goes away).
 - Assumed: a skill cast fires `OnAttackStarted` (`Kind` Cast, `SkillId`) when it commits, also for
   self-buffs (Slash readying, Stealth).
+- Assumed (placeholder, 2026-10-16): the first imported art (CC0, `Content/ThirdParty/LICENSES.md`)
+  is wired up as: one-handed sword Kenney sword ×1.8, two-handed sword the same ×2.6, dagger Poly
+  Haven dagger, one- and two-handed axe Poly Haven wooden axe (×1, ×1.5), shield Poly Haven kite
+  shield ×0.6, spear Kenney spear ×3.3; bow, staff, wand none. Throwing axe, knife and bottle fly
+  as Kenney tool axe, the dagger and Kenney bottle; arrows and bolts no mesh, impact sounds only.
+  Skeleton mobs use Kenney's skeleton (×2.5), the example brute Kenney's zombie (×2.3), the dragon
+  none. The meshes' hand orientation and the mobs' facing (`meshYaw` -90) are untuned: no Anim
+  Blueprint yet (monsters stand in their bind pose) and no Physics Asset (no monster ragdoll).
+  Character sounds: swing Kenney knifeSlice, hit impactPunch_medium, block impactMetal_heavy,
+  death impactSoft_heavy.
+- Assumed (development only, 2026-10-16): in non-Shipping builds `-CrossguardPlayerId=<name>` is
+  also the player name, so the local cluster's clients are alice and bob (invites go by name).
 
 ## Online architecture (owner decisions)
 

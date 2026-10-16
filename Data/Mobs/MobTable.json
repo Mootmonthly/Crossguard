@@ -20,9 +20,9 @@
 		"Scale": 1,
 		"Skills": [],
 		"LootTableId": "mob_example_brute",
-		"Mesh": "",
+		"Mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Zombie.SK_Zombie",
 		"AnimClass": "",
-		"MeshScale": 1,
+		"MeshScale": 2.3,
 		"MeshOffset": {
 			"X": 0,
 			"Y": 0,
@@ -93,9 +93,9 @@
 			"antimagic_garb"
 		],
 		"LootTableId": "mob_skeleton_archer",
-		"Mesh": "",
+		"Mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Skeleton.SK_Skeleton",
 		"AnimClass": "",
-		"MeshScale": 1,
+		"MeshScale": 2.5,
 		"MeshOffset": {
 			"X": 0,
 			"Y": 0,
@@ -129,9 +129,9 @@
 			"wall"
 		],
 		"LootTableId": "mob_skeleton_mage",
-		"Mesh": "",
+		"Mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Skeleton.SK_Skeleton",
 		"AnimClass": "",
-		"MeshScale": 1,
+		"MeshScale": 2.5,
 		"MeshOffset": {
 			"X": 0,
 			"Y": 0,
@@ -165,9 +165,9 @@
 			"heroic_might"
 		],
 		"LootTableId": "mob_skeleton_soldier",
-		"Mesh": "",
+		"Mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Skeleton.SK_Skeleton",
 		"AnimClass": "",
-		"MeshScale": 1,
+		"MeshScale": 2.5,
 		"MeshOffset": {
 			"X": 0,
 			"Y": 0,

@@ -79,7 +79,9 @@
       ]
     },
     "description": "Placeholder mob matching the built-in monster defaults. Edit or delete it in the Mob Forge.",
-    "notes": []
+    "notes": [],
+    "mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Zombie.SK_Zombie",
+    "meshScale": 2.3
   },
   {
     "id": "mithril_dragon",
@@ -255,7 +257,9 @@
       ]
     },
     "description": "",
-    "notes": []
+    "notes": [],
+    "mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Skeleton.SK_Skeleton",
+    "meshScale": 2.5
   },
   {
     "id": "skeleton_mage",
@@ -343,7 +347,9 @@
       ]
     },
     "description": "",
-    "notes": []
+    "notes": [],
+    "mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Skeleton.SK_Skeleton",
+    "meshScale": 2.5
   },
   {
     "id": "skeleton_soldier",
@@ -431,6 +437,8 @@
       ]
     },
     "description": "",
-    "notes": []
+    "notes": [],
+    "mesh": "/Game/ThirdParty/Kenney/GraveyardKit/SK_Skeleton.SK_Skeleton",
+    "meshScale": 2.5
   }
 ]
