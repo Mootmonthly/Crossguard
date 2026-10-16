@@ -75,6 +75,22 @@ namespace
 	}
 }
 
+namespace CrossguardDataPassiveRequirements
+{
+	// The skill's own requirements (Skills.json: [Armor Mastery] Plate, [The Mithril Knight] Plate in
+	// every slot, [Spear of Liscor] a Spear in hand). Its bonuses count only while they are met, as an
+	// active skill can only be used while they are.
+	bool AreMet(const FCrossguardSkillRequirements& Requirements, const UCrossguardEquipmentComponent* Equipment)
+	{
+		if (Requirements.Weapons.IsEmpty() && Requirements.Armor == ECrossguardArmorRequirement::None)
+		{
+			return true;
+		}
+		return Equipment != nullptr && (Requirements.Weapons.IsEmpty() || Equipment->SatisfiesWeaponRequirement(Requirements.Weapons))
+			&& Equipment->SatisfiesArmorRequirement(Requirements.Armor);
+	}
+}
+
 void UCrossguardDataPassiveAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -141,6 +157,12 @@ void UCrossguardDataPassiveAbility::Refresh()
 	const ACrossguardAICharacter* AICharacter = Cast<ACrossguardAICharacter>(Avatar);
 	// Muted: bonuses off until it ends.
 	if (Row == nullptr || ASC == nullptr || !IsActive() || ASC->HasMatchingGameplayTag(CrossguardTags::State_Muted))
+	{
+		return;
+	}
+	// Requirements not met: bonuses off until the equipment changes. An AI's skills come with it (no
+	// requirements).
+	if (AICharacter == nullptr && !CrossguardDataPassiveRequirements::AreMet(Row->Requirements, Equipment))
 	{
 		return;
 	}

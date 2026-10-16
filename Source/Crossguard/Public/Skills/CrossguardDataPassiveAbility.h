@@ -34,6 +34,11 @@ public:
 //   category; with no filter, to all three categories. Cast time likewise, without Melee / Ranged /
 //   Minion.
 //
+// The skill's own requirements (Skills.json `requirements`: weapons, armor) gate all of its
+// bonuses: [Armor Mastery] needs Plate, [The Mithril Knight] Plate in every slot, [Spear of Liscor]
+// a Spear in hand. Not for AI characters (their skills come with them). A bundle's components are
+// their own abilities and are not gated by the bundle's requirement.
+//
 // While Muted the bonuses are off.
 //
 // Not covered (logged once): modifiers that target others (Party, Target, AlliesInRadius),

@@ -148,7 +148,7 @@ public:
 };
 
 // [Triple Thrust] (Art, 12 s, spear): three quick thrusts (0.15 s apart), each the spear's damage +15
-// Attack Damage, 2.5 m reach. Piercing (through blocking shields) waits for blocking.
+// Attack Damage, 2.5 m reach. Piercing: a hit a guard would stop deals 50% instead (CrossguardGuard).
 UCLASS()
 class CROSSGUARD_API UCrossguardTripleThrustAbility : public UCrossguardSkillAbility
 {

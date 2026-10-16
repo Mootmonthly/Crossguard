@@ -250,6 +250,16 @@ damage is computed from the characters' actual stats, so they work at any level.
 | `Crossguard.Scenario.Skills.SwordMastery` | +5 AAD, +10% Action Speed, melee CDR only while a sword is held, not with a dagger. Skipped without `DA_SkillCatalog`. |
 | `Crossguard.Scenario.Skills.RiposteRider` | A readied riposte (`State.NextAttack.Riposte`) gives the next hit +50% ADB, once. |
 
+**`CrossguardScenarioPassiveSkillTests.cpp`** (per-skill status: [skill-coverage.md](skill-coverage.md))
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Skills.ArmorMasteryNeedsPlate` | Without plate the knight's AR and Movement Speed equal a squire's; both in a `plate_cuirass`: the knight's AR is the squire's x1.10 and its speed +0.05. Skipped without `DA_SkillCatalog` or `DT_Armor`. |
+| `Crossguard.Scenario.Skills.MithrilKnightNeedsFullPlate` | Level 15 (Capacity 20). Four plate pieces: no +5 STR; the fifth (head, chest, hands, legs, feet): +5 STR; helm off: gone again. |
+| `Crossguard.Scenario.Skills.SpearOfLiscorNeedsSpear` | Sword in hand: no +7 STR / +3 AGI; `spear_two_handed`: both; sword again: gone. |
+| `Crossguard.Scenario.Skills.CorLeonisEmptySlots` | ADB and MDB +0.05 per empty armor slot (count read from the equipment); a `plate_helm` takes one slot's worth off. |
+| `Crossguard.Scenario.Skills.SplinterOfWinter` | Dagger hit on a dummy: +5 Magic Damage on top of the dagger (formula), `State.Slowed` and Movement Speed −0.1; both gone after 3 s. |
+
 **`CrossguardScenarioCombatTests.cpp`**
 
 | Test | Checks |
