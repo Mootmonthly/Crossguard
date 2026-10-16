@@ -108,14 +108,16 @@ Left as they are, with the reason:
     its last relevant check, so the position reached enemies for the first ~5 s of a 12 s
     stealth. **Confirmed** (2026-10-16, UE 5.8, `Crossguard.Net.StealthHidesFromEnemyClient` on a
     dedicated PIE server): the enemy client dropped the stealthed character 4.3–4.5 s after
-    `State.Stealthed` appeared. **Fix A (owner's choice), built, pending local verification:** when
+    `State.Stealthed` appeared. **Fix A (owner's choice), verified on the PC 2026-10-16: the drop
+    now comes 0.02 s after `State.Stealthed`, `Crossguard.Net.*` 7/7.** When
     the server gains `State.Stealthed`, `ACrossguardCharacter::CloseStealthHiddenChannels` closes
     the character's actor channel (`EChannelCloseReason::Relevancy`) on every client connection it
     is hidden from (`IsHiddenByStealthFrom`, the same rule as `IsNetRelevantFor`; split-screen
     children count as that connection's viewers), so the enemy client drops it at once;
     `IsNetRelevantFor` keeps it from reopening. Only with the switch on; nothing on standalone (no
-    net driver). `RelevantTimeout` is untouched. The test logs the measured time as
-    `STEALTH LEAK: ... s` and fails above 0.5 s (placeholder).
+    net driver). `RelevantTimeout` is untouched (lowering it instead was considered and dropped,
+    2026-10-16). The test logs the measured time as `STEALTH LEAK: ... s` and fails above 0.5 s
+    (placeholder).
   - Only the classic net driver calls `IsNetRelevantFor` and has actor channels to close. With
     Iris or a Replication Graph (replication driver) the channel close is skipped, and the hiding
     needs a filter there instead.
