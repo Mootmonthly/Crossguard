@@ -1,5 +1,6 @@
 # Task: next PC session: build everything, run the tests, start the online stack, then placeholder art
-n**Status 2026-10-16: steps 1-5 done; report: [pc-session-report-2026-10-16.md](pc-session-report-2026-10-16.md).**
+
+**Status 2026-10-16: steps 1-5 done; report: [pc-session-report-2026-10-16.md](pc-session-report-2026-10-16.md).**
 
 This file replaces `build-batch-3.md`, whose steps are included here. Run it in a Claude Code session
 on the owner's Windows PC, environment **Local**, in the Crossguard folder.
