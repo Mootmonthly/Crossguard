@@ -715,17 +715,24 @@ void ACrossguardCharacter::CloseStealthHiddenChannels()
 		return;
 	}
 	UNetDriver* NetDriver = GetNetDriver();
-	if (NetDriver == nullptr || NetDriver->GetReplicationDriver() != nullptr || NetDriver->IsUsingIrisReplication())
+	if (NetDriver == nullptr || NetDriver->GetReplicationDriver() != nullptr)
 	{
 		return;
 	}
+#if defined(UE_WITH_IRIS) && UE_WITH_IRIS
+	// Unbuilt guess (first-compile-triage.md, "Overnight code"): the 5.x accessor name.
+	if (NetDriver->IsUsingIrisReplication())
+	{
+		return;
+	}
+#endif
 	for (UNetConnection* Connection : NetDriver->ClientConnections)
 	{
 		if (Connection == nullptr)
 		{
 			continue;
 		}
-		UActorChannel* Channel = Connection->FindActorChannelRef(this);
+		UActorChannel* Channel = Connection->FindActorChannelRef(TWeakObjectPtr<AActor>(this));
 		if (Channel == nullptr || Channel->Closing)
 		{
 			continue;

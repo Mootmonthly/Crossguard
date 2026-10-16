@@ -4,6 +4,7 @@
 #include "Items/CrossguardInventoryComponent.h"
 
 class ACrossguardCharacter;
+class APawn;
 class UAbilitySystemComponent;
 class UCrossguardEquipmentComponent;
 class UCrossguardLoadoutComponent;

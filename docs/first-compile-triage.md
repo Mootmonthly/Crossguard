@@ -162,3 +162,38 @@ Still there, harmless: `CooldownGameplayEffectClass 'CrossguardCooldownEffect' g
 (5.8 inspects the effect's class defaults; our cooldown tags are dynamic and
 `UCrossguardGameplayAbility::GetCooldownTags` reports them, so cooldowns work), and
 `No GameplayCueNotifyPaths` (no cues yet).
+
+## Overnight code (unbuilt)
+
+Code written on 2026-10-16 after the first build: the placeholder UI (`Source/Crossguard/*/UI`,
+`Tests/CrossguardScenarioUITests.cpp`, `UMG` / `Slate` / `SlateCore` in `Crossguard.Build.cs`), the
+stealth channel close and RVO avoidance, and the data-passive requirements. Reviewed by reading
+only. Fixed before the build: the Iris check is now inside `#if defined(UE_WITH_IRIS) && UE_WITH_IRIS`,
+`FindActorChannelRef` gets an explicit `TWeakObjectPtr<AActor>`, the skill wheel uses `UE_PI`
+(not `PI`), `UIHelpers.h` forward-declares `APawn`, and `Tests/CrossguardScenarioNetworkTests.cpp`
+qualifies `CrossguardScenarioNet::StealthSeconds` (`Skills/CrossguardSupportSkills.cpp` has a
+`StealthSeconds` in an anonymous namespace: ambiguous if a unity blob holds both). Not reviewed
+here: the save and party files (written by other agents the same night).
+
+| # | Where | Call | Why it may fail | Suggested fix |
+| --- | --- | --- | --- | --- |
+| O1 | `Private/Character/CrossguardCharacter.cpp:724` | `UNetDriver::IsUsingIrisReplication()` | Name guessed from 5.x. Now compiled only when `UE_WITH_IRIS` is 1. | If C2039: delete the guarded block (Iris is off, D4) or use `UE::Net::ShouldUseIrisReplication()` / the driver's `bIsUsingIris` if it exists. |
+| O2 | `CrossguardCharacter.cpp:718` | `UNetDriver::GetReplicationDriver()` | Believed public and inline in 5.x. | If missing: test `NetDriver->ReplicationDriver != nullptr` (public `UPROPERTY` in 5.x). |
+| O3 | `CrossguardCharacter.cpp:735` | `UNetConnection::FindActorChannelRef(const TWeakObjectPtr<AActor>&)` | Present since 4.2x; signature unsure in 5.8. | `Connection->ActorChannelMap().FindRef(this)`. |
+| O4 | `CrossguardCharacter.cpp:736` | `UChannel::Closing` (public bitfield) | If made private or deprecated (C2248 / C4996). | `Channel->IsClosing()` if it exists; else drop the check (closing twice is a no-op in `UChannel::Close`). |
+| O5 | `CrossguardCharacter.cpp:743,750` | `UNetConnection::PlayerController`, `OwningActor`, `ViewTarget`, `Children` | Public `TObjectPtr` members in 5.x. | If one went behind an accessor: `GetPlayerController(nullptr)`, `GetConnectionViewTarget()`; `OwningActor` has `GetOwningActor()` in some versions. |
+| O6 | `CrossguardCharacter.cpp:756` | `UChannel::Close(EChannelCloseReason::Relevancy)` | Stable since 4.22. | If C2660: copy the 5.8 signature from `Engine/Channel.h`. |
+| O7 | `Private/Character/CrossguardAICharacter.cpp:49-51,107-113` | `bUseRVOAvoidance`, `AvoidanceConsiderationRadius`, `AvoidanceWeight` (constructor), `FNavAvoidanceMask::SetFlagsDirectly`, `SetAvoidanceGroupMask` / `SetGroupsToAvoidMask` / `SetGroupsToIgnoreMask` | Public `UCharacterMovementComponent` members in 5.x. | If the flag is private: `SetAvoidanceEnabled(true)` in `BeginPlay`. If `SetFlagsDirectly` is missing: set `bGroup0..31` or call the `int32` overloads (`SetAvoidanceGroup(int32)` etc.). |
+| O8 | `Public/UI/CrossguardWidgetBase.h:72` | `UWidgetTree::ConstructWidget<T>(UClass*)` for `UCrossguardUIButton` / `UCrossguardItemGridWidget` (user widgets inside user widgets) | 5.x routes `UUserWidget` classes through `CreateWidget(WidgetTree, ...)`. If 5.8 static_asserts or returns null for them: | `CreateWidget<WidgetT>(this, WidgetT::StaticClass())` for `UUserWidget` subclasses (`if constexpr (TIsDerivedFrom<WidgetT, UUserWidget>::Value)`). |
+| O9 | `Private/UI/CrossguardWidgetBase.cpp:30` | `WidgetTree` created by hand if `UUserWidget::Initialize` did not | `Initialize` creates it for native classes in 5.x, so this branch should not run. A name clash ("WidgetTree" already exists) would show as a fatal `NewObject` error. | Remove the branch, or use `NewObject<UWidgetTree>(this, NAME_None, RF_Transient)`. |
+| O10 | `Private/UI/CrossguardUIHelpers.cpp:102` | `UGameplayAbility::GetCooldownTimeRemaining(const FGameplayAbilityActorInfo*)` on the CDO, `UAbilitySystemComponent::AbilityActorInfo` | Public in 5.x. | If private: `AbilitySystem->GetActiveEffectsTimeRemaining(FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(*Ability->GetCooldownTags()))` and take the max. |
+| O11 | `Private/UI/CrossguardHUD.cpp:129` | `UInputAction::ValueType` written | Same as A5 (it compiled in the character). | As A5. |
+| O12 | `Private/UI/CrossguardHUD.cpp:154` | `AActor::EnableInput` on an `AHUD` makes an Enhanced Input component | Runtime: if `Cast<UEnhancedInputComponent>(InputComponent)` is null, the log says "UI keys are not bound". | `Config/DefaultInput.ini` already sets `DefaultInputComponentClass`; otherwise create it by hand: `InputComponent = NewObject<UEnhancedInputComponent>(this); InputComponent->RegisterComponent(); PlayerOwner->PushInputComponent(InputComponent);`. |
+| O13 | `Private/Tests/CrossguardScenarioUITests.cpp:111-112` | the HUD made its widgets | Runtime: `ACrossguardHUD::CanShowUI` (`HUD.cpp:70`) needs `UWorld::GetGameViewport()`. If headless PIE has none, the HUD makes no widgets and these two checks fail (the rest of the test builds its own widgets and still runs). | Turn the two `TestNotNull` into an `AddWarning` when `Hud->GetHudWidget() == nullptr`, or drop the viewport condition from `CanShowUI`. |
+| O14 | `Private/UI/*.cpp` | `UTextBlock::SetAutoWrapText`, `USizeBox::SetMaxDesiredHeight`, `UEditableTextBox::SetHintText`, `FCoreStyle::GetDefaultFontStyle(FName, float)`, `FAnchors(float, float)`, `FInputModeGameAndUI::SetHideCursorDuringCapture`, `APlayerController::GetHUD<T>()` | UMG setters as of 5.1-5.5. | If one is missing: the matching public property, or the setter's new name in the header next to it. |
+| O15 | `Crossguard.Build.cs` | `UMG`, `Slate`, `SlateCore` added | An LNK2019 on a UMG symbol means a module is missing; `InputCore` is already there. | Add the module the symbol's header lives in. |
+
+Shadowing, unity names, `Printf` formats and brace narrowing were checked by hand and by script on
+the new files: nothing else found. Not checked against an engine: whether UHT accepts the UI
+`UFUNCTION`s (they use only `FString`, `FLinearColor`, `int32`, `float`, `bool`, our UENUMs and
+`UObject` pointers).

@@ -271,7 +271,7 @@ bool FCrossguardNetStealth::RunTest(const FString& Parameters)
 		return true;
 	});
 
-	Scenario.WaitUntilOnClient(2, TEXT("the enemy client loses the sneak (the ally keeps it)"), StealthSeconds, [](FScenarioContext& C, UWorld&)
+	Scenario.WaitUntilOnClient(2, TEXT("the enemy client loses the sneak (the ally keeps it)"), CrossguardScenarioNet::StealthSeconds, [](FScenarioContext& C, UWorld&)
 	{
 		if (C.OnClient(C.FindActor(TEXT("Sneak")), 0) == nullptr)
 		{
@@ -290,7 +290,7 @@ bool FCrossguardNetStealth::RunTest(const FString& Parameters)
 		C.Test.TestTrue(TEXT("The drop came within 0.5 s (the enemy channel is closed when stealth starts)"), Leak <= MaxStealthLeakSeconds);
 	});
 
-	Scenario.WaitUntil(TEXT("stealth ends"), StealthSeconds + 2.0f, [](FScenarioContext& C)
+	Scenario.WaitUntil(TEXT("stealth ends"), CrossguardScenarioNet::StealthSeconds + 2.0f, [](FScenarioContext& C)
 	{
 		return !C.HasTag(C.FindActor(TEXT("Sneak")), CrossguardTags::State_Stealthed);
 	});

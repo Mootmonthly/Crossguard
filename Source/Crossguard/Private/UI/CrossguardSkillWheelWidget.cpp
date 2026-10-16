@@ -61,7 +61,7 @@ void UCrossguardSkillWheelWidget::NativeRefresh()
 			// Hover selects (docs/design-decisions.md, Controls: "hover an activatable skill").
 			Entry->OnHovered = [this, Index]() { SelectEntry(Index); };
 			Entry->OnClicked = [this, Index]() { SelectEntry(Index); };
-			const float Angle = 2.0f * PI * Index / Skills.Num() - 0.5f * PI;
+			const float Angle = 2.0f * UE_PI * Index / Skills.Num() - 0.5f * UE_PI;
 			UCanvasPanelSlot* EntrySlot = Ring->AddChildToCanvas(Entry);
 			EntrySlot->SetAnchors(FAnchors(0.5f, 0.5f));
 			EntrySlot->SetAlignment(FVector2D(0.5f, 0.5f));
