@@ -95,6 +95,12 @@ Code and data must follow it.
 - Mastery cooldown reductions ("Melee Skills -10% Cooldown") apply **only while wielding**
   the mastery's weapon.
 - Mortal Strike requires a melee weapon. Arcane Arrows requires a Bow.
+- A Passive's own requirement (Armor Mastery: Plate; The Mithril Knight: Plate in every slot; Spear
+  of Liscor: a Spear in hand) works like a mastery's weapon: the skill can be equipped without it, and
+  its own bonuses count only while the requirement is met. **Assumed**: a bundle's requirement does not
+  switch off the skills it includes (they keep their own rules: Multiscale needs some Plate, Immutable
+  and Antimagic Garb nothing). Open question in the roadmap. Per-skill status:
+  [skill-coverage.md](skill-coverage.md).
 
 ### Skill numbers filled in
 

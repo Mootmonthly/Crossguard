@@ -1,0 +1,89 @@
+# Skill Coverage
+
+Every skill in `Data/Skills/Skills.json` against the code, as of the 2026-10 audit. Rulings:
+[design-decisions.md](design-decisions.md) (Skills). Tests: [editor-tests.md](editor-tests.md).
+
+**How a skill is played**
+
+- **C++**: its own ability class, registered in `CrossguardNativeSkills.cpp`.
+- **Data**: a Passive with no class is played by `UCrossguardDataPassiveAbility` from its row: Self stat
+  modifiers, wielding / armor / per-empty-slot conditions, and the skill's own `requirements`
+  (weapons, armor). Off while Muted.
+- **Rider**: an on-hit part added to basic attacks in `UCrossguardWeaponAttackAbility::GatherRiders`
+  (players) and `ACrossguardAICharacter` (AI), applied by `ApplyRiders`.
+
+**Status**: done = everything the text and rulings say is in code; partial = a part is missing (what
+and why); blocked = cannot be done until another system exists.
+
+| Skill | Category | Played by | Status | Test (`Crossguard.Scenario.Skills.*`) |
+| --- | --- | --- | --- | --- |
+| Antimagic Garb | Passive | Data | done | none of its own (same path as HeroicMight) |
+| Arcane Arrows | Active | C++ + rider | partial: "dropoff reduced by 50%" waits for arrow damage dropoff (arrows have none) | ArcaneArrows |
+| Arcane Intellect | Passive | Data | done | none of its own (as HeroicMight) |
+| Armor Mastery | Passive | Data | done (Plate requirement enforced since this audit) | ArmorMasteryNeedsPlate |
+| Axe Mastery | Passive | Data | done (wielding axe, melee CDR) | none of its own (as SwordMastery) |
+| Benediction | Spell | C++ | done (full heal, revives a body) | Benediction |
+| Bow Mastery | Passive | Data | done (wielding bow, ranged CDR) | none of its own (as SwordMastery) |
+| Chop Down | Active | C++ + rider | done (110%, slow, Grounds fliers) | ChopDown |
+| Cleave | Art | C++ | done | Cleave |
+| Cor Leonis | Passive | Data | done (per empty armor slot) | CorLeonisEmptySlots |
+| Dagger Mastery | Passive | Data | done | none of its own (as SwordMastery) |
+| Divine Alacrity | Passive | Data | done | none of its own (as HeroicMight) |
+| Dragonification | Art | C++ | done (dragon look is Editor work) | Dragonification |
+| Elder Summoner | Passive | Data | done (Minion CDR on `Skill.Minion` summons) | none of its own |
+| Eldritch Shield | Spell | C++ | done | EldritchShield |
+| Fireball | Spell | C++ | done | Fireball, FireballSelfSplash |
+| Flare Breath | Spell | C++ | done | Dragonification (cast in dragon form) |
+| Flight | Spell | C++ | done | Flight, FlightDescend |
+| Gouge | Active | C++ + rider | done | Gouge |
+| Greater Heal | Spell | C++ (Heal subclass) | done | none of its own (as Heal) |
+| Heal | Spell | C++ | done | Heal |
+| Heroic Might | Passive | Data | done | HeroicMight |
+| Hunter's Leap | Art | C++ | done | HuntersLeap |
+| Hunter's Tracking | Passive | C++ | partial: footprints done; "+20 m hearing" blocked (no sound system) | HuntersTracking |
+| Immutable | Active | C++ | done (permanent and party CC immunity) | Immutable |
+| Light | Spell | C++ | done | Light |
+| Like A Lion, He Leapt | Art | C++ | done | LikeALion |
+| Mortal Strike | Active | C++ + rider | done (cooldown back on a kill) | NextAttackStack, MortalStrikeKillRefresh |
+| Multiscale | Passive | C++ (party aura) | done | Multiscale |
+| Mute | Spell | C++ | done (passives off too) | Mute |
+| Neckbite | Active | C++ + rider | blocked for players: needs Beastial forms; the tiger has it | NeckbiteSilence, SummonTigerLeapAndRiders |
+| Parting the Land | Active | C++ | done | PartingTheLand |
+| Purge Shot | Active | C++ + rider | done | PurgeShot |
+| Quickshot | Active | C++ | done | Quickshot |
+| Shade Blow | Active | C++ + rider | done (heal block) | NextAttackStack, ShadeBlowHealBlock |
+| Shooting Star | Art | C++ | done (Blind screen effect is Editor work) | ShootingStar |
+| Slash | Active | C++ + rider | done | NextAttackStack |
+| Spear Mastery | Passive | Data | done | none of its own (as SwordMastery) |
+| Spear of Liscor | Passive | Data (bundle) | done (Spear requirement enforced since this audit); open: does the requirement also switch off its components? | SpearOfLiscorNeedsSpear |
+| Splinter of Winter | Passive | C++ + rider (Dagger Mastery from data) | done | SplinterOfWinter |
+| Stealth | Active | C++ | done (enemy position leak: roadmap decision) | Stealth, StealthNetRelevancy |
+| Summon Greater Demon | Spell | C++ | done | SummonGreaterDemon, SummonGreaterDemonFights |
+| Summon Skeletons | Spell | C++ | done (Mage Fireball every 8 s) | SummonSkeletons, SummonSkeletonsFollow |
+| Summon Tiger | Spell | C++ | done (Pet Gem needed, kept) | SummonTiger, SummonTigerLeapAndRiders |
+| Sword Mastery | Passive | Data | done | SwordMastery |
+| The Mithril Knight | Passive | Data (bundle) | done (Plate in every slot enforced since this audit); open: does the requirement also switch off its components? | MithrilKnightNeedsFullPlate |
+| Trauma Mastery | Passive | Data | done | none of its own (as SwordMastery) |
+| Triple Thrust | Art | C++ | done (piercing through guards for half) | TripleThrust |
+| Unleash | Active | C++ | done | Unleash |
+| Wall | Spell | C++ | done | Wall |
+
+Totals: 50 skills; 47 done, 2 partial (Arcane Arrows dropoff, Hunter's Tracking hearing), 1 blocked for
+players (Neckbite).
+
+## Fixed in this audit
+
+- Passives played from data ignored the skill's own `requirements`: Armor Mastery worked without
+  Plate, The Mithril Knight without Plate in every slot, Spear of Liscor without a Spear. Now their
+  own bonuses count only while the requirement is met (AI characters skip requirements, as for active
+  skills). See "Assumed" in design-decisions.md.
+
+## Open questions
+
+Listed in [roadmap.md](roadmap.md#open-questions):
+
+- Does a bundle's requirement also switch off the skills it includes (The Mithril Knight without full
+  Plate: still Multiscale, Immutable, Antimagic Garb? Spear of Liscor without a Spear: still Antimagic
+  Garb)? Currently: no, components keep their own rules.
+- Does a thrown throwing knife count as a "dagger attack" for Splinter of Winter (and Gouge)? Currently:
+  no, only basic attacks carry riders.

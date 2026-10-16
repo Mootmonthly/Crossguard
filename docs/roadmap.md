@@ -16,7 +16,7 @@ order changes.
 | Area | What exists |
 | --- | --- |
 | Rules library | Engine-free C++ for formulas, progression, XP, loadouts, items, affixes, armor, teams, inventory grid; 386 unit-test checks. |
-| Data pipeline | JSON → validators → Unreal data tables, cross-checked against the C++ structs (`Tools/run_checks.sh`). 49 skills, 10 weapons, 16 armor pieces, 23 affixes, 4 general items. |
+| Data pipeline | JSON → validators → Unreal data tables, cross-checked against the C++ structs (`Tools/run_checks.sh`). 50 skills, 10 weapons, 16 armor pieces, 23 affixes, 4 general items. |
 | Character | First-person camera, Enhanced Input built in code, GAS stats derived from STR/AGI/INT. |
 | Combat | Weapon attacks (melee sweep, hitscan wand, projectiles), damage and healing formulas, dual wield, cooldowns with CDR cap. Bows use arrows. |
 | Equipment | Main hand / off hand, six armor slots, rolled affixes, equipment stats and tags. |
@@ -67,7 +67,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Remaining skill parts | Code, Decision | Neckbite for players (needs Beastial forms), Hunter's Tracking hearing range (needs sound), Arcane Arrows dropoff (needs arrow dropoff). |
 | Stealth teammate indicator | Editor | Party members see a purple outline around a stealthed ally (with the visual assets). |
 | Skill visuals | Editor | Fireball, breath, shield, Blind screen effect, dragon form, skeleton meshes. |
-| Passives on others and free-text mechanics | Code | Data-driven passives cover Self stat modifiers (masteries, Heroic Might, Cor Leonis, ...); party auras, on-hit slows and mechanics like Hunter's Tracking still need code. |
+| Passives on others and free-text mechanics | Decision | Audited all 50 skills ([skill-coverage.md](skill-coverage.md)): 47 done, the rest are the parts in the row above. Party auras, on-hit slows, CC immunity and tracking are in C++; data passives now honour the skill's own weapon and armor requirement. Left: the two bundle / throwing-knife questions under Open questions. |
 | Block (shields) and parry | Editor | Built in code: hold right click; Impact Power decides; stun, riposte, AI guards. Needs animations and a guard visual. |
 | Status effects | Code | Slow, Root, Mute, Silence, Stun, Blind and Attack Damage shields exist; none applies Root yet. |
 | Minion meshes | Editor | Meshes for skeletons, tiger and demon (cylinders now). All three summons exist, Minion CDR applies to them, and minions and monsters use their skills. |
@@ -129,6 +129,8 @@ Decisions that block items above. Answers go into design-decisions.md.
 | Jewelry, quarterstaffs, two-handed pavise shields, the Beastial transformation for Neckbite | Later content |
 | Tiger attack speed, Demon size? | Summon Tiger, Summon Greater Demon (currently: 1 s; 1.5×) |
 | Real drop rates: what each monster and chest drops, and rarity odds | Loot tables (placeholders now) |
+| Does a bundle's requirement also switch off the skills it includes (The Mithril Knight without Plate in every slot: still Multiscale, Immutable, Antimagic Garb? Spear of Liscor without a Spear: still Antimagic Garb)? | The Mithril Knight, Spear of Liscor (currently: no, only the bundle's own bonuses) |
+| Does throwing a throwing knife count as a "dagger attack" (Splinter of Winter, Gouge)? | Splinter of Winter (currently: no, only basic attacks) |
 | More monsters: enter them in the Mob Forge (https://claude.ai/artifact/JPDt46urNPnzMsgZuD7RYW) | Monster AI |
 
 ## Placeholders to replace
