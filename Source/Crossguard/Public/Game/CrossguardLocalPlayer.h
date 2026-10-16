@@ -16,4 +16,8 @@ class CROSSGUARD_API UCrossguardLocalPlayer : public ULocalPlayer
 
 public:
 	virtual FString GetGameLoginOptions() const override;
+	// DEV-ONLY (not Shipping): -CrossguardPlayerId=<name> is also the player name (?Name=), so the
+	// clients of Tools/run_local_cluster are "alice", "bob"... and invites by name find them. Display
+	// only: the player's identity is still the verified Nakama id. Otherwise the online subsystem's.
+	virtual FString GetNickname() const override;
 };

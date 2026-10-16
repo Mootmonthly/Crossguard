@@ -40,7 +40,8 @@ summary):
    light, player start, nav mesh bounds, two gather nodes, a chest_common loot container, a mob
    spawner, a dummy, a stash chest and a vendor NPC. Skipped if the map exists.
 6. Optional (CG_SETUP_ADD_HUB_ACTORS=1 or --add-hub-actors): opens the existing L_DevSandbox and adds
-   the stash chest (CrossguardStashChest) and vendor NPC (CrossguardVendorNPC) if it has none, then
+   the stash chest (CrossguardStashChest), vendor NPC (CrossguardVendorNPC), an extraction zone and a
+   point of interest (RAID_ACTORS) if it has none, then
    saves it. Skipped if the classes are missing (editor not rebuilt) or both are already there.
    They only open in the hub: play the map with ?Hub (game mode bIsRaid off).
 7. Optional (CG_SETUP_CREATE_HUB=1 or --create-hub): /Game/Maps/L_Hub (docs/hub-and-menu.md): a 60 m
@@ -841,12 +842,22 @@ HUB_ACTORS = [
 ]
 
 
-def place_hub_actors(actor_subsystem, existing=None):
-    """Spawns each HUB_ACTORS class not already in the level (existing: its actors). Returns
-    (placed, skipped) labels."""
+# Raid-only actors of the dev sandbox (not the hub): an extraction zone 10 m beside the player start
+# (stand in it ExtractSeconds to extract; a flat cylinder marks it) and a point of interest over the
+# map's centre, so the X portal can be summoned once it unlocks (PortalUnlockSeconds).
+RAID_ACTORS = [
+    ("CrossguardExtractionZone", (-1500, 1000, 150), 0.0, "ExtractionZone"),
+    ("CrossguardPointOfInterest", (0, 0, 0), 0.0, "PointOfInterest"),
+]
+EXTRACTION_MARKER = ((-1500, 1000, 2), (4.0, 4.0, 0.04), "ExtractionZone_Marker")
+
+
+def place_hub_actors(actor_subsystem, existing=None, actors=None):
+    """Spawns each HUB_ACTORS class (or actors) not already in the level (existing: its actors).
+    Returns (placed, skipped) labels."""
     placed = []
     skipped = []
-    for class_name, (x, y, z), yaw, label in HUB_ACTORS:
+    for class_name, (x, y, z), yaw, label in (HUB_ACTORS if actors is None else actors):
         cls = native_class(class_name)
         if cls is None:
             skipped.append("{} (class missing: rebuild the editor)".format(class_name))
@@ -859,6 +870,17 @@ def place_hub_actors(actor_subsystem, existing=None):
             placed.append(label)
         else:
             skipped.append("{} (spawn failed)".format(class_name))
+    return placed, skipped
+
+
+def place_raid_actors(actor_subsystem, existing=None):
+    """RAID_ACTORS not already in the level, and the extraction zone's marker with its zone."""
+    placed, skipped = place_hub_actors(actor_subsystem, existing, RAID_ACTORS)
+    if "ExtractionZone" in placed:
+        (x, y, z), (sx, sy, sz), label = EXTRACTION_MARKER
+        if spawn_mesh(actor_subsystem, "/Engine/BasicShapes/Cylinder.Cylinder", unreal.Vector(x, y, z), unreal.Vector(sx, sy, sz),
+                      label, collision=False):
+            placed.append(label)
     return placed, skipped
 
 
@@ -885,7 +907,11 @@ def add_hub_actors():
     if not loaded:
         record("FAIL", step, "could not open the map (see the log)")
         return
-    placed, skipped = place_hub_actors(actor_subsystem, actor_subsystem.get_all_level_actors())
+    existing = actor_subsystem.get_all_level_actors()
+    placed, skipped = place_hub_actors(actor_subsystem, existing)
+    raid_placed, raid_skipped = place_raid_actors(actor_subsystem, existing)
+    placed += raid_placed
+    skipped += raid_skipped
     if not placed:
         record("SKIP", step, "nothing to add: " + ", ".join(skipped))
         return
@@ -1069,6 +1095,9 @@ def create_dev_map(game_mode_cls):
     hub_placed, hub_skipped = place_hub_actors(actor_subsystem)
     placed.extend(hub_placed)
     skipped.extend(hub_skipped)
+    raid_placed, raid_skipped = place_raid_actors(actor_subsystem)
+    placed.extend(raid_placed)
+    skipped.extend(raid_skipped)
 
     set_game_mode_override(game_mode_cls, GAME_MODE_BP, placed)
     save_new_map(step, placed, skipped)
