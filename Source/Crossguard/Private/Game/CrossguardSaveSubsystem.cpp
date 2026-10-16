@@ -8,11 +8,15 @@
 #include "Engine/World.h"
 #include "Game/CrossguardGuildSubsystem.h"
 #include "Game/CrossguardLocalSaveBackend.h"
+#include "Game/CrossguardNakamaSaveBackend.h"
+#include "Game/CrossguardNakamaSubsystem.h"
 #include "Game/CrossguardPlayerState.h"
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Items/CrossguardInventoryComponent.h"
 #include "Items/CrossguardStashComponent.h"
+#include "Misc/CommandLine.h"
 #include "Misc/DateTime.h"
+#include "Misc/Parse.h"
 #include "Skills/CrossguardLoadoutComponent.h"
 #include "Skills/CrossguardSkillCatalog.h"
 
@@ -356,12 +360,44 @@ void UCrossguardSaveSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	BackendObject = NewObject<UCrossguardLocalSaveBackend>(this);
+	FString BackendName = SaveBackend;
+	FParse::Value(FCommandLine::Get(), TEXT("SaveBackend="), BackendName);
+	if (BackendName.Equals(TEXT("Nakama"), ESearchCase::IgnoreCase))
+	{
+		FString Url;
+		FString HttpKey;
+		UCrossguardNakamaSubsystem::ReadServerSettings(Url, HttpKey);
+		if (Url.IsEmpty() || HttpKey.IsEmpty())
+		{
+			// Assumed: a misconfigured server still saves (locally) rather than not at all; the log says so.
+			UE_LOG(LogCrossguard, Error, TEXT("-SaveBackend=Nakama needs -NakamaUrl= and -NakamaHttpKey= (or CROSSGUARD_NAKAMA_HTTP_KEY); saving to local files instead"));
+		}
+		else
+		{
+			UCrossguardNakamaSaveBackend* Nakama = NewObject<UCrossguardNakamaSaveBackend>(this);
+			Nakama->Configure(Url, HttpKey, GetDefault<UCrossguardNakamaSubsystem>()->RequestTimeoutSeconds);
+			BackendObject = Nakama;
+		}
+	}
+	else if (!BackendName.Equals(TEXT("Local"), ESearchCase::IgnoreCase))
+	{
+		UE_LOG(LogCrossguard, Error, TEXT("Unknown save backend \"%s\" (Local or Nakama); saving to local files"), *BackendName);
+	}
+	if (const ICrossguardSaveBackend* Backend = GetBackend())
+	{
+		UE_LOG(LogCrossguard, Log, TEXT("Character saves: %s"), *Backend->DescribeBackend());
+	}
 	WorldCleanupHandle = FWorldDelegates::OnWorldCleanup.AddUObject(this, &UCrossguardSaveSubsystem::HandleWorldCleanup);
 }
 
 void UCrossguardSaveSubsystem::Deinitialize()
 {
 	WriteDirty();
+	// Asynchronous backends (Nakama): the last saves must land before the process ends.
+	if (ICrossguardSaveBackend* Backend = GetBackend())
+	{
+		Backend->FlushWrites(ShutdownFlushSeconds);
+	}
 	FWorldDelegates::OnWorldCleanup.Remove(WorldCleanupHandle);
 	Players.Reset();
 	Watchers.Reset();

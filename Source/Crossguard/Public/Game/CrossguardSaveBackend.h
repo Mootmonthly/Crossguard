@@ -11,6 +11,8 @@
 // (CrossguardRules/Save.h) and UCrossguardSaveSubsystem, so swapping the backend (local files today,
 // a database or platform cloud later) changes nothing else.
 //
+// Backends: UCrossguardLocalSaveBackend (default), UCrossguardNakamaSaveBackend (-SaveBackend=Nakama).
+//
 // Only the server talks to a backend. Callbacks must run on the game thread; they may run before the
 // call returns (the local backend is synchronous). Saves for one player id must be stored in the
 // order they are made.
@@ -59,4 +61,7 @@ public:
 	virtual void QuarantineCharacter(const FString& PlayerId, const FString& Reason) = 0;
 	// For logs: "local files in <dir>".
 	virtual FString DescribeBackend() const = 0;
+	// Shutdown: sends every waiting write and blocks until answered or TimeoutSeconds pass. Writes that
+	// did not make it must be kept somewhere (never dropped silently). Synchronous backends: nothing to do.
+	virtual void FlushWrites(float TimeoutSeconds) {}
 };

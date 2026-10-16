@@ -89,6 +89,16 @@ public:
 	UPROPERTY(Config)
 	float SaveDebounceSeconds = 2.0f;
 
+	// Where saves go: "Local" (files, the default for development, PIE and tests) or "Nakama"
+	// (dedicated servers; needs -NakamaUrl= and -NakamaHttpKey=, docs/backend-setup.md). The command
+	// line -SaveBackend=<name> overrides it.
+	UPROPERTY(Config)
+	FString SaveBackend = TEXT("Local");
+
+	// Shutdown waits this long at most for the backend to take the last saves (Nakama).
+	UPROPERTY(Config)
+	float ShutdownFlushSeconds = 10.0f;
+
 	// --- Hooks (server; each does nothing for clients or while saving is off) -------------------
 
 	// The player's unique id is set: starts loading their save. A second player state claiming the
