@@ -486,3 +486,4 @@ private:
 	bool bHubReturnWaitsForHeld = false;
 	bool bHubReturnStarted = false;
 	FString HubReturnUrl;
+};

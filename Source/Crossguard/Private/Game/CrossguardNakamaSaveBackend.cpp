@@ -39,7 +39,11 @@ const TCHAR* UCrossguardNakamaSaveBackend::DefaultCharacterId = TEXT("main");
 
 void UCrossguardNakamaSaveBackend::Configure(const FString& Url, const FString& InHttpKey, float TimeoutSeconds, const FString& InServerId)
 {
-	Client = Url.IsEmpty() ? nullptr : MakeShared<FCrossguardNakamaClient>(Url, TimeoutSeconds);
+	Client.Reset();
+	if (!Url.IsEmpty())
+	{
+		Client = MakeShared<FCrossguardNakamaClient>(Url, TimeoutSeconds);
+	}
 	HttpKey = InHttpKey;
 	ServerId = InServerId;
 	CharacterId = DefaultCharacterId;
