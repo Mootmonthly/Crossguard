@@ -156,10 +156,10 @@ damage is computed from the characters' actual stats, so they work at any level.
 
 ### The scenarios
 
-151 tests in 24 files (133 `Crossguard.Scenario.*`, 10 `Crossguard.Net.*`, 8 `Crossguard.Visual.*`;
+155 tests in 25 files (137 `Crossguard.Scenario.*`, 10 `Crossguard.Net.*`, 8 `Crossguard.Visual.*`;
 2026-10-16; `Net.SeamlessTravelHubToRaid`, `Scenario.UI.StashAndVendor`, `Visual.HubUI`,
-`Scenario.UI.PanelsBind`, `Net.ReconnectShowsDisconnected` and `Scenario.Hub.MainMenuBinds` /
-`HubMarker` / `RaidPortal` not yet built). Grouped by file; the name is the full test name.
+`Scenario.UI.PanelsBind`, `Net.ReconnectShowsDisconnected`, `Scenario.Hub.MainMenuBinds` /
+`HubMarker` / `RaidPortal` and `Scenario.Art.*` not yet built). Grouped by file; the name is the full test name.
 
 **`CrossguardScenarioRaidTests.cpp`**
 
@@ -411,6 +411,17 @@ game mode's Mob Table is unset.
 | `Crossguard.Scenario.Hub.MainMenuBinds` | `UCrossguardMainMenuWidget` builds for the PIE player in C++; main buttons Play, Join, Settings, Quit in that order; Play's URL is `/Game/Maps/L_Hub?listen?Hub` (no menu game mode in the test world: the default); Join's URL is the trimmed field, none when empty, and clicking Join then refuses with a status line; Settings opens and closes, a field of view step changes it, volume clamps at 100 % (not saved). |
 | `Crossguard.Scenario.Hub.HubMarker` | On a raid map with no marker `IsHubMap` is false (`?Hub` alone true); a spawned `ACrossguardHubMarker` makes `IsHubWorld` and `IsHubMap` true and, applied as `InitGame` does, `bIsRaid` off; destroyed, false again. Skipped if the test map already holds a marker. `InitGame` itself is not re-run. |
 | `Crossguard.Scenario.Hub.RaidPortal` | Hub (`bIsRaid` off): A leads a party with B, Solo alone, a raid server address set; a plan-only portal (`bPlanOnly`): B refused `NotLeader` (no URL), A plans a client travel to `127.0.0.1:7777?Party=<id>`, Solo to `127.0.0.1:7777`; in a raid A is refused `OnlyInHub`. The party board: prompt, and with a game viewport the PIE player's party window opens. |
+
+**`CrossguardScenarioArtHookTests.cpp`** (art hooks, [art-placeholder-plan.md](art-placeholder-plan.md#how-the-art-hooks-into-the-code).
+The data has no art yet: a weapon or mob row's mesh is set in memory around the equip or spawn and put
+back in the same step)
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Art.WeaponMeshes` | `sword_one_handed` and `shield_one_handed` equipped with the engine cylinder as their `Mesh`: each hand gets a first-person copy (only its player sees it; on the `FirstPersonArms` mesh or the camera) and a third-person copy (hidden from its player, on the body), no collision, shown while drawn. Holstered: hidden; drawing: still hidden; drawn: shown. Unequipped shield: gone. A weapon without a mesh (the dagger): nothing. |
+| `Crossguard.Scenario.Art.AttackAndDamageEvents` | A sword with a mesh from `MeshOverrides`: a swing at a dummy fires `OnAttackStartedNative` once (Melee, Sword, a duration) and starts the placeholder swing; the hit fires the dummy's `OnDamageTakenNative` (from the player, not blocked) and the player's `OnAttackHitNative` (on the dummy); the swing is over 1 s later; `C.Damage` fires `OnDamageTaken` too. |
+| `Crossguard.Scenario.Art.MonsterAttackEvent` | A monster next to a player: its attack fires its `OnAttackStarted`, and the player's `OnDamageTaken`. |
+| `Crossguard.Scenario.Art.MobMeshFromData` | A Mob Table row given `SKM_Manny_Simple`, mesh scale 1.5 and an offset: the monster spawned from it shows that mesh at that scale, the cylinder hidden, `BodyVisual` set (replicated). A minion spawned with a `BodyVisual` shows it. Skips without `SKM_Manny_Simple`. |
 
 **`CrossguardScenarioNetworkTests.cpp`** (networked: a server and real PIE clients, see
 [Networked scenarios](#networked-scenarios))

@@ -623,5 +623,29 @@ match, as long as their character has not died yet. How it works: [persistence.m
   teammates' UI shows it; an enemy learns nothing they could not see from a character standing
   still).
 
+## Art hooks (placeholders)
+
+How placeholder art plugs in ([art-placeholder-plan.md](art-placeholder-plan.md#how-the-art-hooks-into-the-code)).
+Everything here is cosmetic: no rule depends on it.
+
+- Assumed (placeholder): a **code-driven swing** of the first-person weapon until animations exist
+  (`UCrossguardWeaponVisualsComponent::bPlaceholderSwing`, on by default): melee turns the weapon
+  70° down and back over 80% of the attack interval (0.15-0.8 s); ranged pulls it back 8 cm. Only
+  its own player sees it. Turn it off once swing montages play.
+- Assumed: held weapons show only while the set is drawn and in hand: hidden while drawing (1 s),
+  holstered, or holding an item. The draw has no animation yet.
+- Assumed: without first-person arms the weapon sits in front of the camera (35 cm forward, 18 cm to
+  the side, 22 cm down; off hand mirrored).
+- Assumed: weapon, projectile and mob art are optional data fields (`mesh`, `projectileMesh`, ...);
+  empty shows nothing new. An arrow's look comes from its ammo row, a throw's from the item.
+- Assumed: a mob mesh faces +Y by default (`meshYaw` -90, the UE mannequin's convention); the capsule
+  is not resized to the mesh.
+- Assumed: `OnDamageTaken`'s `bBlocked` is true when a guard took part or all of the hit; a hit stopped
+  whole reports `Amount` 0. Damage over time fires `OnDamageTaken` each tick but no `OnAttackHit`.
+- Assumed: attack, hit and damage events are unreliable multicasts (a lost one is a missed sound); a
+  projectile's impact is reliable (it is sent just before the projectile goes away).
+- Assumed: a skill cast fires `OnAttackStarted` (`Kind` Cast, `SkillId`) when it commits, also for
+  self-buffs (Slash readying, Stealth).
+
 ## Open questions
 

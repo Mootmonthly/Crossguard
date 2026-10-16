@@ -206,23 +206,49 @@ Each Quaternius folder has a `License.txt` (CC0). Keep a copy next to the import
 
 ## How the art hooks into the code
 
-What exists now: players use the mannequin (`GetMesh()`, hidden from its owner). Monsters and
-minions add a capsule-sized cylinder (`ACrossguardAICharacter::PlaceholderMesh`). Projectiles have
-**no visual at all** (a `USphereComponent` + `UProjectileMovementComponent`). Weapons are **not
-shown**. No code event says "an attack started" (see Gaps).
+Placeholder art goes in with **data or Blueprint settings only**; no C++ per asset. Every hook is
+cosmetic (it never changes a rule) and every asset reference is soft: empty means "nothing", which
+is the default everywhere. Players use the mannequin (`GetMesh()`, hidden from its owner). Monsters
+and minions show a capsule-sized cylinder (`ACrossguardAICharacter::PlaceholderMesh`) until a mesh
+is set. Asset paths are Unreal object paths: `/Game/Art/Weapons/SM_Sword.SM_Sword`.
+
+### Data fields (regenerate tables with the exporters, reimport in the editor)
+
+| Data | Fields | Effect |
+| --- | --- | --- |
+| `Data/Items/Weapons.json` ([schema](item-data-schema.md#weapon-art-optional)) | `mesh`, `attachSocket` (default `hand_r` / `hand_l`), `relativeTransform` | The drawn set's weapons and shield show in the hands (see Held weapons below). |
+| `Data/Items/Items.json`, Ammo and Throwable ([schema](item-data-schema.md#projectile-art-optional)) | `projectileMesh`, `trailVfx`, `impactVfx`, `impactSound` | Arrows (the bow's `ammo` row) and thrown items show a mesh and trail, and play an impact. Over the projectile Blueprint's own. |
+| `Data/Mobs/Mobs.json` ([schema](mob-data-schema.md#art-optional)) | `mesh`, `animBlueprint`, `meshScale`, `meshOffset`, `meshYaw` | The monster's body replaces the cylinder on every machine. One spawner can mix looks. |
+
+### Events (Blueprint: override in `BP_CrossguardCharacter` / a monster Blueprint)
+
+All on `ACrossguardCharacter` (players, monsters and minions alike), run on every machine that shows
+the character, with a native C++ delegate of the same name plus `Native` for tests.
+
+| Event | When | Plays by itself (character defaults, `Crossguard\|Art`) |
+| --- | --- | --- |
+| `OnAttackStarted(Cue)` | A melee swing, shot, throw or skill cast starts (players: the owner plays its prediction at once). `Cue`: `Kind` (Melee / Ranged / Throw / Cast), `bHasWeapon`, `WeaponType`, `Slot`, `AttackIndex` (counts up: `% 3` picks `MM_Attack_01-03`), `Duration` (seconds to the next attack; 0 for casts), `SkillId`. | `SwingSound`; the placeholder swing (below). |
+| `OnAttackHit(HitLocation, Target)` | This character's direct hit landed (not damage over time). | `HitSound` at the hit. |
+| `OnDamageTaken(Amount, Source, HitLocation, bBlocked)` | It took damage (server's damage path), or a guard stopped a hit whole (`Amount` 0, `bBlocked`). `bBlocked` also when a guard let part through. Hit react, blood or sparks, damage numbers. | `HitVfx` at the hit. |
+| `OnWeaponClank(ImpactPoint)` | Weapons met (block, parry, clash). Native: `OnWeaponClankNative` (character, point). | `BlockSound` and `ClankVfx` at the point. |
+| (death) | The ragdoll starts. | `DeathSound`. |
+| `ACrossguardProjectile::OnProjectileImpact(Location)` | A projectile hit or exploded. | `Visual.ImpactVfx`, `Visual.ImpactSound`. |
+
+### Where to put art
 
 | Thing | Class | Where to put art |
 | --- | --- | --- |
-| Player body (others see it) | `ACrossguardCharacter` → `Content/BP_CrossguardCharacter` | `Mesh` = `SKM_Manny_Simple` + an Anim Blueprint. The ragdoll on death already uses this mesh (`Ragdoll` profile, Physics Asset `PA_Mannequin`). The body container copies it (`ACrossguardLootContainer::SetBodyMesh`). |
-| First-person view | `FirstPersonCamera` (`UCameraComponent`, protected, BlueprintReadOnly) | In the BP: on the camera turn on First Person Field Of View (e.g. 70) and First Person Scale (e.g. 0.6). Add arms (or a weapon) as children with **First Person Primitive Type = First Person**. Keep `Mesh` as the **World Space Representation** for shadows. The body is `SetOwnerNoSee(true)` in C++ ("until first-person arms exist"); leave that or switch to the FP-rendering pair. |
-| Weapon meshes (held) | `UCrossguardEquipmentComponent` (`GetEquipmentComponent()`) | Nothing in C++ yet. Blueprint: bind `OnEquipmentChanged`, read `GetActiveWeaponSet`, `GetWeaponInSet(Set, MainHand/OffHand).WeaponId` (or `GetItem`), look the id up in a `Map<Name, StaticMesh>` (`sword_one_handed` → Quaternius `Sword`, `shield_one_handed` → `Shield_Heater`, …) and set two Static Mesh Components on hand sockets (`hand_r`, `hand_l`) and/or the FP arms. Hide them while `IsDrawingWeapons`. |
-| Weapon clank | `ACrossguardCharacter::OnWeaponClank(ImpactPoint)` (BlueprintImplementableEvent, runs on every machine) | In `BP_CrossguardCharacter`: `Play Sound at Location` (Kenney `impactMetal_heavy_*`), `Spawn System at Location` (Niagara spark from the Examples pack), and a bounce-back montage. |
-| Player arrows / bolts | `UCrossguardWeaponAttackAbility::DefaultProjectileClass`, `ProjectileClasses[weapon id]` (class: `ACrossguardProjectile`) | BP subclass of `CrossguardProjectile` with a Static Mesh (Quaternius `Arrow`, no collision) attached to `Collision`, optional Niagara trail. Set it on the attack ability Blueprint (`WeaponAttackAbilityClass` on the character). |
-| Monster arrows | `ACrossguardAICharacter::ArrowClass` | Same arrow BP. |
-| Fireball | `UCrossguardFireballAbility::ProjectileClass`, `ACrossguardAICharacter::FireballClass` (`ACrossguardSpellProjectile`) | BP subclass of `CrossguardSpellProjectile` + Niagara fire system + impact explosion (spawned from the BP's `Destroyed` or a hit event). |
-| Thrown items | `UCrossguardInventoryComponent::ThrownProjectileClass` (`ACrossguardThrownProjectile`), `DamageAreaClass` (`ACrossguardDamageArea::AreaMesh`) | BP subclasses with a mesh / Niagara. |
-| Monsters | `ACrossguardMonster`; `ACrossguardMobSpawner::MonsterClass` ("Set a Blueprint subclass for a mesh") | BP per look (`BP_Monster_Skeleton`, `BP_Monster_Dragon`): set `Mesh` (skeletal) + Anim BP, hide or clear `PlaceholderMesh`, fit the capsule. The Mob Table's `Scale` still applies. |
-| Minions (skeletons, tiger, demon) | `ACrossguardMinion`; summon ability classes `WarriorClass`, `MageClass`, `CompanionClass` (`CrossguardSpellSkills.h`) | BP subclasses as for monsters, set on the summon ability Blueprints. |
+| Player body (others see it) | `ACrossguardCharacter` → `Content/BP_CrossguardCharacter` | `Mesh` = `SKM_Manny_Simple` + an Anim Blueprint. The ragdoll on death already uses this mesh (`Ragdoll` profile, Physics Asset `PA_Mannequin`). The body container copies it (`ACrossguardLootContainer::SetBodyMesh`). Play attack / hit-react montages from the events above. |
+| First-person view | `FirstPersonCamera` (`UCameraComponent`, protected, BlueprintReadOnly) | In the BP: on the camera turn on First Person Field Of View (e.g. 70) and First Person Scale (e.g. 0.6). Add arms as a Skeletal Mesh Component with the component tag **`FirstPersonArms`** (held weapons then attach to its hand sockets) and **First Person Primitive Type = First Person**. Keep `Mesh` as the **World Space Representation** for shadows. The body is `SetOwnerNoSee(true)` in C++. |
+| Held weapons and shields | `UCrossguardWeaponVisualsComponent` (`WeaponVisuals` on the character) | Data: `mesh` per weapon row. Two copies per hand: first person (only its player sees it) on the `FirstPersonArms` hand socket, or without arms on the camera at `FirstPersonCameraOffset` (main hand) / `FirstPersonCameraOffsetOffHand` (the first feel test); third person (everyone else) on the body's hand socket. Shown while the set is drawn and in hand; hidden while drawing, holstered, or holding an item. Try a mesh without the table: `MeshOverrides` (weapon id → mesh) on the component. `OnWeaponMeshesChanged` fires after each rebuild (set First Person Primitive Type on `GetWeaponMesh(Slot, true)` there). |
+| Placeholder swing | `UCrossguardWeaponVisualsComponent::bPlaceholderSwing` (on) | Until animations: an attack turns the first-person weapon down through `PlaceholderSwingDegrees` (70) and back over ~80% of the attack interval (melee), or pulls it back `PlaceholderRecoil` cm (ranged). Turn it off once montages play. |
+| Hit, swing, block, death sounds; hit and clank sparks | Character defaults, `Crossguard\|Art` | `SwingSound`, `HitSound`, `BlockSound` (Kenney `impactMetal_heavy_*`), `DeathSound`, `HitVfx`, `ClankVfx` (Niagara). |
+| Player arrows / bolts | `UCrossguardWeaponAttackAbility::DefaultProjectileClass`, `ProjectileClasses[weapon id]` (class `ACrossguardProjectile`) | Data: the ammo row's `projectileMesh` / `trailVfx` / `impactVfx` / `impactSound`. Or a BP subclass of `CrossguardProjectile` with its `Visual` defaults set (mesh, trail, impact), set on the attack ability Blueprint (`WeaponAttackAbilityClass` on the character). A staff without ammo: the BP route. |
+| Monster arrows | `ACrossguardAICharacter::ArrowClass` | A projectile BP with `Visual` set. |
+| Fireball | `UCrossguardFireballAbility::ProjectileClass`, `ACrossguardAICharacter::FireballClass` (`ACrossguardSpellProjectile`) | BP subclass with `Visual.TrailVfx` (fire), `Visual.ImpactVfx` (explosion), `Visual.ImpactSound`. |
+| Thrown items | `UCrossguardInventoryComponent::ThrownProjectileClass` (`ACrossguardThrownProjectile`), `DamageAreaClass` (`ACrossguardDamageArea::AreaMesh`) | Data: the throwable's projectile fields. The damage area: a BP with a mesh / Niagara. |
+| Monsters | `ACrossguardMonster` | Data: the mob's `mesh` / `animBlueprint` / `meshScale` / `meshOffset` / `meshYaw`. Or a BP per look (`BP_Monster_Skeleton`) on the spawner's `MonsterClass` with `Mesh` + Anim BP and `PlaceholderMesh` hidden. The Mob Table's `Scale` still applies. |
+| Minions (skeletons, tiger, demon) | `ACrossguardMinion`; summon abilities | `WarriorVisual` / `MageVisual` (Summon Skeletons) and `CompanionVisual` (Summon Tiger, Summon Greater Demon) on the summon ability Blueprints: mesh, Anim BP class, scale, offset, yaw. Or BP subclasses on `WarriorClass`, `MageClass`, `CompanionClass`. |
 | Extraction portal | `ACrossguardExtractPortal` (`BeamMesh`, `PortalMesh`, `OnStateChanged`); character `PortalClass` | BP subclass: a beam mesh or Niagara beam while channelling, a swirl when open. |
 | Chests and bodies | `ACrossguardLootContainer` | BP with a Static Mesh (KayKit chest / Poly Haven `treasure_chest`). |
 | Doors | `ACrossguardDoor::DoorMesh` | Set the mesh in a BP (KayKit door / Poly Haven `large_castle_door`). It snaps open until animated. |
@@ -233,19 +259,15 @@ shown**. No code event says "an attack started" (see Gaps).
 
 ### Gaps
 
-These need code, not just art. They're not done; each is a decision for the owner.
+The four code gaps of the first version of this plan are closed (2026-10-16): per-mob meshes from
+data, attack-started events, weapon meshes from the weapon table, and hit / damage events. Left:
 
-1. **One `MonsterClass` per spawner.** A spawner mixing `skeleton_soldier` and `mithril_dragon`
-   would give both the same mesh. For now, use one spawner per look. Better: add a soft mesh, Anim BP
-   and class per mob to `FCrossguardMobRow` / Mob Forge, or a `MobId → class` map on the spawner.
-2. **No "attack started" event** for Blueprints (swing montage, whoosh, bow draw), on players or
-   AIs. The server knows (`NoteMeleeSwing`, the AI attack timers). A multicast
-   `BlueprintImplementableEvent` such as `OnAttackStarted(WeaponId, Slot)` /
-   `OnMonsterAttack()`, like `OnWeaponClank`, would let art play without touching rules.
-3. **Weapon visuals aren't in C++.** The Blueprint route above works. A C++ `WeaponMesh` per row
-   (soft pointer in the weapon table) would be cleaner once the art is real.
-4. **Hit and death feedback:** no BP event for "took damage" (hit react, blood or spark, sound).
-   Death already ragdolls.
+1. Assets load synchronously the first time they are used (a hitch on the first swing, hit or
+   spawn). Fine for placeholders; real art should preload or load asynchronously.
+2. The capsule is not fitted to a monster's mesh: size mobs with `scale`.
+3. Monsters' held weapons are not shown (mobs have a weapon type, not a weapon item). A weapon mesh
+   on a monster: a socket-attached Static Mesh in its Blueprint, or a later data field.
+4. No footstep hook (anim notifies in the Anim Blueprint do that without code).
 
 ## Sources (checked 2026-10-16)
 

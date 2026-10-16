@@ -39,6 +39,18 @@ checks it.
 
 Value at a rarity = `baseValue + perRarity × level`.
 
+### Weapon art (optional)
+
+Fields an entry may leave out (none are set yet: no art is in the project). Empty: nothing is
+shown, as before. `UCrossguardWeaponVisualsComponent` shows the drawn set's meshes
+([art-placeholder-plan.md](art-placeholder-plan.md#how-the-art-hooks-into-the-code)).
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `mesh` | asset path | A static mesh held while the weapon is drawn, e.g. `/Game/Art/Weapons/SM_Sword.SM_Sword`. Exported as `Mesh` (`""` when left out). |
+| `attachSocket` | string | Hand socket on the body (and the first-person arms). Left out: `hand_r` in the main hand, `hand_l` in the off hand. Needs `mesh`. Exported as `AttachSocket` (`None` when left out). |
+| `relativeTransform` | object | The mesh's place on the socket: `location` `[x, y, z]` cm, `rotation` `[pitch, yaw, roll]` degrees, `scale` (a number or `[x, y, z]`); each optional. Needs `mesh`. Exported as `MeshOffset`, `MeshRotation`, `MeshScale`. |
+
 Attack interval = `(perSeconds / attacks) / (1 + ActionSpeed)`. ActionSpeed is the
 character's stat (0 at 10 AGI). The divisor is floored at 0.1.
 
@@ -88,6 +100,19 @@ materials, currency, trinkets, tools), sorted by `id`. `Tools/validate_items.py`
 
 Sell value at a rarity = `sellValue + sellPerRarity × level`. The exporter writes `SellValue` and
 `SellPerRarity` for every row.
+
+### Projectile art (optional, Ammo and Throwable)
+
+What the projectile shows, over the projectile Blueprint's own (`ACrossguardProjectile::Visual`): an
+arrow's from its `Ammo` row (the bow's `ammo`), a throw's from the thrown item's row. Each is an asset
+path (`/Game/Folder/Asset.Asset`) and may be left out (the exporter writes `""`).
+
+| Field | Exported as | Meaning |
+| --- | --- | --- |
+| `projectileMesh` | `ProjectileMesh` | Static mesh flying with it (its X axis along the flight). |
+| `trailVfx` | `TrailVfx` | Niagara system attached for the flight. |
+| `impactVfx` | `ImpactVfx` | Niagara system where it hits or explodes. |
+| `impactSound` | `ImpactSound` | Sound where it hits or explodes. |
 
 Consumables also have these fields; other categories must not have them. The exporter writes
 `HealAmount`, `HealPerRarity`, `HealDuration` and `UseTime` for every row (0 for non-consumables).

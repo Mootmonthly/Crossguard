@@ -31,6 +31,25 @@ starts (the game mode's **Mob Table** must be set).
 | `description` | string | Free text. |
 | `notes` | string[] | Open questions. |
 
+### Art (optional)
+
+Fields a mob may leave out (the Mob Forge keeps them but has no editor for them yet; edit
+`Mobs.json` by hand). Without `mesh` the monster keeps its placeholder cylinder (or its Blueprint's
+look). With one, every machine swaps the cylinder for the mesh (`ACrossguardMonster::ApplyMobData` →
+the replicated `ACrossguardAICharacter::BodyVisual`), so one spawner can mix mobs that look different.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `mesh` | asset path | Skeletal mesh, e.g. `/Game/Art/Monsters/SK_Skeleton.SK_Skeleton`. Exported as `Mesh` (`""` when left out). The ragdoll on death needs its Physics Asset. |
+| `animBlueprint` | class path | Its Anim Blueprint's class, ending in `_C`: `/Game/Art/Monsters/ABP_Skeleton.ABP_Skeleton_C`. Exported as `AnimClass`. |
+| `meshScale` | number > 0 | The mesh's own scale, on top of `scale` (default 1). Fit a model to the capsule. |
+| `meshOffset` | `[x, y, z]` meters | From the capsule's bottom centre (default `[0, 0, 0]`). Exported in cm. |
+| `meshYaw` | number | Degrees (default -90: meshes facing +Y, like the UE mannequin; 0 for meshes facing +X). |
+
+The capsule is not resized to the mesh: size a mob with `scale`. Minions take the same settings from
+their summon ability (`WarriorVisual` / `MageVisual` on Summon Skeletons, `CompanionVisual` on Summon
+Tiger and Summon Greater Demon).
+
 ## AI-usable skills
 
 A mob can only have skills the monster AI can use (`Tools/ai_skills.py`, shared by the validator
