@@ -15,7 +15,7 @@ been compiled. The rules library builds and its 1817 checks pass.
 | Placeholder UI in C++: HUD, inventory/loot, skill wheel, trade, guild | `docs/ui.md` | `Source/Crossguard/*/UI/*` |
 | Saving progression (local JSON backend) | `docs/persistence.md` | `Game/CrossguardSave*`, `CrossguardLocalSaveBackend*`, rules `Save`/`Json` |
 | Parties and hub-to-raid launch; seamless travel on | `docs/parties.md` | `Game/CrossguardParty*`, rules `Party`, game mode |
-| Extracted players leave the raid and can't loot | `design-decisions.md` (Extraction) | game mode / extraction code |
+| Extracted players leave the raid, can't loot or respawn (`PlayerCanRestart`) | `design-decisions.md` (Extraction) | game mode / extraction code |
 
 ## Steps
 
