@@ -72,7 +72,9 @@ All from the project folder in `cmd` or PowerShell (`.bat` wrappers call the `.p
    spawner, a dummy, game mode override) if it does not exist; open it once in the editor (or
    Build → Build Paths) for the nav mesh. `-CreateBlueprints` creates missing
    `BP_CrossguardGameMode` / `BP_CrossguardCharacter` in `/Game/Blueprints` (native parents, Default
-   Pawn Class set) instead of skipping them; only with the user's OK. `-Mode Editor` runs the script
+   Pawn Class set) instead of skipping them; only with the user's OK. **The owner's PC already has both
+   Blueprints: do not pass `-CreateBlueprints`.** If a step reports them missing, look for a different
+   name or path before creating anything. `-Mode Editor` runs the script
    through `-ExecutePythonScript=` in a full null-RHI editor process (it quits at the end) instead
    of the commandlet; try it when a step fails only under the commandlet (e.g. map creation).
 
