@@ -147,7 +147,7 @@ void UCrossguardInventoryWidget::BuildTree()
 	LootSize->SetContent(LootScroll);
 	AddTo(LootColumn, LootSize);
 	LootGrid = Make<UCrossguardItemGridWidget>();
-	LootGrid->SquareSize = 30.0f;
+	LootGrid->SquareSize = 36.0f;
 	LootScroll->AddChild(LootGrid);
 	// Taking is the only thing to do with a loot cell: either click takes the stack.
 	LootGrid->OnItemClicked = [this](const FCrossguardInventoryItem& Item)

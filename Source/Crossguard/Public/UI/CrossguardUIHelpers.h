@@ -19,6 +19,11 @@ namespace CrossguardUI
 	CROSSGUARD_API FString WeaponName(const FCrossguardWeaponItem& Weapon, const UCrossguardEquipmentComponent* Equipment);
 	CROSSGUARD_API FString ArmorName(const FCrossguardArmorItem& Armor, const UCrossguardEquipmentComponent* Equipment);
 
+	// A label of at most 4 characters for a one-square item cell: the initials of a name of several
+	// words ("Healing Potion" -> "HP", "healing_potion" -> "HP", small words like "of" skipped),
+	// else the first 3 letters of a single word ("Arrow" -> "Arr").
+	CROSSGUARD_API FString ShortItemName(const FString& Name);
+
 	// "Healing Potion x3 (Rare)".
 	CROSSGUARD_API FString ItemLabel(const FCrossguardInventoryItem& Item, const UCrossguardInventoryComponent* Inventory,
 		const UCrossguardEquipmentComponent* Equipment);

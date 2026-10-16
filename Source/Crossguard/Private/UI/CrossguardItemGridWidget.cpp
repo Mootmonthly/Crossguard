@@ -72,9 +72,26 @@ void UCrossguardItemGridWidget::SetGrid(FIntPoint Size, const TArray<FCrossguard
 		const bool bSelected = Item.Id == SelectedItemId;
 
 		UCrossguardUIButton* Cell = Make<UCrossguardUIButton>();
-		Cell->SetFontSize(8);
+		// Text past the cell's edge is cut off, not drawn over its neighbours; the tooltip has it all.
+		Cell->SetClipping(EWidgetClipping::ClipToBounds);
+		Cell->SetLabelPadding(FMargin(1.0f));
+		Cell->SetFontSize(SquareSize >= 38.0f ? 11 : 10);
 		const FString Name = CrossguardUI::ItemName(Item, Inventory, Equipment);
-		Cell->SetLabel(Item.Count > 1 ? FString::Printf(TEXT("%s\nx%d"), *Name, Item.Count) : Name);
+		const FString Count = Item.Count > 1 ? FString::Printf(TEXT("x%d"), Item.Count) : FString();
+		if (Footprint.X < 2)
+		{
+			// One square wide: a full name cannot be read, so a short one with the count below it.
+			const FString Short = CrossguardUI::ShortItemName(Name);
+			Cell->SetLabel(Count.IsEmpty() ? Short : FString::Printf(TEXT("%s\n%s"), *Short, *Count));
+		}
+		else
+		{
+			// Wider items: the full name, wrapped; the count on its own line when there is room.
+			Cell->SetLabelWrap(true);
+			Cell->SetLabelPadding(FMargin(3.0f, 1.0f));
+			const TCHAR* Separator = Footprint.Y > 1 ? TEXT("\n") : TEXT(" ");
+			Cell->SetLabel(Count.IsEmpty() ? Name : FString::Printf(TEXT("%s%s%s"), *Name, Separator, *Count));
+		}
 		Cell->SetColor(bSelected ? FLinearColor(0.85f, 0.75f, 0.2f, 0.95f) : FLinearColor(Rarity.R * 0.35f, Rarity.G * 0.35f, Rarity.B * 0.35f, 0.95f));
 		Cell->SetLabelColor(bSelected ? FLinearColor::Black : Rarity);
 		Cell->SetToolTipText(FText::FromString(CrossguardUI::ItemLabel(Item, Inventory, Equipment)));

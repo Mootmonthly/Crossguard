@@ -40,7 +40,7 @@ not attack.
 | --- | --- | --- |
 | HUD | `UCrossguardHudWidget` | Health bar and numbers, shield (Eldritch Shield), status effects (Stunned, Rooted, Silenced, Muted, Slowed, Blinded, Knocked up, Heal blocked, Stealthed, CC immune, Flying, Dragon form, Multiscale, Guarding), level, raid XP, carried and banked gold, both weapon sets (active one in brackets) and what is in hand, hotbar keys 3–7 with item names and counts (the readied one highlighted), castable skills with cooldown seconds and the E selection, the interact prompt ("F: Loot body", "F: Open chest", "F: Pick the lock", "F: Gather", "F: Open door", "F: Pick up ..."), a channel bar (gathering, lockpicking, extraction zone, a nearby portal's countdown), downed timer, "Dead for the raid", "Spectating <name>", and messages (refusals, trade results). |
 | Skill wheel | `UCrossguardSkillWheelWidget` | Hold Q: castable skills (Active, Spell, Art) in a ring with cooldowns; hovering one selects it (`SetSelectedSkill`). Shown while the loadout's wheel is open (`OnSkillWheelOpened` / `Closed`). |
-| Inventory | `UCrossguardInventoryWidget` | Equipment (two weapon sets, six armor slots, Backpack, Quiver), the 10 × 5 grid and the Backpack / Quiver grids (cells over each item's footprint, rarity colours, stack counts, tooltips with affixes), selected item actions (equip main / off hand, equip, take in hand, hotbar keys 3–7, learn a gem, rotate, drop, put in the open body), hotbar keys (click to clear), and the open body or chest beside it (click a stack to take it, Take all, Close). |
+| Inventory | `UCrossguardInventoryWidget` | Equipment (two weapon sets, six armor slots, Backpack, Quiver), the 10 × 5 grid and the Backpack / Quiver grids (cells over each item's footprint, rarity colours, short names in one-square cells, stack counts, tooltips with name, count and rarity), selected item actions (equip main / off hand, equip, take in hand, hotbar keys 3–7, learn a gem, rotate, drop, put in the open body), hotbar keys (click to clear), and the open body or chest beside it (click a stack to take it, Take all, Close). |
 | Trade window | `UCrossguardTradeWidget` | Ask the nearest player; answer a request; your items, your offer and theirs; banked gold; lock / unlock; accept; cancel; state line (who has locked or accepted, stacks n / 12). |
 | Guild window | `UCrossguardGuildWidget` | Create a guild (name field) and answer invites; name, your rank and what it allows; roster with rank and online state, promote / demote / make leader / kick (greyed when your rank cannot); invite nearest player; leave; bank gold with deposit / withdraw; bank stacks with withdraw; your stacks with deposit. |
 | Building blocks | `UCrossguardWidgetBase`, `UCrossguardWindowWidget`, `UCrossguardUIButton`, `UCrossguardItemGridWidget`, `CrossguardUI::*` helpers | Tree built in code, periodic refresh, a full-screen window frame that swallows stray clicks, a click/right-click/hover box, the item grid. |
@@ -56,6 +56,19 @@ not attack.
 - With nothing selected, click a worn item in the equipment list to take it off (a Backpack or
   Quiver must be empty first).
 - Closing the inventory closes the open body or chest.
+
+### Item cells
+
+- Squares are 40 px (36 px in the loot grid), in the UI's 1920 × 1080 design units: at 1280 × 720
+  the engine's default DPI scale shrinks them to about two thirds.
+- A one-square-wide item shows a short name of at most 4 characters (initials of a name of several
+  words, "Healing Potion" → "HP", small words like "of" skipped; else the first 3 letters, "Arrow" →
+  "Arr") with the stack count ("x2") on its own line, in font size 11 (10 in the loot grid).
+- A wider item shows its full name, wrapped, with the count on its own line (on the same line when
+  the item is one square tall).
+- Text that does not fit is cut at the cell's edge. Hovering any cell shows the full name, count and
+  rarity ("Healing Potion x2 (Rare)").
+- Placeholder (no ruling): the abbreviation rule, square sizes and font sizes.
 
 ## Approximations (display only)
 
@@ -124,6 +137,7 @@ Written without an engine; these are the calls most likely to need a fix
 | `AActor::EnableInput` on the HUD creating an `UEnhancedInputComponent` (project default) that receives Enhanced Input actions | `Private/UI/CrossguardHUD.cpp:154,168` |
 | `FInputModeGameAndUI::SetHideCursorDuringCapture`, `APlayerController::SetShowMouseCursor`, `AController::SetIgnoreLookInput` (a counter: the HUD keeps it balanced) | `Private/UI/CrossguardHUD.cpp:466-472` |
 | `UWorld::GetGameViewport`, `APlayerController::SetMouseLocation` | `Private/UI/CrossguardHUD.cpp:70,310` |
+| `UWidget::SetClipping(EWidgetClipping::ClipToBounds)`, `UBorder::SetPadding`, `UTextBlock::SetAutoWrapText` on item cells | `Private/UI/CrossguardItemGridWidget.cpp:76`, `Private/UI/CrossguardUIButton.cpp:47` |
 | `USizeBox::SetMaxDesiredHeight` | `Private/UI/CrossguardInventoryWidget.cpp:146` |
 | `CreateWidget` + `TakeWidget` under `-nullrhi` (the test) | `Private/Tests/CrossguardScenarioUITests.cpp:127` |
 | Tab may be taken by Slate focus navigation while a text field has focus; I always works | — |

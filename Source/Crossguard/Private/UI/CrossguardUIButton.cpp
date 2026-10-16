@@ -44,6 +44,24 @@ void UCrossguardUIButton::SetFontSize(int32 Size)
 	ApplyLook();
 }
 
+void UCrossguardUIButton::SetLabelPadding(const FMargin& InPadding)
+{
+	EnsureTree();
+	if (Background != nullptr)
+	{
+		Background->SetPadding(InPadding);
+	}
+}
+
+void UCrossguardUIButton::SetLabelWrap(bool bWrap)
+{
+	EnsureTree();
+	if (LabelText != nullptr)
+	{
+		LabelText->SetAutoWrapText(bWrap);
+	}
+}
+
 void UCrossguardUIButton::SetColor(const FLinearColor& InColor)
 {
 	Color = InColor;

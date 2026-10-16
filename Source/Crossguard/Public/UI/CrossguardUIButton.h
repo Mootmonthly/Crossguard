@@ -20,6 +20,10 @@ public:
 
 	void SetLabel(const FString& InLabel);
 	void SetFontSize(int32 Size);
+	// Space between the box's edge and its label (default 5 x 2).
+	void SetLabelPadding(const FMargin& InPadding);
+	// True: the label wraps at the box's width (item cells with a long name).
+	void SetLabelWrap(bool bWrap);
 	// Background colour (the hover highlight brightens it).
 	void SetColor(const FLinearColor& InColor);
 	void SetLabelColor(const FLinearColor& InColor);

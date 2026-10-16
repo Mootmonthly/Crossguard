@@ -10,8 +10,9 @@ class UCanvasPanel;
 class USizeBox;
 
 // One item grid (the inventory, Backpack, Quiver or a body / chest): a square per grid square and
-// a cell per item over its footprint, coloured by rarity, with its name and stack count. Clicks go
-// to the callbacks; the window that owns it decides what they request.
+// a cell per item over its footprint, coloured by rarity, with its name and stack count (a short name
+// in one-square-wide cells; the tooltip has the full name, count and rarity). Clicks go to the
+// callbacks; the window that owns it decides what they request.
 UCLASS()
 class CROSSGUARD_API UCrossguardItemGridWidget : public UCrossguardWidgetBase
 {
@@ -30,7 +31,7 @@ public:
 
 	// Pixels per grid square.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Crossguard|UI")
-	float SquareSize = 34.0f;
+	float SquareSize = 40.0f;
 
 	TFunction<void(const FCrossguardInventoryItem&)> OnItemClicked;
 	TFunction<void(const FCrossguardInventoryItem&)> OnItemRightClicked;

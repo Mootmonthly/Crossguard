@@ -55,6 +55,60 @@ namespace CrossguardUI
 		return Row != nullptr && !Row->DisplayName.IsEmpty() ? Row->DisplayName.ToString() : Item.ItemId.ToString();
 	}
 
+	FString ShortItemName(const FString& Name)
+	{
+		// Words: runs of letters and digits ("Gem: fireball", "healing_potion" split too).
+		TArray<FString> Words;
+		FString Word;
+		for (const TCHAR Char : Name)
+		{
+			if (FChar::IsAlnum(Char))
+			{
+				Word.AppendChar(Char);
+			}
+			else if (!Word.IsEmpty())
+			{
+				Words.Add(Word);
+				Word.Reset();
+			}
+		}
+		if (!Word.IsEmpty())
+		{
+			Words.Add(Word);
+		}
+		if (Words.Num() > 1)
+		{
+			TArray<FString> Kept;
+			for (const FString& Each : Words)
+			{
+				if (!Each.Equals(TEXT("of"), ESearchCase::IgnoreCase) && !Each.Equals(TEXT("the"), ESearchCase::IgnoreCase)
+					&& !Each.Equals(TEXT("a"), ESearchCase::IgnoreCase) && !Each.Equals(TEXT("an"), ESearchCase::IgnoreCase))
+				{
+					Kept.Add(Each);
+				}
+			}
+			if (Kept.Num() > 0)
+			{
+				Words = MoveTemp(Kept);
+			}
+		}
+		if (Words.Num() == 0)
+		{
+			return TEXT("?");
+		}
+		if (Words.Num() == 1)
+		{
+			const FString Short = Words[0].Left(3);
+			return Short.Left(1).ToUpper() + Short.Mid(1);
+		}
+		FString Initials;
+		for (int32 Index = 0; Index < Words.Num() && Initials.Len() < 4; ++Index)
+		{
+			Initials.AppendChar(FChar::ToUpper(Words[Index][0]));
+		}
+		return Initials;
+	}
+
 	ECrossguardRarity ItemRarity(const FCrossguardInventoryItem& Item)
 	{
 		switch (Item.Category)
