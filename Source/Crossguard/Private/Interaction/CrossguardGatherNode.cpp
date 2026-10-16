@@ -76,11 +76,17 @@ void ACrossguardGatherNode::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	DOREPLIFETIME(ACrossguardGatherNode, GatherStartTime);
 }
 
+void ACrossguardGatherNode::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	// What the Blueprint set; restored on respawn. Read here, not in BeginPlay: on a client
+	// OnRep_Depleted can run before BeginPlay and would already have switched collision off.
+	MeshCollision = NodeMesh->GetCollisionEnabled();
+}
+
 void ACrossguardGatherNode::BeginPlay()
 {
 	Super::BeginPlay();
-	// What the Blueprint set; restored on respawn.
-	MeshCollision = NodeMesh->GetCollisionEnabled();
 	ApplyDepleted();
 }
 
