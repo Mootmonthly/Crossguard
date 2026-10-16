@@ -73,16 +73,29 @@ Status: **fixed** (a hole closed in this review), **ok** (checked, no change nee
 | Player state: XP, gold, allocation, respec tokens, Skill Library, `bInRaid` | `COND_OwnerOnly`. | ok |
 | Attributes | Only `Health`, `MaxHealth` and `AttackShield` reach everyone (health bars); the rest are `COND_OwnerOnly`. | ok |
 | Equipment `MainHand`, `OffHand`, `Armor` | Reach everyone (visible gear), including affix rolls. | note |
-| Stealthed characters | Hidden on each machine by `UpdateStealthVisibility`, but their position still replicates to enemies, so a modified client can see them. | note |
+| Stealthed characters | Hidden on each machine by `UpdateStealthVisibility`. With `crossguard.StealthHidesFromEnemies` (default on, placeholder) `ACrossguardCharacter::IsNetRelevantFor` returns false for viewers outside the character's team while `State.Stealthed`, so enemy clients get no position (the actor despawns there and is re-created when stealth ends). Own player and allies (spectators too) still get it. Needs the two-client play test (next-build-checklist.md, section 6). | **fixed** (behind switch, untested) |
 
 ## Notes
 
 Left as they are, with the reason:
 
-- **Stealth position leak.** The proper fix is a relevancy override (`IsNetRelevantFor` false for
-  enemy viewers while `State.Stealthed`, with a reveal radius). That closes the actor channel on
-  enemy clients, so abilities, effects and the body must survive the actor despawning and
-  respawning on them. That needs a play test, so it is not a blind change.
+- **Stealth position leak.** Fixed behind the console variable `crossguard.StealthHidesFromEnemies`
+  (default 1; set 0 on the server for the old, render-only hiding). `IsNetRelevantFor` is false
+  for enemy connections while `State.Stealthed`; no reveal radius (the design has none). The
+  enemy client's actor channel closes, so the character is destroyed there and re-created, with
+  fresh replicated state (tags, attributes, equipment), when it is relevant again; stealth start
+  and end call `ForceNetUpdate`. Open points for the play test:
+  - The net driver keeps replicating an actor for `RelevantTimeout` (engine default 5 s) after
+    its last relevant check, so the position can still reach enemies for the first ~5 s of a 12 s
+    stealth. If the play test confirms it, lower `RelevantTimeout` in `DefaultEngine.ini`
+    (`[/Script/OnlineSubsystemUtils.IpNetDriver]`; it applies to every actor) or close the channel
+    on stealth start.
+  - Only the classic net driver calls `IsNetRelevantFor`. If the project turns on Iris or a
+    Replication Graph, this needs a filter there instead.
+  - A listen-server host sees everything (no connection to filter); only remote clients are
+    protected.
+  - Server-side AI (monsters, minions) is unaffected: relevancy only concerns client connections.
+  - `bAlwaysRelevant` must stay false on characters; `NetCullDistanceSquared` only hides more.
 - **Gear affixes visible to everyone.** Equipped items replicate whole. Others only need the mesh
   and rarity. Strip it to a cosmetic struct once gear visuals exist.
 - **Aim.** The aim is the client's control rotation, as in every UE shooter, so aimbots are a

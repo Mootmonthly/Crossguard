@@ -146,3 +146,11 @@ These are called from Blueprint (e.g. a debug widget or the Level Blueprint) unt
 - Both see each other's bodies ragdoll.
 - `showdebug abilitysystem` on a client shows the other player's `Equipment.Wielding.*` tags.
 - Looting the same body at the same time never duplicates an item.
+- Stealth relevancy (`crossguard.StealthHidesFromEnemies` 1, the default). Run with **Play As
+  Client** (dedicated server) and three clients, A and B in one party (`?Party=`), C alone; A casts
+  `stealth`. C: A disappears completely (no ghost, no footprints, A gone from the World Outliner /
+  the client world's actor list after a few seconds; note how many seconds A's position still updated). B: A
+  stays in its world (hidden for now; the purple outline comes later). When A attacks or the 12 s
+  end, A reappears cleanly on C's screen at the right spot, with gear and tags right (`showdebug abilitysystem`),
+  and can be hit; repeat a few times. With `crossguard.StealthHidesFromEnemies 0` on the server, A
+  stays in C's world while hidden (the old behavior).

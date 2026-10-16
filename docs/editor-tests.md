@@ -263,6 +263,12 @@ damage is computed from the characters' actual stats, so they work at any level.
 | --- | --- |
 | `Crossguard.Scenario.Status.Root` | Rooted 1 s: walk speed 0, no jump, Hunter's Leap refused, basic attack still works; afterwards walk speed and jumping are back. |
 
+**`CrossguardScenarioStealthRelevancyTests.cpp`**
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Status.StealthNetRelevancy` | Calls `IsNetRelevantFor` with the viewers' PlayerControllers: a stealthed player is not relevant to an enemy's, still to an ally's (same party) and its own; relevant to everyone when not stealthed, with `crossguard.StealthHidesFromEnemies` 0, and again once `State.Stealthed` is removed. Skips if the console holds the switch. The real despawn on a client is the two-client check. |
+
 **`CrossguardScenarioMonsterTests.cpp`**
 
 | Test | Checks |
@@ -357,7 +363,7 @@ server-side players in one standalone PIE, not real clients.
 | 4 `parting_the_land` | auto | `Skills.PartingTheLand` | The pop-up and walls' look. |
 | 4 `hunters_leap` | auto | `Skills.HuntersLeap` | — |
 | 4 `wall`, `light` | auto | `Skills.Wall`, `Skills.Light` | The light itself. |
-| 4 `stealth` vanish on the other screen | part | `Skills.Stealth` | Vanishing on a real second client (replication). |
+| 4 `stealth` vanish on the other screen | part | `Skills.Stealth`, `Status.StealthNetRelevancy` | Vanishing on a real second client (replication); the enemy client dropping and re-creating the character. |
 | 4 `immutable` | auto | `Skills.Immutable` | — |
 | 4 `unleash` | auto | `Skills.Unleash` | — |
 | 4 `benediction` on a body | auto | `Skills.Benediction` | — |

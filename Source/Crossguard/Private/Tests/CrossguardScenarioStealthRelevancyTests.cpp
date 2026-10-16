@@ -10,6 +10,8 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "AbilitySystem/CrossguardGameplayTags.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
 #include "Character/CrossguardCharacter.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
@@ -88,8 +90,14 @@ bool FCrossguardScenarioStealthNetRelevancy::RunTest(const FString& Parameters)
 		C.Test.TestTrue(TEXT("Switch off: stealthed but relevant to the enemy"), IsRelevantTo(Sneak, EnemyPC));
 		SetSwitch(Switch, true);
 
-		// Stealth ends: relevant to the enemy again.
-		C.Kill(Sneak, nullptr);
+		// Stealth ends (as when it breaks): relevant to the enemy again.
+		if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Sneak))
+		{
+			ASC->RemoveActiveEffectsWithGrantedTags(FGameplayTagContainer(CrossguardTags::State_Stealthed));
+		}
+		C.Test.TestFalse(TEXT("State.Stealthed is gone"), C.HasTag(Sneak, CrossguardTags::State_Stealthed));
+		C.Test.TestTrue(TEXT("Stealth over: relevant to the enemy again"), IsRelevantTo(Sneak, EnemyPC));
+
 		Switch->Set(bWasOn ? 1 : 0, ECVF_SetByCode);
 	});
 
