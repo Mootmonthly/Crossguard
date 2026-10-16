@@ -39,7 +39,7 @@
     "category": "Trinket",
     "gridWidth": 1,
     "gridHeight": 1,
-    "maxStack": 1,
+    "maxStack": 3,
     "sellValue": 50,
     "sellPerRarity": 50
   },
@@ -151,7 +151,7 @@
     "category": "Trinket",
     "gridWidth": 1,
     "gridHeight": 1,
-    "maxStack": 1,
+    "maxStack": 3,
     "sellValue": 50,
     "sellPerRarity": 50
   },
@@ -161,7 +161,7 @@
     "category": "Trinket",
     "gridWidth": 1,
     "gridHeight": 1,
-    "maxStack": 1,
+    "maxStack": 3,
     "sellValue": 50,
     "sellPerRarity": 50
   },

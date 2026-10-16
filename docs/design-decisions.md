@@ -237,12 +237,13 @@ Independent of category, a skill is:
   Extracting with coins moves them into the character's banked gold automatically. Selling to a
   vendor pays banked gold.
 - Gemstones (Ruby, Sapphire, Emerald) are 1 × 1 trinkets selling for 50 gold at Common, +50 per
-  rarity level (300 at Mystic).
+  rarity level (300 at Mystic). They stack **up to 3 per kind per rarity** (three Common rubies in
+  one stack; a Rare ruby or a sapphire starts its own).
 - Vendor prices for gear (weapons and armor): 5 gold per grid square at Common, +5 per rarity
   level: `5 × squares × (rarity level + 1)`. A 2 × 4 Mystic weapon sells for 240. Placeholder for a
   richer formula later.
-- Assumed until ruled otherwise: vendors are used between raids only; gemstones do not stack; a
-  whole stack sells at once.
+- Assumed until ruled otherwise: vendors are used between raids only; a whole stack sells at once
+  (a stack of 3 Common rubies: 150 gold).
 - Lockpicking: the best chests and doors need it, through a skill or a lockpick item. It takes 5 s,
   faster with Dexterity, and cannot fail. The lockpicking skill comes from the Skill Forge.
 - Assumed until ruled otherwise: time = 5 s ÷ (1 + Dexterity) (30% Dexterity: 3.8 s); a lockpick

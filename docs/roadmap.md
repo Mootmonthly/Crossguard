@@ -117,7 +117,6 @@ Decisions that block items above. Answers go into design-decisions.md.
 
 | Question | Blocks |
 | --- | --- |
-| Do gemstones stack? | Gemstones (currently: no) |
 | Is a lockpick used up per lock? Exact Dexterity effect? | Lockpicking (currently: used up; 5 s ÷ (1 + Dexterity)) |
 | Extraction time | Extraction (currently: 5 s) |
 | Final subscription price | Subscription |

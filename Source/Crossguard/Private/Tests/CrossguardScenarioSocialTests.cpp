@@ -1513,6 +1513,78 @@ bool FCrossguardScenarioHubVendor::RunTest(const FString& Parameters)
 	return true;
 }
 
+// Ruling: gemstones stack up to 3 per kind per rarity. Four Common rubies make stacks of 3 and 1; a
+// Rare ruby and a Common sapphire each start their own stack; a whole stack of 3 sells at once.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioHubGemstonesStack, "Crossguard.Scenario.Hub.GemstonesStackToThree", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioHubGemstonesStack::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioSocial;
+
+	FScenario Scenario(*this);
+	Scenario.Raid(false);
+
+	Scenario.Step(TEXT("Rubies stack to 3 per rarity; other gems and rarities keep apart"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = C.SpawnPlayer(TEXT("Player"), FVector(0.0f, Row, 0.0f));
+		ACrossguardPlayerState* Progression = Player != nullptr ? C.PlayerState(Player) : nullptr;
+		UCrossguardVendorComponent* Vendor = Progression != nullptr ? Progression->GetVendor() : nullptr;
+		UCrossguardInventoryComponent* Inventory = InventoryOf(Player);
+		if (!C.Require(Vendor != nullptr && Inventory != nullptr, TEXT("the player has a vendor component and an inventory"))
+			|| !C.Require(CountOf(Player, Ruby()) == 0, TEXT("no rubies to start with")))
+		{
+			return;
+		}
+		const FName Sapphire(TEXT("sapphire"));
+		C.Require(C.GiveItem(Player, Ruby(), 4) == 0, TEXT("four Common rubies fit"));
+		C.Require(C.GiveItem(Player, Ruby(), 1, ECrossguardRarity::Rare) == 0, TEXT("a Rare ruby fits"));
+		C.Require(C.GiveItem(Player, Sapphire, 1) == 0, TEXT("a Common sapphire fits"));
+
+		TArray<int32> CommonRubies;
+		int32 RareRubies = 0;
+		int32 FullStackId = 0;
+		for (const FCrossguardInventoryItem& Item : Inventory->GetItems())
+		{
+			if (Item.ItemId != Ruby())
+			{
+				continue;
+			}
+			C.Test.TestEqual(TEXT("A ruby stacks to 3"), Item.MaxStack, 3);
+			if (Item.Rarity == ECrossguardRarity::Common)
+			{
+				CommonRubies.Add(Item.Count);
+				FullStackId = Item.Count == 3 ? Item.Id : FullStackId;
+			}
+			else
+			{
+				C.Test.TestEqual(TEXT("The Rare ruby keeps its own stack of 1"), Item.Count, 1);
+				++RareRubies;
+			}
+		}
+		CommonRubies.Sort();
+		C.Test.TestEqual(TEXT("Four Common rubies: two stacks"), CommonRubies.Num(), 2);
+		C.Test.TestTrue(TEXT("Stacks of 1 and 3"), CommonRubies.Num() == 2 && CommonRubies[0] == 1 && CommonRubies[1] == 3);
+		C.Test.TestEqual(TEXT("One Rare ruby stack"), RareRubies, 1);
+		C.Test.TestEqual(TEXT("Rubies in all"), CountOf(Player, Ruby()), 5);
+		C.Test.TestEqual(TEXT("The sapphire is apart"), CountOf(Player, Sapphire), 1);
+
+		// The full stack sells whole: 3 x 50 gold (Common).
+		FCrossguardInventoryItem FullStack;
+		if (C.Require(FullStackId != 0 && Inventory->FindItem(FullStackId, FullStack), TEXT("the stack of 3 is in the inventory")))
+		{
+			const int32 GoldBefore = Progression->GetGold();
+			C.Test.TestEqual(TEXT("A stack of 3 Common rubies sells for 150"), Vendor->GetSellPrice(FullStack), 150);
+			Vendor->RequestSell(ECrossguardItemSource::Inventory, FullStackId);
+			C.Test.TestEqual(TEXT("Banked gold after the sale"), Progression->GetGold(), GoldBefore + 150);
+			C.Test.TestEqual(TEXT("Two rubies left (Common 1, Rare 1)"), CountOf(Player, Ruby()), 2);
+		}
+	});
+
+	Scenario.Run();
+	return true;
+}
+
 // Checklist 5: "RequestBuyStashTab with 3000+ gold -> A second tab appears; a fourth purchase is
 // refused."
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioHubStashTabs, "Crossguard.Scenario.Hub.BuyStashTabs", CROSSGUARD_SCENARIO_FLAGS)

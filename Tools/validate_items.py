@@ -7,8 +7,11 @@ import sys
 
 CATEGORIES = {"Ammo", "Consumable", "Throwable", "Material", "Currency", "Trinket", "Tool"}
 GRID_WIDTH, GRID_HEIGHT = 10, 5  # main inventory grid
-# Stack size is set per category (docs/design-decisions.md). Materials, trinkets and tools are not ruled yet.
+# Stack size is set per category (docs/design-decisions.md). Materials, other trinkets and tools are not ruled yet.
 STACK_BY_CATEGORY = {"Ammo": 20, "Throwable": 3, "Consumable": 5, "Currency": 100}
+# Ruled: gemstones (Trinkets) stack to 3 per kind and rarity.
+GEMSTONE_IDS = {"emerald", "ruby", "sapphire"}
+GEMSTONE_STACK = 3
 ID_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 
 
@@ -135,6 +138,12 @@ def validate(items):
         expected = STACK_BY_CATEGORY.get(it.get("category"))
         if expected is not None and it.get("maxStack") != expected:
             err(f"maxStack must be {expected} for {it.get('category')}")
+
+        if it.get("id") in GEMSTONE_IDS:
+            if it.get("category") != "Trinket":
+                err("a gemstone must be a Trinket")
+            if it.get("maxStack") != GEMSTONE_STACK:
+                err(f"maxStack must be {GEMSTONE_STACK} for a gemstone")
 
         if it.get("category") == "Trinket" and non_negative_int(it.get("sellValue")) and it["sellValue"] == 0:
             err("sellValue must be > 0 for Trinket")

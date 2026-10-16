@@ -196,11 +196,14 @@ namespace CrossguardScenarioRaidWorld
 	}
 
 	// Whether Items can be one roll of Row: each drop is one stack, except gold, whose drops (CountMin
-	// to CountMax coins each) may fill several stacks of 100. "Nothing" weight: a roll may drop less
-	// than RollsMin. OutDescription says what was found.
+	// to CountMax coins each) may fill several stacks of 100, and drops of one stackable item at one
+	// rarity (potions, gemstones), which may share a stack: so the drops lie between the non-gold
+	// stacks and the non-gold items. "Nothing" weight: a roll may drop less than RollsMin.
+	// OutDescription says what was found.
 	bool IsOneRollOf(const FCrossguardLootTableRow& Row, const TArray<FCrossguardInventoryItem>& Items, FString& OutDescription)
 	{
 		int32 NonGoldDrops = 0;
+		int32 NonGoldItems = 0;
 		int32 GoldTotal = 0;
 		for (const FCrossguardInventoryItem& Item : Items)
 		{
@@ -211,6 +214,7 @@ namespace CrossguardScenarioRaidWorld
 			else
 			{
 				++NonGoldDrops;
+				NonGoldItems += FMath::Max(1, Item.Count);
 			}
 		}
 		int32 GoldMin = MAX_int32;
@@ -238,7 +242,7 @@ namespace CrossguardScenarioRaidWorld
 		const int32 Lowest = Row.NothingWeight > 0 ? 0 : Row.RollsMin;
 		OutDescription = FString::Printf(TEXT("%d stacks: %d non-gold drops and %d gold (%d-%d gold drops); the table drops %d-%d"), Items.Num(),
 			NonGoldDrops, GoldTotal, GoldDropsMin, GoldDropsMax, Lowest, Row.RollsMax);
-		return GoldDropsMin <= GoldDropsMax && NonGoldDrops + GoldDropsMin <= Row.RollsMax && NonGoldDrops + GoldDropsMax >= Lowest;
+		return GoldDropsMin <= GoldDropsMax && NonGoldDrops + GoldDropsMin <= Row.RollsMax && NonGoldItems + GoldDropsMax >= Lowest;
 	}
 
 	// Aims the view at Target, raised to make up for the throw's drop on the way.

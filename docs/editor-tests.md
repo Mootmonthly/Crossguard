@@ -341,6 +341,7 @@ game mode's Mob Table is unset.
 | `Crossguard.Scenario.Hub.SkillGemLearnsSkill` | Between raids a `heroic_might` gem joins the Skill Library and is used up; in a raid refused, gem stays. Skipped without `DA_SkillCatalog`. |
 | `Crossguard.Scenario.Hub.StashStoreAndRetrieve` | Store anywhere and retrieve 3 potions; refused in a raid. |
 | `Crossguard.Scenario.Hub.VendorSellsRareRuby` | Rare ruby sells for its price (150) into banked gold; a potion is refused. |
+| `Crossguard.Scenario.Hub.GemstonesStackToThree` | Four Common rubies make stacks of 3 and 1 (max stack 3); a Rare ruby and a sapphire keep their own stacks; the stack of 3 sells whole for 150. |
 | `Crossguard.Scenario.Hub.BuyStashTabs` | No gold: refused; with gold, three tabs; the fourth refused AtCap, no gold taken. |
 | `Crossguard.Scenario.Hub.LoweringAttributeNeedsRespecToken` | Lowering Strength refused without a token (nothing changes), done with one (token used). |
 | `Crossguard.Scenario.Hub.RespecPaidWithGold` | Respec paid with gold (price 1000): refused at 999 gold and in a raid (nothing taken, token not used instead); at 1000 Strength drops and all 1000 go, the token stays; then a token respec takes no gold. |
