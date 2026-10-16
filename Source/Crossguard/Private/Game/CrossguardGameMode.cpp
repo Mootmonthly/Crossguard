@@ -2,13 +2,17 @@
 
 #include "Character/CrossguardCharacter.h"
 #include "Character/CrossguardMinion.h"
+#include "AbilitySystem/CrossguardAttributeSet.h"
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "Crossguard.h"
+#include "Engine/Engine.h"
+#include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 #include "Game/CrossguardGuildSubsystem.h"
 #include "Game/CrossguardPartySubsystem.h"
+#include "Game/CrossguardPlayerController.h"
 #include "Game/CrossguardPlayerState.h"
 #include "Game/CrossguardSaveSubsystem.h"
 #include "Game/CrossguardTeamLibrary.h"
@@ -22,11 +26,14 @@
 
 const TCHAR* ACrossguardGameMode::PartyOption = TEXT("Party");
 const TCHAR* ACrossguardGameMode::HubOption = TEXT("Hub");
+const TCHAR* ACrossguardGameMode::DevPlayerIdOption = TEXT("DevPlayerId");
 
 ACrossguardGameMode::ACrossguardGameMode()
 {
 	DefaultPawnClass = ACrossguardCharacter::StaticClass();
 	PlayerStateClass = ACrossguardPlayerState::StaticClass();
+	// Holds a raider's character when their connection drops (docs/persistence.md, "Reconnecting").
+	PlayerControllerClass = ACrossguardPlayerController::StaticClass();
 	// Placeholder UI built in C++ (docs/ui.md); a Blueprint game mode can set its own HUD Class.
 	HUDClass = ACrossguardHUD::StaticClass();
 	// A hub party's ServerTravel to the raid map keeps the player states, and with them each
@@ -55,6 +62,50 @@ void ACrossguardGameMode::InitGame(const FString& MapName, const FString& Option
 	}
 }
 
+APlayerController* ACrossguardGameMode::Login(UPlayer* NewPlayer, ENetRole InRemoteRole, const FString& Portal, const FString& Options,
+	const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
+{
+	TGuardValue<bool> LocalLogin(bLoggingInLocalPlayer, Cast<ULocalPlayer>(NewPlayer) != nullptr);
+	return Super::Login(NewPlayer, InRemoteRole, Portal, Options, UniqueId, ErrorMessage);
+}
+
+FString ACrossguardGameMode::DevPlayerIdFor(const FString& Options) const
+{
+#if UE_BUILD_SHIPPING
+	return FString();
+#else
+	// Development only: saves and reconnects need an id that outlives the session, and without Steam
+	// there is none (docs/persistence.md, "Player id").
+	FString Name;
+	// 1. Asked for in the login URL: the client's word, so only where the server allows it.
+	if (FParse::Param(FCommandLine::Get(), TEXT("AllowDevPlayerIds")) || GIsAutomationTesting)
+	{
+		Name = UGameplayStatics::ParseOption(Options, DevPlayerIdOption);
+	}
+	// 2. This process's own player: -CrossguardPlayerId=<name>, else in PIE the PIE instance, so the
+	// same PIE window gets the same save every run.
+	if (Name.IsEmpty() && bLoggingInLocalPlayer)
+	{
+		FParse::Value(FCommandLine::Get(), TEXT("CrossguardPlayerId="), Name);
+		if (Name.IsEmpty())
+		{
+			const FWorldContext* Context = GEngine != nullptr ? GEngine->GetWorldContextFromWorld(GetWorld()) : nullptr;
+			return Context != nullptr && Context->WorldType == EWorldType::PIE ? FString::Printf(TEXT("pie-%d"), Context->PIEInstance) : FString();
+		}
+	}
+	// Letters, digits, '-' and '_' (it names the save file), 32 at most.
+	FString Safe;
+	for (const TCHAR Char : Name.Left(32))
+	{
+		if (FChar::IsAlnum(Char) || Char == TEXT('-') || Char == TEXT('_'))
+		{
+			Safe.AppendChar(Char);
+		}
+	}
+	return Safe.IsEmpty() ? FString() : TEXT("dev-") + Safe;
+#endif
+}
+
 void ACrossguardGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
 {
 	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
@@ -74,6 +125,33 @@ void ACrossguardGameMode::PreLogin(const FString& Options, const FString& Addres
 FString ACrossguardGameMode::InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId, const FString& Options,
 	const FString& Portal)
 {
+	// The player id this login claims, settled before Super gives the player state its unique id
+	// (which starts loading the save under it).
+	ACrossguardPlayerState* NewState = NewPlayerController != nullptr ? NewPlayerController->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	const FString DevId = UniqueId.IsValid() ? FString() : DevPlayerIdFor(Options);
+	const FString LoginId = UniqueId.IsValid() ? UniqueId.ToString() : DevId;
+	if (!LoginId.IsEmpty())
+	{
+		if (bIsRaid && FinishedPlayerIds.Contains(LoginId))
+		{
+			// Extracted or dead for this raid (also while away): back to the menu / hub path.
+			return TEXT("Your raid is over.");
+		}
+		if (FindOnlinePlayer(LoginId, NewState) != nullptr)
+		{
+			// Also a reconnect before the server has noticed the old connection drop (it times out).
+			return TEXT("You are already in this match.");
+		}
+	}
+	if (NewState != nullptr)
+	{
+		NewState->DevPlayerId = DevId;
+	}
+	if (bIsRaid && !LoginId.IsEmpty() && HeldPlayers.Contains(LoginId))
+	{
+		return RestoreHeldPlayer(NewPlayerController, LoginId, UniqueId, Options, Portal);
+	}
+
 	const FString Error = Super::InitNewPlayer(NewPlayerController, UniqueId, Options, Portal);
 	if (!Error.IsEmpty())
 	{
@@ -175,11 +253,21 @@ void ACrossguardGameMode::HandleSeamlessTravelPlayer(AController*& C)
 
 void ACrossguardGameMode::Logout(AController* Exiting)
 {
+	ACrossguardPlayerState* LeavingState = Exiting != nullptr ? Exiting->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	// Held for a reconnect (HoldForReconnect): still in the raid. No last save and nothing forgotten:
+	// the stored record stays the raid start's (no carried gear) until the raid ends for them.
+	const bool bHeld = LeavingState != nullptr && !HeldIdOf(LeavingState).IsEmpty();
+
 	// A last save while the player state is still here.
 	UCrossguardSaveSubsystem* Saves = UCrossguardSaveSubsystem::Get(this);
-	if (ACrossguardPlayerState* LeavingState = Saves != nullptr && Exiting != nullptr ? Exiting->GetPlayerState<ACrossguardPlayerState>() : nullptr)
+	if (Saves != nullptr && LeavingState != nullptr && !bHeld)
 	{
 		Saves->PlayerLeaving(LeavingState);
+	}
+	// Extracted or dead for the raid: they cannot log in to it again.
+	if (bIsRaid && LeavingState != nullptr && LeavingState->HasFinishedRaid())
+	{
+		FinishedPlayerIds.Add(UCrossguardGuildSubsystem::PlayerIdOf(LeavingState));
 	}
 
 	// In the hub, leaving the server leaves the party (the rest get a new leader if need be). In a
@@ -192,9 +280,14 @@ void ACrossguardGameMode::Logout(AController* Exiting)
 	}
 
 	FString Key;
-	if (PlayerKeys.RemoveAndCopyValue(TWeakObjectPtr<const AController>(Exiting), Key))
+	if (PlayerKeys.RemoveAndCopyValue(TWeakObjectPtr<const AController>(Exiting), Key) && !bHeld)
 	{
 		Teams.Leave(std::string(TCHAR_TO_UTF8(*Key)));
+	}
+	if (bHeld)
+	{
+		// Nobody owns it while the player is away (the controller is going).
+		LeavingState->SetOwner(nullptr);
 	}
 	Super::Logout(Exiting);
 	// Whoever was watching the leaving player needs someone else.
@@ -203,6 +296,14 @@ void ACrossguardGameMode::Logout(AController* Exiting)
 
 void ACrossguardGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
 {
+	// Reconnected: their own character, not a new pawn (RestartPlayer), save or raid.
+	TWeakObjectPtr<ACrossguardCharacter> Waiting;
+	if (NewPlayer != nullptr && Reconnecting.RemoveAndCopyValue(TWeakObjectPtr<APlayerController>(NewPlayer), Waiting))
+	{
+		ResumeHeldCharacter(NewPlayer, Waiting.Get());
+		return;
+	}
+
 	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
 
 	ACrossguardPlayerState* PlayerState = NewPlayer != nullptr ? NewPlayer->GetPlayerState<ACrossguardPlayerState>() : nullptr;
@@ -311,6 +412,15 @@ void ACrossguardGameMode::HandlePermanentDeath(ACrossguardCharacter* Character)
 {
 	ACrossguardPlayerState* PlayerState = Character != nullptr ? Character->GetPlayerState<ACrossguardPlayerState>() : nullptr;
 	APlayerController* Player = Character != nullptr ? Character->GetController<APlayerController>() : nullptr;
+	if (PlayerState != nullptr && Player == nullptr && bIsRaid)
+	{
+		// Died while its player was away.
+		if (const FString HeldId = HeldIdOf(PlayerState); !HeldId.IsEmpty())
+		{
+			ReleaseHeldPlayer(HeldId);
+			return;
+		}
+	}
 	if (PlayerState == nullptr || Player == nullptr || !bIsRaid || !PlayerState->IsInRaid())
 	{
 		// AI, a hub map, or a player who already extracted: no raid to end.

@@ -9,9 +9,20 @@
 #include "CrossguardGameMode.generated.h"
 
 class ACrossguardCharacter;
+class ACrossguardPlayerState;
 class UCrossguardSkillCatalog;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardPlayerExtracted, ACrossguardCharacter*, Character);
+
+// A raider whose connection closed mid-raid: their character waits in the world for them to log in
+// again (ACrossguardGameMode::HoldForReconnect).
+struct FCrossguardHeldPlayer
+{
+	TWeakObjectPtr<ACrossguardPlayerState> PlayerState;
+	TWeakObjectPtr<ACrossguardCharacter> Character;
+	// Their FTeamRegistry key: the team slot stays theirs while they are away.
+	FString TeamKey;
+};
 
 // Match game mode. Assigns teams on login from the "Party" URL option: players joining with the
 // same ?Party=<key> share a team (up to 8); players without one each get their own team.
@@ -28,15 +39,22 @@ public:
 
 	// A "?Hub" option on the server's map URL turns bIsRaid off (a dev hub on any map).
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
+	// Notes whether the login is this process's own player (for the development player id).
+	virtual APlayerController* Login(UPlayer* NewPlayer, ENetRole InRemoteRole, const FString& Portal, const FString& Options,
+		const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
 	// Refuses a login whose party's team is already full.
 	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
+	// Also: refuses a player id already playing here, or whose raid on this map is over; gives a
+	// player held for a reconnect their own player state back (docs/persistence.md, "Reconnecting").
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId, const FString& Options,
 		const FString& Portal = TEXT("")) override;
+	// A player held for a reconnect keeps their save record, team slot and party.
 	virtual void Logout(AController* Exiting) override;
 	// Seamless travel skips InitNewPlayer: re-register the player with the party key their player
 	// state carried over.
 	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
-	// Starts the raid for each player when this map is a raid.
+	// Starts the raid for each player when this map is a raid. A reconnecting player takes their
+	// waiting character back instead (no new pawn, no new raid).
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 	// No respawn into a raid the player already left (extracted or dead for the raid), even if a
 	// client forges ServerRestartPlayer.
@@ -53,8 +71,27 @@ public:
 	virtual void HandleExtraction(ACrossguardCharacter* Character);
 
 	// Server. The character's revive window ran out: its player's raid ends as a failure. The player
-	// spectates a teammate still in the raid, or goes back to the menu if none is left (or solo).
+	// spectates a teammate still in the raid, or goes back to the menu if none is left (or solo). A
+	// player away (held for a reconnect) is let go: the raid failed, and they cannot log in to it again.
 	virtual void HandlePermanentDeath(ACrossguardCharacter* Character);
+
+	// --- Reconnecting (docs/persistence.md, "Reconnecting"). Server. ---
+
+	// The player's connection is closing (ACrossguardPlayerController::PawnLeavingGame). On a raid map,
+	// a character still in the raid (alive or downed, not extracted) stays where it is, unpossessed and
+	// vulnerable, and its player state (progression, raid XP, team, party) is kept, so the same player
+	// id can log in again and take it back. Returns true if held.
+	virtual bool HoldForReconnect(APlayerController* Leaving);
+	// The held player state of PlayerId (UCrossguardGuildSubsystem::PlayerIdOf), or null.
+	ACrossguardPlayerState* FindHeldPlayer(const FString& PlayerId) const;
+	// A login with this player id is refused: their raid on this map is over (extracted, or dead for the
+	// raid, also while away).
+	bool HasFinishedRaidHere(const FString& PlayerId) const { return FinishedPlayerIds.Contains(PlayerId); }
+
+	// Login option asking for a development player id (?DevPlayerId=<name>, becomes "dev-<name>").
+	// Development builds only, and only on a server started with -AllowDevPlayerIds (or in automation
+	// tests): it is the client's word.
+	static const TCHAR* DevPlayerIdOption;
 
 	// After a successful extraction. Hook the trip to the hub here once it exists.
 	UPROPERTY(BlueprintAssignable, Category = "Crossguard")
@@ -136,4 +173,28 @@ private:
 	float RaidStartSeconds = 0.0f;
 	// Controller -> registry key, so Logout can find the player.
 	TMap<TWeakObjectPtr<const AController>, FString> PlayerKeys;
+
+	// The stable stand-in id for a login without an online id (ACrossguardPlayerState::DevPlayerId);
+	// empty in Shipping or when none applies.
+	FString DevPlayerIdFor(const FString& Options) const;
+	// A player state here, not held for a reconnect and not Except, whose PlayerIdOf is PlayerId.
+	const ACrossguardPlayerState* FindOnlinePlayer(const FString& PlayerId, const APlayerState* Except) const;
+	// The id PlayerState is held under; empty if it is not held.
+	FString HeldIdOf(const ACrossguardPlayerState* PlayerState) const;
+	// The reconnecting controller takes over the held player state (before Super::InitNewPlayer).
+	FString RestoreHeldPlayer(APlayerController* Controller, const FString& PlayerId, const FUniqueNetIdRepl& UniqueId, const FString& Options,
+		const FString& Portal);
+	// The held player's character died for the raid: their raid fails and the player state goes.
+	void ReleaseHeldPlayer(const FString& PlayerId);
+	// Possesses the waiting character again, keeping its Health.
+	void ResumeHeldCharacter(APlayerController* Player, ACrossguardCharacter* Character);
+
+	// Raiders away from the raid, by player id.
+	TMap<FString, FCrossguardHeldPlayer> HeldPlayers;
+	// Reconnected controllers waiting for HandleStartingNewPlayer, and their characters.
+	TMap<TWeakObjectPtr<APlayerController>, TWeakObjectPtr<ACrossguardCharacter>> Reconnecting;
+	// Players whose raid on this map is over: they cannot log in to it again.
+	TSet<FString> FinishedPlayerIds;
+	// During Login of this process's own player (a ULocalPlayer: standalone, listen-server host).
+	bool bLoggingInLocalPlayer = false;
 };
