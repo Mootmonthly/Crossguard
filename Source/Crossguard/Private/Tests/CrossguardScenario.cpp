@@ -1089,6 +1089,20 @@ namespace CrossguardScenario
 		}
 	}
 
+	// --- Server travel ----------------------------------------------------------------------------
+
+	void FScenarioContext::ExpectServerTravel(const FString& MapPackage, float TimeoutRealSeconds)
+	{
+		if (MapPackage.IsEmpty())
+		{
+			Fail(TEXT("ExpectServerTravel: no destination map"));
+			return;
+		}
+		TravelMapPackage = MapPackage;
+		TravelDeadline = FPlatformTime::Seconds() + FMath::Max(TimeoutRealSeconds, 1.0f);
+		Test.AddInfo(FString::Printf(TEXT("Expecting a server travel to %s (up to %.0f real seconds)"), *MapPackage, TimeoutRealSeconds));
+	}
+
 	// --- Screenshots ------------------------------------------------------------------------------
 
 	void FScenarioContext::LookFrom(const FVector& Eye, const FVector& LookAt, int32 ClientIndex)
@@ -1578,8 +1592,56 @@ namespace CrossguardScenario
 			return false;
 		}
 
+		// ExpectServerTravel: no item runs until the server world is the destination; then the
+		// context follows it.
+		bool FollowServerTravel()
+		{
+			UWorld* Server = ServerPlayWorld();
+			const bool bArrived = Server != nullptr && Server != Context.World() && Server->HasBegunPlay()
+				&& UWorld::RemovePIEPrefix(Server->GetPackage()->GetName()) == Context.TravelMapPackage;
+			if (bArrived)
+			{
+				ACrossguardGameMode* Mode = Cast<ACrossguardGameMode>(Server->GetAuthGameMode());
+				if (Mode == nullptr)
+				{
+					Test.AddError(FString::Printf(TEXT("The server travelled to %s, but it runs game mode %s, not a CrossguardGameMode (World Settings)"),
+						*Context.TravelMapPackage, *GetNameSafe(Server->GetAuthGameMode())));
+					SetPhase(EPhase::EndPIE);
+					return false;
+				}
+				Test.AddInfo(FString::Printf(TEXT("The server arrived on %s (game mode %s) after %.1f real seconds"), *Context.TravelMapPackage,
+					*Mode->GetClass()->GetName(), RealSince(StepsStarted)));
+				Context.WorldPtr = Server;
+				Context.GameModePtr = Mode;
+				// Everything remembered was in the old world.
+				Context.Actors.Reset();
+				Context.Cameras.Reset();
+				Context.TravelMapPackage.Reset();
+				// A wait restarts on the new world's clock.
+				bItemStarted = false;
+				return false;
+			}
+			if (GEditor == nullptr || GEditor->PlayWorld == nullptr)
+			{
+				Test.AddError(FString::Printf(TEXT("PIE ended during the server travel to %s"), *Context.TravelMapPackage));
+				SetPhase(EPhase::EndPIE);
+				return false;
+			}
+			if (FPlatformTime::Seconds() > Context.TravelDeadline)
+			{
+				Test.AddError(FString::Printf(TEXT("The server did not arrive on %s in time (server world now: %s)"), *Context.TravelMapPackage,
+					Server != nullptr ? *Server->GetPackage()->GetName() : TEXT("none")));
+				SetPhase(EPhase::EndPIE);
+			}
+			return false;
+		}
+
 		bool RunSteps()
 		{
+			if (Context.IsTravelling() && !Context.IsStopped())
+			{
+				return FollowServerTravel();
+			}
 			UWorld* PlayWorld = Context.World();
 			if (PlayWorld == nullptr || ServerPlayWorld() != PlayWorld)
 			{

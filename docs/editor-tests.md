@@ -154,8 +154,8 @@ damage is computed from the characters' actual stats, so they work at any level.
 
 ### The scenarios
 
-143 tests in 20 files (128 `Crossguard.Scenario.*`, 8 `Crossguard.Net.*`, 7 `Crossguard.Visual.*`;
-2026-10-16). Grouped by file; the name is the full test name.
+144 tests in 21 files (128 `Crossguard.Scenario.*`, 9 `Crossguard.Net.*`, 7 `Crossguard.Visual.*`;
+2026-10-16; `Net.SeamlessTravelHubToRaid` not yet built). Grouped by file; the name is the full test name.
 
 **`CrossguardScenarioRaidTests.cpp`**
 
@@ -354,13 +354,19 @@ game mode's Mob Table is unset.
 | --- | --- |
 | `Crossguard.Scenario.UI.WidgetsBind` | Every widget class built for the PIE player's controller (C++ tree, no assets) shows the game state: the HUD's Health and hotbar lines; one inventory cell per stack, click selects and deselects; a dead dummy's body shows its ruby, Take all moves it; one wheel entry per castable skill and picking one selects it; the trade window says no trade; the guild window shows the founder after `RequestCreate`. The player's HUD is `ACrossguardHUD` (a warning if a game mode Blueprint overrides it). |
 
-**`CrossguardScenarioPartyTests.cpp`** (parties in the hub, [parties.md](parties.md); the travel itself is never started)
+**`CrossguardScenarioPartyTests.cpp`** (parties in the hub, [parties.md](parties.md); the travel itself is never started here: `Net.SeamlessTravelHubToRaid` does it)
 
 | Test | Checks |
 | --- | --- |
 | `Crossguard.Net.PartyInviteAcceptMakesAllies` | Listen server + 2 clients, hub. The host invites client 1 (founding a party it leads), client 1 sees the invite and accepts on its own client (RPC): on the server both are allies on the party's team (`PartyKey` = party id), the outsider is not; client 1's own component shows two members and the host leading, and its copy of the host has its team; the outsider's client sees the two on one team but no party data on any component, and client 1's copy of the host's component is empty (owner only). |
 | `Crossguard.Net.PartyKickPromoteLeave` | Listen server + 2 clients, all in one party. Promote hands the lead to client 1 (its client sees it); the old leader's kick is refused NotLeader; the new leader kicks client 2 (no longer an ally; its client sees no party, another team); the leader leaving hands the lead back to the host; in a raid invite, leave and the launch are refused OnlyInHub; the last member leaving disbands it. |
 | `Crossguard.Scenario.Hub.PartyRaidLaunchPlan` | A leads B, Solo alone (standalone hub). A member cannot launch (NotLeader); no destination: NoRaidDestination; with a raid server: client travel to `127.0.0.1:7777?Party=<id>` (Party option read back with `FURL`), Solo without the option; others on the server: no server travel even with a raid map; everyone in the party and a raid map: server travel to `/Game/L_Test?Party=<id>`; in a raid: OnlyInHub. Never travels. |
+
+**`CrossguardScenarioTravelTests.cpp`** (the hub-to-raid launch played for real, [parties.md](parties.md#raid-launch); unbuilt, see [first-compile-triage.md](first-compile-triage.md) Batch 3)
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Net.SeamlessTravelHubToRaid` | Listen server + 1 client in the hub (`Raid(false)`), saving on into a temporary folder (`Saved\Automation\TravelTests`, deleted after). The host invites, client 1 accepts; each banks quest XP and gold, holds a weapon (Rare sword / Uncommon axe) and carries potions or bandages and a ruby. `RaidMapName` = `/Game/Maps/Dev/L_DevSandbox`; the plan is a ServerTravel with `?Party=<id>`; the leader's `StartRaid` travels **seamlessly** for real (`net.AllowPIESeamlessTravel` set to 1 for the run, restored after, also on failure). On the raid map, server side: exactly two player states, each found by its **engine PlayerId** (copied only by seamless travel), same player id and `DevPlayerId`, party key and party view = the party id, allies on one team, same banked XP, level and gold, same weapon in hand and same inventory (kinds and counts; the debug loadout included), raid begun with 0 raid XP, the game mode a raid (`bIsRaid`); the save entry followed the new player state (state Ready, a record with the same player id marked in-raid, the raid start written); no `is online with that id`, `You are already in this match`, `could not rejoin a team after travel` or `NOT supported in single process PIE` in the log. Each client's world is the raid map with its own pawn and its party view. Skipped (warning) without `L_DevSandbox` (`Tools\editor_setup.bat -CreateMap`), without the cvar, or with `-RaidMap=` on the command line. |
 
 **`CrossguardScenarioSaveTests.cpp`** (character saves, [persistence.md](persistence.md); saving is off in tests, so these turn it on with a temporary folder under `Saved\Automation\SaveTests` and delete it at the end)
 
@@ -481,7 +487,7 @@ use server-side players in one standalone PIE; `Crossguard.Net.*` use real PIE c
 | 6 Both see bodies ragdoll | auto | `Net.DeathRagdollsOnEveryClient`, `Visual.RagdollBody` | — |
 | 6 `showdebug` shows the other's `Equipment.Wielding.*` | auto | `Net.WieldingTagsReplicate` | The debug HUD itself. |
 | 6 Concurrent loot never duplicates | auto | `Social.ConcurrentLootNeverDuplicates`, `Net.ConcurrentLootFromTwoClients` | — |
-| 6 Parties and the raid launch | part | `Net.PartyInviteAcceptMakesAllies`, `Net.PartyKickPromoteLeave`, `Hub.PartyRaidLaunchPlan` | The travel itself (two PCs): both arrive on the raid map, still allies. |
+| 6 Parties and the raid launch | part | `Net.PartyInviteAcceptMakesAllies`, `Net.PartyKickPromoteLeave`, `Hub.PartyRaidLaunchPlan`, `Net.SeamlessTravelHubToRaid` (unbuilt) | Two PCs (a real network, not one process); the ClientTravel path to a raid server. |
 | 6 Reconnecting mid-raid | part | `Reconnect.RetakesCharacter`, `Reconnect.DiedWhileAway` | A real crash and relaunch (two processes): the connection timeout, the client getting its pawn and HUD back. |
 
 Totals: 69 rows: 65 auto, 3 script, 1 part (the party raid launch's travel), none manual (2026-10-16). What the "By hand" column
@@ -497,6 +503,9 @@ rows: `Combat.ArrowBlockedNoStun`, `SwingClash`, `AIIgnoresAllySwings`, `StunBlo
   with no input, HUD or client. Replication and prediction are the networked tests' job
   (`Crossguard.Net.*`); keys are untested, and the UI only to the point that its widgets build and
   show the right state (`Scenario.UI.WidgetsBind`): nothing is drawn or clicked by a mouse.
+- Map travel: only `Net.SeamlessTravelHubToRaid` travels, in one process (single-process PIE with
+  `net.AllowPIESeamlessTravel 1`, the engine's own caveat), to a saved map (`L_DevSandbox`). A non-seamless
+  travel, the ClientTravel path to a separate raid server, and travel between two machines are untested.
 - Networked tests drive clients from C++ (`ActivateSkill` on the client pawn, inventory requests on
   the client component): the real path from a key press to the request is not covered.
 - Clanks: there is no native event to bind to, so the clank (`MulticastWeaponClank` →
@@ -631,6 +640,7 @@ reached through:
 | `C.MakeAllies(Player, Ally)` | Server: `Player` joins `Ally`'s team (`ACrossguardPlayerState::SetTeamId`). PIE clients log in without `?Party=`, each on a team of its own. |
 | `C.HasSkill(Character, SkillId)` | A non-passive skill is granted; on a client pawn, once its spec has replicated. |
 | `Scenario.WaitUntilOnClient(i, Name, Timeout, [](FScenarioContext& C, UWorld& ClientWorld) { ... }, Poll = 0)` | `WaitUntil` for a client-side condition (named `[client i] ...` in the log); fails at once if that world is gone. |
+| `C.ExpectServerTravel(MapPackage, TimeoutRealSeconds = 90)` | Call in the step that starts a server travel (`UWorld::ServerTravel`, `StartRaid`). The items after it wait until PIE instance 0's world is `MapPackage` (long package name, e.g. `/Game/Maps/Dev/L_DevSandbox`, matched without the `UEDPIE_<n>_` prefix), has begun play and runs an `ACrossguardGameMode`; then `World()` / `GameMode()` are the new ones, remembered names and `LookFrom` cameras are forgotten, game time is the new world's. Fails past the timeout. The destination must be a saved map. Clients travel on their own: wait for them with `WaitUntilOnClient`. Single-process PIE travels seamlessly only with `net.AllowPIESeamlessTravel 1` (`Net.SeamlessTravelHubToRaid` sets it). |
 
 Rules of thumb:
 
@@ -724,6 +734,7 @@ inventory grid's item labels, tiny and truncated in one-square cells ("Healing P
 | | `ClankCount(A)` | Weapon clanks (block, parry, clash: `MulticastWeaponClank`) the character has played since it spawned; the defender plays it. 0 for non-characters. Native: `ACrossguardCharacter::GetWeaponClankCount()` and the `OnWeaponClankNative` delegate. |
 | | `FindAll<T>()`, `FindNearest<T>(Point, Radius)` | Actors in the PIE world. |
 | Game | `SetRaid(bool)`, `SetTimeDilation(X)` | `bIsRaid` (and begins / ends every player's raid); global time dilation. |
+| | `ExpectServerTravel(MapPackage, TimeoutRealSeconds = 90)`, `IsTravelling()` | Follow a server travel: see [Networked scenarios](#networked-scenarios). |
 | Log | `LogContains(Text)`, `LogCount(Text)`, `LogLines()`, `ClearLog()` | The captured log. |
 
 ### Scenario framework: engine calls (UE 5.8, verified)

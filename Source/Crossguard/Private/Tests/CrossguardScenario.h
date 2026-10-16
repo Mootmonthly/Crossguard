@@ -395,6 +395,19 @@ namespace CrossguardScenario
 		// cooldowns, ability waits and Wait() all speed up together.
 		void SetTimeDilation(float Dilation);
 
+		// --- Server travel --------------------------------------------------------------------------
+
+		// Call in the step that starts a server travel (UWorld::ServerTravel, a party's raid launch).
+		// The items after that step wait until the server world (PIE instance 0) is MapPackage (a long
+		// package name, "/Game/Maps/Dev/L_DevSandbox"; matched without the PIE prefix), has begun play
+		// and runs an ACrossguardGameMode; then they go on against it: World() and GameMode() are the
+		// new ones, remembered actors and LookFrom cameras are forgotten (they were in the old world),
+		// and game time is the new world's. The scenario fails if the server has not arrived within
+		// TimeoutRealSeconds. Clients travel on their own: wait for them with WaitUntilOnClient.
+		void ExpectServerTravel(const FString& MapPackage, float TimeoutRealSeconds = 90.0f);
+		// Between ExpectServerTravel and the arrival.
+		bool IsTravelling() const { return !TravelMapPackage.IsEmpty(); }
+
 		// --- Screenshots (visual scenarios) -------------------------------------------------------
 
 		// Points a viewport's camera: a camera actor at Eye looking at LookAt becomes the view target of
@@ -441,6 +454,10 @@ namespace CrossguardScenario
 		TMap<int32, TWeakObjectPtr<ACameraActor>> Cameras;
 		TSharedPtr<FScenarioLogCapture> LogCapture;
 		bool bStopped = false;
+		// ExpectServerTravel: the destination's long package name (empty: not travelling), and when
+		// to give up (FPlatformTime::Seconds).
+		FString TravelMapPackage;
+		double TravelDeadline = 0.0;
 	};
 
 	// Builds a scenario in RunTest, then Run() queues it as a latent command.

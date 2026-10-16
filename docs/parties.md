@@ -128,6 +128,15 @@ Seamless travel in PIE needs `net.AllowPIESeamlessTravel 1`; without it PIE fall
 non-seamless travel (player states are re-created; the subsystem's fallback above still finds the
 party for each login, if the online ids stay the same). Test on two PCs or standalone processes.
 
+Automated: `Crossguard.Net.SeamlessTravelHubToRaid` ([editor-tests.md](editor-tests.md), unbuilt)
+plays this flow in one process: a listen server and a client in one party in the hub launch the raid
+to `/Game/Maps/Dev/L_DevSandbox` with `net.AllowPIESeamlessTravel 1` (set for the test only), and
+checks on the raid map that both arrived with the same engine PlayerId (seamless, not a fresh login),
+player id, `DevPlayerId`, party (key, view, one team), banked XP, level, gold, weapon in hand and
+carried items (through the save subsystem's record), that their raid began, and that the save entry
+followed the new player state without a duplicate-login refusal. The ClientTravel path and a real
+two-machine travel stay manual.
+
 With a dedicated hub (or a listen host not in the party), set `RaidServerAddress` to a running raid
 server (e.g. a second process `Crossguard.exe /Game/L_Test?listen -game`, or a dedicated server):
 the party's clients travel there and the hub stays.
