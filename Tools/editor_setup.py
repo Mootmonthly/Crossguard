@@ -811,10 +811,16 @@ def create_dev_map(game_mode_cls):
     skipped = []
     v = unreal.Vector
     # 100 m x 100 m floor, top at z = 0.
-    if spawn_mesh(actor_subsystem, "/Engine/BasicShapes/Cube.Cube", v(0, 0, -50), v(100, 100, 1), "Floor"):
+    floor = spawn_mesh(actor_subsystem, "/Engine/BasicShapes/Cube.Cube", v(0, 0, -50), v(100, 100, 1), "Floor")
+    if floor:
+        # A 100x scaled cube shadows its own top and goes black; the floor needs no shadow.
+        floor.get_editor_property("static_mesh_component").set_cast_shadow(False)
         placed.append("floor")
+    if spawn(actor_subsystem, unreal.SkyAtmosphere, v(0, 0, 0), label="SkyAtmosphere"):
+        placed.append("sky atmosphere")
     # Movable lights: no Lightmass build, so the map never says "lighting needs to be rebuilt".
-    light = spawn(actor_subsystem, unreal.DirectionalLight, v(0, 0, 1000), unreal.Rotator(-45.0, 30.0, 0.0), "Sun")
+    # unreal.Rotator's positional order is roll, pitch, yaw: name them (the sun once pointed up).
+    light = spawn(actor_subsystem, unreal.DirectionalLight, v(0, 0, 1000), unreal.Rotator(roll=0.0, pitch=-45.0, yaw=30.0), "Sun")
     if light:
         light.light_component.set_mobility(unreal.ComponentMobility.MOVABLE)
         placed.append("light")
@@ -881,7 +887,7 @@ def create_dev_map(game_mode_cls):
     if dummy_cls is None:
         dummy_cls = native_class("CrossguardCharacter")
     if dummy_cls is not None:
-        dummy = spawn(actor_subsystem, dummy_cls, v(-1000, 0, 100), unreal.Rotator(0.0, 180.0, 0.0), "Dummy")
+        dummy = spawn(actor_subsystem, dummy_cls, v(-1000, 0, 100), unreal.Rotator(roll=0.0, pitch=0.0, yaw=180.0), "Dummy")
         if dummy:
             try:
                 dummy.set_editor_property("auto_possess_ai", unreal.AutoPossessAI.PLACED_IN_WORLD_OR_SPAWNED)
