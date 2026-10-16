@@ -163,6 +163,32 @@ Still there, harmless: `CooldownGameplayEffectClass 'CrossguardCooldownEffect' g
 `UCrossguardGameplayAbility::GetCooldownTags` reports them, so cooldowns work), and
 `No GameplayCueNotifyPaths` (no cues yet).
 
+## Batch 3 and 4 build results (UE 5.8, 2026-10-16)
+
+Built after two fixes; none of the ST / SV / PB / HM / HR / TR / AH / RV / NK rows fired at compile
+time. Runs: headless 166/166, net 10/10, visual 8/8 (after the test fixes below). Backend smoke 70 ok,
+1 skip (the expired-ticket check needs `CROSSGUARD_MATCH_TICKET_TTL_SEC=10`), 0 fail. The local
+cluster (hub + match server + two clients, Nakama) played the whole loop: log in, hub, party,
+matchmaking, ticket, raid, extraction, team back to its hub with the party; saves correct in Nakama.
+
+| Cause | Fix |
+| --- | --- |
+| `ACrossguardGameMode` lost its closing `};` in 5d15df7 (UHT: "Found EOF") | Restored |
+| `Url.IsEmpty() ? nullptr : MakeShared<...>` (no common type for TSharedRef / nullptr) | if / else in `UCrossguardNakamaSaveBackend::Configure` |
+| HubReturn test read the raider's player state after extraction; unpossessing clears it (crash) | Held before `HandleExtraction` |
+| GameInstance subsystems `NewObject`ed with the transient package as outer (ensure) | A bare `UGameInstance` outer |
+| Hub UI tests counted the owner's Debug inventory rubies on the PIE player | `HubEmptyInventory` first |
+| Art.WeaponMeshes assumed the dagger has no mesh (art now imported) | The wand |
+| Cluster: `NakamaUrl=http://...` unquoted in DefaultGame.ini was read as `http:` (login: no response) | Quoted |
+| Cluster: the menu's UI-only input outlived the travel to the hub (no movement, no keys) | `ACrossguardHUD::BeginPlay` sets game input |
+| Cluster: players were named after the PC; invites by name found nobody | Non-Shipping: `-CrossguardPlayerId=` is the player name |
+| Cluster: L_DevSandbox had no extraction zone or point of interest | `editor_setup` RAID_ACTORS |
+| Party window showed `refused (AlreadySearching)`; the menu showed no reason for a refused Join | Readable lines; `UCrossguardConnectionErrorSubsystem` |
+
+Not done: Build Paths in L_Hub (an editor click; a scripted nav build stays locked by
+`AsyncLoadLock`). A restarted hub with the same `-ServerId=` takes its own leases back at once (no
+60 s wait): expected.
+
 ## Overnight code (unbuilt)
 
 Code written on 2026-10-16 after the first build: the placeholder UI (`Source/Crossguard/*/UI`,
