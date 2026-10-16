@@ -9,6 +9,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Dom/JsonObject.h"
+#include "Engine/GameInstance.h"
 #include "Game/CrossguardMatchmaking.h"
 #include "Game/CrossguardNakamaClient.h"
 #include "Game/CrossguardNakamaMatchmaking.h"
@@ -242,7 +243,8 @@ bool FCrossguardNakamaMatchmakingTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("Ticket error refused"), UCrossguardNakamaSubsystem::ParseTicketAnswer(TEXT("{\"code\":16,\"message\":\"match ticket has expired\"}"), UserId, PartyId, MatchId));
 
 	// Verified tickets are kept per ticket and player, once.
-	UCrossguardNakamaSubsystem* Nakama = NewObject<UCrossguardNakamaSubsystem>(GetTransientPackage());
+	// A game instance subsystem needs a game instance outer (an uninitialised one: no world).
+	UCrossguardNakamaSubsystem* Nakama = NewObject<UCrossguardNakamaSubsystem>(NewObject<UGameInstance>(GetTransientPackage()));
 	Nakama->AddVerifiedTicketForTesting(TEXT("t1"), Alice, TEXT("p1"));
 	TestFalse(TEXT("Another player's ticket"), Nakama->TakeVerifiedTicket(TEXT("t1"), Bob, PartyId));
 	Nakama->AddVerifiedTicketForTesting(TEXT("t1"), Alice, TEXT("p1"));
@@ -262,8 +264,8 @@ bool FCrossguardNakamaPartyStateTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Unknown name"), UCrossguardPartySubsystem::ResultFromName(TEXT("Dance")) == ECrossguardPartyResult::BackendUnavailable);
 	TestTrue(TEXT("Empty name"), UCrossguardPartySubsystem::ResultFromName(FString()) == ECrossguardPartyResult::BackendUnavailable);
 
-	// The registry here mirrors the backend's answers (no game instance: no players to bring up to date).
-	UCrossguardPartySubsystem* Parties = NewObject<UCrossguardPartySubsystem>(GetTransientPackage());
+	// The registry here mirrors the backend's answers (a bare game instance, no world: no players to bring up to date).
+	UCrossguardPartySubsystem* Parties = NewObject<UCrossguardPartySubsystem>(NewObject<UGameInstance>(GetTransientPackage()));
 	const FString PartyId = TEXT("79594019a4ca06249b69e8b9fe785c55");
 	// An invite (live run's shape): Alice founded the party, Bob has her invite for 180 s.
 	const FString Invited = FString::Printf(TEXT("{\"result\":\"None\",\"party_id\":\"%s\",\"now_ms\":1792180158747,\"players\":{")

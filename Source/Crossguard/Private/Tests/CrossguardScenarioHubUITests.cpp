@@ -47,6 +47,21 @@ namespace CrossguardScenarioHubUI
 		return Controller != nullptr ? Cast<ACrossguardHUD>(Controller->GetHUD()) : nullptr;
 	}
 
+	// Empties the PIE player's inventory: it spawns with the Blueprint's Debug loadout (the owner's choice for
+	// manual play, e.g. rubies), which the scenario framework strips only from the characters it spawns.
+	void HubEmptyInventory(ACrossguardCharacter* Character)
+	{
+		UCrossguardInventoryComponent* Inventory = Character != nullptr ? Character->GetInventoryComponent() : nullptr;
+		if (Inventory != nullptr)
+		{
+			const TArray<FCrossguardInventoryItem> Items = Inventory->GetItems();
+			for (const FCrossguardInventoryItem& Item : Items)
+			{
+				Inventory->RemoveItem(Item.Id);
+			}
+		}
+	}
+
 	// The first inventory stack of ItemId (null id 0 when none).
 	FCrossguardInventoryItem HubStackOf(const UCrossguardInventoryComponent* Inventory, FName ItemId)
 	{
@@ -115,6 +130,7 @@ bool FCrossguardScenarioUIStashAndVendor::RunTest(const FString& Parameters)
 			return;
 		}
 		C.Place(Player, FVector(0.0f, CrossguardScenarioHubUI::HubRow, 0.0f), 0.0f);
+		CrossguardScenarioHubUI::HubEmptyInventory(Player);
 		C.Require(C.GiveItem(Player, CrossguardScenarioHubUI::HubPotion(), 2) == 0 && C.GiveItem(Player, CrossguardScenarioHubUI::HubRuby(), 3) == 0,
 			TEXT("the player's items fit"));
 		C.Require(C.SpawnActor<ACrossguardStashChest>(TEXT("Chest"), FVector(150.0f, CrossguardScenarioHubUI::HubRow, 0.0f)) != nullptr,
@@ -332,6 +348,7 @@ bool FCrossguardVisualHubUI::RunTest(const FString& Parameters)
 			return;
 		}
 		C.Place(Player, FVector(0.0f, CrossguardScenarioHubUI::HubRow, 0.0f), 0.0f);
+		CrossguardScenarioHubUI::HubEmptyInventory(Player);
 		C.Require(C.GiveItem(Player, CrossguardScenarioHubUI::HubPotion(), 4) == 0 && C.GiveItem(Player, CrossguardScenarioHubUI::HubRuby(), 3) == 0
 				&& C.GiveItem(Player, CrossguardScenarioHubUI::HubSapphire(), 1, ECrossguardRarity::Rare) == 0,
 			TEXT("the player's items fit"));

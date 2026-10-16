@@ -148,8 +148,10 @@ bool FCrossguardScenarioHubReturnLastExtraction::RunTest(const FString& Paramete
 			return;
 		}
 		C.Test.TestTrue(TEXT("The PIE player is in the raid"), C.PlayerState(Local)->IsInRaid());
+		// Unpossessing on extraction clears the pawn's player state: hold it first.
+		const ACrossguardPlayerState* RaiderState = C.PlayerState(Raider);
 		C.GameMode()->HandleExtraction(Raider);
-		C.Test.TestFalse(TEXT("The other raider extracted"), C.PlayerState(Raider)->IsInRaid());
+		C.Test.TestFalse(TEXT("The other raider extracted"), RaiderState->IsInRaid());
 		C.Test.TestFalse(TEXT("The PIE player is still in the raid: no countdown"), C.GameMode()->IsHubReturnPending());
 	});
 
