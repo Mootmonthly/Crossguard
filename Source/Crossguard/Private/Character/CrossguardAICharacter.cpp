@@ -9,6 +9,7 @@
 #include "Combat/CrossguardSpellProjectile.h"
 #include "Combat/CrossguardWeaponAttackAbility.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Crossguard.h"
 #include "CrossguardRules/Items.h"

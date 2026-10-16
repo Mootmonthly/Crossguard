@@ -24,11 +24,11 @@ ACrossguardMonsterController::ACrossguardMonsterController()
 
 bool ACrossguardMonsterController::IsValidTarget(const ACrossguardMonster& Monster, const AActor* Candidate) const
 {
-	const ACrossguardCharacter* Character = Cast<ACrossguardCharacter>(Candidate);
+	const ACrossguardCharacter* CandidateCharacter = Cast<ACrossguardCharacter>(Candidate);
 	const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Candidate);
 	// Players and their minions; never another monster or a monster's minion. Alive and not stealthed.
-	return Character != nullptr && Character != &Monster && !UCrossguardTeamLibrary::AreAllies(&Monster, Character)
-		&& (Character->IsPlayerControlled() || Character->IsA<ACrossguardMinion>()) && !Character->IsActorBeingDestroyed()
+	return CandidateCharacter != nullptr && CandidateCharacter != &Monster && !UCrossguardTeamLibrary::AreAllies(&Monster, CandidateCharacter)
+		&& (CandidateCharacter->IsPlayerControlled() || CandidateCharacter->IsA<ACrossguardMinion>()) && !CandidateCharacter->IsActorBeingDestroyed()
 		&& ASC != nullptr && !ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead) && !ASC->HasMatchingGameplayTag(CrossguardTags::State_Stealthed);
 }
 

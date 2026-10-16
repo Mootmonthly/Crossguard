@@ -43,7 +43,7 @@ All from the project folder in `cmd` or PowerShell (`.bat` wrappers call the `.p
    Exit 0 built, 2 failed (errors printed as `Source/...cpp:12: error C2065: ...`), 4 engine not
    found.
 
-3. **Fix loop**: read `Saved\Build\errors.txt`, fix the first error (later ones are often
+3. **Fix loop** (known risks and fixes: [first-compile-triage.md](first-compile-triage.md)): read `Saved\Build\errors.txt`, fix the first error (later ones are often
    consequences), rebuild with `Tools\build_editor.bat`, repeat until exit 0. Commit fixes with a
    clear message; do not change game rules to make something compile.
 
