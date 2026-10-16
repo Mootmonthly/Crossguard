@@ -1,4 +1,5 @@
-# Shared by Tools\build_editor.ps1 and Tools\editor_setup.ps1 (dot-sourced): engine location, the
+# Shared by Tools\build_editor.ps1, Tools\editor_setup.ps1, Tools\build_server.ps1 and
+# Tools\run_local_cluster.ps1 (dot-sourced): engine location, the
 # CrossguardEditor build with compact error output, the .uproject plugin check.
 # The engine lookup is the same as Tools\run_editor_tests.ps1's (kept separate there so that script
 # stays self-contained).
@@ -113,13 +114,19 @@ function Get-CgBuildErrors([string[]]$Lines, [switch]$Warnings) {
 # Builds CrossguardEditor Win64 Development with the engine's Build.bat. Returns a hashtable:
 # ExitCode, Seconds, Errors (compact list), Warnings (count), LiveCoding (bool).
 function Invoke-CgEditorBuild([string]$EngineRoot, [string]$LogFile) {
+    return (Invoke-CgTargetBuild $EngineRoot "CrossguardEditor" "Win64" "Development" $LogFile)
+}
+
+# Builds any Crossguard target (CrossguardEditor, CrossguardServer, Crossguard) for a platform and
+# configuration with the engine's Build.bat. Same result hashtable as Invoke-CgEditorBuild.
+function Invoke-CgTargetBuild([string]$EngineRoot, [string]$Target, [string]$Platform, [string]$Configuration, [string]$LogFile) {
     $buildBat = Join-Path $EngineRoot "Engine\Build\BatchFiles\Build.bat"
     $errLog = "$LogFile.stderr"
     New-Item -ItemType Directory -Force -Path (Split-Path $LogFile -Parent) | Out-Null
     Remove-Item -Path $LogFile, $errLog -Force -ErrorAction SilentlyContinue
     $start = Get-Date
     # cmd /c ""bat" args": cmd strips the outer quotes, so paths with spaces stay quoted.
-    $buildArgs = "/c `"`"$buildBat`" CrossguardEditor Win64 Development `"-Project=$($script:CgProjectFile)`" -WaitMutex`""
+    $buildArgs = "/c `"`"$buildBat`" $Target $Platform $Configuration `"-Project=$($script:CgProjectFile)`" -WaitMutex`""
     $proc = Start-Process -FilePath "cmd.exe" -ArgumentList $buildArgs -NoNewWindow -PassThru `
         -RedirectStandardOutput $LogFile -RedirectStandardError $errLog
     $null = $proc.Handle   # keeps ExitCode readable after exit (Windows PowerShell quirk)
@@ -135,6 +142,22 @@ function Invoke-CgEditorBuild([string]$EngineRoot, [string]$LogFile) {
         Errors     = (Get-CgBuildErrors $text)
         Warnings   = (Get-CgBuildErrors $text -Warnings).Count
         LiveCoding = [bool]($text -match "Live Coding")
+    }
+}
+
+# True for an engine installed by the Epic launcher (or any installed build): it has
+# Engine\Build\InstalledBuild.txt and cannot build Server targets. A source build has no such file.
+function Test-CgInstalledEngine([string]$EngineRoot) {
+    return (Test-Path (Join-Path $EngineRoot "Engine\Build\InstalledBuild.txt"))
+}
+
+# The engine version from Engine\Build\Build.version ("5.8.1"), "" if unreadable.
+function Get-CgEngineVersion([string]$EngineRoot) {
+    try {
+        $v = [System.IO.File]::ReadAllText((Join-Path $EngineRoot "Engine\Build\Build.version")) | ConvertFrom-Json
+        return "{0}.{1}.{2}" -f $v.MajorVersion, $v.MinorVersion, $v.PatchVersion
+    } catch {
+        return ""
     }
 }
 
