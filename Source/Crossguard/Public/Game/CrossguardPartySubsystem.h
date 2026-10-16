@@ -118,7 +118,8 @@ private:
 	// Raid launch: the checks (hub, leader), the request, and the end of an answered search.
 	ECrossguardPartyResult CheckRaidLaunch(ACrossguardPlayerState* Actor) const;
 	FCrossguardMatchRequest MakeMatchRequest(ACrossguardPlayerState* Actor) const;
-	ECrossguardPartyResult FinishRaidLaunch(const FString& ActorId, const FCrossguardMatchAssignment& Assignment);
+	// Actor null: they left the server meanwhile.
+	ECrossguardPartyResult FinishRaidLaunch(ACrossguardPlayerState* Actor, const FString& ActorId, const FCrossguardMatchAssignment& Assignment);
 	// A running raid search for the party (or the solo player) is called off: its membership changed.
 	void CancelSearch(const FString& PartyKey, const FString& PlayerId);
 	// A refusal that comes after the request returned (an asynchronous answer).

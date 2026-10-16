@@ -519,10 +519,11 @@ ECrossguardPartyResult UCrossguardPartySubsystem::StartRaid(ACrossguardPlayerSta
 	const FString ActorId = IdOf(Actor);
 	const TSharedRef<FLaunchAnswer> Answer = MakeShared<FLaunchAnswer>();
 	TWeakObjectPtr<UCrossguardPartySubsystem> WeakThis(this);
-	Matchmaking->GetMatchmaking().RequestMatch(Actor->GetWorld(), Request, [WeakThis, ActorId, Answer](const FCrossguardMatchAssignment& Assignment)
+	TWeakObjectPtr<ACrossguardPlayerState> WeakActor(Actor);
+	Matchmaking->GetMatchmaking().RequestMatch(Actor->GetWorld(), Request, [WeakThis, WeakActor, ActorId, Answer](const FCrossguardMatchAssignment& Assignment)
 	{
 		UCrossguardPartySubsystem* Self = WeakThis.Get();
-		Answer->Result = Self != nullptr ? Self->FinishRaidLaunch(ActorId, Assignment) : ECrossguardPartyResult::TravelFailed;
+		Answer->Result = Self != nullptr ? Self->FinishRaidLaunch(WeakActor.Get(), ActorId, Assignment) : ECrossguardPartyResult::TravelFailed;
 		Answer->bAnswered = true;
 		if (Answer->bReturned && Self != nullptr && Answer->Result != ECrossguardPartyResult::None)
 		{
@@ -542,15 +543,14 @@ ECrossguardPartyResult UCrossguardPartySubsystem::StartRaid(ACrossguardPlayerSta
 	return ECrossguardPartyResult::None;
 }
 
-ECrossguardPartyResult UCrossguardPartySubsystem::FinishRaidLaunch(const FString& ActorId, const FCrossguardMatchAssignment& Assignment)
+ECrossguardPartyResult UCrossguardPartySubsystem::FinishRaidLaunch(ACrossguardPlayerState* Actor, const FString& ActorId, const FCrossguardMatchAssignment& Assignment)
 {
-	UWorld* World = GetServerWorld();
-	ACrossguardPlayerState* Actor = FindOnline(World, ActorId);
-	if (Actor == nullptr)
+	if (Actor == nullptr || Actor->IsActorBeingDestroyed() || Actor->GetWorld() == nullptr)
 	{
 		UE_LOG(LogCrossguard, Warning, TEXT("Raid launch for %s answered after they left the server"), *ActorId);
 		return ECrossguardPartyResult::NoPlayer;
 	}
+	UWorld* World = Actor->GetWorld();
 	ECrossguardRaidTravel Mode = ECrossguardRaidTravel::NoDestination;
 	FString Url;
 	if (const ECrossguardPartyResult Planned = PlanRaidTravelWith(Actor, Assignment, Mode, Url); Planned != ECrossguardPartyResult::None)
