@@ -167,6 +167,13 @@ public:
 	// The placeholder cylinder (tests: hidden once a mesh from data is on).
 	UStaticMeshComponent* GetPlaceholderMesh() const { return PlaceholderMesh; }
 
+	// The state animation playing on the body (BodyVisual's Idle / Move / Attack / Death); null when
+	// none plays (no state animations, an Anim Blueprint, a dedicated server). Tests.
+	const UAnimSequenceBase* GetPlayingBodyAnim() const { return PlayingBodyAnim.Get(); }
+
+	// Picks and plays the state animation now (normally every BodyAnimInterval seconds).
+	void UpdateBodyAnimation();
+
 private:
 	UFUNCTION()
 	void OnRep_BodyVisual();
@@ -179,6 +186,16 @@ private:
 	// Seconds between attacks after Action Speed.
 	float ActionSpeedInterval(float Seconds) const;
 	void ShootArrow(AActor* Target, const FGameplayEffectSpecHandle& Spec, const FCrossguardAttackRiders& Riders);
+
+	// State animations (FCrossguardBodyVisual): started by ApplyBodyVisual on machines that draw it.
+	void StartBodyAnimations();
+	void HandleBodyAttackStarted(ACrossguardCharacter* Character, const FCrossguardAttackCue& Cue);
+	UPROPERTY(Transient)
+	TObjectPtr<UAnimSequenceBase> PlayingBodyAnim;
+	FTimerHandle BodyAnimTimer;
+	FDelegateHandle BodyAttackHandle;
+	// World time until which the attack animation plays.
+	double BodyAttackUntil = 0.0;
 
 	double NextAttackTime = 0.0;
 	double NextSkillCheckTime = 0.0;

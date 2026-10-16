@@ -21,6 +21,7 @@
 #include "TimerManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Animation/AnimInstance.h"
+#include "Animation/AnimSequenceBase.h"
 #include "Engine/SkeletalMesh.h"
 #include "Net/UnrealNetwork.h"
 #include "Skills/CrossguardDataPassiveAbility.h"
@@ -117,6 +118,88 @@ void ACrossguardAICharacter::ApplyBodyVisual()
 		FVector(0.0f, 0.0f, -HalfHeight) + BodyVisual.MeshOffset, FVector(FMath::Max(BodyVisual.MeshScale, 0.01f))));
 	BodyMeshComponent->SetVisibility(true);
 	PlaceholderMesh->SetVisibility(false);
+	if (BodyVisual.AnimClass.IsNull() && BodyVisual.HasStateAnimations())
+	{
+		StartBodyAnimations();
+	}
+}
+
+namespace CrossguardAIBodyAnims
+{
+	// How often the state animation is picked (placeholder).
+	constexpr float BodyAnimInterval = 0.1f;
+	// Horizontal speed (cm/s) above which the move animation plays (placeholder).
+	constexpr float BodyMoveSpeed = 20.0f;
+}
+
+void ACrossguardAICharacter::StartBodyAnimations()
+{
+	UWorld* World = GetWorld();
+	// Nothing to look at on a dedicated server.
+	if (World == nullptr || IsNetMode(NM_DedicatedServer) || GetMesh() == nullptr)
+	{
+		return;
+	}
+	GetMesh()->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+	PlayingBodyAnim = nullptr;
+	if (!BodyAttackHandle.IsValid())
+	{
+		BodyAttackHandle = OnAttackStartedNative.AddUObject(this, &ACrossguardAICharacter::HandleBodyAttackStarted);
+	}
+	World->GetTimerManager().SetTimer(BodyAnimTimer, this, &ACrossguardAICharacter::UpdateBodyAnimation, CrossguardAIBodyAnims::BodyAnimInterval, true);
+	UpdateBodyAnimation();
+}
+
+void ACrossguardAICharacter::HandleBodyAttackStarted(ACrossguardCharacter* Character, const FCrossguardAttackCue& Cue)
+{
+	UAnimSequenceBase* Attack = BodyVisual.AttackAnim.LoadSynchronous();
+	const UWorld* World = GetWorld();
+	if (Attack == nullptr || World == nullptr || !IsAlive())
+	{
+		return;
+	}
+	BodyAttackUntil = World->GetTimeSeconds() + Attack->GetPlayLength();
+	// Restarts it for back-to-back attacks.
+	PlayingBodyAnim = nullptr;
+	UpdateBodyAnimation();
+}
+
+void ACrossguardAICharacter::UpdateBodyAnimation()
+{
+	USkeletalMeshComponent* BodyMeshComponent = GetMesh();
+	const UWorld* World = GetWorld();
+	if (BodyMeshComponent == nullptr || World == nullptr || !BodyVisual.AnimClass.IsNull())
+	{
+		return;
+	}
+	UAnimSequenceBase* Wanted = nullptr;
+	bool bLoop = true;
+	if (!IsAlive())
+	{
+		Wanted = BodyVisual.DeathAnim.LoadSynchronous();
+		bLoop = false;
+		// The last pose stays: nothing changes after death.
+		World->GetTimerManager().ClearTimer(BodyAnimTimer);
+	}
+	else if (World->GetTimeSeconds() < BodyAttackUntil && !BodyVisual.AttackAnim.IsNull())
+	{
+		Wanted = BodyVisual.AttackAnim.LoadSynchronous();
+		bLoop = false;
+	}
+	else if (GetVelocity().Size2D() > CrossguardAIBodyAnims::BodyMoveSpeed && !BodyVisual.MoveAnim.IsNull())
+	{
+		Wanted = BodyVisual.MoveAnim.LoadSynchronous();
+	}
+	else
+	{
+		Wanted = BodyVisual.IdleAnim.LoadSynchronous();
+	}
+	if (Wanted == nullptr || Wanted == PlayingBodyAnim)
+	{
+		return;
+	}
+	PlayingBodyAnim = Wanted;
+	BodyMeshComponent->PlayAnimation(Wanted, bLoop);
 }
 
 void ACrossguardAICharacter::NotifyAIAttack(ECrossguardAttackKind Kind, float Duration, FName SkillId)

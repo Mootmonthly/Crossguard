@@ -75,6 +75,9 @@ ART_SPEC = {
     "meshScale": (positive, "number > 0"),
     "meshOffset": (triple, "[x, y, z] in meters"),
     "meshYaw": (is_num, "number (degrees)"),
+    "animations": (lambda v: isinstance(v, dict) and bool(v) and set(v) <= {"idle", "move", "attack", "death"}
+                   and all(isinstance(p, str) and bool(ASSET_PATH_RE.match(p)) for p in v.values()),
+                   "an object of animation paths: idle, move, attack, death (each optional)"),
 }
 
 
@@ -122,7 +125,7 @@ def validate(mobs):
             else:
                 err(f"unknown field '{name}'")
         if "mesh" not in mob and any(name in mob for name in ART_SPEC):
-            err("art fields (animBlueprint, meshScale, meshOffset, meshYaw) need a mesh")
+            err("art fields (animBlueprint, meshScale, meshOffset, meshYaw, animations) need a mesh")
         if isinstance(mob.get("id"), str):
             if mob["id"] in ids:
                 err("duplicate id")

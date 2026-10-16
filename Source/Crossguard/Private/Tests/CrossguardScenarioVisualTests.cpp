@@ -12,6 +12,7 @@
 
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "Character/CrossguardCharacter.h"
+#include "Character/CrossguardMobRow.h"
 #include "Character/CrossguardMonster.h"
 #include "Engine/DataTable.h"
 #include "Game/CrossguardGameMode.h"
@@ -556,6 +557,77 @@ bool FCrossguardVisualUI::RunTest(const FString& Parameters)
 		}
 	});
 
+	Scenario.Run();
+	return true;
+}
+
+// Every mob of the data with a mesh in a row facing the camera: standing alone (state animations:
+// idle); then a player at the left end (size), and 3 s later they go for it (move, attack; friendly
+// fire may kill one: death). The mithril dragon on its own. Checks nothing visual itself: look at the
+// pictures (scale, facing, pose).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardVisualMobArt, "Crossguard.Visual.MobArt", CROSSGUARD_VISUAL_FLAGS)
+
+bool FCrossguardVisualMobArt::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioVisual;
+
+	static const FVector RowStart(0.0f, 8000.0f, 0.0f);
+	static const FVector DragonSpot(4000.0f, 8000.0f, 0.0f);
+	static const FVector ArmedSpot(-5000.0f, 2000.0f, 0.0f);
+	constexpr float Spacing = 350.0f;
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("Every mob with a mesh in a row"), [](FScenarioContext& C)
+	{
+		const UDataTable* Mobs = C.GameMode() != nullptr ? C.GameMode()->MobTable.Get() : nullptr;
+		if (!C.Require(Mobs != nullptr, TEXT("the game mode's Mob Table")))
+		{
+			return;
+		}
+		int32 Placed = 0;
+		for (const FName MobId : Mobs->GetRowNames())
+		{
+			const FCrossguardMobRow* Row = Mobs->FindRow<FCrossguardMobRow>(MobId, TEXT("MobArt"), false);
+			if (Row == nullptr || Row->Mesh.IsNull())
+			{
+				continue;
+			}
+			const bool bDragon = MobId == FName(TEXT("mithril_dragon"));
+			const FVector Spot = bDragon ? DragonSpot : RowStart + FVector(0.0f, Spacing * static_cast<float>(++Placed), 0.0f);
+			C.Test.TestNotNull(*FString::Printf(TEXT("%s spawned"), *MobId.ToString()), C.SpawnMonster(MobId, MobId, Spot, 180.0f));
+		}
+		C.Test.TestTrue(TEXT("some mob has a mesh"), Placed > 0);
+		C.SetNumber(TEXT("Placed"), Placed);
+		const float Middle = Spacing * static_cast<float>(Placed) * 0.5f;
+		C.LookFrom(RowStart + FVector(-Middle * 1.2f - 300.0f, Middle, EyeHeight), RowStart + FVector(0.0f, Middle, 90.0f));
+	});
+	Scenario.Wait(SettleSeconds + 0.5f);
+	Scenario.Step(TEXT("lineup.png; then a player at the left end"), [](FScenarioContext& C)
+	{
+		C.Screenshot(TEXT("lineup"));
+		C.SpawnPlayer(TEXT("Player"), RowStart, 180.0f);
+		// Sword and shield in hand, out of the monsters' reach: how the weapon meshes sit (third person).
+		if (ACrossguardCharacter* Armed = C.SpawnPlayer(TEXT("Armed"), ArmedSpot, 180.0f))
+		{
+			C.Equip(Armed, TEXT("sword_one_handed"));
+			C.Equip(Armed, TEXT("shield_one_handed"), ECrossguardEquipmentSlot::OffHand);
+		}
+	});
+	Scenario.Wait(3.0f);
+	Scenario.Step(TEXT("lineup_action.png; then the dragon"), [](FScenarioContext& C)
+	{
+		C.Screenshot(TEXT("lineup_action"));
+		C.LookFrom(DragonSpot + FVector(-2200.0f, 0.0f, 500.0f), DragonSpot + FVector(0.0f, 0.0f, 400.0f));
+	});
+	Scenario.Wait(SettleSeconds + 0.5f);
+	Scenario.Step(TEXT("dragon.png; then the armed player"), [](FScenarioContext& C)
+	{
+		C.Screenshot(TEXT("dragon"));
+		C.LookFrom(ArmedSpot + FVector(-220.0f, 120.0f, 140.0f), ArmedSpot + FVector(0.0f, 0.0f, 100.0f));
+	});
+	Scenario.Wait(SettleSeconds + 0.5f);
+	Scenario.Step(TEXT("weapons.png"), [](FScenarioContext& C) { C.Screenshot(TEXT("weapons")); });
 	Scenario.Run();
 	return true;
 }

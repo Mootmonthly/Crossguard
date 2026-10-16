@@ -8,6 +8,7 @@
 #include "CrossguardCosmetics.generated.h"
 
 class UAnimInstance;
+class UAnimSequenceBase;
 class UNiagaraComponent;
 class UNiagaraSystem;
 class USceneComponent;
@@ -126,7 +127,23 @@ struct CROSSGUARD_API FCrossguardBodyVisual
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body")
 	float MeshYaw = -90.0f;
 
+	// Without AnimClass: animations played by state (ACrossguardAICharacter, single-node mode). Idle
+	// and Move loop (Move above a walking speed); Attack plays once per attack; Death once, holding
+	// its last pose (a Physics Asset's ragdoll takes over where there is one). Each optional.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body")
+	TSoftObjectPtr<UAnimSequenceBase> IdleAnim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body")
+	TSoftObjectPtr<UAnimSequenceBase> MoveAnim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body")
+	TSoftObjectPtr<UAnimSequenceBase> AttackAnim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body")
+	TSoftObjectPtr<UAnimSequenceBase> DeathAnim;
+
 	bool HasMesh() const { return !Mesh.IsNull(); }
+	bool HasStateAnimations() const { return !IdleAnim.IsNull() || !MoveAnim.IsNull() || !AttackAnim.IsNull() || !DeathAnim.IsNull(); }
 };
 
 // Playing the soft references. All of them do nothing for an empty reference, without a world, and on

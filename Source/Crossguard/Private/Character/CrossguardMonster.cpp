@@ -90,6 +90,10 @@ void ACrossguardMonster::ApplyMobData()
 		BodyVisual.MeshScale = Row->MeshScale;
 		BodyVisual.MeshOffset = Row->MeshOffset;
 		BodyVisual.MeshYaw = Row->MeshYaw;
+		BodyVisual.IdleAnim = Row->IdleAnim;
+		BodyVisual.MoveAnim = Row->MoveAnim;
+		BodyVisual.AttackAnim = Row->AttackAnim;
+		BodyVisual.DeathAnim = Row->DeathAnim;
 		ApplyBodyVisual();
 	}
 }

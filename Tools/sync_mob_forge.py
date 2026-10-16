@@ -36,7 +36,7 @@ TOOLS = REPO / "Tools"
 # Field order of Mobs.json (docs/mob-data-schema.md); the forge's database returns keys sorted.
 FIELD_ORDER = ["id", "name", "kind", "combatRole", "weapon", "health", "attackDamage", "attackInterval", "attackRange",
                "fireballInterval", "keepDistance", "aggroRange", "leashRange", "moveSpeed", "scale", "skills", "loot",
-               "mesh", "animBlueprint", "meshScale", "meshOffset", "meshYaw", "description", "notes"]
+               "mesh", "animBlueprint", "meshScale", "meshOffset", "meshYaw", "animations", "description", "notes"]
 LOOT_ORDER = ["rolls", "nothingWeight", "rarityWeights", "entries"]
 RARITY_ORDER = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Mystic"]
 ENTRY_ORDER = ["kind", "id", "armorType", "weight", "count"]

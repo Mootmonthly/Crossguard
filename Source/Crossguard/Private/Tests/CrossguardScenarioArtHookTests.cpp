@@ -318,4 +318,60 @@ bool FCrossguardScenarioArtMobMesh::RunTest(const FString& Parameters)
 	return true;
 }
 
+// A mob row's state animations (Data/Mobs/Mobs.json `animations`) play without an Anim Blueprint:
+// idle while it stands, the attack when an attack starts, death once it dies.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioArtMobStateAnims, "Crossguard.Scenario.Art.MobStateAnimations", CROSSGUARD_SCENARIO_FLAGS)
+bool FCrossguardScenarioArtMobStateAnims::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioArtHooks;
+	FScenario Scenario(*this);
+	Scenario.Step(TEXT("A mob with idle, attack and death animations from data stands"), [](FScenarioContext& C)
+	{
+		UDataTable* Mobs = C.GameMode() != nullptr ? C.GameMode()->MobTable.Get() : nullptr;
+		if (!C.Require(Mobs != nullptr, TEXT("the game mode's Mob Table")))
+		{
+			return;
+		}
+		FName MobId;
+		for (const FName RowName : Mobs->GetRowNames())
+		{
+			const FCrossguardMobRow* Row = Mobs->FindRow<FCrossguardMobRow>(RowName, TEXT("ArtTest"), false);
+			if (Row != nullptr && Row->AnimClass.IsNull() && !Row->IdleAnim.IsNull() && !Row->AttackAnim.IsNull() && !Row->DeathAnim.IsNull()
+				&& Row->IdleAnim.LoadSynchronous() != nullptr)
+			{
+				MobId = RowName;
+				break;
+			}
+		}
+		if (MobId.IsNone())
+		{
+			C.Skip(TEXT("no mob row with idle, attack and death animations (or the art is not in the project)"));
+			return;
+		}
+		// Far from the PIE player (out of aggro range): it stands.
+		C.SpawnMonster(TEXT("Monster"), MobId, FVector(0.0f, -5000.0f, 0.0f));
+	});
+	Scenario.Wait(0.3f);
+	Scenario.Step(TEXT("Idle, then an attack starts: the attack animation"), [](FScenarioContext& C)
+	{
+		ACrossguardMonster* Monster = C.Get<ACrossguardMonster>(TEXT("Monster"));
+		const FCrossguardMobRow* Row = Monster != nullptr ? C.GameMode()->MobTable->FindRow<FCrossguardMobRow>(Monster->MobId, TEXT("ArtTest"), false) : nullptr;
+		if (!C.Require(Monster != nullptr && Row != nullptr, TEXT("monster and its row")))
+		{
+			return;
+		}
+		C.Test.TestTrue(TEXT("standing: idle"), Monster->GetPlayingBodyAnim() == Row->IdleAnim.Get());
+		FCrossguardAttackCue Cue;
+		Cue.Kind = ECrossguardAttackKind::Melee;
+		Monster->OnAttackStartedNative.Broadcast(Monster, Cue);
+		C.Test.TestTrue(TEXT("attacking: the attack animation"), Monster->GetPlayingBodyAnim() == Row->AttackAnim.Get());
+		C.Kill(Monster);
+		Monster->UpdateBodyAnimation();
+		C.Test.TestTrue(TEXT("dead: the death animation"), Monster->GetPlayingBodyAnim() == Row->DeathAnim.Get());
+	});
+	Scenario.Run();
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

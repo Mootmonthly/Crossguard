@@ -53,6 +53,11 @@ def row(mob, weapons):
         "MeshScale": mob.get("meshScale", 1),
         "MeshOffset": {k: round(v * 100, 3) for k, v in zip(("X", "Y", "Z"), mob.get("meshOffset", [0, 0, 0]))},
         "MeshYaw": mob.get("meshYaw", -90),
+        # State animations without an Anim Blueprint (`animations`: idle, move, attack, death).
+        "IdleAnim": mob.get("animations", {}).get("idle", ""),
+        "MoveAnim": mob.get("animations", {}).get("move", ""),
+        "AttackAnim": mob.get("animations", {}).get("attack", ""),
+        "DeathAnim": mob.get("animations", {}).get("death", ""),
     }
 
 

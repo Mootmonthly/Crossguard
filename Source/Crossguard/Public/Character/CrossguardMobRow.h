@@ -8,6 +8,7 @@
 #include "CrossguardMobRow.generated.h"
 
 class UAnimInstance;
+class UAnimSequenceBase;
 class USkeletalMesh;
 
 UENUM(BlueprintType)
@@ -119,4 +120,18 @@ struct CROSSGUARD_API FCrossguardMobRow : public FTableRowBase
 	// Art (`meshYaw`): degrees; -90 for meshes facing +Y (the UE mannequin).
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob|Art")
 	float MeshYaw = -90.0f;
+
+	// Art (`animations`: `idle`, `move`, `attack`, `death`): played by state without an Anim Blueprint
+	// (FCrossguardBodyVisual).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob|Art")
+	TSoftObjectPtr<UAnimSequenceBase> IdleAnim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob|Art")
+	TSoftObjectPtr<UAnimSequenceBase> MoveAnim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob|Art")
+	TSoftObjectPtr<UAnimSequenceBase> AttackAnim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob|Art")
+	TSoftObjectPtr<UAnimSequenceBase> DeathAnim;
 };

@@ -45,6 +45,7 @@ the replicated `ACrossguardAICharacter::BodyVisual`), so one spawner can mix mob
 | `meshScale` | number > 0 | The mesh's own scale, on top of `scale` (default 1). Fit a model to the capsule. |
 | `meshOffset` | `[x, y, z]` meters | From the capsule's bottom centre (default `[0, 0, 0]`). Exported in cm. |
 | `meshYaw` | number | Degrees (default -90: meshes facing +Y, like the UE mannequin; 0 for meshes facing +X). |
+| `animations` | object | Without `animBlueprint`: animation sequences played by state, each optional: `idle` and `move` loop (move while it walks), `attack` once per attack, `death` once, holding its last pose. Paths like `/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Idle.Rig_Medium_SpecialSkeletons_Idle`. Exported as `IdleAnim`, `MoveAnim`, `AttackAnim`, `DeathAnim`. |
 
 The capsule is not resized to the mesh: size a mob with `scale`. Minions take the same settings from
 their summon ability (`WarriorVisual` / `MageVisual` on Summon Skeletons, `CompanionVisual` on Summon
