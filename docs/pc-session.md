@@ -123,3 +123,13 @@ hand** column of [editor-tests.md](editor-tests.md#checklist-coverage)):
   `BP_CrossguardCharacter` (**Crossguard | Debug**: DebugInventory, DebugMainHand, …: the user's
   choice for manual play, not set by the script).
 - NavMesh pathing (summons following, monsters walking round obstacles), the `mithril_dragon` fight.
+
+## Open follow-ups for the next PC session
+
+- Rebuild and rerun the tests: `State.Dragonified` is now granted only by Dragonification's stats effect
+  (5.8 warned about mixed replication); `GameplayCueNotifyPaths=/Game/GameplayCues` is set.
+- `CrossguardCooldownEffect` "grants no tags" warning: cooldown tags are added per cast, so it is noise.
+  If it is worth silencing, give the effect class a target-tags component with a harmless parent tag
+  (e.g. `Cooldown`) — compile and rerun the cooldown tests after.
+- Ask the owner before deleting `test+new.umap` / `L_Test.umap` or touching the Android File Server
+  `SecurityToken` in `DefaultEngine.ini`.

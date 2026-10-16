@@ -216,8 +216,8 @@ UCrossguardDragonificationAbility::UCrossguardDragonificationAbility()
 	SkillCategory = ECrossguardSkillCategory::Art;
 	BaseCooldownSeconds = 180.0f;
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_Dragonification);
-	// Predicted locally; the stats effect carries the tag to everyone else.
-	ActivationOwnedTags.AddTag(CrossguardTags::State_Dragonified);
+	// State.Dragonified comes only from the stats effect (granting it from ActivationOwnedTags as well
+	// made UE 5.8 warn about mixed tag replication). The server refuses blocked activations anyway.
 	FlareBreathClass = UCrossguardFlareBreathAbility::StaticClass();
 	FlightClass = UCrossguardFlightAbility::StaticClass();
 }
