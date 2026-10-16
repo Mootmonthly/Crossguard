@@ -308,15 +308,13 @@ func (c *cluster) RpcMatchStatus(ctx context.Context, logger runtime.Logger, db 
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	at := nowMs()
-	if existing, ok := q.requests[request.RequestID]; ok {
-		existing.PolledAtMs = at
-	}
 	q.cleanLocked(at)
-	c.formMatchesLocked(ctx, logger, nk, at)
 	existing, ok := q.requests[request.RequestID]
 	if !ok {
 		return "", errUnknownRequest
 	}
+	existing.PolledAtMs = at
+	c.formMatchesLocked(ctx, logger, nk, at)
 	out, _ := json.Marshal(existing.status(at))
 	return string(out), nil
 }
