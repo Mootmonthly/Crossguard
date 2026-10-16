@@ -29,6 +29,9 @@ In `Content/Data/` (right-click → **Reimport** for existing ones):
 
 On `BP_CrossguardCharacter`, select **InventoryComponent** and set **Item Table** to `DT_Items`.
 
+Reimport `DT_Items` and `DT_Loot` for the gathering materials (`herb_*`, `ore_*`) and the `gather_herb` /
+`gather_ore` tables.
+
 Loot: import `Data/Loot/LootTable.json` as `DT_Loot` (row struct `CrossguardLootTableRow`). On
 `BP_CrossguardGameMode` → **Crossguard | Loot**, set Loot Tables `DT_Loot`, Weapon / Armor / Affix /
 Item tables (`DT_Weapons`, `DT_Armor`, `DT_Affixes`, `DT_Items`) and Skill Catalog `DA_SkillCatalog`.
@@ -120,6 +123,8 @@ Skills: put them in `DebugSkills` (Skill Capacity permitting; raise `Level` with
 | Guilds (2 clients, game mode `bIsRaid` off for the bank): client 1 `GuildCreate "Night Watch"`, `GuildInviteNearest`; client 2 `GuildAccept`; client 1 `GuildInfo`, `TradeItems`, `GuildDeposit <id>`; client 2 `GuildInfo`, `GuildWithdraw <slot>` | The log shows the guild, both members and the stack moving; client 2 (Member) is refused the withdrawal (NotPermitted) until client 1 runs `GuildRank <their id> Officer`. |
 | `summon_tiger` without a `pet_gem_tiger` in the inventory | Refused; with one (DebugInventory), it works and the gem stays. |
 | `spear_two_handed` as `DebugMainHand` | Hits for 33 once every 1.2 s; `triple_thrust` works. |
+| Place an `ACrossguardGatherNode` (Place Actors, search "Gather Node") with Loot Table Id `gather_herb` (another with `gather_ore`), press F at it and stand still | After 2 s: 1–3 herbs (Silverleaf or Bloodroot) in your inventory, +10 raid XP, the node (a sphere) disappears. F at the spot again: refused ("depleted" in the log). Reimport `DT_Items` and `DT_Loot` first (new materials and `gather_*` tables). |
+| Press F at a gather node, then walk, attack or get hit before 2 s | The channel breaks (log: "interrupted: moved" / "attacked" / "took damage"): no materials, no XP, the node stays. |
 
 Passive skills: put `heroic_might` (or a mastery) in `DebugSkills` and check
 `showdebug abilitysystem`: Strength +10 (masteries only while their weapon is held).

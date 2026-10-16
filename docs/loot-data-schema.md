@@ -1,6 +1,7 @@
 # Loot Data Schema
 
-`Data/Loot/LootTables.json` is the source of truth for what monsters drop and chests hold.
+`Data/Loot/LootTables.json` is the source of truth for what monsters drop, chests hold and
+gathering nodes yield.
 `Tools/validate_loot.py` checks it (every id must exist in the weapon, armor, item or skill data);
 `Tools/export_loot_table.py` writes `Data/Loot/LootTable.json` for Unreal (row struct
 `CrossguardLootTableRow`). Both run in `Tools/run_checks.sh`.
@@ -41,3 +42,10 @@ For each drop: pick an entry (or nothing) by weight, then:
   with no rarity never drop this way.
 
 The same seed always gives the same loot (Crossguard::RollLoot, unit tested).
+
+## Gathering tables
+
+Gathering nodes (`ACrossguardGatherNode`, `LootTableId`) roll their table once when a gather
+completes, into the gatherer's inventory. `gather_herb` (Silverleaf ×1–3 weight 3, Bloodroot ×1–2
+weight 1) and `gather_ore` (Iron Ore ×1–3 weight 3, Mithril Ore ×1 weight 1): `rolls` [1, 1],
+`nothingWeight` 0 (a node never yields nothing), all Common. Placeholders like every table.

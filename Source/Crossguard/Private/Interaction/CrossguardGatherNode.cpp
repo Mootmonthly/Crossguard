@@ -101,7 +101,8 @@ float ACrossguardGatherNode::GetGatherProgress() const
 	{
 		return 1.0f;
 	}
-	return FMath::Clamp((GetWorld()->GetTimeSeconds() - GatherStartTime) / GatherSeconds, 0.0f, 1.0f);
+	const float Elapsed = static_cast<float>(GetWorld()->GetTimeSeconds() - GatherStartTime);
+	return FMath::Clamp(Elapsed / GatherSeconds, 0.0f, 1.0f);
 }
 
 void ACrossguardGatherNode::Interact(ACrossguardCharacter* User)

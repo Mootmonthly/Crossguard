@@ -151,7 +151,7 @@ damage is computed from the characters' actual stats, so they work at any level.
 
 ### The scenarios
 
-92 tests in 10 files. Grouped by file; the name is the full test name.
+95 tests in 12 files. Grouped by file; the name is the full test name.
 
 **`CrossguardScenarioRaidTests.cpp`**
 
@@ -179,6 +179,13 @@ damage is computed from the characters' actual stats, so they work at any level.
 | `Crossguard.Scenario.Raid.DoorOpenClose` | F snaps a closed door open, F again closes it. |
 | `Crossguard.Scenario.Raid.LockedDoor` | Locked: F does nothing without a lockpick ("no lockpick" logged); with `Ability.Lockpicking` it opens after the lockpicking time; a lockpick item works too and is used up only when the lock opens. |
 | `Crossguard.Scenario.Raid.DropAndPickUp` | G drops the readied potion stack as an `ACrossguardWorldItem` about 1.5 m ahead on the floor; F picks all 3 back up and the box goes. |
+
+**`CrossguardScenarioGatheringTests.cpp`**
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Raid.GatherNode` | A native `ACrossguardGatherNode` (`gather_herb`, default 2 s, once per raid) 1.5 m ahead: F starts the channel; standing still, after 2 s at least one herb is in the inventory, raid XP +10 (`GatherNode`), the node is depleted and "gathered" logged; F again is refused ("depleted"), and no more herbs or XP follow. Skipped without `gather_herb` in `DT_Loot` or `herb_silverleaf` in `DT_Items`. |
+| `Crossguard.Scenario.Raid.GatherNodeMoveInterrupts` | F at a `gather_ore` node, then the player is moved 1 m aside 0.5 s in: "interrupted: moved", nobody gathering; 2.5 s later no ore, no raid XP, the node not depleted. Skipped without the data like `GatherNode`. |
 
 **`CrossguardScenarioSkillTests.cpp`**
 
@@ -357,6 +364,8 @@ server-side players in one standalone PIE, not real clients.
 | 4 `multiscale` with a party member | auto | `Skills.Multiscale` | — |
 | 4 `hunters_tracking` grey marks | part | `Skills.HuntersTracking` | The marks on a real client's screen. |
 | 4 Drop with G, pick up with F | auto | `Raid.DropAndPickUp` | The box's look. |
+| 4 Gather node: 2 s, herbs, +10 XP, depleted, refused again | auto | `Raid.GatherNode` | The node's mesh hiding. |
+| 4 Gather node: walking, attacking or damage breaks the channel | part | `Raid.GatherNodeMoveInterrupts` | Attacking and taking damage (rules unit tested: `CheckGatherInterrupt`). |
 | 4 `summon_skeletons` | part | `Skills.SummonSkeletons` | Following you; NavMesh pathing. |
 | 4 `summon_tiger` leap, riders, hits for 20 | part | `Skills.SummonTiger` | Leap, the +7 / +10 Magic riders (only "it hits" is checked). |
 | 4 `summon_greater_demon` | part | `Skills.SummonGreaterDemon` | Raising Eldritch Shield, its 40 hits with riders in a fight. |

@@ -262,6 +262,27 @@ point of interest instead of only using fixed extraction points. Ruled details:
 - A collapsed portal still uses up the player's one summon for the raid.
 - Summoning is on X for now.
 
+## Gathering
+
+Herb and ore nodes placed in raid maps (`ACrossguardGatherNode`). Ruled: gathering a node gives
+**10 XP** (`FXpConfig::GatherNode`; in a raid it is held until extraction like all raid XP).
+Everything else is a placeholder until ruled; the numbers live in `Crossguard::FGatherConfig`
+(`CrossguardRules/Gathering.h`) and on each placed node, the yields in `Data/Loot/LootTables.json`:
+
+- F at a node starts a **2 s channel** (placeholder). It breaks if the gatherer moves more than
+  30 cm (placeholder slack), takes any damage, attacks or uses a skill or the guard (any non-passive
+  ability), dies, or leaves the node's 2.5 m interact range. F at the node again stops it. One
+  gatherer at a time (placeholder). Throwing an item is not an ability and does not break it yet.
+- On completion the node's **loot table** is rolled into the gatherer's inventory: `gather_herb`
+  (Silverleaf ×1–3 or Bloodroot ×1–2) and `gather_ore` (Iron Ore ×1–3 or Mithril Ore ×1), one roll,
+  never nothing, always Common (placeholder weights and counts). What does not fit drops on the
+  ground at the node, like a dropped stack (placeholder).
+- The node is then **depleted** (its mesh hides) for the rest of the raid: `RespawnSeconds` 0 =
+  once per raid (placeholder). A node with `RespawnSeconds` > 0 comes back after that long.
+- **Materials** (placeholder): Silverleaf, Bloodroot, Iron Ore, Mithril Ore, category Material,
+  1 × 1, stack 20 (materials stack size is not ruled), sell 5 / 10 / 5 / 15 gold, nothing extra per
+  rarity. They are for crafting, which is not designed yet.
+
 ## Controls
 
 | Key | Action |

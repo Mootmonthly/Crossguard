@@ -84,7 +84,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Loot tables | Decision | Built: `Data/Loot/LootTables.json` (monsters, bosses, chests) with placeholder drop rates and rarity weights. Needs real numbers. |
 | Lockpicking skill | Editor | Lockpicking and the lockpick item are built; the skill comes from the Skill Forge (grant `Ability.Lockpicking`). |
 | Doors in maps | Editor | `ACrossguardDoor` needs a mesh and placing; it snaps open until it is animated. |
-| Gathering nodes | Code, Editor | Herbs and ore, 10 XP per node; materials stack size not ruled. |
+| Gathering nodes | Editor, Decision | Built in code: `ACrossguardGatherNode` (F, 2 s channel broken by moving, damage or attacking; rolls `gather_herb` / `gather_ore` into the inventory; 10 XP; depleted once per raid). Four placeholder materials (herbs, ores). Needs meshes (herb, ore Blueprints) and placing in maps; channel time, respawn, yields and materials stack size are placeholders. |
 | Raid maps | Editor | PCG plugin is enabled. |
 | Quests | Decision, Code | 10–100 XP each. |
 
@@ -122,7 +122,7 @@ Decisions that block items above. Answers go into design-decisions.md.
 | Extraction time | Extraction (currently: 5 s) |
 | Final subscription price | Subscription |
 | Can the loadout change during a raid? | Loadout timing |
-| Materials stack size? | Gathering |
+| Materials stack size? Gathering channel time, respawn, yields? | Gathering (currently: stack 20; 2 s, once per raid, 1–3 per node) |
 | Which arrows does a bow use first when several rarities are carried? | Ammo (currently: first found) |
 | Is drinking a potion instant? Does bandaging slow movement? | Consumables (currently: instant, full speed) |
 | Respec price? | Store |

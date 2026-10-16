@@ -128,6 +128,9 @@ Lockpick (Tool, 1 × 1, stack 3, not sold). Throwing Knife and Throwing Axe (Thr
 stack 3, not sold): Attack damage 15 / 25 at Common, +2 per rarity level, single target, count as a
 Dagger / Axe. Explosive Bottle (Throwable, 1 × 3, stack 3, not sold): Magic damage 10, explodes in a
 3 m radius and leaves 3 damage per second for 5 s, counts as no weapon.
+Materials (gathered from nodes, for crafting later; all placeholders): Silverleaf (`herb_silverleaf`)
+and Bloodroot (`herb_bloodroot`) herbs, Iron Ore (`ore_iron`) and Mithril Ore (`ore_mithril`); 1 × 1,
+stack 20 (materials stack size is not ruled), sell 5 / 10 / 5 / 15 gold, `sellPerRarity` 0.
 
 ## Equipment slots
 
