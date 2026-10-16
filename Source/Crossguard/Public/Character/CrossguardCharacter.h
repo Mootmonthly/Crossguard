@@ -70,6 +70,7 @@ public:
 
 	// Clanks this character has played on this machine (tests).
 	int32 GetWeaponClankCount() const { return WeaponClankCount; }
+
 	UCrossguardAbilitySystemComponent* GetCrossguardAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UCrossguardLoadoutComponent* GetLoadoutComponent() const { return LoadoutComponent; }
 	UCrossguardEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }

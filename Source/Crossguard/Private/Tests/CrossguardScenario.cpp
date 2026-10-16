@@ -20,7 +20,10 @@
 #include "AssetRegistry/IAssetRegistry.h"
 #include "Character/CrossguardAICharacter.h"
 #include "Character/CrossguardCharacter.h"
+#include "Character/CrossguardMinion.h"
+#include "Character/CrossguardMinionController.h"
 #include "Character/CrossguardMonster.h"
+#include "Character/CrossguardMonsterController.h"
 #include "Components/StaticMeshComponent.h"
 #include "CrossguardRules/Combat.h"
 #include "Editor.h"
@@ -300,7 +303,7 @@ namespace CrossguardScenario
 	}
 
 	ACrossguardCharacter* FScenarioContext::SpawnCharacter(FName Name, UClass* Class, const FVector& FloorPoint, float Yaw, bool bAIController,
-		TFunctionRef<void(ACrossguardCharacter&)> Configure)
+		TFunctionRef<void(ACrossguardCharacter&)> Configure, ACrossguardCharacter* SpawnOwner)
 	{
 		UWorld* PlayWorld = World();
 		if (PlayWorld == nullptr || Class == nullptr || !Class->IsChildOf(ACrossguardCharacter::StaticClass()))
@@ -310,7 +313,7 @@ namespace CrossguardScenario
 		}
 		const float HalfHeight = Class->GetDefaultObject<ACrossguardCharacter>()->GetDefaultHalfHeight();
 		const FTransform Transform(FRotator(0.0f, Yaw, 0.0f), FloorPoint + FVector(0.0f, 0.0f, HalfHeight + CrossguardScenarioLocal::SpawnClearance));
-		ACrossguardCharacter* Character = PlayWorld->SpawnActorDeferred<ACrossguardCharacter>(Class, Transform, nullptr, nullptr,
+		ACrossguardCharacter* Character = PlayWorld->SpawnActorDeferred<ACrossguardCharacter>(Class, Transform, SpawnOwner, SpawnOwner,
 			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 		if (Character == nullptr)
 		{
@@ -427,11 +430,75 @@ namespace CrossguardScenario
 		return Character;
 	}
 
-	ACrossguardMonster* FScenarioContext::SpawnMonster(FName Name, FName MobId, const FVector& FloorPoint, float Yaw)
+	ACrossguardMonster* FScenarioContext::SpawnMonster(FName Name, FName MobId, const FVector& FloorPoint, float Yaw,
+		TFunction<void(ACrossguardMonster&)> Configure)
 	{
 		ACrossguardCharacter* Character = SpawnCharacter(Name, ACrossguardMonster::StaticClass(), FloorPoint, Yaw, true,
-			[MobId](ACrossguardCharacter& Spawned) { CastChecked<ACrossguardMonster>(&Spawned)->MobId = MobId; });
+			[MobId, &Configure](ACrossguardCharacter& Spawned)
+			{
+				ACrossguardMonster* Monster = CastChecked<ACrossguardMonster>(&Spawned);
+				Monster->MobId = MobId;
+				if (Configure)
+				{
+					Configure(*Monster);
+				}
+			});
 		return Cast<ACrossguardMonster>(Character);
+	}
+
+	ACrossguardMinion* FScenarioContext::SpawnMinion(FName Name, ACrossguardCharacter* Summoner, const FVector& FloorPoint, UClass* MinionClass,
+		TFunction<void(ACrossguardMinion&)> Configure)
+	{
+		if (Summoner == nullptr)
+		{
+			Fail(FString::Printf(TEXT("SpawnMinion '%s': no summoner"), *Name.ToString()));
+			return nullptr;
+		}
+		UClass* SpawnClass = MinionClass != nullptr ? MinionClass : ACrossguardMinion::StaticClass();
+		if (!SpawnClass->IsChildOf(ACrossguardMinion::StaticClass()))
+		{
+			Fail(FString::Printf(TEXT("SpawnMinion '%s': %s is not an ACrossguardMinion"), *Name.ToString(), *SpawnClass->GetName()));
+			return nullptr;
+		}
+		ACrossguardCharacter* Character = SpawnCharacter(Name, SpawnClass, FloorPoint, static_cast<float>(Summoner->GetActorRotation().Yaw), true,
+			[Summoner, &Configure](ACrossguardCharacter& Spawned)
+			{
+				ACrossguardMinion* Minion = CastChecked<ACrossguardMinion>(&Spawned);
+				Minion->SetSummoner(Summoner);
+				if (Configure)
+				{
+					Configure(*Minion);
+				}
+			},
+			Summoner);
+		ACrossguardMinion* Minion = Cast<ACrossguardMinion>(Character);
+		if (Minion != nullptr)
+		{
+			Require(Minion->GetController() != nullptr, FString::Printf(TEXT("SpawnMinion '%s' has its controller"), *Name.ToString()));
+		}
+		return Minion;
+	}
+
+	AStaticMeshActor* FScenarioContext::SpawnBlockingBox(FName Name, const FVector& Center, const FVector& Size)
+	{
+		UStaticMesh* Cube = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
+		if (!Require(Cube != nullptr, TEXT("/Engine/BasicShapes/Cube exists (SpawnBlockingBox)")))
+		{
+			return nullptr;
+		}
+		AStaticMeshActor* Box = SpawnActor<AStaticMeshActor>(Name, Center, 0.0f, [Cube](AStaticMeshActor& Spawned)
+		{
+			UStaticMeshComponent* Mesh = Spawned.GetStaticMeshComponent();
+			Mesh->SetMobility(EComponentMobility::Movable);
+			Mesh->SetStaticMesh(Cube);
+			Mesh->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+		});
+		if (Box != nullptr)
+		{
+			// The engine cube is 100 cm, centred.
+			Box->SetActorScale3D(Size / 100.0f);
+		}
+		return Box;
 	}
 
 	void FScenarioContext::Place(ACrossguardCharacter* Character, const FVector& FloorPoint, float Yaw)
@@ -702,6 +769,28 @@ namespace CrossguardScenario
 		SourceASC->ApplyGameplayEffectSpecToTarget(*Spec.Data.Get(), VictimASC);
 	}
 
+	float FScenarioContext::Damage(AActor* Source, AActor* Victim, float Attack, float Magic)
+	{
+		UAbilitySystemComponent* VictimASC = CrossguardScenarioLocal::FindASC(Victim);
+		UAbilitySystemComponent* SourceASC = Source != nullptr ? CrossguardScenarioLocal::FindASC(Source) : VictimASC;
+		if (VictimASC == nullptr || SourceASC == nullptr)
+		{
+			Fail(FString::Printf(TEXT("Damage: %s or %s has no ability system"), *GetNameSafe(Source), *GetNameSafe(Victim)));
+			return 0.0f;
+		}
+		const FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(UCrossguardDamageEffect::StaticClass(), 1.0f, SourceASC->MakeEffectContext());
+		if (!Spec.IsValid())
+		{
+			Fail(TEXT("Damage: could not make the damage spec"));
+			return 0.0f;
+		}
+		const float Before = Health(Victim);
+		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, Attack);
+		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, Magic);
+		SourceASC->ApplyGameplayEffectSpecToTarget(*Spec.Data.Get(), VictimASC);
+		return Before - Health(Victim);
+	}
+
 	// --- Reading state ----------------------------------------------------------------------------
 
 	float FScenarioContext::Health(const AActor* Actor) const
@@ -742,6 +831,27 @@ namespace CrossguardScenario
 	bool FScenarioContext::IsDead(const AActor* Actor) const
 	{
 		return HasTag(Actor, CrossguardTags::State_Dead);
+	}
+
+	AActor* FScenarioContext::TargetOf(const APawn* Pawn) const
+	{
+		AController* Controller = Pawn != nullptr ? Pawn->GetController() : nullptr;
+		if (const ACrossguardMonsterController* MonsterController = Cast<ACrossguardMonsterController>(Controller))
+		{
+			return MonsterController->GetCurrentTarget();
+		}
+		if (const ACrossguardMinionController* MinionController = Cast<ACrossguardMinionController>(Controller))
+		{
+			return MinionController->GetCurrentTarget();
+		}
+		const AAIController* AI = Cast<AAIController>(Controller);
+		return AI != nullptr ? AI->GetFocusActor() : nullptr;
+	}
+
+	int32 FScenarioContext::ClankCount(const AActor* Actor) const
+	{
+		const ACrossguardCharacter* Character = Cast<ACrossguardCharacter>(Actor);
+		return Character != nullptr ? Character->GetWeaponClankCount() : 0;
 	}
 
 	ACrossguardPlayerState* FScenarioContext::PlayerState(const AActor* Actor) const
@@ -1202,6 +1312,22 @@ namespace CrossguardScenario
 					Context.Fail(FString::Printf(TEXT("Timed out after %.1f game seconds waiting until: %s"), Item.Seconds, *Item.Name));
 				}
 				break;
+			case FScenario::FItem::EKind::WaitWatching:
+				if (!bItemStarted)
+				{
+					bItemStarted = true;
+					ItemDeadline = Now + Item.Seconds;
+					Test.AddInfo(FString::Printf(TEXT("[%.2f s] watching %.2f s: %s"), Now, Item.Seconds, *Item.Name));
+				}
+				if (Item.Action)
+				{
+					Item.Action(Context);
+				}
+				if (Now >= ItemDeadline)
+				{
+					NextItem();
+				}
+				break;
 			}
 			return false;
 		}
@@ -1307,6 +1433,16 @@ namespace CrossguardScenario
 		Item.Condition = MoveTemp(Condition);
 		Item.Seconds = FMath::Max(TimeoutGameSeconds, 0.0f);
 		Item.PollSeconds = FMath::Max(PollSeconds, 0.0f);
+		return *this;
+	}
+
+	FScenario& FScenario::WaitWatching(const FString& Name, float Seconds, TFunction<void(FScenarioContext&)> Watch)
+	{
+		FItem& Item = Items.AddDefaulted_GetRef();
+		Item.Kind = FItem::EKind::WaitWatching;
+		Item.Name = Name;
+		Item.Action = MoveTemp(Watch);
+		Item.Seconds = FMath::Max(Seconds, 0.0f);
 		return *this;
 	}
 

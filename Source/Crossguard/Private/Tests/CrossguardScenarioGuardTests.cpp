@@ -100,9 +100,9 @@ namespace CrossguardScenarioGuard
 	}
 
 	// CrossguardGuard::ApplyHit logs "<Target> parried|blocked|clashed with <Attacker>'s hit (Impact
-	// Power a vs b): N% through" for every Impact Power check, right before the clank
-	// (MulticastWeaponClank -> OnWeaponClank). There is no native event to bind to, so the clanks are
-	// counted from these lines.
+	// Power a vs b): N% through" for every Impact Power check, right before the target's clank
+	// (MulticastWeaponClank -> OnWeaponClank). Tests check both these lines and the native clank
+	// count (C.ClankCount).
 	FString CheckLine(const AActor* Target, const TCHAR* Verb, const AActor* Attacker)
 	{
 		return FString::Printf(TEXT("%s %s %s's hit"), *GetNameSafe(Target), Verb, *GetNameSafe(Attacker));
@@ -113,19 +113,15 @@ namespace CrossguardScenarioGuard
 		return FString::Printf(TEXT("%.0f%% through"), Share * 100.0f);
 	}
 
-	// A minion summoned by Summoner (on its team), run by its minion controller.
-	ACrossguardMinion* SpawnMinionOf(FContext& C, FName Name, ACrossguardCharacter* Summoner, const FVector& FloorPoint, float Yaw)
+	// Clanks played by every character in the world (C.ClankCount summed).
+	int32 TotalClanks(const FContext& C)
 	{
-		const FVector Location = FloorPoint + FVector(0.0f, 0.0f, GetDefault<ACrossguardMinion>()->GetDefaultHalfHeight() + 5.0f);
-		ACrossguardMinion* Minion = C.SpawnActor<ACrossguardMinion>(Name, Location, Yaw, [Summoner](ACrossguardMinion& Spawned)
+		int32 Total = 0;
+		for (const ACrossguardCharacter* Character : C.FindAll<ACrossguardCharacter>())
 		{
-			Spawned.SetSummoner(Summoner);
-		});
-		if (Minion != nullptr && Minion->GetController() == nullptr)
-		{
-			Minion->SpawnDefaultController();
+			Total += C.ClankCount(Character);
 		}
-		return Minion;
+		return Total;
 	}
 
 	// One parry duel of the Impact Power table: Attacker swings Weapon at Defender parrying with
@@ -229,11 +225,13 @@ bool FCrossguardScenarioParryTwoHanded::RunTest(const FString& Parameters)
 		const float AttackerBefore = C.Health(Attacker);
 		const float Mirror = FMath::Min(C.ExpectedDamage(Defender, Attacker, C.WeaponValue(Defender)), AttackerBefore);
 		C.SetNumber(TEXT("ActionSpeedBefore"), C.Stat(Defender, UCrossguardAttributeSet::GetActionSpeedAttribute()));
+		const int32 ClanksBefore = C.ClankCount(Defender);
 		if (!C.Require(C.BasicAttack(Attacker), TEXT("the dagger attack activates")))
 		{
 			return;
 		}
 		C.Test.TestEqual(TEXT("The defender takes nothing"), C.Health(Defender), DefenderBefore, 0.001f);
+		C.Test.TestEqual(TEXT("The parry clanks once (native count)"), C.ClankCount(Defender), ClanksBefore + 1);
 		C.Test.AddInfo(FString::Printf(TEXT("Mirror: attacker %.2f -> %.2f Health (expected -%.2f)"), AttackerBefore, C.Health(Attacker), Mirror));
 		C.Test.TestEqual(TEXT("The attacker takes the defender's full weapon damage (mirror rule)"), AttackerBefore - C.Health(Attacker), Mirror, 0.05f);
 		C.Test.TestTrue(TEXT("Log: parried, 0% through"), LogHasLine(C, CheckLine(Defender, TEXT("parried"), Attacker), ThroughText(0.0f)));
@@ -374,6 +372,7 @@ bool FCrossguardScenarioImpactDifferences::RunTest(const FString& Parameters)
 				? FMath::Min(C.ExpectedDamage(Attacker, Defender, C.WeaponValue(Attacker), 0.0f, 1.0f, Outcome.DefenderShare), DefenderBefore) : 0.0f;
 			const float AttackerLoss = Outcome.AttackerShare > 0.0f
 				? FMath::Min(C.ExpectedDamage(Defender, Attacker, C.WeaponValue(Defender), 0.0f, 1.0f, Outcome.AttackerShare), AttackerBefore) : 0.0f;
+			const int32 ClanksBefore = C.ClankCount(Defender);
 			if (!C.Require(C.BasicAttack(Attacker), FString::Printf(TEXT("attacker %d's %s attack activates"), Index, Duel.AttackerWeapon)))
 			{
 				return;
@@ -385,6 +384,7 @@ bool FCrossguardScenarioImpactDifferences::RunTest(const FString& Parameters)
 			C.Test.TestEqual(*FString::Printf(TEXT("%s attacker's damage (mirror)"), *Case), AttackerBefore - C.Health(Attacker), AttackerLoss, 0.05f);
 			C.Test.TestTrue(*FString::Printf(TEXT("%s log: parried, %s"), *Case, *ThroughText(Outcome.DefenderShare)),
 				LogHasLine(C, CheckLine(Defender, TEXT("parried"), Attacker), ThroughText(Outcome.DefenderShare)));
+			C.Test.TestEqual(*FString::Printf(TEXT("%s the defender clanks once (native count)"), *Case), C.ClankCount(Defender), ClanksBefore + 1);
 			CheckStun(C, Defender, Case + TEXT(" defender"), Outcome.DefenderStun, 0.0f);
 			CheckStun(C, Attacker, Case + TEXT(" attacker"), Outcome.AttackerStun, 0.0f);
 			// A stun drops the guard; otherwise it stays up.
@@ -477,6 +477,7 @@ bool FCrossguardScenarioArrowOnShield::RunTest(const FString& Parameters)
 		C.Aim(Player, Archer);
 		C.Require(C.RaiseGuard(Player), TEXT("the shield is up"));
 		C.ClearLog();
+		C.SetNumber(TEXT("ClanksBefore"), C.ClankCount(Player));
 	});
 
 	Scenario.WaitUntil(TEXT("an arrow hits the shield"), 5.0f, [](FScenarioContext& C)
@@ -519,6 +520,9 @@ bool FCrossguardScenarioArrowOnShield::RunTest(const FString& Parameters)
 			return;
 		}
 		C.Test.TestTrue(TEXT("Log: blocked, 0% through"), LogHasLine(C, CheckLine(Player, TEXT("blocked"), Archer), ThroughText(0.0f)));
+		const int32 Clanks = C.ClankCount(Player) - static_cast<int32>(C.Number(TEXT("ClanksBefore")));
+		C.Test.TestTrue(TEXT("The block clanks (native count)"), Clanks >= 1);
+		C.Test.TestEqual(TEXT("One clank per blocked arrow (native count = block lines)"), Clanks, C.LogCount(CheckLine(Player, TEXT("blocked"), Archer)));
 		C.Test.TestEqual(TEXT("The player took nothing"), C.Health(Player), C.MaxHealth(Player), 0.01f);
 		C.Test.TestTrue(TEXT("The archer was never stunned (a stopped arrow does not reach back)"), C.Number(TEXT("ArcherStunned")) <= 0.0);
 		C.Test.TestEqual(TEXT("The archer is unhurt"), C.Health(Archer), C.MaxHealth(Archer), 0.01f);
@@ -595,6 +599,7 @@ bool FCrossguardScenarioSwingClash::RunTest(const FString& Parameters)
 				0.05f);
 		}
 		C.Test.TestEqual(TEXT("No clash yet"), C.LogCount(TEXT("clashed with")), 0);
+		C.Test.TestEqual(TEXT("No clank yet (native count)"), TotalClanks(C), 0);
 		C.SetNumber(TEXT("SwingTime"), C.Now());
 	});
 
@@ -645,6 +650,9 @@ bool FCrossguardScenarioSwingClash::RunTest(const FString& Parameters)
 		C.Test.TestFalse(TEXT("Pair 2: a clash is no parry: no riposte"), C.HasTag(First1, CrossguardTags::State_NextAttack_Riposte));
 
 		C.Test.TestEqual(TEXT("Two clanks so far (one Impact Power check line each)"), C.LogCount(TEXT("clashed with")), 2);
+		C.Test.TestEqual(TEXT("Two clanks so far (native count)"), TotalClanks(C), 2);
+		C.Test.TestEqual(TEXT("Pair 1: the first swinger (hit by the answer) clanked"), C.ClankCount(First0), 1);
+		C.Test.TestEqual(TEXT("Pair 2: the first swinger (hit by the answer) clanked"), C.ClankCount(First1), 1);
 	});
 
 	Scenario.Wait(0.3f);
@@ -678,6 +686,8 @@ bool FCrossguardScenarioSwingClash::RunTest(const FString& Parameters)
 		C.Test.TestEqual(TEXT("Pair 3: the late answer lands in full"), Before2 - C.Health(First2), Expected, 0.05f);
 		C.Test.TestFalse(TEXT("Pair 3: no clash line"), C.LogContains(CheckLine(First2, TEXT("clashed with"), Second2)));
 		C.Test.TestEqual(TEXT("Still two clanks in all"), C.LogCount(TEXT("clashed with")), 2);
+		C.Test.TestEqual(TEXT("Still two clanks in all (native count)"), TotalClanks(C), 2);
+		C.Test.TestEqual(TEXT("Pair 3: no clank"), C.ClankCount(First2), 0);
 	});
 
 	Scenario.Run();
@@ -764,6 +774,10 @@ bool FCrossguardScenarioAIGuardsAgainstSwings::RunTest(const FString& Parameters
 			Landed));
 		C.Test.TestTrue(TEXT("The monster raised its guard (State.Guarding seen)"), C.Number(TEXT("SawGuard")) > 0.0);
 		C.Test.TestTrue(TEXT("Some swings were parried"), Parried > 0);
+		// Clashes with its own swing clank too, so at least one per parry.
+		const ACrossguardMonster* Monster = C.Get<ACrossguardMonster>(TEXT("Monster"));
+		C.Test.TestTrue(*FString::Printf(TEXT("The monster clanked for every parry (native count %d >= %d)"), C.ClankCount(Monster), Parried),
+			C.ClankCount(Monster) >= Parried);
 		C.Test.TestTrue(TEXT("Some swings landed (it does not guard every time)"), Landed > 0);
 		// Not asserted: a swing can also miss when a clank has just pushed the monster out of reach.
 		if (Parried + Landed != Swings)
@@ -800,7 +814,7 @@ bool FCrossguardScenarioAIIgnoresAllySwings::RunTest(const FString& Parameters)
 		{
 			return;
 		}
-		ACrossguardMinion* Minion = SpawnMinionOf(C, TEXT("Minion"), Q, FVector(SceneX, SceneY, 0.0f), 0.0f);
+		ACrossguardMinion* Minion = C.SpawnMinion(TEXT("Minion"), Q, FVector(SceneX, SceneY, 0.0f));
 		if (!C.Require(Minion != nullptr && Minion->GetController() != nullptr, TEXT("Q's minion spawned with its controller")))
 		{
 			return;
@@ -854,6 +868,7 @@ bool FCrossguardScenarioAIIgnoresAllySwings::RunTest(const FString& Parameters)
 	{
 		C.Test.TestTrue(TEXT("The minion never raised its guard against its ally"), C.Number(TEXT("SawGuard")) <= 0.0);
 		C.Test.TestEqual(TEXT("No parry line"), C.LogCount(TEXT(" parried ")), 0);
+		C.Test.TestEqual(TEXT("The minion never clanked (native count)"), C.ClankCount(C.FindActor(TEXT("Minion"))), 0);
 		C.Test.TestEqual(TEXT("Every swing landed (friendly fire)"), static_cast<int32>(C.Number(TEXT("Landed"))), static_cast<int32>(Swings));
 	});
 
