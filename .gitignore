@@ -24,3 +24,6 @@ build/
 
 # Python
 __pycache__/
+
+# Local backend secrets (Backend/.env.example is the template)
+Backend/.env

@@ -100,15 +100,27 @@ func registerAuthPolicy(initializer runtime.Initializer) error {
 		func() error { return initializer.RegisterBeforeLinkDevice(beforeLinkDevice) },
 		func() error { return initializer.RegisterBeforeWriteStorageObjects(beforeWriteStorage) },
 		func() error { return initializer.RegisterBeforeDeleteStorageObjects(beforeDeleteStorage) },
-		func() error { return initializer.RegisterBeforeAuthenticateApple(denyBefore[*api.AuthenticateAppleRequest]()) },
-		func() error { return initializer.RegisterBeforeAuthenticateCustom(denyBefore[*api.AuthenticateCustomRequest]()) },
-		func() error { return initializer.RegisterBeforeAuthenticateEmail(denyBefore[*api.AuthenticateEmailRequest]()) },
-		func() error { return initializer.RegisterBeforeAuthenticateFacebook(denyBefore[*api.AuthenticateFacebookRequest]()) },
+		func() error {
+			return initializer.RegisterBeforeAuthenticateApple(denyBefore[*api.AuthenticateAppleRequest]())
+		},
+		func() error {
+			return initializer.RegisterBeforeAuthenticateCustom(denyBefore[*api.AuthenticateCustomRequest]())
+		},
+		func() error {
+			return initializer.RegisterBeforeAuthenticateEmail(denyBefore[*api.AuthenticateEmailRequest]())
+		},
+		func() error {
+			return initializer.RegisterBeforeAuthenticateFacebook(denyBefore[*api.AuthenticateFacebookRequest]())
+		},
 		func() error {
 			return initializer.RegisterBeforeAuthenticateFacebookInstantGame(denyBefore[*api.AuthenticateFacebookInstantGameRequest]())
 		},
-		func() error { return initializer.RegisterBeforeAuthenticateGameCenter(denyBefore[*api.AuthenticateGameCenterRequest]()) },
-		func() error { return initializer.RegisterBeforeAuthenticateGoogle(denyBefore[*api.AuthenticateGoogleRequest]()) },
+		func() error {
+			return initializer.RegisterBeforeAuthenticateGameCenter(denyBefore[*api.AuthenticateGameCenterRequest]())
+		},
+		func() error {
+			return initializer.RegisterBeforeAuthenticateGoogle(denyBefore[*api.AuthenticateGoogleRequest]())
+		},
 		func() error { return initializer.RegisterBeforeAuthenticate(denyBefore[*api.AuthenticateRequest]()) },
 		func() error { return initializer.RegisterBeforeLinkCustom(denyBefore[*api.AccountCustom]()) },
 		func() error { return initializer.RegisterBeforeLinkEmail(denyBefore[*api.AccountEmail]()) },
