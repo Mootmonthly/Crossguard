@@ -27,7 +27,9 @@ namespace Crossguard
 		{
 			return EAllocationError::NegativeAttribute;
 		}
-		if (Allocation.Total() > AttributePointsAtLevel(Config, Level))
+		// Summed wide: client-sent values near INT_MAX must not wrap around to a small total.
+		const long long Total = static_cast<long long>(Allocation.Str) + Allocation.Agi + Allocation.Int;
+		if (Total > AttributePointsAtLevel(Config, Level))
 		{
 			return EAllocationError::TooManyPoints;
 		}

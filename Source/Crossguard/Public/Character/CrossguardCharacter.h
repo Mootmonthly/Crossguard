@@ -427,6 +427,15 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void ServerInteract();
+	// Server. What TryInteract and ServerInteract do (the RPC is rate-limited first).
+	void HandleInteract();
+	// Server. World time of the last ServerInteract taken: each one walks every actor, so a client
+	// spamming it is refused for InteractMinInterval.
+	double LastInteractRequestTime = -1.0;
+	static constexpr double InteractMinInterval = 0.1;
+	// False for players in Shipping builds: the Debug options (loadout, progression, loot, revive)
+	// then never reach them, even if a Blueprint default was left on. AI keep them.
+	bool AllowsDebugOptions() const;
 
 	UFUNCTION(Server, Reliable)
 	void ServerSummonPortal();

@@ -2,6 +2,7 @@
 
 #include "AbilitySystem/CrossguardAbilitySystemComponent.h"
 #include "AbilitySystem/CrossguardGameplayAbility.h"
+#include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemGlobals.h"
 #include "Character/CrossguardCharacter.h"
 #include "Crossguard.h"
@@ -119,6 +120,13 @@ void UCrossguardLoadoutComponent::RequestLoadout(const TArray<FName>& Skills)
 
 void UCrossguardLoadoutComponent::ServerRequestLoadout_Implementation(const TArray<FName>& Skills)
 {
+	// A dead body keeps the loadout it died with (no passives re-granted on it).
+	const UCrossguardAbilitySystemComponent* ASC = GetAbilitySystem();
+	if (ASC != nullptr && ASC->HasMatchingGameplayTag(CrossguardTags::State_Dead))
+	{
+		UE_LOG(LogCrossguard, Log, TEXT("Loadout request from %s refused: dead"), *GetNameSafe(GetOwner()));
+		return;
+	}
 	ApplyLoadout(Skills);
 }
 

@@ -15,6 +15,7 @@
 #include "CrossguardRules/Guard.h"
 #include "CrossguardRules/Trade.h"
 
+#include <climits>
 #include <cmath>
 #include <cstdio>
 
@@ -74,6 +75,8 @@ static void TestProgression()
 	CHECK(ValidateAllocation(Config, 1, {31, 0, 0}) == EAllocationError::TooManyPoints);
 	CHECK(ValidateAllocation(Config, 2, {31, 1, 1}) == EAllocationError::None);
 	CHECK(ValidateAllocation(Config, 1, {-1, 20, 11}) == EAllocationError::NegativeAttribute);
+	// Anti-cheat: a total that would overflow int is still too many points.
+	CHECK(ValidateAllocation(Config, 1, {INT_MAX, INT_MAX, 2}) == EAllocationError::TooManyPoints);
 
 	CHECK(!RequiresRespec({10, 10, 10}, {10, 10, 10}));
 	CHECK(!RequiresRespec({10, 10, 10}, {13, 10, 10}));
@@ -606,6 +609,9 @@ static void TestInventoryGrid()
 
 	FInventoryGrid Grid(ContainerSize(Config, EContainerKind::Main));
 	CHECK(Grid.FreeSquares() == 50);
+	// Anti-cheat: client-sent positions near INT_MAX do not wrap around into the grid.
+	CHECK(!Grid.CanPlace({2, 1}, {INT_MAX, 0, false}));
+	CHECK(!Grid.CanPlace({1, 2}, {0, INT_MAX - 1, false}));
 
 	// A 1×3 sword at the left edge.
 	CHECK(Grid.Place(1, {1, 3}, {0, 0, false}));

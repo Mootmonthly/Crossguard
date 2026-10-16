@@ -117,6 +117,11 @@ FCrossguardInventoryResult UCrossguardVendorComponent::Sell(ECrossguardItemSourc
 	{
 		return VendorFail(ECrossguardInventoryError::NotSellable);
 	}
+	// Banked gold is an int32: refuse rather than wrap around (the item stays).
+	if (!Progression->CanReceiveGold(OutGold))
+	{
+		return VendorFail(ECrossguardInventoryError::AtCap);
+	}
 
 	const bool bRemoved = Source == ECrossguardItemSource::Inventory ? Inventory->RemoveItem(ItemId) : Stash->RemoveStashItem(ItemId);
 	if (!bRemoved)

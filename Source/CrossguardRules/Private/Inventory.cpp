@@ -77,8 +77,9 @@ namespace Crossguard
 	bool FInventoryGrid::CanPlace(FGridSize ItemSize, FGridPlacement At, int IgnoreId) const
 	{
 		const FGridSize Footprint = Rotate(ItemSize, At.bRotated);
+		// Compared without adding to At: a client-sent position near INT_MAX must not wrap around.
 		if (Footprint.Width <= 0 || Footprint.Height <= 0 || At.X < 0 || At.Y < 0
-			|| At.X + Footprint.Width > GridSize.Width || At.Y + Footprint.Height > GridSize.Height)
+			|| At.X > GridSize.Width - Footprint.Width || At.Y > GridSize.Height - Footprint.Height)
 		{
 			return false;
 		}

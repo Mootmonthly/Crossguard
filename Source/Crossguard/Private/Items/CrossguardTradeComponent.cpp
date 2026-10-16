@@ -126,6 +126,12 @@ void UCrossguardTradeComponent::ServerSetOffer_Implementation(const TArray<int32
 	{
 		return;
 	}
+	// Refused before the per-id lookups below: a client can send any number of ids.
+	if (ItemIds.Num() > TradeConfig().MaxOfferedStacks)
+	{
+		UE_LOG(LogCrossguard, Log, TEXT("Trade offer from %s refused: %d stacks"), *GetNameSafe(GetOwner()), ItemIds.Num());
+		return;
+	}
 	Crossguard::FTradeOffer Offer;
 	Offer.Gold = Gold;
 	TArray<FCrossguardInventoryItem> Stacks;

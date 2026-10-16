@@ -450,8 +450,20 @@ void ACrossguardCharacter::PossessedBy(AController* NewController)
 		{
 			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(GuardAbilityClass, 1, INDEX_NONE, this));
 		}
-		ApplyDebugLoadout();
+		if (AllowsDebugOptions())
+		{
+			ApplyDebugLoadout();
+		}
 	}
+}
+
+bool ACrossguardCharacter::AllowsDebugOptions() const
+{
+#if UE_BUILD_SHIPPING
+	return !IsPlayerControlled();
+#else
+	return true;
+#endif
 }
 
 void ACrossguardCharacter::ApplyDebugLoadout()
@@ -534,7 +546,7 @@ void ACrossguardCharacter::ApplyDebugLoadout()
 bool ACrossguardCharacter::PullProgression()
 {
 	const ACrossguardPlayerState* Progression = GetPlayerState<ACrossguardPlayerState>();
-	if (bUseDebugProgression || Progression == nullptr)
+	if ((bUseDebugProgression && AllowsDebugOptions()) || Progression == nullptr)
 	{
 		return false;
 	}
@@ -676,7 +688,7 @@ void ACrossguardCharacter::TryInteract()
 {
 	if (HasAuthority())
 	{
-		ServerInteract_Implementation();
+		HandleInteract();
 	}
 	else
 	{
@@ -685,6 +697,18 @@ void ACrossguardCharacter::TryInteract()
 }
 
 void ACrossguardCharacter::ServerInteract_Implementation()
+{
+	const double Time = GetWorld()->GetTimeSeconds();
+	if (LastInteractRequestTime >= 0.0 && Time - LastInteractRequestTime < InteractMinInterval)
+	{
+		UE_LOG(LogCrossguard, Verbose, TEXT("%s interact refused: too soon after the last one"), *GetName());
+		return;
+	}
+	LastInteractRequestTime = Time;
+	HandleInteract();
+}
+
+void ACrossguardCharacter::HandleInteract()
 {
 	if (bLockpicking)
 	{
@@ -710,7 +734,7 @@ void ACrossguardCharacter::ServerInteract_Implementation()
 	Interactable->Interact(this);
 
 	ACrossguardLootContainer* Container = Cast<ACrossguardLootContainer>(Target);
-	if (bDebugLootTakesAll && Container != nullptr && InventoryComponent->GetOpenContainer() == Container)
+	if (bDebugLootTakesAll && AllowsDebugOptions() && Container != nullptr && InventoryComponent->GetOpenContainer() == Container)
 	{
 		UE_LOG(LogCrossguard, Log, TEXT("%s opened %s (%d items)"), *GetName(), *Container->GetName(), Container->GetItems().Num());
 		TArray<int32> Ids;
@@ -849,7 +873,7 @@ void ACrossguardCharacter::HandleDeath()
 	Body->InitializeContents(Dropped);
 	Body->SetBodyMesh(GetMesh()->GetSkeletalMeshAsset(), MeshRelativeTransform);
 
-	if (DebugReviveDelay > 0.0f)
+	if (DebugReviveDelay > 0.0f && AllowsDebugOptions())
 	{
 		FTimerHandle Handle;
 		GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateWeakLambda(this, [this]() { Revive(0.5f); }), DebugReviveDelay, false);

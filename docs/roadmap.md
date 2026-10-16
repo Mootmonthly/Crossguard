@@ -109,7 +109,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Matchmaking with parties | Code | Must pass `?Party=<key>` in the travel URL. |
 | Backend and accounts | Decision, Code | Persistence, purchases, auction house. |
 | Platform store | Decision, Code | Steam or other; purchases verified server-side. |
-| Anti-cheat review | Code | Container contents now reach only the looter; review the rest (inventories are owner-only already). |
+| Anti-cheat review | Code | Reviewed: every server RPC, ability, console command, debug option and replicated property ([anti-cheat.md](anti-cheat.md)). Fixed the grid-position and attribute-allocation overflows, vendor gold overflow, interact spam, oversized trade offers, loadout changes while dead, and debug options in Shipping. Left: stealthed positions still replicate to enemies, and gear affixes are visible to everyone. |
 
 ## Open questions
 
