@@ -59,6 +59,25 @@ SPEC = {
 }
 
 
+# Unreal object path of an asset (/Game/Folder/Asset.Asset); a class path ends in _C.
+ASSET_PATH_RE = re.compile(r"^/[A-Za-z0-9_]+(/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9_]+$")
+
+
+def triple(v):
+    return isinstance(v, list) and len(v) == 3 and all(is_num(x) for x in v)
+
+
+# Art fields, all optional (docs/mob-data-schema.md, "Art").
+ART_SPEC = {
+    "mesh": (lambda v: isinstance(v, str) and bool(ASSET_PATH_RE.match(v)), "a skeletal mesh path like /Game/Monsters/SK_Skeleton.SK_Skeleton"),
+    "animBlueprint": (lambda v: isinstance(v, str) and bool(ASSET_PATH_RE.match(v)) and v.endswith("_C"),
+                      "an Anim Blueprint class path like /Game/Monsters/ABP_Skeleton.ABP_Skeleton_C"),
+    "meshScale": (positive, "number > 0"),
+    "meshOffset": (triple, "[x, y, z] in meters"),
+    "meshYaw": (is_num, "number (degrees)"),
+}
+
+
 def weapon_problem(role, weapon):
     """Why the weapon (a Weapons.json object, or None for natural attacks) does not suit the role, or None."""
     if weapon is None:
@@ -95,8 +114,15 @@ def validate(mobs):
                 err(f"missing field '{name}'")
             elif not pred(mob[name]):
                 err(f"field '{name}' must be {desc}")
-        for name in set(mob) - set(SPEC):
-            err(f"unknown field '{name}'")
+        for name in sorted(set(mob) - set(SPEC)):
+            if name in ART_SPEC:
+                pred, desc = ART_SPEC[name]
+                if not pred(mob[name]):
+                    err(f"field '{name}' must be {desc}")
+            else:
+                err(f"unknown field '{name}'")
+        if "mesh" not in mob and any(name in mob for name in ART_SPEC):
+            err("art fields (animBlueprint, meshScale, meshOffset, meshYaw) need a mesh")
         if isinstance(mob.get("id"), str):
             if mob["id"] in ids:
                 err("duplicate id")

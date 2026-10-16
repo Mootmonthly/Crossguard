@@ -88,6 +88,18 @@ THROWABLE_SPEC = {
 }
 
 
+# Unreal object path of an asset: /Game/Folder/Asset.Asset (or /Engine/..., a plugin's mount point).
+ASSET_PATH_RE = re.compile(r"^/[A-Za-z0-9_]+(/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9_]+$")
+ASSET_DESC = "an asset path like /Game/Folder/Asset.Asset"
+
+# Art fields, optional, Ammo and Throwable only (docs/item-data-schema.md, "Projectile art").
+PROJECTILE_ART_SPEC = {
+    name: (lambda v: isinstance(v, str) and bool(ASSET_PATH_RE.match(v)), ASSET_DESC)
+    for name in ("projectileMesh", "trailVfx", "impactVfx", "impactSound")
+}
+PROJECTILE_CATEGORIES = {"Ammo", "Throwable"}
+
+
 def validate(items):
     errors = []
     if not isinstance(items, list):
@@ -114,9 +126,16 @@ def validate(items):
             spec.update(CONSUMABLE_SPEC)
         if isinstance(it, dict) and it.get("category") == "Throwable":
             spec.update(THROWABLE_SPEC)
-        check_fields(it, spec, "item", err)
+        art = {k: it[k] for k in PROJECTILE_ART_SPEC if k in it} if isinstance(it, dict) else {}
+        check_fields({k: v for k, v in it.items() if k not in art} if isinstance(it, dict) else it, spec, "item", err)
         if not isinstance(it, dict):
             continue
+        for name, value in art.items():
+            pred, desc = PROJECTILE_ART_SPEC[name]
+            if it.get("category") not in PROJECTILE_CATEGORIES:
+                err(f"field '{name}' is only allowed for Ammo and Throwable items")
+            elif not pred(value):
+                err(f"field '{name}' must be {desc}")
         if it.get("category") != "Consumable":
             for name in CONSUMABLE_SPEC:
                 if name in it:

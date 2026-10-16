@@ -41,6 +41,11 @@ def row(item):
         "CountsAsWeapon": item.get("countsAsWeapon") or "Sword",
         "bHasCountsAsWeapon": item.get("countsAsWeapon") is not None,
         "ImpactPower": item.get("impactPower", 0),
+        # Art (optional, ammo and throwables): an empty path imports as none.
+        "ProjectileMesh": item.get("projectileMesh", ""),
+        "TrailVfx": item.get("trailVfx", ""),
+        "ImpactVfx": item.get("impactVfx", ""),
+        "ImpactSound": item.get("impactSound", ""),
     }
 
 

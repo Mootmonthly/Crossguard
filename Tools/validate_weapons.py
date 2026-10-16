@@ -21,8 +21,10 @@ def is_num(v):
     return isinstance(v, (int, float)) and not isinstance(v, bool)
 
 
-def check_fields(obj, spec, where, err):
-    """spec: name -> (predicate, description). Reports missing/extra/mistyped fields."""
+def check_fields(obj, spec, where, err, optional=None):
+    """spec: name -> (predicate, description); optional: the same for fields that may be left out.
+    Reports missing/extra/mistyped fields."""
+    optional = optional or {}
     if not isinstance(obj, dict):
         err(f"{where}: expected object")
         return False
@@ -34,8 +36,12 @@ def check_fields(obj, spec, where, err):
         elif not pred(obj[name]):
             err(f"{where}: field '{name}' must be {desc}")
             ok = False
+    for name, (pred, desc) in optional.items():
+        if name in obj and not pred(obj[name]):
+            err(f"{where}: field '{name}' must be {desc}")
+            ok = False
     for name in obj:
-        if name not in spec:
+        if name not in spec and name not in optional:
             err(f"{where}: unknown field '{name}'")
             ok = False
     return ok
@@ -70,6 +76,32 @@ WEAPON_SPEC = {
     "canParry": (lambda v: isinstance(v, bool), "boolean"),
     "impactPower": (lambda v: isinstance(v, int) and not isinstance(v, bool) and v >= 1, "integer >= 1"),
 }
+# Unreal object path of an asset: /Game/Folder/Asset.Asset (or /Engine/..., a plugin's mount point).
+ASSET_PATH_RE = re.compile(r"^/[A-Za-z0-9_]+(/[A-Za-z0-9_.-]+)+\.[A-Za-z0-9_]+$")
+SOCKET_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def asset_path(v):
+    return isinstance(v, str) and bool(ASSET_PATH_RE.match(v))
+
+
+def triple(v):
+    return isinstance(v, list) and len(v) == 3 and all(is_num(x) for x in v)
+
+
+TRANSFORM_SPEC = {
+    "location": (triple, "[x, y, z] in cm"),
+    "rotation": (triple, "[pitch, yaw, roll] in degrees"),
+    "scale": (lambda v: positive(v) or (triple(v) and all(x > 0 for x in v)), "number > 0 or [x, y, z] > 0"),
+}
+
+# Art fields, all optional (docs/item-data-schema.md, "Weapon art").
+WEAPON_ART_SPEC = {
+    "mesh": (asset_path, "an asset path like /Game/Weapons/SM_Sword.SM_Sword"),
+    "attachSocket": (lambda v: isinstance(v, str) and bool(SOCKET_RE.match(v)), "a socket name (e.g. hand_r)"),
+    "relativeTransform": (lambda v: isinstance(v, dict), "object"),
+}
+
 SPEED_SPEC = {
     "attacks": (positive, "number > 0"),
     "perSeconds": (positive, "number > 0"),
@@ -107,9 +139,16 @@ def validate(weapons, ammo_ids=None):
                 err("duplicate id")
             seen.add(wid)
             ids.append(wid)
-        check_fields(w, WEAPON_SPEC, "weapon", err)
+        check_fields(w, WEAPON_SPEC, "weapon", err, WEAPON_ART_SPEC)
         if not isinstance(w, dict):
             continue
+        transform = w.get("relativeTransform")
+        if isinstance(transform, dict):
+            check_fields(transform, {}, "relativeTransform", err, TRANSFORM_SPEC)
+            if "mesh" not in w:
+                err("relativeTransform without a mesh")
+        if "attachSocket" in w and "mesh" not in w:
+            err("attachSocket without a mesh")
 
         gw, gh = w.get("gridWidth"), w.get("gridHeight")
         if grid_size(gw) and grid_size(gh) and (max(gw, gh) > GRID_WIDTH or min(gw, gh) > GRID_HEIGHT):

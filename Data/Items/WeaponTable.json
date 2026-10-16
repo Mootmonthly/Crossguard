@@ -15,7 +15,24 @@
 		"Delivery": "MeleeSwing",
 		"AmmoId": "None",
 		"bCanParry": false,
-		"ImpactPower": 4
+		"ImpactPower": 4,
+		"Mesh": "",
+		"AttachSocket": "None",
+		"MeshOffset": {
+			"X": 0,
+			"Y": 0,
+			"Z": 0
+		},
+		"MeshRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"MeshScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		}
 	},
 	{
 		"Name": "axe_two_handed",
@@ -33,7 +50,24 @@
 		"Delivery": "MeleeSwing",
 		"AmmoId": "None",
 		"bCanParry": true,
-		"ImpactPower": 6
+		"ImpactPower": 6,
+		"Mesh": "",
+		"AttachSocket": "None",
+		"MeshOffset": {
+			"X": 0,
+			"Y": 0,
+			"Z": 0
+		},
+		"MeshRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"MeshScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		}
 	},
 	{
 		"Name": "bow",
@@ -51,7 +85,24 @@
 		"Delivery": "Projectile",
 		"AmmoId": "arrow",
 		"bCanParry": false,
-		"ImpactPower": 3
+		"ImpactPower": 3,
+		"Mesh": "",
+		"AttachSocket": "None",
+		"MeshOffset": {
+			"X": 0,
+			"Y": 0,
+			"Z": 0
+		},
+		"MeshRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"MeshScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		}
 	},
 	{
 		"Name": "dagger_one_handed",
@@ -69,7 +120,24 @@
 		"Delivery": "MeleeSwing",
 		"AmmoId": "None",
 		"bCanParry": false,
-		"ImpactPower": 1
+		"ImpactPower": 1,
+		"Mesh": "",
+		"AttachSocket": "None",
+		"MeshOffset": {
+			"X": 0,
+			"Y": 0,
+			"Z": 0
+		},
+		"MeshRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"MeshScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		}
 	},
 	{
 		"Name": "shield_one_handed",
@@ -87,7 +155,24 @@
 		"Delivery": "None",
 		"AmmoId": "None",
 		"bCanParry": false,
-		"ImpactPower": 4
+		"ImpactPower": 4,
+		"Mesh": "",
+		"AttachSocket": "None",
+		"MeshOffset": {
+			"X": 0,
+			"Y": 0,
+			"Z": 0
+		},
+		"MeshRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"MeshScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		}
 	},
 	{
 		"Name": "spear_two_handed",
@@ -105,7 +190,24 @@
 		"Delivery": "MeleeSwing",
 		"AmmoId": "None",
 		"bCanParry": true,
-		"ImpactPower": 5
+		"ImpactPower": 5,
+		"Mesh": "",
+		"AttachSocket": "None",
+		"MeshOffset": {
+			"X": 0,
+			"Y": 0,
+			"Z": 0
+		},
+		"MeshRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"MeshScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		}
 	},
 	{
 		"Name": "staff_two_handed",
@@ -123,7 +225,24 @@
 		"Delivery": "Projectile",
 		"AmmoId": "None",
 		"bCanParry": true,
-		"ImpactPower": 4
+		"ImpactPower": 4,
+		"Mesh": "",
+		"AttachSocket": "None",
+		"MeshOffset": {
+			"X": 0,
+			"Y": 0,
+			"Z": 0
+		},
+		"MeshRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"MeshScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		}
 	},
 	{
 		"Name": "sword_one_handed",
@@ -141,7 +260,24 @@
 		"Delivery": "MeleeSwing",
 		"AmmoId": "None",
 		"bCanParry": false,
-		"ImpactPower": 3
+		"ImpactPower": 3,
+		"Mesh": "",
+		"AttachSocket": "None",
+		"MeshOffset": {
+			"X": 0,
+			"Y": 0,
+			"Z": 0
+		},
+		"MeshRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"MeshScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		}
 	},
 	{
 		"Name": "sword_two_handed",
@@ -159,7 +295,24 @@
 		"Delivery": "MeleeSwing",
 		"AmmoId": "None",
 		"bCanParry": true,
-		"ImpactPower": 5
+		"ImpactPower": 5,
+		"Mesh": "",
+		"AttachSocket": "None",
+		"MeshOffset": {
+			"X": 0,
+			"Y": 0,
+			"Z": 0
+		},
+		"MeshRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"MeshScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		}
 	},
 	{
 		"Name": "wand_one_handed",
@@ -177,6 +330,23 @@
 		"Delivery": "Hitscan",
 		"AmmoId": "None",
 		"bCanParry": false,
-		"ImpactPower": 1
+		"ImpactPower": 1,
+		"Mesh": "",
+		"AttachSocket": "None",
+		"MeshOffset": {
+			"X": 0,
+			"Y": 0,
+			"Z": 0
+		},
+		"MeshRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"MeshScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		}
 	}
 ]

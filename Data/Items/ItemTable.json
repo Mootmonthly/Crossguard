@@ -20,7 +20,11 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
-		"ImpactPower": 0
+		"ImpactPower": 0,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "bandage",
@@ -43,7 +47,11 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
-		"ImpactPower": 0
+		"ImpactPower": 0,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "bolt",
@@ -66,7 +74,11 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
-		"ImpactPower": 0
+		"ImpactPower": 0,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "emerald",
@@ -89,7 +101,11 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
-		"ImpactPower": 0
+		"ImpactPower": 0,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "explosive_bottle",
@@ -112,7 +128,11 @@
 		"ThrowDotSeconds": 5,
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
-		"ImpactPower": 0
+		"ImpactPower": 0,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "gold_coin",
@@ -135,7 +155,11 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
-		"ImpactPower": 0
+		"ImpactPower": 0,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "healing_potion",
@@ -158,7 +182,11 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
-		"ImpactPower": 0
+		"ImpactPower": 0,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "herb_bloodroot",
@@ -181,7 +209,11 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
-		"ImpactPower": 0
+		"ImpactPower": 0,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "herb_silverleaf",
@@ -204,7 +236,11 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
-		"ImpactPower": 0
+		"ImpactPower": 0,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "lockpick",
@@ -227,7 +263,11 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
-		"ImpactPower": 0
+		"ImpactPower": 0,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "ore_iron",
@@ -250,7 +290,11 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
-		"ImpactPower": 0
+		"ImpactPower": 0,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "ore_mithril",
@@ -273,7 +317,11 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
-		"ImpactPower": 0
+		"ImpactPower": 0,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "pet_gem_tiger",
@@ -296,7 +344,11 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
-		"ImpactPower": 0
+		"ImpactPower": 0,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "ruby",
@@ -319,7 +371,11 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
-		"ImpactPower": 0
+		"ImpactPower": 0,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "sapphire",
@@ -342,7 +398,11 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
-		"ImpactPower": 0
+		"ImpactPower": 0,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "throwing_axe",
@@ -365,7 +425,11 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Axe",
 		"bHasCountsAsWeapon": true,
-		"ImpactPower": 3
+		"ImpactPower": 3,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	},
 	{
 		"Name": "throwing_knife",
@@ -388,6 +452,10 @@
 		"ThrowDotSeconds": 0,
 		"CountsAsWeapon": "Dagger",
 		"bHasCountsAsWeapon": true,
-		"ImpactPower": 1
+		"ImpactPower": 1,
+		"ProjectileMesh": "",
+		"TrailVfx": "",
+		"ImpactVfx": "",
+		"ImpactSound": ""
 	}
 ]

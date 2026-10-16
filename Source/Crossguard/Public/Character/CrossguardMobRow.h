@@ -3,8 +3,12 @@
 #include "Character/CrossguardAICharacter.h"
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
+#include "UObject/SoftObjectPtr.h"
 
 #include "CrossguardMobRow.generated.h"
+
+class UAnimInstance;
+class USkeletalMesh;
 
 UENUM(BlueprintType)
 enum class ECrossguardMobKind : uint8
@@ -95,4 +99,24 @@ struct CROSSGUARD_API FCrossguardMobRow : public FTableRowBase
 	// Its drops: the loot table "mob_<id>" (exported from the mob's own loot).
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob")
 	FName LootTableId;
+
+	// Art (`mesh`): its skeletal mesh, replacing the placeholder cylinder. Empty: the cylinder.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob|Art")
+	TSoftObjectPtr<USkeletalMesh> Mesh;
+
+	// Art (`animBlueprint`): the Anim Blueprint class for Mesh.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob|Art")
+	TSoftClassPtr<UAnimInstance> AnimClass;
+
+	// Art (`meshScale`): the mesh's own scale, on top of Scale.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob|Art")
+	float MeshScale = 1.0f;
+
+	// Art (`meshOffset`, meters in the source): cm from the capsule's bottom centre.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob|Art")
+	FVector MeshOffset = FVector::ZeroVector;
+
+	// Art (`meshYaw`): degrees; -90 for meshes facing +Y (the UE mannequin).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob|Art")
+	float MeshYaw = -90.0f;
 };

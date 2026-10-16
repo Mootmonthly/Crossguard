@@ -19,7 +19,16 @@
 		"MoveSpeed": 450.0,
 		"Scale": 1,
 		"Skills": [],
-		"LootTableId": "mob_example_brute"
+		"LootTableId": "mob_example_brute",
+		"Mesh": "",
+		"AnimClass": "",
+		"MeshScale": 1,
+		"MeshOffset": {
+			"X": 0,
+			"Y": 0,
+			"Z": 0
+		},
+		"MeshYaw": -90
 	},
 	{
 		"Name": "mithril_dragon",
@@ -49,7 +58,16 @@
 			"summon_skeletons",
 			"summon_greater_demon"
 		],
-		"LootTableId": "mob_mithril_dragon"
+		"LootTableId": "mob_mithril_dragon",
+		"Mesh": "",
+		"AnimClass": "",
+		"MeshScale": 1,
+		"MeshOffset": {
+			"X": 0,
+			"Y": 0,
+			"Z": 0
+		},
+		"MeshYaw": -90
 	},
 	{
 		"Name": "skeleton_archer",
@@ -74,7 +92,16 @@
 			"bow_mastery",
 			"antimagic_garb"
 		],
-		"LootTableId": "mob_skeleton_archer"
+		"LootTableId": "mob_skeleton_archer",
+		"Mesh": "",
+		"AnimClass": "",
+		"MeshScale": 1,
+		"MeshOffset": {
+			"X": 0,
+			"Y": 0,
+			"Z": 0
+		},
+		"MeshYaw": -90
 	},
 	{
 		"Name": "skeleton_mage",
@@ -101,7 +128,16 @@
 			"heal",
 			"wall"
 		],
-		"LootTableId": "mob_skeleton_mage"
+		"LootTableId": "mob_skeleton_mage",
+		"Mesh": "",
+		"AnimClass": "",
+		"MeshScale": 1,
+		"MeshOffset": {
+			"X": 0,
+			"Y": 0,
+			"Z": 0
+		},
+		"MeshYaw": -90
 	},
 	{
 		"Name": "skeleton_soldier",
@@ -128,6 +164,15 @@
 			"cleave",
 			"heroic_might"
 		],
-		"LootTableId": "mob_skeleton_soldier"
+		"LootTableId": "mob_skeleton_soldier",
+		"Mesh": "",
+		"AnimClass": "",
+		"MeshScale": 1,
+		"MeshOffset": {
+			"X": 0,
+			"Y": 0,
+			"Z": 0
+		},
+		"MeshYaw": -90
 	}
 ]

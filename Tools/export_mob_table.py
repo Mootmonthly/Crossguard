@@ -47,6 +47,12 @@ def row(mob, weapons):
         "Scale": mob["scale"],
         "Skills": mob["skills"],
         "LootTableId": "mob_" + mob["id"],
+        # Art (optional in the source): an empty path keeps the placeholder cylinder.
+        "Mesh": mob.get("mesh", ""),
+        "AnimClass": mob.get("animBlueprint", ""),
+        "MeshScale": mob.get("meshScale", 1),
+        "MeshOffset": {k: round(v * 100, 3) for k, v in zip(("X", "Y", "Z"), mob.get("meshOffset", [0, 0, 0]))},
+        "MeshYaw": mob.get("meshYaw", -90),
     }
 
 

@@ -4,8 +4,13 @@
 #include "Engine/DataTable.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Skills/CrossguardSkillTypes.h"
+#include "UObject/SoftObjectPtr.h"
 
 #include "CrossguardItemTypes.generated.h"
+
+class UNiagaraSystem;
+class USoundBase;
+class UStaticMesh;
 
 // Item data types. Mirrors docs/item-data-schema.md. Weapon rows are generated from
 // Data/Items/Weapons.json by Tools/export_weapon_table.py; do not edit the data table by hand.
@@ -150,6 +155,25 @@ struct CROSSGUARD_API FCrossguardWeaponRow : public FTableRowBase
 	// Blocking and parrying: when weapons collide, the higher Impact Power wins (docs/design-decisions.md, Block and parry).
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	int32 ImpactPower = 0;
+
+	// Art (`mesh`): the static mesh held while the weapon is drawn (UCrossguardWeaponVisualsComponent).
+	// Empty: nothing shown.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Art")
+	TSoftObjectPtr<UStaticMesh> Mesh;
+
+	// Art (`attachSocket`): the hand socket. None: hand_r in the main hand, hand_l in the off hand.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Art")
+	FName AttachSocket;
+
+	// Art (`relativeTransform`): the mesh's place on the socket (cm, degrees, scale).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Art")
+	FVector MeshOffset = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Art")
+	FRotator MeshRotation = FRotator::ZeroRotator;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Art")
+	FVector MeshScale = FVector::OneVector;
 
 	bool IsMelee() const { return Range == ECrossguardWeaponRange::Melee; }
 };
@@ -313,6 +337,20 @@ struct CROSSGUARD_API FCrossguardItemRow : public FTableRowBase
 	// weapon hit, cannot be blocked.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
 	int32 ImpactPower = 0;
+
+	// Ammo and throwables, art: what the projectile shows (FCrossguardProjectileVisual), over the
+	// projectile Blueprint's own. Empty: the Blueprint's.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item|Art")
+	TSoftObjectPtr<UStaticMesh> ProjectileMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item|Art")
+	TSoftObjectPtr<UNiagaraSystem> TrailVfx;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item|Art")
+	TSoftObjectPtr<UNiagaraSystem> ImpactVfx;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item|Art")
+	TSoftObjectPtr<USoundBase> ImpactSound;
 };
 
 // A rolled affix on an item instance.

@@ -18,8 +18,15 @@ SOURCE = REPO / "Data" / "Items" / "Weapons.json"
 OUTPUT = REPO / "Data" / "Items" / "WeaponTable.json"
 
 
+def vec(values, keys=("X", "Y", "Z")):
+    return {k: v for k, v in zip(keys, values)}
+
+
 def row(weapon):
     speed = weapon["attackSpeed"] or {}
+    transform = weapon.get("relativeTransform") or {}
+    scale = transform.get("scale", 1)
+    scale = scale if isinstance(scale, list) else [scale] * 3
     return {
         "Name": weapon["id"],
         "DisplayName": weapon["name"],
@@ -37,6 +44,12 @@ def row(weapon):
         "AmmoId": weapon["ammo"] or "None",  # Unreal imports "None" as an empty FName
         "bCanParry": weapon["canParry"],
         "ImpactPower": weapon["impactPower"],
+        # Art (optional in the source): an empty path imports as no mesh.
+        "Mesh": weapon.get("mesh") or "",
+        "AttachSocket": weapon.get("attachSocket") or "None",
+        "MeshOffset": vec(transform.get("location", [0, 0, 0])),
+        "MeshRotation": vec(transform.get("rotation", [0, 0, 0]), ("Pitch", "Yaw", "Roll")),
+        "MeshScale": vec(scale),
     }
 
 
