@@ -139,6 +139,8 @@ void ACrossguardMenuHUD::BeginPlay()
 		return;
 	}
 	MainMenu->EnsureTree();
+	// UI-only input focuses it: a non-focusable widget is refused ("Attempting to focus Non-Focusable widget").
+	MainMenu->SetIsFocusable(true);
 	MainMenu->AddToViewport();
 	MainMenu->Refresh();
 

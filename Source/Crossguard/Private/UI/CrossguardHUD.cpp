@@ -81,6 +81,14 @@ void ACrossguardHUD::BeginPlay()
 	CreateWidgets();
 	EnsureDefaultInput();
 	BindInput();
+	// The input mode outlives a map change: coming from the main menu it is still UI only (no keys, no
+	// look). Start in game input; UpdateInputMode switches from here as windows open and close.
+	if (PlayerOwner != nullptr)
+	{
+		PlayerOwner->SetInputMode(FInputModeGameOnly());
+		PlayerOwner->SetShowMouseCursor(false);
+		bUIMode = false;
+	}
 }
 
 void ACrossguardHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
