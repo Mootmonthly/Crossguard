@@ -13,6 +13,7 @@
 #include "Character/CrossguardCharacter.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "Game/CrossguardConnectionErrorSubsystem.h"
 #include "Game/CrossguardGameMode.h"
 #include "Game/CrossguardHubMarker.h"
 #include "Game/CrossguardMenuGameMode.h"
@@ -80,6 +81,10 @@ bool FCrossguardMenuUrls::RunTest(const FString& Parameters)
 	TestTrue(TEXT("No menu map: nothing"), ACrossguardMenuGameMode::BuildMenuUrl(FString(), TEXT("RaidOver")).IsEmpty());
 	TestEqual(TEXT("Raid over message"), ACrossguardMenuGameMode::ReasonMessage(ACrossguardMenuGameMode::RaidOverReason), FString(TEXT("Your raid is over.")));
 	TestTrue(TEXT("Unknown reason: no message"), ACrossguardMenuGameMode::ReasonMessage(TEXT("Nope")).IsEmpty());
+	// A refused Join (the server's reason) is shown on the menu.
+	TestEqual(TEXT("Connection failure line"), UCrossguardConnectionErrorSubsystem::MenuLine(TEXT("No match ticket: start the raid from the hub.")),
+		FString(TEXT("Connection failed: No match ticket: start the raid from the hub.")));
+	TestTrue(TEXT("No failure: no line"), UCrossguardConnectionErrorSubsystem::MenuLine(FString()).IsEmpty());
 	return true;
 }
 

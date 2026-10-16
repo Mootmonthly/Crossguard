@@ -9,7 +9,9 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "Game/CrossguardConnectionErrorSubsystem.h"
 #include "Game/CrossguardDevMode.h"
 #include "Game/CrossguardMenuGameMode.h"
 #include "Game/CrossguardNakamaSubsystem.h"
@@ -149,6 +151,16 @@ void UCrossguardMainMenuWidget::BuildTree()
 	if (MenuMode != nullptr && !MenuMode->GetReturnMessage().IsEmpty())
 	{
 		ShowStatus(MenuMode->GetReturnMessage(), Info);
+	}
+	// Or why the last Join / Play failed (the server's refusal, a lost connection).
+	const UGameInstance* GameInstance = GetGameInstance();
+	if (UCrossguardConnectionErrorSubsystem* Errors = GameInstance != nullptr ? GameInstance->GetSubsystem<UCrossguardConnectionErrorSubsystem>() : nullptr)
+	{
+		const FString Line = UCrossguardConnectionErrorSubsystem::MenuLine(Errors->TakeLastError());
+		if (!Line.IsEmpty())
+		{
+			ShowStatus(Line, Refusal);
+		}
 	}
 }
 
