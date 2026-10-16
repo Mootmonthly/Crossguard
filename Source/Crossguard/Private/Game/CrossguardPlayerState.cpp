@@ -401,10 +401,10 @@ void ACrossguardPlayerState::OnSetUniqueId()
 {
 	Super::OnSetUniqueId();
 	UGameInstance* GameInstance = GetGameInstance();
-	UCrossguardGuildSubsystem* Guilds = HasAuthority() && GameInstance != nullptr ? GameInstance->GetSubsystem<UCrossguardGuildSubsystem>() : nullptr;
-	if (Guilds != nullptr)
+	UCrossguardGuildSubsystem* GuildSubsystem = HasAuthority() && GameInstance != nullptr ? GameInstance->GetSubsystem<UCrossguardGuildSubsystem>() : nullptr;
+	if (GuildSubsystem != nullptr)
 	{
-		Guilds->PlayerJoined(this);
+		GuildSubsystem->PlayerJoined(this);
 	}
 	// Saves are keyed by the same id.
 	if (UCrossguardSaveSubsystem* Saves = HasAuthority() ? UCrossguardSaveSubsystem::Get(this) : nullptr)
