@@ -28,7 +28,8 @@ order changes.
 | Economy | Gold coins carried in raids, banked on extraction; banked gold; selling gemstones to vendors; buying stash tabs. |
 | World | Extract portals (points of interest, 60 s channel, 30 s open), extraction zones, doors, locks and lockpicking. |
 | Teams | Parties up to 8 via `?Party=`, friendly fire always on. In-game parties in the hub (invite, accept, leave, kick, promote; members allied at once) and the leader's raid launch ([parties.md](parties.md)); console commands until a party panel exists. |
-| Build and tests | Builds on UE 5.8. 118/118 headless editor tests pass, including networked tests (listen and dedicated server with clients in one process) that cover replication, ragdolls, stealth and concurrent loot; `-Visual` runs rendered scenes and saves screenshots. Every checklist row is automated (`docs/editor-tests.md`). `Tools\editor_setup.bat` imports every data table and sets the references. First-build notes: [first-compile-triage.md](first-compile-triage.md). |
+| Build and tests | Builds on UE 5.8 with no warnings. 143/143 headless, 8/8 networked and 7/7 visual editor tests pass on the owner's PC; every checklist row is automated (`docs/editor-tests.md`). `Tools\editor_setup.bat` imports every data table and sets the game mode's classes and references. First-build notes: [first-compile-triage.md](first-compile-triage.md). |
+| Online play | Reconnect to a raid after a crash or logout (same body, if alive); saving to local JSON behind a backend interface; parties with an invite inbox and the hub-to-raid launch; stealthed players hidden from enemy clients (leak 0.02 s, verified); crowd avoidance for monsters and minions (verified). |
 
 ## Milestone 0: Verify what is written
 
@@ -37,8 +38,6 @@ The code builds and the automated tests pass; what is left needs hands-on play. 
 | Item | Needs | Notes |
 | --- | --- | --- |
 | Playtest feel | Editor | Automated tests cover the rules; play for feel, timing and balance. Debug options on the character: `DebugInventory`, `bDebugLootTakesAll`, `DebugReviveDelay`, `bUseDebugProgression`; turn off the game mode's `bIsRaid` to test the stash and vendors. |
-| Stealth position leak | Editor | Built (fix A), pending local verification: when stealth starts the server closes the enemy connections' actor channels, so enemy clients drop the stealthed player at once instead of after 4.3–4.5 s (`RelevantTimeout`). `Crossguard.Net.StealthHidesFromEnemyClient` now fails above 0.5 s. Classic net driver only. See [anti-cheat.md](anti-cheat.md). |
-| Crowd avoidance | Editor | Built, pending local verification: RVO avoidance on monsters and minions (placeholder: 3 m radius, weight 0.5), only toward their own side; players untouched ([design-decisions.md](design-decisions.md)). New test `Crossguard.Scenario.Monsters.MinionAvoidsSummoner` (minion gets around its summoner standing in its line). `MonsterTeam` keeps its 3 m offset until that passes. Check bunching on a real map. |
 
 ## Milestone 1: One complete raid
 
