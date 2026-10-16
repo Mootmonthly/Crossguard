@@ -16,7 +16,7 @@
         incompatible version).
 
     Hub server:   <HubMap>?Hub -server -port=<HubPort> -AllowDevPlayerIds -RaidServer=127.0.0.1:<RaidPort>
-    Match server: <RaidMap> -server -port=<RaidPort> -AllowDevPlayerIds -HubServer=127.0.0.1:<HubPort> -HubMap=
+    Match server: <RaidMap> -server -port=<RaidPort> -AllowDevPlayerIds -HubServer=127.0.0.1:<HubPort>
     Client i:     127.0.0.1:<port>?DevPlayerId=<name i> -game -windowed (tiled) -CrossguardPlayerId=<name i>
 
     Each server is started first and waited for ("listening on port" in its log) before the clients.
@@ -61,7 +61,7 @@
     first time).
 
 .PARAMETER ExtraServerArgs
-    Appended to both servers' command lines (e.g. "-HubMap=/Game/Maps/L_Hub").
+    Appended to both servers' command lines (e.g. "-RaidMap=/Game/Maps/L_Raid").
 
 .PARAMETER Stop
     Close every process the last run started (from pids.json) and exit.
@@ -228,9 +228,9 @@ if (-not $NoHub) {
     $ok = $ok -and (Wait-CgListening "hub" $hub $HubPort)
 }
 if ($ok -and -not $NoRaid) {
-    # Assumed (placeholder): an empty -HubMap= keeps the match server from travelling to the hub map
-    # itself (docs/hub-and-menu.md); teams go back to the hub server (-HubServer=).
-    $hubArg = if ($NoHub) { "-HubMap=" } else { "-HubServer=127.0.0.1:$HubPort -HubMap=" }
+    # Teams go back to the hub server (-HubServer=). Not -DevListenHub: a dedicated match server never
+    # travels to the hub map as a whole (ACrossguardGameMode::GetHubDestination).
+    $hubArg = if ($NoHub) { "" } else { "-HubServer=127.0.0.1:$HubPort" }
     $cmd = Get-CgServerCommand $RaidMap $RaidPort $hubArg
     $raid = Start-CgProcess "match" $cmd[0] $cmd[1]
     $ok = $ok -and (Wait-CgListening "match" $raid $RaidPort)

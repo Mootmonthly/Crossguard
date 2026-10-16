@@ -696,8 +696,7 @@ Everything here is cosmetic: no rule depends on it.
 - Dedicated server tooling ([dedicated-server-plan.md](dedicated-server-plan.md)). **Assumed**: the
   committed `Crossguard.uproject` stays on the launcher engine (`EngineAssociation` 5.8) and server
   builds use a second working copy with the source engine; local cluster ports 7777 (hub) and 7778
-  (match) (placeholders); the local match server runs with `-HubMap=` empty so it never becomes a hub;
-  one server process per match (fits GameLift; to confirm); `ServerDefaultMap` = `L_Hub` when set
+  (match) (placeholders); one server process per match (fits GameLift; to confirm); `ServerDefaultMap` = `L_Hub` when set
   (placeholder).
 
 ## Open questions

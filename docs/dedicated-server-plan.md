@@ -268,7 +268,7 @@ project path):
 rem hub server (port 7777); its raid launch goes to the local match server (dev matchmaking fake)
 UnrealEditor.exe Crossguard.uproject /Game/Maps/L_Hub?Hub -server -log -port=7777 -AllowDevPlayerIds -RaidServer=127.0.0.1:7778
 rem match server (port 7778); teams go back to the hub server
-UnrealEditor.exe Crossguard.uproject /Game/Maps/Dev/L_DevSandbox -server -log -port=7778 -AllowDevPlayerIds -HubServer=127.0.0.1:7777 -HubMap=
+UnrealEditor.exe Crossguard.uproject /Game/Maps/Dev/L_DevSandbox -server -log -port=7778 -AllowDevPlayerIds -HubServer=127.0.0.1:7777
 rem client i
 UnrealEditor.exe Crossguard.uproject 127.0.0.1:7777?DevPlayerId=alice -game -log -windowed -ResX=960 -ResY=540 -WinX=0 -WinY=0 -CrossguardPlayerId=alice
 ```
@@ -277,10 +277,9 @@ Examples: `Tools\run_local_cluster.bat` (hub + match + 2 clients to the hub);
 `-Clients 3 -ClientsTo Raid -NoHub` (one match server, three raiders); `-Clients 0` (servers only).
 From a running client the console `open 127.0.0.1:7778?DevPlayerId=alice` joins another server.
 
-- **Assumed**: `-HubMap=` (empty) on the match server so it never travels to the hub map itself
-  ([hub-and-menu.md](hub-and-menu.md)). Until checklist items C4–C6 are done, the **last** team's
-  return then stops with "Cannot return to the hub" (players stay on the match server; leave with
-  the console `open 127.0.0.1:7777?DevPlayerId=<name>`).
+- No `-DevListenHub` on either server: they behave as hosted ones (a match server never travels as
+  a whole; each team goes back to `-HubServer=`). Until C6 is done a match server serves **one**
+  match: restart the cluster for the next.
 - **Assumed**: ports 7777 (hub) and 7778 (match), names alice, bob, … (placeholders, script options).
 - Saves: both servers use the project's `Saved\Crossguard\Characters` (same folder), so a character
   carries across hub and match locally; in the cloud this needs the backend.
@@ -305,7 +304,7 @@ the server compile) and a cluster smoke run (3c).
 
 ## Part 4: code that assumes a listen server (checklist)
 
-Scanned on 2026-10-16 at commit `f9086b7` (after "Dedicated architecture 2/5"). That series is
+Scanned on 2026-10-16 after "Dedicated architecture 3/5" (`9d1b3d4`). That series is still
 changing this code: **re-run the scan before acting** and drop the items it already fixed:
 
 ```bat
@@ -320,11 +319,11 @@ before hosting, **L** cleanup.
 | C1 | M | `ACrossguardCharacter::UpdateStealthVisibility` (`GetWorld()->GetFirstPlayerController()`) | The comment says a dedicated server has no viewer, but `GetFirstPlayerController` returns the first **remote** client's controller there: the server hides capsules as if it were that client. Harmless for rendering, but it toggles visibility on the server (anim ticking with `OnlyTickPoseWhenRendered`, visibility-based logic). | Return early on `NM_DedicatedServer`, or use `GetFirstLocalPlayerController()`. |
 | C2 | H | `UCrossguardPartySubsystem::StartRaid` ClientTravel URL (`BuildMatchTravelUrl` / `RaidTravelUrl`) | No `?DevPlayerId=` (the team return adds it, `CrossguardGameMode.cpp` "Development ids travel along"). On a dedicated match server a dev player gets a `session-<n>` id: no save loaded, no reconnect. | Append `?DevPlayerId=<name>` for `dev-` ids in development builds, as the team return does. |
 | C3 | H | Main menu Join (`ACrossguardMenuGameMode::BuildJoinUrl`, `UCrossguardMainMenuWidget`) and the cluster clients | A dedicated server has no local player, so `pie-<n>` / `-CrossguardPlayerId` never apply; only the login URL's `?DevPlayerId=` does. Join from the menu sends none. | Development builds: the client appends `?DevPlayerId=` from its `-CrossguardPlayerId=` to every join / travel URL it builds. Shipping: Steam id + session ticket check on the server ([anti-cheat.md](anti-cheat.md)). |
-| C4 | H | `ACrossguardGameMode::ReturnToHub` (whole-server return) | `ServerTravel` to `<HubMap>?Hub`: a match server would turn itself into a hub; with `-HubMap=` empty it logs "Cannot return to the hub" and everyone stays. | With a hub server (`GetHubServerAddress()` set, or the backend), the last team goes like the early team return: each client travels to the hub server; then the match server resets (C6). `ServerTravel` back only in dev listen mode (`IsDevListenMode`). |
-| C5 | M | `UpdateSpectators` (dead with nobody to watch: `bHubReturnStarted \|\| !GetHubMapName().IsEmpty()`) | With `-HubMap=` empty on a match server, the dead go to the menu instead of riding back with their team (ruled: they ride back). | Count a hub server address as "has a hub". |
+| C4 | – | `ACrossguardGameMode::ReturnToHub` (whole-server return) | **Done (series 3/5)**: refused outside dev listen mode; on a dedicated match server every team, the last one too, leaves on its own to `GetHubDestination` (backend stub, then `-HubServer=`, else the menu). | Verify in the smoke run. |
+| C5 | – | `UpdateSpectators` (dead with nobody to watch) | **Done (series 3/5)**: `HasTripBack()` counts the hub server. | Verify. |
 | C6 | H | Match server lifecycle (`ACrossguardGameMode`: `FinishedPlayerIds`, `HeldPlayers`, `SentToMenuIds`, `LeavingForHubIds`, `bHubReturnStarted`, looted containers, killed mobs) | A raid map is used once; nothing resets it. The next party on the same server is refused ("Your raid is over") or finds it looted. | One process per match fits GameLift (the chosen host): `ProcessReady` → `OnStartGameSession` → match → `ProcessEnding` and exit; GameLift starts a fresh process (C15). **Owner**: confirm, and when a match closes to new teams. |
-| C7 | M | Team early return without a hub server (`ECrossguardTeamHubTravel::HostHub` / `JoinLeader`, `TeamHubListenPort`, `RemoteAddressOf`) | The leader's client hosts a listen hub. | Dev listen mode only; on a dedicated match server without a hub address: error log and the menu (or ask the backend). |
-| C8 | M | Menu Play (`ACrossguardMenuGameMode::BuildHostUrl`, `<HubMap>?listen?Hub`) | Play hosts a listen hub on the player's PC. | Play asks the backend for a hub server (dev: a `-HubServer=` / config address); hosting only in dev listen mode. |
+| C7 | – | Team early return without a hub server | **Done (series 3/5)**: the leader-hosts-hub path is gone; no hub server → the menu with a message. | – |
+| C8 | – | Menu Play (`BuildHostUrl`, `<HubMap>?listen?Hub`) | **Done (series 3/5)**: Play is refused outside dev listen mode. Left: Play asks the backend for a hub server. | With the backend. |
 | C9 | L | Listen-host special cases that are simply false on a dedicated server: `IsLocalController() && NM_ListenServer` in `UpdateSpectators`, `bListenHostInParty`, `BuildHubReturnUrl(.., bListen)`, `IsServerOwnPlayer`, `Login`'s `bLoggingInLocalPlayer`, `pie-<n>` in `DevPlayerIdFor` | Correct on dedicated (they never fire). | Tag `// DEV-ONLY (listen server)` as the series does; no behaviour change. |
 | C10 | M | `?Party=` on the match server (`InitNewPlayer` → `JoinTeam`) | The client's word decides the team. | Accept only parties / tickets the matchmaker announced (`?MatchTicket=`, series 2/5 started this). |
 | C11 | M | Config | No `ServerDefaultMap` (a server started without a map opens `/Engine/Maps/Entry`); no `MapsToCook` / `DirectoriesToAlwaysCook`. | Set `[/Script/EngineSettings.GameMapsSettings] ServerDefaultMap=/Game/Maps/L_Hub` (Assumed) and the packaging lists; keep passing the map on the command line. |
@@ -334,8 +333,8 @@ before hosting, **L** cleanup.
 | C15 | M | GameLift Server SDK (not in the project) | Nothing reports to a host. | Add the Amazon GameLift Server SDK plugin for Unreal (built with the source engine; it needs OpenSSL from the engine): `InitSDK`, `ProcessReady` with the port, `OnStartGameSession` (players / match tickets from Nakama), `ActivateGameSession`, `AcceptPlayerSession` at login (with C10), `ProcessEnding`. Hub servers the same, long-lived. Test with GameLift Anywhere on the PC. |
 
 Already fine for dedicated servers: everything gameplay is server-authoritative
-([anti-cheat.md](anti-cheat.md)); `bUseSeamlessTravel`; raid launch `ServerTravel` only in dev listen
-mode (series 1/5); the team early return to a hub server (`-HubServer=`).
+([anti-cheat.md](anti-cheat.md)); `bUseSeamlessTravel`; raid launch `ServerTravel` and the whole-server return only in dev listen
+mode (`IsDevListenMode`: PIE or `-DevListenHub`, never Shipping; series 1/5–3/5); the team return to a hub server (`-HubServer=`).
 
 ## Part 5: scripts
 
