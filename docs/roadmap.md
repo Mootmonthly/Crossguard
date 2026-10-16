@@ -15,14 +15,14 @@ order changes.
 
 | Area | What exists |
 | --- | --- |
-| Rules library | Engine-free C++ for formulas, progression, XP, loadouts, items, affixes, armor, teams, inventory grid; 386 unit-test checks. |
+| Rules library | Engine-free C++ for formulas, progression, XP, loadouts, items, affixes, armor, teams, inventory grid, character saves (JSON, migration, validation); unit tested. |
 | Data pipeline | JSON → validators → Unreal data tables, cross-checked against the C++ structs (`Tools/run_checks.sh`). 50 skills, 10 weapons, 16 armor pieces, 23 affixes, 4 general items. |
 | Character | First-person camera, Enhanced Input built in code, GAS stats derived from STR/AGI/INT. |
 | Combat | Weapon attacks (melee sweep, hitscan wand, projectiles), damage and healing formulas, dual wield, cooldowns with CDR cap. Bows use arrows. |
 | Equipment | Main hand / off hand, six armor slots, rolled affixes, equipment stats and tags. |
 | Skills | Loadout validation (Capacity, bundles, superseded skills), Skill Library gating. Passive stat bonuses play from the skill data. All 50 skills playable: 35 in C++ (including the next-attack system, Stealth, walls, CC immunity, party auras, tracking, Silence and minions that use skills) and the stat passives from data. Neckbite is the tiger's only, until Beastial forms exist. |
-| Progression | XP sources, level curve, raid XP banked on extraction, attribute allocation, paid respec tokens. Session only, not saved. |
-| Stash | Per-character tabs of 10 × 30, between raids only. Not saved yet. |
+| Progression | XP sources, level curve, raid XP banked on extraction, attribute allocation, paid respec tokens. Saved ([persistence.md](persistence.md)). |
+| Stash | Per-character tabs of 10 × 30, between raids only. Saved with the character. |
 | Inventory | Server-authoritative 10 × 5 grid, Backpack and Quiver, stacking by type and rarity, equip through the inventory, Skill Gems, hotbar keys 3–7 for potions, bandages and throwables, two weapon sets on 1 and 2. |
 | Death | Ragdoll, lootable body for every death, F to loot, revive within 120 s returns what was not looted; spectating teammates after. |
 | Economy | Gold coins carried in raids, banked on extraction; banked gold; selling gemstones to vendors; buying stash tabs. |
@@ -56,7 +56,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Hotbar, weapon sets and skill wheel UI | Editor | Built in code (keys 1–7, hold Q, E). Placeholder UI in code ([ui.md](ui.md)): hotbar with counts, weapon set line, cooldowns, a ring of skills while Q is held. Needs art: the radial wheel and icons. |
 | Drop and pick up single items | Editor | Built in code (G drops the stack in hand, F picks up). Needs drag-to-drop in the inventory UI and item meshes. |
 | Revive spell | Decision, Code | Calls the existing `Revive`. Comes from the skills you add in the Skill Forge. |
-| Saving progression | Code, Decision | XP, level, attributes, Skill Library, stash, respec tokens. Needs a choice of backend. |
+| Saving progression | Decision, Editor | Built in code ([persistence.md](persistence.md)): XP, attributes, Skill Library, loadout, respec tokens, gold, stash and gear carried between raids, saved on raid start / end, logout and changes between raids; versioned JSON, validated on load, corrupt saves kept aside. Local JSON files on the server for now (`Saved/Crossguard/Characters`). Needs the backend choice (one class: `ICrossguardSaveBackend`) and a local build + `Crossguard.Scenario.Save.*` run. Player ids are only stable with Steam. |
 | Steam accounts | Editor | Lasting player ids for guilds and saves: plugin + config steps in [steam-setup.md](steam-setup.md). |
 | Loadout timing | Decision | Can the loadout change during a raid, or only between raids? |
 

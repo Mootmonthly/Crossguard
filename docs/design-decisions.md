@@ -500,5 +500,29 @@ An explosion has none and is never stopped. When a hit meets a guard, the differ
 
 Players trade face to face, in raids or between them: ask within 5 m, both offer, both lock, both accept, the server swaps everything or nothing. Banked gold only between raids (in raids, gold coins are items). Details and assumptions: [trading.md](trading.md).
 
+## Saving
+
+Characters are saved by the server behind a backend interface; the backend itself is not chosen
+(local JSON files until then). How it works: [persistence.md](persistence.md).
+
+- Saved: banked XP and level, attribute allocation, respec tokens, Skill Library, equipped skills,
+  banked gold, bought stash tabs and every stash item (rarity, affixes, stack counts), and the gear
+  carried between raids (inventory, Backpack, Quiver, worn weapons and armor).
+- Not saved: raid XP (banked only by extracting, as ruled), anything picked up in a raid until the
+  player extracts.
+- Assumed until ruled otherwise:
+  - (placeholder) The gear carried into a raid is at risk from the moment the raid starts: a save
+    made during a raid lists none, so a server crash or the player **logging out during a raid
+    loses it like a failed extraction**, and the next load has no carried gear.
+  - (placeholder) The hotbar and the active weapon set are not saved (the hotbar refills from the
+    keys' remembered items).
+  - (placeholder) A corrupt save is refused whole and kept aside; the player starts fresh. Values
+    out of range are repaired: negative gold, XP or tokens become 0, an allocation over the level's
+    points is reset to all points unassigned (a free re-spend), a stack over its stack size is
+    clamped. Items and skills the game data no longer has are kept in a quarantine and come back
+    when the data does.
+  - (placeholder) Player ids without Steam (`session-<n>`) are saved too, for development; they
+    are not stable across server restarts (turn `bSaveSessionIds` off once Steam is in).
+
 ## Open questions
 

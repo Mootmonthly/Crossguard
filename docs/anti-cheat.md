@@ -81,6 +81,19 @@ Status: **fixed** (a hole closed in this review), **ok** (checked, no change nee
 | Equipment `MainHand`, `OffHand`, `Armor` | Reach everyone (visible gear), including affix rolls. | note |
 | Stealthed characters | Hidden on each machine by `UpdateStealthVisibility`. With `crossguard.StealthHidesFromEnemies` (default on, placeholder) `ACrossguardCharacter::IsNetRelevantFor` returns false for viewers outside the character's team while `State.Stealthed`, so enemy clients get no position (the actor despawns there and is re-created when stealth ends). Own player and allies (spectators too) still get it. On stealth start the server closes the enemy connections' channels at once (no `RelevantTimeout` leak; classic net driver only). Covered by `Crossguard.Net.StealthHidesFromEnemyClient`. | **fixed** (behind switch; channel close pending local verification) |
 
+## Saves
+
+Character saves ([persistence.md](persistence.md)) add no RPC: clients cannot ask for a save, a
+load or a record, and nothing about saves replicates.
+
+| Entry point | Risk checked | Status |
+| --- | --- | --- |
+| `UCrossguardSaveSubsystem` (load, apply, save) | Server only (authority and not `NM_Client`). The record is built from the server's own state; the player id is the server's (`PlayerIdOf`: the login's net id), never sent by a client. | ok |
+| Save files / backend documents | Treated as untrusted: `ParseCharacterSave` refuses malformed JSON, wrong types, out-of-range integers, unknown names, deep nesting, oversized documents and another player's file; `ValidateCharacterSave` clamps gold, XP, tokens, tabs and stacks, re-checks the allocation for the level, re-places overlapping stash items and quarantines unknown items and skills. Applying goes through the same server functions as play (`RequestLoadout` re-validates the loadout). | ok |
+| Gear duplication through saves | A raid save lists no carried gear, so disconnecting or crashing mid-raid cannot keep gear dropped or traded away in the raid. Between raids every inventory, equipment, stash and progression change triggers a save of one consistent snapshot (stash and carried together), so dropping or trading an item and logging out does not leave it in the save. | ok |
+| Session ids | `session-<n>` ids repeat after a server restart: a player could load another's save. Only for development (`bSaveSessionIds`); Steam ids fix it. | note |
+| Several servers, one backend | Two servers saving one character (hub and raid) could overwrite each other. The local backend assumes one server; a shared backend needs per-player leases or versioned writes. | note |
+
 ## Notes
 
 Left as they are, with the reason:

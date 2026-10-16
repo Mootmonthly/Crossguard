@@ -141,6 +141,7 @@ Passive skills: put `heroic_might` (or a mastery) in `DebugSkills` and check
 | Vendor: `RequestSell(Inventory, ruby id)` | +150 gold for a Rare ruby. |
 | `RequestBuyStashTab` with 3000+ gold | A second tab appears; a fourth purchase is refused. |
 | `RequestAttributeAllocation` lowering a stat | Refused without a respec token. |
+| Saving ([persistence.md](persistence.md)): stash something, stop PIE, start again | `Saved/Crossguard/Characters/<id>.json` exists; the stash, gold, XP and carried gear come back ("Loaded the save" in the log). Automated: `Crossguard.Scenario.Save.*`. |
 
 These are called from Blueprint (e.g. a debug widget or the Level Blueprint) until the UI exists.
 

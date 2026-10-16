@@ -356,6 +356,13 @@ game mode's Mob Table is unset.
 | `Crossguard.Net.PartyKickPromoteLeave` | Listen server + 2 clients, all in one party. Promote hands the lead to client 1 (its client sees it); the old leader's kick is refused NotLeader; the new leader kicks client 2 (no longer an ally; its client sees no party, another team); the leader leaving hands the lead back to the host; in a raid invite, leave and the launch are refused OnlyInHub; the last member leaving disbands it. |
 | `Crossguard.Scenario.Hub.PartyRaidLaunchPlan` | A leads B, Solo alone (standalone hub). A member cannot launch (NotLeader); no destination: NoRaidDestination; with a raid server: client travel to `127.0.0.1:7777?Party=<id>` (Party option read back with `FURL`), Solo without the option; others on the server: no server travel even with a raid map; everyone in the party and a raid map: server travel to `/Game/L_Test?Party=<id>`; in a raid: OnlyInHub. Never travels. |
 
+**`CrossguardScenarioSaveTests.cpp`** (character saves, [persistence.md](persistence.md); saving is off in tests, so these turn it on with a temporary folder under `Saved\Automation\SaveTests` and delete it at the end)
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Save.RoundTrip` | A new character is saved at once. Between raids: 300 XP, 15/15/12 attributes, 2 respec tokens, `fireball` and `heal` learned (`heal` equipped), a stash tab bought (4321 gold left), a Rare sword with two affixes stored rotated at (3, 4) in tab 2, potions stored, an axe in hand, potions and a ruby carried. Saved, then everything wiped in memory; loading gives back the identical record (compared as the save JSON) and the same XP, gold, tabs, sword (square, rotation, affix 0.03 exactly), axe in hand and carried items. Starting a raid saves again: that save lists no carried gear, keeps the stash and gold. |
+| `Crossguard.Scenario.Save.CorruptFileRefused` | A save cut in half is refused ("refused (InvalidJson"), nothing of the character changes, the file is kept aside as `.corrupt-*`, the next save writes the live state and loads. A hand-edited save with gold -50 and an unknown item loads repaired: gold 0 (`GoldOutOfRange`), the item quarantined (`UnknownItem`) and kept in the file. A save whose `playerId` is someone else's is refused (`WrongPlayer`). |
+
 **`CrossguardScenarioNetworkTests.cpp`** (networked: a server and real PIE clients, see
 [Networked scenarios](#networked-scenarios))
 
