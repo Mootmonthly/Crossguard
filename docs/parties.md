@@ -72,7 +72,7 @@ players can delete invites from their inbox (one at a time or all). Everything e
   `NoRaidDestination`, `HostInParty`, `TravelFailed`) through `OnPartyRefused`, and are logged as
   "Party request from <player> refused: <result>".
 
-### API for a party panel (UI to do)
+### API for a party panel (the P window, [ui.md](ui.md))
 
 On `UCrossguardPartyComponent` (`ACrossguardPlayerState::GetParty()`), local player's own:
 
@@ -80,14 +80,15 @@ On `UCrossguardPartyComponent` (`ACrossguardPlayerState::GetParty()`), local pla
 | --- | --- |
 | `IsInParty()`, `IsLeader()`, `GetPartyId()`, `GetLeaderId()` | |
 | `GetMembers()` | `FCrossguardPartyMemberView`: `PlayerId`, `DisplayName`, `bLeader`; join order. |
-| `GetInvites()` | The invite inbox. `FCrossguardPartyInviteView`: `PartyId`, `InvitedBy` (name), `InvitedById`, `MemberCount`. Refreshed on every change to it; an invite can expire while listed (accepting it is refused with `InviteExpired` and it drops off). |
+| `GetInvites()` | The invite inbox. `FCrossguardPartyInviteView`: `PartyId`, `InvitedBy` (name), `InvitedById`, `MemberCount`, `SecondsLeft` (when the server wrote the view). Refreshed on every change to it; an invite can expire while listed (accepting it is refused with `InviteExpired` and it drops off). |
+| `GetInviteSecondsLeft(PartyId)` | Time left on an invite now, counted on this machine from when the view arrived (off by the network delay). |
 | `OnPartyChanged` | Fires on the server and the owning client after every change. |
 | `OnPartyRefused(ECrossguardPartyResult)` | A request was refused. |
 
 Requests: `RequestInvite(APlayerState*)`, `RequestAccept(PartyId)`, `RequestDecline(PartyId)` (deletes
 one invite), `RequestDeclineAll()` (empties the inbox; `NoInvite` if it was empty), `RequestLeave()`, `RequestKick(PlayerId)`, `RequestPromote(PlayerId)`, `RequestStartRaid()`.
 
-### Console commands (until the panel exists)
+### Console commands (also with the panel)
 
 On `ACrossguardCharacter` (console, Output Log): `PartyInvite <player name>`, `PartyAccept` (your
 first invite), `PartyInvites` (the inbox, numbered), `PartyDecline <number, inviter's name or party
@@ -175,4 +176,4 @@ Still assumed:
 
 Persistence (parties live in hub memory), coming back from a raid as a party, a matchmaker and raid
 server allocation, raid servers checking `?Party=` against the matchmaker, party chat, a ready
-check, invite by friends list (Steam), and the party panel UI.
+check, and invite by friends list (Steam). A member held for a reconnect shows as "(disconnected)" in the panel (`ACrossguardPlayerState::IsDisconnected`).

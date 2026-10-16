@@ -7,7 +7,9 @@ Artists replace it piece by piece with Widget Blueprints (see [Replacing it](#re
 Code: `Source/Crossguard/Public/UI`, `Source/Crossguard/Private/UI`. Tests:
 `Crossguard.Scenario.UI.WidgetsBind` (`Private/Tests/CrossguardScenarioUITests.cpp`),
 `Crossguard.Scenario.UI.StashAndVendor` and `Crossguard.Visual.HubUI`
-(`Private/Tests/CrossguardScenarioHubUITests.cpp`).
+(`Private/Tests/CrossguardScenarioHubUITests.cpp`), `Crossguard.Scenario.UI.PanelsBind` and
+`Crossguard.UI.RarityContrast` (`Private/Tests/CrossguardScenarioUIPanelTests.cpp`),
+`Crossguard.Net.ReconnectShowsDisconnected` (`Private/Tests/CrossguardScenarioReconnectTests.cpp`).
 
 ## Rules it follows
 
@@ -28,6 +30,8 @@ Code: `Source/Crossguard/Public/UI`, `Source/Crossguard/Private/UI`. Tests:
 | I or Tab | Inventory screen (opens by itself when F opens a body or chest) | Ruled (Controls) |
 | T | Trade: asks the nearest player within 5 m and opens the trade window; with a trade or request, opens / closes it | Ruled (Controls) |
 | U | Guild window | Ruled (Controls) |
+| K | Attributes window (attribute points, Apply, respec) | Placeholder key (Controls) |
+| P | Party window (members, invite, inbox, Start raid) | Placeholder key (Controls) |
 | F at a stash chest / vendor NPC | Stash screen / vendor screen (hub only; the server agrees first) | Ruled (Controls: F interacts) |
 | `OpenStash`, `OpenVendor` (console) | The same screens without a chest or NPC, for testing (refused in a raid) | Placeholder (debug) |
 | Esc | Closes every window (in the editor, Esc also ends Play-In-Editor: use the X button there) | Ruled (Controls) |
@@ -46,6 +50,9 @@ not attack.
 | Skill wheel | `UCrossguardSkillWheelWidget` | Hold Q: castable skills (Active, Spell, Art) in a ring with cooldowns; hovering one selects it (`SetSelectedSkill`). Shown while the loadout's wheel is open (`OnSkillWheelOpened` / `Closed`). |
 | Inventory | `UCrossguardInventoryWidget` | Equipment (two weapon sets, six armor slots, Backpack, Quiver), the 10 × 5 grid and the Backpack / Quiver grids (cells over each item's footprint, rarity colours, short names in one-square cells, stack counts, tooltips with name, count and rarity; items drag and drop), selected item actions (equip main / off hand, equip, take in hand, hotbar keys 3–7, learn a gem, split 1 or half off a stack, rotate, drop, put in the open body), hotbar keys (click to clear), and the open body or chest beside it (click a stack to take it, Take all, Close). |
 | Trade window | `UCrossguardTradeWidget` | Ask the nearest player; answer a request; your items, your offer and theirs; banked gold; lock / unlock; accept; cancel; state line (who has locked or accepted, stacks n / 12). |
+| Attributes window | `UCrossguardAttributesWidget` | Level, attribute points and unspent points; Strength, Agility, Intelligence with the planned value and - / +; Reset, Unassign all; Apply (free: only unspent points added), "Respec with token (n left)", "Respec for 1000 gold (you have n)" (greyed when the plan does not lower anything, is over the points, cannot be paid, or in a raid); refusals in the window. |
+| Party window | `UCrossguardPartyWidget` | Party header (size, "you lead"); members in join order with "(you)", "[leader]", "(disconnected)" (held for a reconnect) or "(not here)"; Make leader and Kick per member (leader only); invite by name; Leave party; Start raid (leader or solo; hub); the invite inbox (inviter, members, time left of 180 s) with Accept / Decline per invite and Decline all; refusals in the window. |
+| Team list | `UCrossguardTeamListWidget` | Always on, top right, only with teammates: each teammate's name, "(disconnected)" in orange while their player is away. |
 | Guild window | `UCrossguardGuildWidget` | Create a guild (name field) and answer invites; name, your rank and what it allows; roster with rank and online state, promote / demote / make leader / kick (greyed when your rank cannot); invite nearest player; leave; bank gold with deposit / withdraw; bank stacks with withdraw; your stacks with deposit. |
 | Stash screen | `UCrossguardStashWidget` | The inventory grids beside one stash tab (10 × 30, 32 px squares, scrolls), tab buttons, "Buy tab: 3000 gold (n / 3 bought)" (greyed without the gold, in a raid or at the cap; tooltip says why), banked gold, the selected item's actions (take to inventory, store, learn a Skill Gem). Opened by F on a stash chest (`ACrossguardStashChest`) or `OpenStash`. |
 | Vendor screen | `UCrossguardVendorWidget` | The inventory grids, a sell box to drop stacks on, banked gold, "Sell all gemstones: n gold", and one row per inventory stack with its price and a Sell button (greyed, "not bought", for what vendors do not take). Opened by F on a vendor NPC (`ACrossguardVendorNPC`) or `OpenVendor`. Selling only: buying from vendors is not ruled. |
@@ -93,6 +100,56 @@ not attack.
   a sale shows "Sold for n gold".
 - Placeholder (no ruling): the stash chest is a 1 m box, the vendor a 1.8 m cylinder; the screens'
   layout, the close distance and square sizes.
+
+### Attributes (K)
+
+- Plan with - and + (never below 0, never more points than the level has), then:
+  - **Apply** when the plan only adds unspent points: free (`RequestAttributeAllocation`, no
+    payment).
+  - **Respec with token** / **Respec for 1000 gold** when the plan lowers any attribute: that is a
+    respec (ruled price: one token or 1000 banked gold, the player chooses). Unassign all, then +,
+    is a full respec.
+- Greyed buttons are hints; the server checks everything and pays (`ApplyAttributeAllocation`).
+  When the allocation changes on the server the plan starts over from it ("Applied.").
+- The window opens in a raid too, read-only (all requests greyed): attributes change between raids
+  only. Assumed (placeholder): reading them in a raid is fine.
+- Console: `Respec <str> <agi> <int> [gold]` asks for that allocation (a respec pays with a token,
+  or with gold when `gold` is given); `Respec` alone prints the allocation, unspent points, tokens,
+  gold and the price.
+
+### Party (P) and the team list
+
+- Not in a party: invite someone by name (the party is founded with you as leader) or accept an
+  invite. Names are matched on this server, any case. The leader also makes someone leader or
+  kicks; anyone leaves. Start raid: the leader, or a player alone (docs/parties.md, "Raid launch").
+- Invite inbox: one row per inviting party with the time left (counted on this machine from when
+  the view arrived: `UCrossguardPartyComponent::GetInviteSecondsLeft`, off by the network delay; the
+  server's 180 s decide). An expired row says "expired", Accept greys out; Decline removes it.
+- Hub only (hints, the server decides): invite, accept, leave, kick, Start raid. Decline, Decline all
+  and Make leader work in a raid too (parties.md).
+- "(disconnected)": a member (or, in the team list, a teammate) whose player left mid-raid and
+  whose character waits for a reconnect (`ACrossguardPlayerState::IsDisconnected`, set and cleared
+  by the game mode). "(not here)": a member with no player state on this server.
+- The HUD's widget classes for these: `Attributes Widget Class`, `Party Widget Class`, `Team List
+  Widget Class` (empty: the built-in ones); keys `Toggle Attributes Action`, `Toggle Party Action`.
+- Placeholder (no ruling): the keys, the layouts, the team list's place, invite by typed name (no
+  friends list), "(not here)".
+
+### Contrast
+
+- Item buttons and cells (inventory, stash and loot grids, equipment list, trade lists) use a dark
+  tint of the rarity colour as the background and a light tint as the text
+  (`CrossguardUI::StyleRarityButton`); rarity text on a window (guild lists, the partner's offer,
+  the vendor's sell list) uses the light tint (`RarityTextColor`). The light tint is the rarity
+  colour mixed with white until its relative luminance is 0.6 (Uncommon and Mystic are already that
+  bright).
+- Contrast (WCAG ratio, AA asks 4.5:1): every rarity's text is 8:1 or more on its background, 5:1
+  or more hovered, 8:1 or more on a window. Before: Rare blue on the grey button was 1.3:1, Epic
+  1.3:1, Common 2.3:1. White on the default grey button is 6.2:1 (4.8:1 hovered: the hover lift is
+  now +0.05, was +0.15). `Crossguard.UI.RarityContrast` checks all of it.
+- Rarity text colours (sRGB): Common #CBCBCB, Uncommon #1EFF00, Rare #BFCBEF, Epic #D9C2F7,
+  Legendary #FFBCA3, Mystic #FFD700; backgrounds #2F2F2F, #214221, #21283B, #30233F, #422A21,
+  #423A21. Placeholder look; the item data's rarity colours (`GetRarityColor`) are unchanged.
 
 ### Item cells
 
@@ -144,31 +201,10 @@ for the next skill" fallback for the HUD's player. Turn it off on the HUD to get
 ## Not built
 
 - Drag and drop (click-to-select-then-click works), splitting stacks, the
-  Skill Library / loadout editor, attributes, party UI, guild redistribution ("Give" to a member)
+  Skill Library / loadout editor, guild redistribution ("Give" to a member)
   and the guild bank log, rearranging the guild bank, a chat.
 - A main menu and a spectator camera switcher (spectating shows the name only).
 - Gamepad navigation.
-
-## To do: party panel
-
-Parties are built in code ([parties.md](parties.md), "API for a party panel"); the panel is not.
-Read `ACrossguardPlayerState::GetParty()` (`UCrossguardPartyComponent`): `IsInParty`, `IsLeader`,
-`GetMembers` (name, id, leader flag), `GetInvites` (party id, inviter, size); refresh on
-`OnPartyChanged`, show refusals from `OnPartyRefused`. Buttons: invite a player (`RequestInvite`
-with their player state), accept / decline an invite, leave, kick and make leader (leader only;
-greyed otherwise), and "Start raid" (`RequestStartRaid`, leader only, hub only). Console stand-ins
-until then: `PartyInvite`, `PartyAccept`, `PartyInvites`, `PartyDecline`, `PartyDeclineAll`,
-`PartyLeave`, `PartyKick`, `PartyPromote`, `PartyInfo`, `PartyStartRaid`.
-
-## To do: party invite inbox panel
-
-Ruled: players can delete invites from their inbox. Built in code, no panel yet. List
-`GetParty()->GetInvites()` (owner only: inviter's name and id, party id, member count; it refreshes
-with `OnPartyChanged`), each row with **Accept** (`RequestAccept(PartyId)`) and **Delete**
-(`RequestDecline(PartyId)`), plus **Delete all** (`RequestDeclineAll()`). Invites last 180 s; one
-can expire while listed (Accept is then refused with `InviteExpired` and the row drops off), so the
-panel may grey a row out after 180 s on its own. Decline works in a raid too. Console stand-ins:
-`PartyInvites`, `PartyDecline <number, inviter's name or party id>`, `PartyDeclineAll`.
 
 ## Engine calls to check on the first compile (UE 5.8)
 
@@ -191,4 +227,6 @@ Written without an engine; these are the calls most likely to need a fix
 | `UFUNCTION(Exec)` on the HUD (`OpenStash`, `OpenVendor`) reached from the console (as `AHUD::ShowHUD`) | `Public/UI/CrossguardHUD.h` |
 | A drag's source grid read as the operation's outer (`NewObject<UCrossguardItemDragOperation>(this)` in the grid) | `Private/UI/CrossguardStashWidget.cpp` (`IsFromStash`) |
 | `UCrossguardUIButton` with no click callback (`MakeButton(..., nullptr)`) as a drop target (the sell box) | `Private/UI/CrossguardVendorWidget.cpp` |
+| Binding a widget's `UFUNCTION` to `OnProgressionRejected` / `OnPartyRefused` with `AddUniqueDynamic` from the widget | `Private/UI/CrossguardAttributesWidget.cpp`, `Private/UI/CrossguardPartyWidget.cpp` |
+| `UWorld::GetRealTimeSeconds` (double) for the invite countdown | `Private/Game/CrossguardPartyComponent.cpp` |
 | Tab may be taken by Slate focus navigation while a text field has focus; I always works | — |

@@ -328,3 +328,25 @@ reading; nothing built or run.
 | SV6 | `Private/Tests/CrossguardScenarioHubUITests.cpp` | `if (ACrossguardHUD* Hud = ...; Hud != nullptr && ...)` (C++17 if with initializer) | UE 5.8 builds C++20; only an older toolchain setting would refuse it. | Split into a declaration and an `if`. |
 | SV7 | Runtime: `Scenario.UI.StashAndVendor` | `ClientOpenStash` / `ClientOpenVendor` on the PIE player's (standalone) player state run locally | Assumed a client RPC on a standalone server runs at once (as `ClientStashRejected`). If "the HUD shows the vendor screen" fails while "Log: the vendor opened" passes: | Check the HUD bound the components (`TickHubWindows` ran); broadcast `OnVendorOpened` directly when `GetNetMode() == NM_Standalone`. |
 | SV8 | `Tools/editor_setup.py` `add_hub_actors` | `LevelEditorSubsystem.load_level` on an existing map inside the commandlet; `EditorActorSubsystem.get_all_level_actors`; `isinstance(actor, unreal.CrossguardStashChest)` | Python API from memory. | Run with `-Mode Editor`, or place them by hand: drag `CrossguardStashChest` and `CrossguardVendorNPC` from Place Actors (search) next to the player start and save. |
+
+### Attributes, party windows, disconnected marker (`Crossguard.Scenario.UI.PanelsBind`, `Crossguard.UI.RarityContrast`, `Crossguard.Net.ReconnectShowsDisconnected`)
+
+New `UI/CrossguardAttributesWidget`, `UI/CrossguardPartyWidget`, `UI/CrossguardTeamListWidget`,
+`Private/UI/CrossguardHUDSocialWindows.cpp` (more `ACrossguardHUD` members; namespace
+`CrossguardHUDSocialLocal`), `Tests/CrossguardScenarioUIPanelTests.cpp` (namespace
+`CrossguardScenarioUIPanels`); `ACrossguardPlayerState::bDisconnected` (replicated) and
+`SetDisconnected`; `FCrossguardPartyInviteView::SecondsLeft` and
+`UCrossguardPartyComponent::GetInviteSecondsLeft`; `ACrossguardCharacter::Respec` (Exec);
+`CrossguardUI::RarityTextColor` / `RarityBackgroundColor` / `StyleRarityButton` / `ContrastRatio`.
+Reviewed by reading; nothing built or run.
+
+| # | Where | Call | Why it may fail | Suggested fix |
+| --- | --- | --- | --- | --- |
+| AP1 | `Public/Character/CrossguardCharacter.h` | `UFUNCTION(Exec) void Respec(const FString& Arguments)` | Relies on the console putting the rest of the line into the last `FString` parameter (`CallFunctionByNameWithArguments`). If only the first number arrives ("Respec 12 10 8" prints the usage): | Make it `Respec(int32 Str, int32 Agi, int32 Int, const FString& Payment)` (the trailing string may be empty). |
+| AP2 | `Private/UI/CrossguardAttributesWidget.cpp`, `CrossguardPartyWidget.cpp` | `OnProgressionRejected.AddUniqueDynamic(this, &UCrossguardAttributesWidget::HandleProgressionRejected)` (and `OnPartyRefused`) from a widget | Standard dynamic binding; the handler must be a `UFUNCTION` (it is). | — |
+| AP3 | `Private/Game/CrossguardPartyComponent.cpp` | `UWorld::GetRealTimeSeconds()` returning `double` | If 5.8 returns `float`, the `FMath::Max(0.0, ...)` mixes types. | `FMath::Max<double>(...)`. |
+| AP4 | `Private/UI/CrossguardHUDSocialWindows.cpp` | `TArray<UCrossguardWindowWidget*>{ AttributesWidget.Get(), PartyWidget.Get() }`; `EKeys::K`, `EKeys::P` | Derived-to-base pointers in an initializer list; needs the widget headers (included). | Build the array with `Add`. |
+| AP5 | `Private/UI/CrossguardTeamListWidget.cpp` | `UCanvasPanelSlot::SetAutoSize`, anchors (1, 0) | As the HUD widget's pins. | — |
+| AP6 | `Private/Tests/CrossguardScenarioReconnectTests.cpp` (`Net.ReconnectShowsDisconnected`) | `C.SpawnPlayer` and the reconnect helpers in a **networked** (dedicated server) scenario | First use of `SpawnPlayer` with `Clients(N)`: a server-side controller without a connection, marked local (`SetAsLocalPlayerController`). If the raider does not spawn, or its player state never reaches the client: | Use a real client as the raider and hold it with `GameMode->HoldForReconnect(ServerControllerOf(1))` directly (then `ResumeHeldCharacter`). |
+| AP7 | `Private/Tests/CrossguardScenarioUIPanelTests.cpp` | `CROSSGUARD_TEST_FLAGS` from `CrossguardTestUtils.h` beside `CROSSGUARD_SCENARIO_FLAGS` in one file | Both headers in one test file is new. | Use `CROSSGUARD_SCENARIO_FLAGS` for `Crossguard.UI.RarityContrast` too. |
+| AP8 | Runtime: `Scenario.UI.PanelsBind` | Party and attribute requests from the PIE player run at once (standalone server RPCs) | As `WidgetsBind`'s `RequestCreate`. If "the invite founded a party" fails while `PanelFriend` exists: | Call `UCrossguardPartySubsystem::Invite` directly in the test and keep `InviteByName` for the lookup only. |

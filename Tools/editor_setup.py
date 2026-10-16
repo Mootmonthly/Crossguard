@@ -108,6 +108,15 @@ CHARACTER_BP = "BP_CrossguardCharacter"
 CREATED_BP_FOLDER = "/Game/Blueprints"
 
 MAP_PATH = "/Game/Maps/Dev/L_DevSandbox"
+HUB_MAP_PATH = "/Game/Maps/L_Hub"
+MENU_MAP_PATH = "/Game/Maps/L_MainMenu"
+HUB_FLOOR_METRES = 60
+# Hub-only actors (class, (x, y, z), yaw, label); the stash chest and vendor come from HUB_ACTORS.
+HUB_MAP_ACTORS = [
+    ("CrossguardHubMarker", (0, 0, 0), 0.0, "HubMarker"),
+    ("CrossguardPartyBoard", (-1100, 0, 0), 180.0, "PartyBoard"),
+    ("CrossguardRaidPortal", (1500, 0, 0), 0.0, "RaidPortal"),
+]
 
 
 def _flag(env_name, arg_name):
@@ -118,6 +127,8 @@ def _flag(env_name, arg_name):
 
 CREATE_MAP = _flag("CG_SETUP_CREATE_MAP", "--create-map")
 ADD_HUB_ACTORS = _flag("CG_SETUP_ADD_HUB_ACTORS", "--add-hub-actors")
+CREATE_HUB = _flag("CG_SETUP_CREATE_HUB", "--create-hub")
+CREATE_MENU = _flag("CG_SETUP_CREATE_MENU", "--create-menu")
 CREATE_BLUEPRINTS = _flag("CG_SETUP_CREATE_BLUEPRINTS", "--create-blueprints")
 KEEP_MAPPING_CONTEXT = _flag("CG_SETUP_KEEP_MAPPING_CONTEXT", "--keep-mapping-context")
 QUIT_AT_END = _flag("CG_SETUP_QUIT", "--quit")
@@ -879,33 +890,28 @@ def add_hub_actors():
     record("PASS", step, detail)
 
 
-def create_dev_map(game_mode_cls):
-    step = "Dev map " + MAP_PATH
-    if asset_exists(MAP_PATH):
-        record("SKIP", step, "already exists (not modified)")
-        return
+def create_new_map(map_path):
+    """Creates and opens an empty map at map_path. True on success (warnings in the log)."""
     level_subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
-    actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
     created = False
     try:
-        created = bool(level_subsystem.new_level(MAP_PATH))  # UNCERTAIN inside the commandlet.
+        created = bool(level_subsystem.new_level(map_path))  # UNCERTAIN inside the commandlet.
     except Exception as error:  # noqa: BLE001
         warn("LevelEditorSubsystem.new_level: {}".format(error))
     if not created:
         try:
             world = unreal.EditorLoadingAndSavingUtils.new_blank_map(False)
-            created = world is not None and bool(unreal.EditorLoadingAndSavingUtils.save_map(world, MAP_PATH))
+            created = world is not None and bool(unreal.EditorLoadingAndSavingUtils.save_map(world, map_path))
         except Exception as error:  # noqa: BLE001
             warn("EditorLoadingAndSavingUtils.new_blank_map/save_map: {}".format(error))
-    if not created:
-        record("FAIL", step, "could not create the map (see the log)")
-        return
+    return created
 
-    placed = []
-    skipped = []
+
+def place_floor_and_lighting(actor_subsystem, placed, floor_metres):
+    """A floor_metres x floor_metres floor (top at z = 0), sky atmosphere, sun and sky light, all
+    movable (the same fixed lighting in every scripted map)."""
     v = unreal.Vector
-    # 100 m x 100 m floor, top at z = 0.
-    floor = spawn_mesh(actor_subsystem, "/Engine/BasicShapes/Cube.Cube", v(0, 0, -50), v(100, 100, 1), "Floor")
+    floor = spawn_mesh(actor_subsystem, "/Engine/BasicShapes/Cube.Cube", v(0, 0, -50), v(floor_metres, floor_metres, 1), "Floor")
     if floor:
         # A 100x scaled cube shadows its own top and goes black; the floor needs no shadow.
         floor.get_editor_property("static_mesh_component").set_cast_shadow(False)
@@ -923,14 +929,70 @@ def create_dev_map(game_mode_cls):
         sky.light_component.set_mobility(unreal.ComponentMobility.MOVABLE)
         sky.light_component.set_editor_property("real_time_capture", True)
         placed.append("sky light")
-    if spawn(actor_subsystem, unreal.PlayerStart, v(-1500, 0, 100), label="PlayerStart"):
-        placed.append("player start")
-    nav = spawn(actor_subsystem, unreal.NavMeshBoundsVolume, v(0, 0, 0), label="NavMeshBounds")
+
+
+def place_nav_bounds(actor_subsystem, placed, floor_metres):
+    nav = spawn(actor_subsystem, unreal.NavMeshBoundsVolume, unreal.Vector(0, 0, 0), label="NavMeshBounds")
     if nav:
         # UNCERTAIN: the spawned volume's brush is a 200 uu box (UActorFactoryBoxVolume); scaled to
         # cover the floor and 20 m of height.
-        nav.set_actor_scale3d(v(50, 50, 10))
+        nav.set_actor_scale3d(unreal.Vector(floor_metres / 2.0, floor_metres / 2.0, 10))
         placed.append("nav mesh bounds (build paths after opening)")
+
+
+def set_game_mode_override(game_mode_cls, label, placed):
+    """World Settings -> GameMode Override of the open map."""
+    if game_mode_cls is None:
+        return
+    try:
+        world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+        world.get_world_settings().set_editor_property("default_game_mode", game_mode_cls)
+        placed.append("game mode override " + label)
+    except Exception as error:  # noqa: BLE001
+        warn("world settings game mode: {}".format(error))
+
+
+def save_new_map(step, placed, skipped):
+    """Saves the open map and records the step. True if saved."""
+    level_subsystem = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
+    saved = False
+    try:
+        saved = bool(level_subsystem.save_current_level())
+    except Exception as error:  # noqa: BLE001
+        warn("save_current_level: {}".format(error))
+    if not saved:
+        try:
+            saved = bool(unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True))
+        except Exception as error:  # noqa: BLE001
+            warn("save_dirty_packages: {}".format(error))
+    if not saved:
+        record("FAIL", step, "placed {} but saving failed".format(", ".join(placed)))
+        return False
+    detail = "placed " + ", ".join(placed)
+    if skipped:
+        detail += "; skipped " + ", ".join(skipped)
+    record("PASS", step, detail)
+    return True
+
+
+def create_dev_map(game_mode_cls):
+    step = "Dev map " + MAP_PATH
+    if asset_exists(MAP_PATH):
+        record("SKIP", step, "already exists (not modified)")
+        return
+    actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    if not create_new_map(MAP_PATH):
+        record("FAIL", step, "could not create the map (see the log)")
+        return
+
+    placed = []
+    skipped = []
+    v = unreal.Vector
+    # 100 m x 100 m floor, top at z = 0.
+    place_floor_and_lighting(actor_subsystem, placed, 100)
+    if spawn(actor_subsystem, unreal.PlayerStart, v(-1500, 0, 100), label="PlayerStart"):
+        placed.append("player start")
+    place_nav_bounds(actor_subsystem, placed, 100)
 
     gather_type = native_class("CrossguardGatherNode")
     if gather_type is not None:
@@ -995,31 +1057,133 @@ def create_dev_map(game_mode_cls):
     placed.extend(hub_placed)
     skipped.extend(hub_skipped)
 
-    if game_mode_cls is not None:
-        try:
-            world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
-            world.get_world_settings().set_editor_property("default_game_mode", game_mode_cls)
-            placed.append("game mode override " + GAME_MODE_BP)
-        except Exception as error:  # noqa: BLE001
-            warn("world settings game mode: {}".format(error))
+    set_game_mode_override(game_mode_cls, GAME_MODE_BP, placed)
+    save_new_map(step, placed, skipped)
 
-    saved = False
-    try:
-        saved = bool(level_subsystem.save_current_level())
-    except Exception as error:  # noqa: BLE001
-        warn("save_current_level: {}".format(error))
-    if not saved:
-        try:
-            saved = bool(unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True))
-        except Exception as error:  # noqa: BLE001
-            warn("save_dirty_packages: {}".format(error))
-    if not saved:
-        record("FAIL", step, "placed {} but saving failed".format(", ".join(placed)))
+
+# ------------------------------------------------------------------------------------------------
+# Step 7: hub map (optional, -CreateHub)
+# ------------------------------------------------------------------------------------------------
+
+def create_hub_map(game_mode_cls):
+    """/Game/Maps/L_Hub: a 60 m plaza, the sandbox's lighting, player starts, nav bounds, the hub
+    marker (makes it a hub without ?Hub), stash chest and vendor (place_hub_actors), party board and
+    raid portal."""
+    step = "Hub map " + HUB_MAP_PATH
+    if asset_exists(HUB_MAP_PATH):
+        record("SKIP", step, "already exists (not modified)")
         return
-    detail = "placed " + ", ".join(placed)
-    if skipped:
-        detail += "; skipped " + ", ".join(skipped)
-    record("PASS", step, detail)
+    actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+    if not create_new_map(HUB_MAP_PATH):
+        record("FAIL", step, "could not create the map (see the log)")
+        return
+
+    placed = []
+    skipped = []
+    v = unreal.Vector
+    place_floor_and_lighting(actor_subsystem, placed, HUB_FLOOR_METRES)
+    starts = 0
+    for index, y in enumerate((-300, -100, 100, 300)):
+        # Facing +X: the stash and vendor stand just ahead, the raid portal across the plaza.
+        if spawn(actor_subsystem, unreal.PlayerStart, v(-1500, y, 100), label="PlayerStart_{}".format(index + 1)):
+            starts += 1
+    if starts:
+        placed.append("{} player starts".format(starts))
+    place_nav_bounds(actor_subsystem, placed, HUB_FLOOR_METRES)
+
+    for class_name, location, yaw, label in HUB_MAP_ACTORS:
+        cls = native_class(class_name)
+        if cls is None:
+            skipped.append("{} (class missing: rebuild the editor)".format(class_name))
+            continue
+        if spawn(actor_subsystem, cls, v(*location), unreal.Rotator(roll=0.0, pitch=0.0, yaw=yaw), label):
+            placed.append(label)
+        else:
+            skipped.append("{} (spawn failed)".format(class_name))
+    # The stash chest and vendor NPC, where the dev sandbox has them (beside the player starts).
+    hub_placed, hub_skipped = place_hub_actors(actor_subsystem)
+    placed.extend(hub_placed)
+    skipped.extend(hub_skipped)
+
+    # BP_CrossguardGameMode; the hub marker turns bIsRaid off on this map.
+    set_game_mode_override(game_mode_cls, GAME_MODE_BP, placed)
+    save_new_map(step, placed, skipped)
+
+
+# ------------------------------------------------------------------------------------------------
+# Step 8: main menu map (optional, -CreateMenu)
+# ------------------------------------------------------------------------------------------------
+
+def create_menu_map():
+    """/Game/Maps/L_MainMenu with the CrossguardMenuGameMode override, then GameDefaultMap."""
+    step = "Menu map " + MENU_MAP_PATH
+    menu_mode = native_class("CrossguardMenuGameMode")
+    if menu_mode is None:
+        record("FAIL", step, "class CrossguardMenuGameMode not found (build the editor)")
+        return
+    if asset_exists(MENU_MAP_PATH):
+        record("SKIP", step, "already exists (not modified)")
+    elif not create_new_map(MENU_MAP_PATH):
+        record("FAIL", step, "could not create the map (see the log)")
+        return
+    else:
+        actor_subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+        placed = []
+        # A lit floor behind the menu (the menu has no pawn: the camera stays at the origin).
+        place_floor_and_lighting(actor_subsystem, placed, 40)
+        if spawn(actor_subsystem, unreal.PlayerStart, unreal.Vector(0, 0, 100), label="PlayerStart"):
+            placed.append("player start")
+        set_game_mode_override(menu_mode.static_class(), "CrossguardMenuGameMode", placed)
+        if not save_new_map(step, placed, []):
+            return
+    set_game_default_map(MENU_MAP_PATH)
+
+
+def set_game_default_map(map_path):
+    """Config/DefaultEngine.ini [/Script/EngineSettings.GameMapsSettings] GameDefaultMap = map_path
+    (a text edit: the settings object's own save is not reliable from a commandlet). The editor
+    startup map is left alone."""
+    step = "GameDefaultMap " + map_path
+    ini_path = os.path.join(PROJECT_DIR, "Config", "DefaultEngine.ini")
+    value = "GameDefaultMap=" + object_path(map_path)
+    section = "[/Script/EngineSettings.GameMapsSettings]"
+    try:
+        with open(ini_path, "r", encoding="utf-8") as handle:
+            lines = handle.read().splitlines()
+    except OSError as error:
+        record("FAIL", step, "cannot read {}: {}".format(ini_path, error))
+        return
+    if value in lines:
+        record("SKIP", step, "already set")
+        return
+    out = []
+    in_section = False
+    done = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            if in_section and not done:
+                out.append(value)
+                done = True
+            in_section = stripped == section
+        elif in_section and stripped.startswith("GameDefaultMap="):
+            if not done:
+                out.append(value)
+                done = True
+            continue
+        out.append(line)
+    if in_section and not done:
+        out.append(value)
+        done = True
+    if not done:
+        out.extend(["", section, value])
+    try:
+        with open(ini_path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write("\n".join(out) + "\n")
+    except OSError as error:
+        record("FAIL", step, "cannot write {}: {}".format(ini_path, error))
+        return
+    record("PASS", step, "set in Config/DefaultEngine.ini (commit it; EditorStartupMap unchanged)")
 
 
 # ------------------------------------------------------------------------------------------------

@@ -331,6 +331,8 @@ Everything else is a placeholder until ruled; the numbers live in `Crossguard::F
 | I or Tab | Inventory screen |
 | T | Trade: ask the nearest player, or open the trade window |
 | U | Guild window |
+| K | Attributes window: unspent points, Apply, respec (placeholder key) |
+| P | Party window: members, invite, invite inbox, Start raid (placeholder key) |
 | Esc | Close the open windows |
 
 - Drawing a weapon set (1 / 2) takes 1 s, faster with Dexterity (`1 s ÷ (1 + Dexterity)`); an
@@ -345,6 +347,13 @@ Everything else is a placeholder until ruled; the numbers live in `Crossguard::F
   (walking, hotbar, casting). Hovering a skill on the wheel selects it at once. Opening a body or
   chest opens the inventory beside it; closing the inventory closes the body or chest. Moving items
   is click an item, then click a square (no drag-and-drop yet).
+- (placeholder) K opens the attributes window and P the party window ([ui.md](ui.md)); the keys are
+  not ruled. Assumed: the attributes window opens in a raid too, read-only (changes are between
+  raids only, ruled). Assumed: a party invite is sent by typing the player's name (no friends list
+  yet). Assumed (placeholder look): item text and buttons use light and dark tints of the rarity
+  colours so text reads at WCAG AA (4.5:1) or better; the rarity colours themselves are unchanged.
+- (placeholder) Console: `Respec <str> <agi> <int> [gold]` sets the attributes (a respec pays with
+  a token, or with gold when `gold` is given); `Respec` alone shows them.
 
 ## Throwables
 
@@ -592,7 +601,12 @@ match, as long as their character has not died yet. How it works: [persistence.m
   never by name. It needs a stable id: Steam ([steam-setup.md](steam-setup.md)); `session-<n>` ids
   cannot reconnect. A login while the server still has the old connection open (before it times out)
   is refused as "already in this match"; retry once it has timed out.
-- Open: no "disconnected" marker on the character or in the party UI yet.
+- Assumed (placeholder): teammates see a player who is away as "(disconnected)": in the party
+  window (P) and in the HUD's team list (top right). No marker over the character itself yet (no
+  world-space widget). The flag (`ACrossguardPlayerState::IsDisconnected`) is set when the character
+  is held and cleared on the reconnect; it replicates to every client like the team id (only
+  teammates' UI shows it; an enemy learns nothing they could not see from a character standing
+  still).
 
 ## Open questions
 

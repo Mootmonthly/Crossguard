@@ -84,6 +84,7 @@ are described in their own section below.
 | `Crossguard.Teams.MonstersAndPlayerless` | nothing | On class defaults: a monster is on `MonsterTeamId` and its own ally; a character without a player state and a minion without a summoner have no team and are not a monster's allies. |
 | `Crossguard.World.AICharacters` | a transient world | Spawns an `ACrossguardMonster` (Fixed Health 50) and an `ACrossguardMinion` (a native skill in `SkillIds`): both are possessed by their AI controller; Max Health is the Fixed Health; the skill is granted on possession and `GrantSkills` replaces it; a 10-damage hit through `UCrossguardDamageEffect` lowers Health; lethal damage leaves 0 Health, `State.Dead` and `IsAlive() == false`, and further hits keep it at 0; two monsters are allies, a monster's minion is on the monster team, a player-less character is nobody's ally; a minion dies the same way. |
 | `Crossguard.Data.RepoTables` | the repository's `Data/` | Imports every generated `…Table.json` with its real row struct (as the editor import does) and fails on import problems; native skills' category and cooldown match their rows; loot entries point at existing weapons, armor, items and skills; every loot table rolls 16 times with the real data without dropping anything unresolvable; every mob's skills and loot table exist. |
+| `Crossguard.UI.RarityContrast` | nothing | Every rarity's item text colour on its item background (also hovered, +0.05) and on a window's panel is at least 4.5:1 (WCAG AA), and white on the default grey button (also hovered); logs each ratio ([ui.md](ui.md), "Contrast"). |
 | `Crossguard.Data.EditorAssets` | `Content/Data/DT_*`, `DA_SkillCatalog` | For each imported asset the checklist asks for (`DT_Skills`, `DT_Weapons`, `DT_Affixes`, `DT_Armor`, `DT_Items`, `DT_Loot`, `DT_Mobs` in `/Game/Data/`): right row struct and the same rows as the JSON (else: reimport). `DA_SkillCatalog` (looked for in `/Game/Data`, `/Game`, `/Game/Data/Skills`, `/Game/Skills`): `SkillTable` set to `DT_Skills`, every `AbilityClasses` entry's `SkillId` matches and is a row. Missing assets are skipped with a warning, so the test passes on a fresh checkout. |
 
 The world test runs in a world with no level and no game mode, and nothing ticks: actors spawned there
@@ -154,8 +155,9 @@ damage is computed from the characters' actual stats, so they work at any level.
 
 ### The scenarios
 
-146 tests in 22 files (129 `Crossguard.Scenario.*`, 9 `Crossguard.Net.*`, 8 `Crossguard.Visual.*`;
-2026-10-16; `Net.SeamlessTravelHubToRaid`, `Scenario.UI.StashAndVendor` and `Visual.HubUI` not yet built). Grouped by file; the name is the full test name.
+148 tests in 23 files (130 `Crossguard.Scenario.*`, 10 `Crossguard.Net.*`, 8 `Crossguard.Visual.*`;
+2026-10-16; `Net.SeamlessTravelHubToRaid`, `Scenario.UI.StashAndVendor`, `Visual.HubUI`,
+`Scenario.UI.PanelsBind` and `Net.ReconnectShowsDisconnected` not yet built). Grouped by file; the name is the full test name.
 
 **`CrossguardScenarioRaidTests.cpp`**
 
@@ -360,6 +362,12 @@ game mode's Mob Table is unset.
 | --- | --- |
 | `Crossguard.Scenario.UI.StashAndVendor` | The PIE player in the hub with potions and three Common rubies; a native stash chest and vendor NPC. F (their `Interact`) opens each screen ("Stash opened" / "Vendor opened"; with a game viewport the HUD shows the vendor screen in place of the stash). Stash screen: one tab button per tab, a 10 × 30 grid, one cell per stack in the tab and in the inventory; dropping the potions on a free stash square stores them there, dropping them on the inventory takes them back; "Buy tab" greyed at 2999 gold and naming 3000, active at 3000, buying adds a tab (and its button) and costs 3000, the new tab shows empty. Vendor screen: one sell row per stack, the rubies listed at 150 gold; dropping them on the sell box pays 150 and removes them; "Sell all gemstones" is worth 100 for a sapphire and an emerald and sells both, not the potions. In a raid both refuse (logged) and `OpenStash` opens nothing. |
 
+**`CrossguardScenarioUIPanelTests.cpp`** (the attributes and party windows and the team list, [ui.md](ui.md); hub, no raid)
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.UI.PanelsBind` | Attributes window for the PIE player at level 2: the points line shows unspent points; +1 Strength is not a respec and Apply raises it (the plan follows the new allocation); -1 is a respec: Apply greyed, token and gold respecs greyed with none; with a token the token respec lowers it and spends the token; with 1000 gold the gold respec lowers Agility and takes the 1000. Party window: no rows at first; an invite from PanelHost shows one inbox row with about 180 s left, declining removes it; Invite by name finds "panelfriend" (any case) and founds the party, an unknown name is refused; after PanelFriend accepts: two member rows, "(you) [leader]", PanelFriend listed, and the team list shows PanelFriend; with PanelFriend marked disconnected both show "PanelFriend (disconnected)", and the marker goes when cleared. |
+
 **`CrossguardScenarioPartyTests.cpp`** (parties in the hub, [parties.md](parties.md); the travel itself is never started here: `Net.SeamlessTravelHubToRaid` does it)
 
 | Test | Checks |
@@ -390,6 +398,7 @@ game mode's Mob Table is unset.
 | Test | Checks |
 | --- | --- |
 | `Crossguard.Scenario.Reconnect.RetakesCharacter` | A raider with a potion, raid XP and 60 % Health. A second login with the same id while connected is refused ("You are already in this match."). The connection closes: the character stays, unpossessed, with its player state (in the raid, same raid XP, potion, Health), held under its id. Another id logs in: a player state and pawn of its own, the raider still held. The same id logs in: the held player state is back on the new controller, the same character is possessed (no new pawn), same raid XP, team, potion and Health. |
+| `Crossguard.Net.ReconnectShowsDisconnected` | Dedicated server + 1 client (the teammate). A raider on the client's team: its player state reaches the client not disconnected. The raider's connection closes: held, marked disconnected on the server, and the client's copy says `IsDisconnected` (what the party window and team list show). The same id logs in again: the held player state is back, the mark clears on the server and on the client. |
 | `Crossguard.Scenario.Reconnect.DiedWhileAway` | A raider disconnects; its waiting character is killed and its revive window ends (`HandlePermanentDeath` called directly): no longer held, the raid is over for that id, the body is not the player's any more and a body container lies there; logging in again with the id is refused ("Your raid is over."). |
 
 **`CrossguardScenarioNetworkTests.cpp`** (networked: a server and real PIE clients, see
@@ -414,7 +423,7 @@ each asserts just the state behind the picture)
 | `Crossguard.Visual.MonsterAttack` | `approach.png` a built-in melee monster and a player 3 m apart; `attack.png` the frame of its first hit. |
 | `Crossguard.Visual.Dragonification` | `before.png` a player; `dragon.png` the same player in `State.Dragonified` (no form art yet, so alike). |
 | `Crossguard.Visual.StealthViews` | Listen server + 2 clients: from the enemy client's and the ally host's screen, `*_before.png`, `*_stealth.png` 1 s into Stealth (gone from the enemy's, still on the ally's), `*_after.png` when it ends. |
-| `Crossguard.Visual.UI` | The PIE player's own screen with the placeholder UI ([ui.md](ui.md)): `hud.png` (Health, level, gold, weapon sets, hotbar, skills, "F: Loot body"), `inventory_body.png` (the inventory window with a Rare Backpack and a Common Quiver worn, so their grids show under the main one, arrows in the Quiver, and a dead dummy's body open beside it), `trade.png` (after asking a partner 2 m away), `guild.png`. Asserts each window is open. |
+| `Crossguard.Visual.UI` | The PIE player's own screen with the placeholder UI ([ui.md](ui.md)): `hud.png` (Health, level, gold, weapon sets, hotbar, skills, "F: Loot body"), `inventory_body.png` (the inventory window with a Rare Backpack and a Common Quiver worn, so their grids show under the main one, arrows in the Quiver, and a dead dummy's body open beside it), `trade.png` (after asking a partner 2 m away), `guild.png`, then in the hub `attributes.png` (K: level 2, 3 unspent points) and `party.png` (P: a party with the partner, marked "(disconnected)", also in the team list top right). Asserts each window is open. |
 | `Crossguard.Visual.HubUI` | The same, in the hub ([ui.md](ui.md)): `stash.png` (the stash screen, `OpenStash`: potions stored, 3500 banked gold so "Buy tab" is active, the inventory with rubies and a Rare sapphire), `vendor.png` (the vendor screen, `OpenVendor`: the sell list with prices, "Sell all gemstones"). Asserts each screen is open. |
 
 ### Checklist coverage
@@ -495,7 +504,7 @@ use server-side players in one standalone PIE; `Crossguard.Net.*` use real PIE c
 | 6 `showdebug` shows the other's `Equipment.Wielding.*` | auto | `Net.WieldingTagsReplicate` | The debug HUD itself. |
 | 6 Concurrent loot never duplicates | auto | `Social.ConcurrentLootNeverDuplicates`, `Net.ConcurrentLootFromTwoClients` | — |
 | 6 Parties and the raid launch | part | `Net.PartyInviteAcceptMakesAllies`, `Net.PartyKickPromoteLeave`, `Hub.PartyRaidLaunchPlan`, `Net.SeamlessTravelHubToRaid` (unbuilt) | Two PCs (a real network, not one process); the ClientTravel path to a raid server. |
-| 6 Reconnecting mid-raid | part | `Reconnect.RetakesCharacter`, `Reconnect.DiedWhileAway` | A real crash and relaunch (two processes): the connection timeout, the client getting its pawn and HUD back. |
+| 6 Reconnecting mid-raid | part | `Reconnect.RetakesCharacter`, `Reconnect.DiedWhileAway`, `Net.ReconnectShowsDisconnected` (the teammate's marker) | A real crash and relaunch (two processes): the connection timeout, the client getting its pawn and HUD back. |
 
 Totals: 69 rows: 65 auto, 3 script, 1 part (the party raid launch's travel), none manual (2026-10-16). What the "By hand" column
 still leaves to a person is feel, art and real internet play: looks (frames from the visual run),

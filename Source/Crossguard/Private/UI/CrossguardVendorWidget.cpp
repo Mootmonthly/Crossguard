@@ -228,7 +228,7 @@ void UCrossguardVendorWidget::Redraw()
 		UCrossguardUIButton* Sell = MakeButton(TEXT("Sell"), [this, Id]() { SellItem(Id); }, 10);
 		Sell->SetActive(Price > 0);
 		AddTo(Row, Sell);
-		AddTo(Row, MakeText(Label, 11, Price > 0 ? CrossguardUI::RarityColor(CrossguardUI::ItemRarity(Item)) : NotBought), 6.0f);
+		AddTo(Row, MakeText(Label, 11, Price > 0 ? CrossguardUI::RarityTextColor(CrossguardUI::ItemRarity(Item)) : NotBought), 6.0f);
 		AddTo(SellList, Row, 2.0f);
 	}
 
