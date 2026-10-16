@@ -22,6 +22,8 @@
 #include "Game/CrossguardPlayerState.h"
 #include "Game/CrossguardSaveSubsystem.h"
 #include "Game/CrossguardTeamLibrary.h"
+#include "Items/CrossguardEquipmentComponent.h"
+#include "Items/CrossguardInventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/GameSession.h"
 #include "GameFramework/GameStateBase.h"
@@ -528,6 +530,75 @@ bool ACrossguardGameMode::PlayerCanRestart_Implementation(APlayerController* Pla
 		return false;
 	}
 	return Super::PlayerCanRestart_Implementation(Player);
+}
+
+bool ACrossguardGameMode::GiveStarterKit(ACrossguardCharacter* Character) const
+{
+	UCrossguardEquipmentComponent* Equipment = Character != nullptr ? Character->GetEquipmentComponent() : nullptr;
+	UCrossguardInventoryComponent* Inventory = Character != nullptr ? Character->GetInventoryComponent() : nullptr;
+	if (Equipment == nullptr || Inventory == nullptr)
+	{
+		return false;
+	}
+	// Main hand first: a two-handed main hand then rejects the off hand, as in play.
+	for (const TPair<ECrossguardEquipmentSlot, FName>& Weapon :
+		{ TPair<ECrossguardEquipmentSlot, FName>(ECrossguardEquipmentSlot::MainHand, StarterMainHand),
+			TPair<ECrossguardEquipmentSlot, FName>(ECrossguardEquipmentSlot::OffHand, StarterOffHand) })
+	{
+		if (Weapon.Value.IsNone() || !Equipment->GetItem(Weapon.Key).IsEmpty())
+		{
+			continue;
+		}
+		FCrossguardWeaponItem Item;
+		Item.WeaponId = Weapon.Value;
+		Item.Rarity = ECrossguardRarity::Common;
+		const ECrossguardEquipError Error = Equipment->Equip(Weapon.Key, Item);
+		if (Error != ECrossguardEquipError::None)
+		{
+			UE_LOG(LogCrossguard, Warning, TEXT("Starter kit: %s not equipped (%s)"), *Weapon.Value.ToString(),
+				*StaticEnum<ECrossguardEquipError>()->GetNameStringByValue(static_cast<int64>(Error)));
+		}
+	}
+	for (const TPair<FName, int32>& Starter : StarterItems)
+	{
+		const FCrossguardItemRow* Row = Inventory->ItemTable != nullptr
+			? Inventory->ItemTable->FindRow<FCrossguardItemRow>(Starter.Key, TEXT("GiveStarterKit"), false)
+			: nullptr;
+		if (Row == nullptr || Starter.Value <= 0)
+		{
+			UE_LOG(LogCrossguard, Warning, TEXT("Starter kit: %s is not an item of the Item Table"), *Starter.Key.ToString());
+			continue;
+		}
+		FCrossguardInventoryItem Item;
+		Item.Category = Row->Category;
+		Item.ItemId = Starter.Key;
+		Item.Rarity = ECrossguardRarity::Common;
+		Item.Count = Starter.Value;
+		if (const int32 Left = Inventory->AddItem(Item); Left > 0)
+		{
+			UE_LOG(LogCrossguard, Warning, TEXT("Starter kit: %d of %s did not fit"), Left, *Starter.Key.ToString());
+		}
+	}
+	// Consumables and throwables on the first free hotbar keys (3-7).
+	int32 HotbarSlot = 0;
+	for (const FCrossguardInventoryItem& Item : Inventory->GetItems())
+	{
+		const bool bHotbarItem = Item.Category == ECrossguardItemCategory::Consumable || Item.Category == ECrossguardItemCategory::Throwable;
+		const bool bAssigned = Inventory->GetHotbar().ContainsByPredicate([&Item](const FCrossguardHotbarSlot& Slot)
+		{
+			return Slot.ItemId == Item.ItemId && Slot.Rarity == Item.Rarity;
+		});
+		while (HotbarSlot < Inventory->GetHotbar().Num() && !Inventory->GetHotbar()[HotbarSlot].ItemId.IsNone())
+		{
+			++HotbarSlot;
+		}
+		if (bHotbarItem && !bAssigned && HotbarSlot < Inventory->GetHotbar().Num())
+		{
+			Inventory->RequestAssignHotbarSlot(HotbarSlot++, Item.Id);
+		}
+	}
+	UE_LOG(LogCrossguard, Log, TEXT("%s: a new character, starter kit given"), *Character->GetName());
+	return true;
 }
 
 TArray<FCrossguardInventoryItem> ACrossguardGameMode::RollLoot(FName TableId)

@@ -191,7 +191,8 @@ void UCrossguardWeaponVisualsComponent::RefreshHand(ECrossguardEquipmentSlot Slo
 		{
 			const FVector Offset = Slot == ECrossguardEquipmentSlot::MainHand ? FirstPersonCameraOffset : FirstPersonCameraOffsetOffHand;
 			FirstPerson->AttachToComponent(Camera, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-			FirstPerson->SetRelativeTransform(FTransform(Row->MeshRotation, Offset, Row->MeshScale));
+			const FQuat Tilt = FirstPersonCameraTilt.Quaternion() * Row->MeshRotation.Quaternion();
+			FirstPerson->SetRelativeTransform(FTransform(Tilt, Offset, Row->MeshScale * FirstPersonCameraScale));
 		}
 		FirstPerson->SetOnlyOwnerSee(true);
 		FirstPerson->SetCastShadow(false);

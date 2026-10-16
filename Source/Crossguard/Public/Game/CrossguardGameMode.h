@@ -335,6 +335,22 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Mobs")
 	TObjectPtr<UCrossguardSkillCatalog> MobSkillCatalog;
 
+	// A new character's gear (placeholder; docs/design-decisions.md, "Starter kit"): given once, when
+	// the player has no save yet (UCrossguardSaveSubsystem), as Common items into empty weapon slots
+	// and the inventory; consumables go on the hotbar.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Starter Kit")
+	FName StarterMainHand = TEXT("sword_one_handed");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Starter Kit")
+	FName StarterOffHand = TEXT("shield_one_handed");
+
+	// Item id -> count.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Starter Kit")
+	TMap<FName, int32> StarterItems = { { TEXT("healing_potion"), 3 }, { TEXT("bandage"), 3 } };
+
+	// Server. Gives Character the starter kit (see above). Returns false without a character.
+	bool GiveStarterKit(ACrossguardCharacter* Character) const;
+
 	// Server. Rolls a loot table with a fresh random seed. Empty if the table or data is missing.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Crossguard|Loot")
 	TArray<FCrossguardInventoryItem> RollLoot(FName TableId);

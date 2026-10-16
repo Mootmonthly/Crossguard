@@ -163,6 +163,8 @@ private:
 		bool bReady = false;
 		// The last load found a usable save, or none (a new character); false if it was refused or failed.
 		bool bLastLoadAccepted = false;
+		// No save was found: the starter kit goes on the pawn at PlayerReady, before the first save.
+		bool bNewCharacter = false;
 	};
 
 	FString PlayerIdFor(const ACrossguardPlayerState* PlayerState) const;

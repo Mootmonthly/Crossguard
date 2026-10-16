@@ -60,6 +60,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Art")
 	FVector FirstPersonCameraOffsetOffHand = FVector(35.0f, -18.0f, -22.0f);
 
+	// Without arms: the weapon's tilt in front of the camera, before the row's own rotation (placeholder:
+	// the blade leans 45 degrees forward, away from the view), and its size there (times the row's scale).
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Art")
+	FRotator FirstPersonCameraTilt = FRotator(-45.0f, 0.0f, 0.0f);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Art", meta = (ClampMin = "0.01"))
+	float FirstPersonCameraScale = 0.6f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossguard|Art")
 	FName MainHandSocket = TEXT("hand_r");
 

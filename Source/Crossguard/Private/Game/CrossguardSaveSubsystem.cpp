@@ -6,6 +6,7 @@
 #include "Engine/DataTable.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "Game/CrossguardGameMode.h"
 #include "Game/CrossguardGuildSubsystem.h"
 #include "Game/CrossguardLocalSaveBackend.h"
 #include "Game/CrossguardNakamaSaveBackend.h"
@@ -573,6 +574,7 @@ bool UCrossguardSaveSubsystem::HandleLoaded(const FString& PlayerId, const FCros
 		UE_LOG(LogCrossguard, Log, TEXT("No save for %s: a new character"), *PlayerId);
 		Entry->State = ECrossguardSaveState::Ready;
 		Entry->bLastLoadAccepted = true;
+		Entry->bNewCharacter = true;
 		break;
 	case ECrossguardSaveLoadStatus::Failed:
 		UE_LOG(LogCrossguard, Error, TEXT("Could not load the save for %s (%s): not saving this player this session"), *PlayerId, *Result.Error);
@@ -672,6 +674,16 @@ void UCrossguardSaveSubsystem::PlayerReady(ACrossguardPlayerState* PlayerState)
 		Entry->bHasPending = false;
 		Entry->Pending = Crossguard::FCharacterSave();
 		Apply(*Entry, *PlayerState, MoveTemp(Record));
+	}
+	// A new character: the starter kit, once (the first save below records it).
+	if (Entry->bNewCharacter)
+	{
+		Entry->bNewCharacter = false;
+		const UWorld* World = PlayerState->GetWorld();
+		if (const ACrossguardGameMode* GameMode = World != nullptr ? World->GetAuthGameMode<ACrossguardGameMode>() : nullptr)
+		{
+			GameMode->GiveStarterKit(CrossguardSaveDetail::CharacterOf(PlayerState));
+		}
 	}
 	Entry->AppliedTo = PlayerState;
 	// Write what the player has now: repairs made on load, or a new character's first save.

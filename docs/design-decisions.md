@@ -264,6 +264,12 @@ Independent of category, a skill is:
 - Guild banks: a shared stash per guild; every member deposits, only officers withdraw, manage or
   redistribute.
 
+### Starter kit
+
+- Ruled 2026-10-16 (placeholder contents): a brand-new character (no save yet) gets a starter kit
+  once, before its first save: a Common one-handed sword and shield, 3 healing potions and 3
+  bandages (on the hotbar). Set on the game mode (**Crossguard | Starter Kit**). Lost like any gear.
+
 ## Subscription
 
 - Planned price: about $10 per season (not final).
@@ -666,7 +672,7 @@ Everything here is cosmetic: no rule depends on it.
 - Assumed: held weapons show only while the set is drawn and in hand: hidden while drawing (1 s),
   holstered, or holding an item. The draw has no animation yet.
 - Assumed: without first-person arms the weapon sits in front of the camera (35 cm forward, 18 cm to
-  the side, 22 cm down; off hand mirrored).
+  the side, 22 cm down; off hand mirrored), tilted 45 degrees forward at 60% size (owner OK 2026-10-16).
 - Assumed: weapon, projectile and mob art are optional data fields (`mesh`, `projectileMesh`, ...);
   empty shows nothing new. An arrow's look comes from its ammo row, a throw's from the item.
 - Assumed: a mob mesh faces +Y by default (`meshYaw` -90, the UE mannequin's convention); the capsule

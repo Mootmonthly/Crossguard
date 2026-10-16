@@ -98,6 +98,24 @@ namespace CrossguardScenarioSave
 			return nullptr;
 		}
 		C.Test.TestTrue(TEXT("A new character is saved at once"), IFileManager::Get().FileSize(*SaveFileOf(Folder.Directory, PlayerState)) > 0);
+		// A new character gets the game mode's starter kit; the tests then start from nothing.
+		if (const ACrossguardGameMode* Mode = C.GameMode())
+		{
+			UCrossguardInventoryComponent* Inventory = Player->GetInventoryComponent();
+			C.Test.TestEqual(TEXT("Starter kit: main hand"), Player->GetEquipmentComponent()->GetItem(ECrossguardEquipmentSlot::MainHand).WeaponId,
+				Mode->StarterMainHand);
+			for (const TPair<FName, int32>& Starter : Mode->StarterItems)
+			{
+				C.Test.TestEqual(*FString::Printf(TEXT("Starter kit: %s"), *Starter.Key.ToString()), Inventory->CountItem(Starter.Key), Starter.Value);
+			}
+			C.Unequip(Player, ECrossguardEquipmentSlot::OffHand);
+			C.Unequip(Player, ECrossguardEquipmentSlot::MainHand);
+			const TArray<FCrossguardInventoryItem> Items = Inventory->GetItems();
+			for (const FCrossguardInventoryItem& Item : Items)
+			{
+				Inventory->RemoveItem(Item.Id);
+			}
+		}
 		return Player;
 	}
 
