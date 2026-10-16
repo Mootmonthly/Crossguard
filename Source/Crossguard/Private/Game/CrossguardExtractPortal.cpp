@@ -81,7 +81,7 @@ bool ACrossguardExtractPortal::IsKeeperPresent() const
 	{
 		const ACrossguardCharacter* Character = *It;
 		const bool bOnTeam = TeamId >= 0 ? UCrossguardTeamLibrary::GetTeamId(Character) == TeamId : Character == Summoner.Get();
-		if (bOnTeam && IsAlive(Character) && FVector::Dist(Character->GetActorLocation(), GetActorLocation()) <= KeepAliveRadius)
+		if (bOnTeam && IsAlive(Character) && !Character->HasLeftRaid() && FVector::Dist(Character->GetActorLocation(), GetActorLocation()) <= KeepAliveRadius)
 		{
 			return true;
 		}

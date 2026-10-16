@@ -268,6 +268,11 @@ point of interest instead of only using fixed extraction points. Ruled details:
   solo); the channel collapses only when none are left.
 - A collapsed portal still uses up the player's one summon for the raid.
 - Summoning is on X for now.
+- Assumed until ruled otherwise (placeholder until the trip to the hub exists): an extracted
+  character leaves the raid at once. Its gear is saved as carried out, then the character is removed
+  from the world (nothing stays behind, unlike a death's body); it can no longer pick up, loot, open
+  or trade, and keeps no portal alive. The player spectates a teammate still in the raid; with none
+  left they stay where they extracted (not sent to the menu, unlike a solo death).
 
 ## Gathering
 

@@ -10,6 +10,7 @@
 #include "Game/CrossguardGuildSubsystem.h"
 #include "Game/CrossguardSaveSubsystem.h"
 #include "Game/CrossguardPartyComponent.h"
+#include "Game/CrossguardPartySubsystem.h"
 #include "Items/CrossguardStashComponent.h"
 #include "Items/CrossguardVendorComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -376,5 +377,13 @@ void ACrossguardPlayerState::OnSetUniqueId()
 	if (UCrossguardSaveSubsystem* Saves = HasAuthority() ? UCrossguardSaveSubsystem::Get(this) : nullptr)
 	{
 		Saves->PlayerJoined(this);
+	}
+	// The party view too. Seamless travel creates this player state (and runs its components'
+	// BeginPlay) before CopyProperties gives it the id, so the party component's own refresh can
+	// miss.
+	UCrossguardPartySubsystem* Parties = HasAuthority() && GameInstance != nullptr ? GameInstance->GetSubsystem<UCrossguardPartySubsystem>() : nullptr;
+	if (Parties != nullptr)
+	{
+		Parties->RefreshPlayer(this);
 	}
 }

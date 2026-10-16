@@ -15,6 +15,7 @@
 #include "Character/CrossguardCharacter.h"
 #include "CrossguardRules/Json.h"
 #include "CrossguardRules/Save.h"
+#include "Game/CrossguardGameMode.h"
 #include "Game/CrossguardGuildSubsystem.h"
 #include "Game/CrossguardLocalSaveBackend.h"
 #include "Game/CrossguardPlayerState.h"
@@ -23,6 +24,7 @@
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Items/CrossguardInventoryComponent.h"
 #include "Items/CrossguardStashComponent.h"
+#include "Items/CrossguardWorldItem.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Guid.h"
 #include "Misc/Paths.h"
@@ -32,6 +34,8 @@
 
 namespace CrossguardScenarioSave
 {
+	using CrossguardScenario::FScenarioContext;
+
 	constexpr float SceneRow = 2500.0f;
 	// Long enough that no debounced save fires while a step is between "wipe" and "load".
 	constexpr float TestDebounceSeconds = 600.0f;
@@ -169,6 +173,44 @@ namespace CrossguardScenarioSave
 		TArray<FString> Found;
 		IFileManager::Get().FindFiles(Found, *FPaths::Combine(Directory, TEXT("*.json")), true, false);
 		return Found.FilterByPredicate([](const FString& File) { return File.Contains(TEXT(".corrupt-")); }).Num();
+	}
+
+	// A Common sapphire lying 1 m in front of a player placed at (0, SceneRow) facing +X.
+	ACrossguardWorldItem* SpawnSapphire(FScenarioContext& C, FName Name)
+	{
+		FCrossguardInventoryItem Sapphire;
+		Sapphire.Category = ECrossguardItemCategory::Trinket;
+		Sapphire.ItemId = TEXT("sapphire");
+		Sapphire.Count = 1;
+		return C.SpawnActor<ACrossguardWorldItem>(Name, FVector(100.0f, SceneRow, 50.0f), 0.0f,
+			[Sapphire](ACrossguardWorldItem& Spawned) { Spawned.SetItem(Sapphire); });
+	}
+
+	// The player's save file, parsed. False (and a test error) if it cannot be read or parsed.
+	bool ReadSaveFile(FScenarioContext& C, const FString& Directory, const ACrossguardPlayerState* PlayerState, Crossguard::FCharacterSave& OutSave)
+	{
+		FString Text;
+		if (!C.Require(FFileHelper::LoadFileToString(Text, *SaveFileOf(Directory, PlayerState)), TEXT("the save file is there")))
+		{
+			return false;
+		}
+		Crossguard::FSaveParseResult Parsed = Crossguard::ParseCharacterSave(std::string(TCHAR_TO_UTF8(*Text)));
+		if (!C.Require(Parsed.IsValid(), TEXT("the save file parses")))
+		{
+			return false;
+		}
+		OutSave = MoveTemp(Parsed.Save);
+		return true;
+	}
+
+	int32 CountCarried(const Crossguard::FCharacterSave& Save, const char* ItemId)
+	{
+		int32 Count = 0;
+		for (const Crossguard::FSavedItem& Item : Save.Carried)
+		{
+			Count += Item.ItemId == ItemId ? Item.Count : 0;
+		}
+		return Count;
 	}
 }
 
@@ -461,6 +503,133 @@ bool FCrossguardScenarioSaveCorrupt::RunTest(const FString& Parameters)
 		C.Test.TestFalse(TEXT("Another player's save is refused"), Saves->ReloadPlayer(Progression));
 		C.Test.TestTrue(TEXT("Log: wrong player"), C.LogContains(TEXT("WrongPlayer")));
 		C.Test.TestEqual(TEXT("No gold from it"), Progression->GetGold(), 0);
+	});
+
+	Scenario.Step(TEXT("Clean up"), [Folder](FScenarioContext& C)
+	{
+		StopSaving(C, *Folder);
+	});
+
+	Scenario.Run();
+	return true;
+}
+
+// The extracted character leaves the raid (docs/design-decisions.md, Extraction; assumed
+// details there). A ruby carried in and a sapphire looted in the raid are saved when the player
+// extracts; the character then leaves the world: F no longer picks up the second sapphire lying in
+// front of it, a stash request to take an item out is refused (no character to take it), and the
+// saved record stays the same until the character is gone and after.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioSaveExtractedLeavesRaid, "Crossguard.Scenario.Save.ExtractedPlayerLeavesRaid", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioSaveExtractedLeavesRaid::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioSave;
+
+	const TSharedRef<FSaveTestFolder> Folder = MakeShared<FSaveTestFolder>();
+	const TSharedRef<FString> Extracted = MakeShared<FString>();
+
+	FScenario Scenario(*this);
+	Scenario.Raid(false);
+
+	Scenario.Step(TEXT("Between raids: a ruby carried, a potion in the stash; the raid starts"), [Folder](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = StartSaving(C, *Folder, TEXT("Runner"));
+		if (Player == nullptr)
+		{
+			return;
+		}
+		ACrossguardPlayerState* Progression = C.PlayerState(Player);
+		// The character leaves the world when it extracts; the player state stays.
+		C.Remember(TEXT("RunnerState"), Progression);
+		C.Place(Player, FVector(0.0f, SceneRow, 0.0f), 0.0f);
+		C.Require(C.GiveItem(Player, TEXT("ruby"), 1, ECrossguardRarity::Rare) == 0, TEXT("the ruby fits"));
+		C.Require(C.GiveItem(Player, TEXT("healing_potion"), 1, ECrossguardRarity::Uncommon) == 0, TEXT("the potion fits"));
+		UCrossguardStashComponent* Stash = Progression->GetStash();
+		Stash->RequestStoreAnywhere(StackId(Player, TEXT("healing_potion")));
+		C.Require(Stash->GetTabCount() > 0 && Stash->GetTabs()[0].Items.Num() == 1, TEXT("the potion is in the stash"));
+		C.SetRaid(true);
+		C.Require(Progression->IsInRaid(), TEXT("the raid started"));
+	});
+
+	Scenario.Wait(0.5f);
+
+	Scenario.Step(TEXT("Loot a sapphire, extract, then try to loot again and take from the stash"), [Folder, Extracted](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = C.Get<ACrossguardCharacter>(TEXT("Runner"));
+		ACrossguardPlayerState* Progression = Cast<ACrossguardPlayerState>(C.FindActor(TEXT("RunnerState")));
+		UCrossguardSaveSubsystem* Saves = SavesOf(C);
+		if (Player == nullptr || Saves == nullptr || !C.Require(Progression != nullptr && C.GameMode() != nullptr, TEXT("the player state and game mode")))
+		{
+			return;
+		}
+		UCrossguardInventoryComponent* Inventory = Player->GetInventoryComponent();
+
+		// In the raid F picks up what lies in front.
+		C.Require(SpawnSapphire(C, TEXT("Loot1")) != nullptr, TEXT("the first sapphire spawned"));
+		Player->TryInteract();
+		if (!C.Require(Inventory->CountItem(TEXT("sapphire")) == 1, TEXT("in the raid, F picks up the sapphire in front")))
+		{
+			return;
+		}
+
+		C.Require(SpawnSapphire(C, TEXT("Loot2")) != nullptr, TEXT("the second sapphire spawned"));
+		C.ClearLog();
+		C.GameMode()->HandleExtraction(Player);
+		C.Test.TestFalse(TEXT("Extracted: the raid is over for the player"), Progression->IsInRaid());
+		C.Test.TestTrue(TEXT("The character has left the raid"), Player->HasLeftRaid());
+		C.Test.TestTrue(TEXT("The player no longer controls it"), Player->GetController() == nullptr && Progression->GetPawn() == nullptr);
+
+		// The gear carried out is saved.
+		Crossguard::FCharacterSave OnDisk;
+		if (ReadSaveFile(C, Folder->Directory, Progression, OnDisk))
+		{
+			C.Test.TestFalse(TEXT("The extraction save is not a raid save"), OnDisk.bInRaid);
+			C.Test.TestEqual(TEXT("The ruby carried out is saved"), CountCarried(OnDisk, "ruby"), 1);
+			C.Test.TestEqual(TEXT("The sapphire looted in the raid is saved"), CountCarried(OnDisk, "sapphire"), 1);
+		}
+		*Extracted = RecordOf(*Saves, Progression);
+		C.Test.TestFalse(TEXT("The player has a record"), Extracted->IsEmpty());
+
+		// The character is still in memory until the next tick: everything it tries is refused.
+		Player->TryInteract();
+		C.Test.TestEqual(TEXT("After extracting, F picks up nothing"), Inventory->CountItem(TEXT("sapphire")), 1);
+		C.Test.TestTrue(TEXT("The second sapphire still lies there"), C.FindActor(TEXT("Loot2")) != nullptr);
+		C.Test.TestTrue(TEXT("Log: interact refused"), C.LogContains(TEXT("interact refused: extracted")));
+
+		UCrossguardStashComponent* Stash = Progression->GetStash();
+		if (C.Require(Stash->GetTabCount() > 0 && Stash->GetTabs()[0].Items.Num() == 1, TEXT("the potion is still in the stash")))
+		{
+			Stash->RequestRetrieve(Stash->GetTabs()[0].Items[0].Id);
+			C.Test.TestEqual(TEXT("Taking from the stash is refused: no character to take it"), Stash->GetTabs()[0].Items.Num(), 1);
+		}
+		C.Test.TestEqual(TEXT("The record is unchanged by the attempts"), RecordOf(*Saves, Progression), *Extracted);
+	});
+
+	Scenario.Wait(0.5f);
+
+	Scenario.Step(TEXT("The character is gone; the record and the save keep the gear carried out"), [Folder, Extracted](FScenarioContext& C)
+	{
+		ACrossguardPlayerState* Progression = Cast<ACrossguardPlayerState>(C.FindActor(TEXT("RunnerState")));
+		UCrossguardSaveSubsystem* Saves = SavesOf(C);
+		if (Saves == nullptr || !C.Require(Progression != nullptr, TEXT("the player state")))
+		{
+			return;
+		}
+		C.Test.TestTrue(TEXT("The extracted character left the world"), C.FindActor(TEXT("Runner")) == nullptr);
+		C.Test.TestTrue(TEXT("The player has no pawn"), Progression->GetPawn() == nullptr);
+		C.Test.TestTrue(TEXT("The second sapphire still lies there"), C.FindActor(TEXT("Loot2")) != nullptr);
+		C.Test.TestEqual(TEXT("The record is unchanged"), RecordOf(*Saves, Progression), *Extracted);
+
+		// A later save (logout, a change between raids) still lists the gear carried out.
+		Saves->SaveNow(Progression);
+		Crossguard::FCharacterSave OnDisk;
+		if (ReadSaveFile(C, Folder->Directory, Progression, OnDisk))
+		{
+			C.Test.TestEqual(TEXT("Saved again: the ruby"), CountCarried(OnDisk, "ruby"), 1);
+			C.Test.TestEqual(TEXT("Saved again: one sapphire"), CountCarried(OnDisk, "sapphire"), 1);
+			C.Test.TestEqual(TEXT("Saved again: the stash potion stays in the stash"), static_cast<int32>(OnDisk.StashTabs.empty() ? 0 : OnDisk.StashTabs[0].Items.size()), 1);
+		}
 	});
 
 	Scenario.Step(TEXT("Clean up"), [Folder](FScenarioContext& C)

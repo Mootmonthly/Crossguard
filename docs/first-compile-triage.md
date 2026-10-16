@@ -197,3 +197,35 @@ Shadowing, unity names, `Printf` formats and brace narrowing were checked by han
 the new files: nothing else found. Not checked against an engine: whether UHT accepts the UI
 `UFUNCTION`s (they use only `FString`, `FLinearColor`, `int32`, `float`, `bool`, our UENUMs and
 `UObject` pointers).
+
+### Saving and parties (second review)
+
+The save code (`CrossguardRules` `Json` / `Save`, `Game/CrossguardSave*`, `CrossguardLocalSaveBackend`,
+`Tests/CrossguardScenarioSaveTests.cpp`) and the party code (`CrossguardRules` `Party`,
+`Game/CrossguardParty*`, `Tests/CrossguardScenarioPartyTests.cpp`, game mode and character
+`Party*` commands), reviewed by reading, plus the extraction fix (design-decisions.md, Extraction).
+Checked and believed fine: the save backend `UINTERFACE` (C++-only, pure virtuals, no `UFUNCTION`s,
+like `IAbilitySystemInterface`); `UCLASS(Config = Game)` with `UPROPERTY(Config)`;
+`FWorldDelegates::OnWorldCleanup` handler `(UWorld*, bool, bool)`; `GIsAutomationTesting`
+(`CoreGlobals.h`); every party `Replicated` property registered `COND_OwnerOnly`; `UWorld::ServerTravel`
+returning `bool`; `APlayerController::ClientTravel(Url, TRAVEL_Absolute)`; the rules classes the game
+calls are exported (`CROSSGUARDRULES_API`); named namespaces in the new `.cpp`s; no new shadowing found.
+
+| # | Where | What | Why it may fail | Suggested fix |
+| --- | --- | --- | --- | --- |
+| S1 | `Tests/CrossguardScenarioSaveTests.cpp` helpers | `FScenarioContext` unqualified inside `namespace CrossguardScenarioSave` | Would not compile (C2061). | **Applied**: `using CrossguardScenario::FScenarioContext;` in the namespace (as the other test files do). |
+| S2 | `Game/CrossguardGameMode.cpp` `HandleExtraction` | `FTimerDelegate::CreateWeakLambda`, `FTimerManager::SetTimerForNextTick(const FTimerDelegate&)` | Both in 5.x. | If either fails: `Character->SetLifeSpan(0.1f);` instead of the next-tick timer. |
+| S3 | Extraction and permanent death | `APawn::UnPossessed` clears the player state's pawn (`APlayerState::GetPawn()` null afterwards) | 5.x behaviour; the save relies on it (no pawn: the last record's carried gear), and so do `Raid.ExtractionZone` and `Save.ExtractedPlayerLeavesRaid` ("The player has no pawn"). | If it stays set: in `UCrossguardSaveSubsystem::BuildRecord` treat a pawn whose `GetController()` is null as no pawn. |
+| S4 | Extraction | The pawn is unpossessed, then destroyed; the controller stays in its playing state, so `ServerRestartPlayer` does nothing for it (as after a death). | If 5.8 moves the controller to `NAME_Inactive` on unpossess, a forged `ServerRestartPlayer` would spawn a fresh pawn in the raid. | Override `PlayerCanRestart_Implementation` to refuse players in `ExtractedPlayers` / `Spectators` (anti-cheat follow-up either way). |
+| S5 | `APlayerState::CopyProperties` (seamless travel) | Engine order assumed: `SetPlayerId` before `SetUniqueId` | `OnSetUniqueId` keys the save and party view by `PlayerIdOf` (`session-<PlayerId>` without Steam). If the id is set after, a session-id player would load the wrong record after travel. | Steam ids are unaffected. Otherwise call `Saves->PlayerJoined(Next)` and the party refresh again at the end of `ACrossguardPlayerState::CopyProperties`. |
+| S6 | `ACrossguardPlayerState::OnSetUniqueId` | Party view refreshed there too | **Applied**: seamless travel spawns the new player state (and may run the party component's `BeginPlay` refresh) before it has its id, so the raid map would show no party. | — |
+| S7 | `ACrossguardGameMode::HandleSeamlessTravelPlayer` | `JoinTeam` runs after `Super`, which already spawned the pawn and began the raid (`HandleStartingNewPlayer`) | Not a build error. For that moment the team id is the hub's (copied in `CopyProperties`), possibly another party's id on the raid map. Harmless today (same frame, nothing reads teams in between). | If spawning ever depends on the team: move `JoinTeam` into an `InitSeamlessTravelPlayer` override (called before `HandleStartingNewPlayer`). |
+| S8 | Raid launch (`UCrossguardPartySubsystem::StartRaid`) | `bUseSeamlessTravel = true` | PIE needs `net.AllowPIESeamlessTravel 1` (docs/parties.md); without it PIE does not travel seamlessly and the hub's player states (party keys, save records on them) are dropped; the save subsystem still has each record per id. | Set the cvar for PIE tests of the launch. |
+| S9 | `CrossguardRules` `Save.h` | First `std::function` in the rules module (exceptions off in Unreal) | MSVC may warn (C4577 / C4530); warnings do not stop the build. | Nothing, or `#pragma warning(disable: ...)` in the rules module. |
+| S10 | `ACrossguardGameMode::HandlePermanentDeath` | Now unpossesses before `EndRaid(false)` | **Applied**: the failure's save no longer reads the dead pawn (which would hold its gear if the body did not spawn); it keeps the raid start's record (no carried gear). | — |
+
+Extraction behaviour changed (Scope B): `HandleExtraction` saves, then the character leaves the
+world (hidden and unpossessed at once, destroyed next tick); `ACrossguardCharacter::HandleInteract`
+refuses while `HasLeftRaid()`; extract portals ignore it as a keeper. `Raid.ExtractionZone` and
+`Raid.ExtractPortal` now read the player state they remembered instead of the (gone) pawn; new test
+`Crossguard.Scenario.Save.ExtractedPlayerLeavesRaid`.

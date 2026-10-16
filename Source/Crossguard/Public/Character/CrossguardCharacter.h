@@ -186,6 +186,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Extraction")
 	void TrySummonPortal();
 
+	// Server. The character extracted and is leaving the world (ACrossguardGameMode::HandleExtraction):
+	// from now on it interacts with nothing and keeps no portal alive.
+	void MarkLeftRaid() { bLeftRaid = true; }
+	bool HasLeftRaid() const { return bLeftRaid; }
+
 	// True while picking a lock (for a progress bar). Owner only.
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Interaction")
 	bool IsLockpicking() const { return bLockpicking; }
@@ -520,6 +525,8 @@ private:
 
 	UPROPERTY(Replicated)
 	bool bPermanentlyDead = false;
+	// Server: extracted (MarkLeftRaid).
+	bool bLeftRaid = false;
 
 	// Server: runs from death until the revive window closes.
 	FTimerHandle ReviveWindowTimer;

@@ -824,6 +824,12 @@ void ACrossguardCharacter::ServerInteract_Implementation()
 
 void ACrossguardCharacter::HandleInteract()
 {
+	if (bLeftRaid)
+	{
+		// Extracted: whatever it would pick up would never be part of the raid's result.
+		UE_LOG(LogCrossguard, Log, TEXT("%s interact refused: extracted, no longer in the raid"), *GetName());
+		return;
+	}
 	if (bLockpicking)
 	{
 		StopLockpicking();

@@ -18,6 +18,7 @@
 #include "UI/CrossguardHUD.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "TimerManager.h"
 
 const TCHAR* ACrossguardGameMode::PartyOption = TEXT("Party");
 const TCHAR* ACrossguardGameMode::HubOption = TEXT("Hub");
@@ -260,9 +261,28 @@ void ACrossguardGameMode::HandleExtraction(ACrossguardCharacter* Character)
 	{
 		return;
 	}
+	// Saves the gear carried out while the pawn still holds it.
 	const int32 Xp = PlayerState->EndRaid(true);
 	UE_LOG(LogCrossguard, Log, TEXT("%s extracted: %d XP banked, %d gold banked in total"), *Character->GetName(), Xp, PlayerState->GetGold());
 	OnPlayerExtracted.Broadcast(Character);
+
+	// The character leaves the raid: nothing of it stays to loot, pick up, trade, open doors or keep a
+	// portal alive, and nothing it would touch reaches the save (the record now holds the gear carried
+	// out). Unpossessed first, like a death, so the controller is not left waiting to respawn; the pawn
+	// goes next tick (this can run inside its own overlap event). The player watches a teammate still
+	// in the raid. Placeholder until the trip to the hub exists (docs/design-decisions.md, Extraction).
+	Character->MarkLeftRaid();
+	Character->SetActorHiddenInGame(true);
+	if (APlayerController* Player = Character->GetController<APlayerController>())
+	{
+		Player->UnPossess();
+		ExtractedPlayers.AddUnique(Player);
+		Spectators.AddUnique(Player);
+	}
+	GetWorldTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(Character, [Character]()
+	{
+		Character->Destroy();
+	}));
 	UpdateSpectators();
 }
 
@@ -286,11 +306,11 @@ void ACrossguardGameMode::HandlePermanentDeath(ACrossguardCharacter* Character)
 		// AI, a hub map, or a player who already extracted: no raid to end.
 		return;
 	}
+	// The body stays in the world; the player only watches from now on. Unpossessed before the raid
+	// ends, so the failure's save takes no gear from the body (it keeps the raid start's: none).
+	Player->UnPossess();
 	PlayerState->EndRaid(false);
 	UE_LOG(LogCrossguard, Log, TEXT("%s is dead for the raid"), *Character->GetName());
-
-	// The body stays in the world; the player only watches from now on.
-	Player->UnPossess();
 	Spectators.AddUnique(Player);
 	UpdateSpectators();
 }
@@ -339,6 +359,11 @@ void ACrossguardGameMode::UpdateSpectators()
 		}
 		// Solo, or no teammate left in the raid.
 		Spectators.RemoveAt(Index);
+		if (ExtractedPlayers.Contains(Player))
+		{
+			// Extracted: the raid went well; they stay where they left until the hub trip exists.
+			continue;
+		}
 		if (Player->IsLocalController() && GetNetMode() == NM_ListenServer)
 		{
 			// Sending the listen-server host to the menu would end the match for everyone; it keeps

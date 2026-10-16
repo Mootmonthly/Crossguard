@@ -43,7 +43,9 @@ until the player extracts, so a crash or a disconnect in a raid loses it like a 
 | Map change, shutdown | Pending writes are flushed (`FWorldDelegates::OnWorldCleanup`, `Deinitialize`) |
 
 The record is built when a change happens (the pawn is surely there then); only the write waits. A
-player with no pawn (logging out, spectating) keeps the carried gear of the last record.
+player with no pawn (logging out, spectating) keeps the carried gear of the last record. Extraction
+saves with the pawn still holding the gear, then the character leaves the world
+(`ACrossguardGameMode::HandleExtraction`), so nothing it could touch afterwards reaches the save.
 
 Seamless travel (hub → raid map on the same server) replaces the player state and the pawn: the
 subsystem keeps the latest record per player id and applies it to the new player state and pawn, so

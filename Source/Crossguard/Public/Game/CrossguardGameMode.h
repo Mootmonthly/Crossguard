@@ -45,7 +45,8 @@ public:
 	virtual void HandleKill(AActor* Victim, AActor* Killer);
 
 	// Server. Called by an extraction zone: ends the raid for the character's player as a success.
-	// Dead characters (State.Dead) cannot extract.
+	// Dead characters (State.Dead) cannot extract. The character then leaves the world (destroyed
+	// next tick) and its player spectates a teammate still in the raid.
 	virtual void HandleExtraction(ACrossguardCharacter* Character);
 
 	// Server. The character's revive window ran out: its player's raid ends as a failure. The player
@@ -127,6 +128,8 @@ private:
 
 	Crossguard::FTeamRegistry Teams;
 	TArray<TWeakObjectPtr<APlayerController>> Spectators;
+	// Players who extracted from this raid: they spectate, but are never sent to the menu.
+	TArray<TWeakObjectPtr<APlayerController>> ExtractedPlayers;
 	float RaidStartSeconds = 0.0f;
 	// Controller -> registry key, so Logout can find the player.
 	TMap<TWeakObjectPtr<const AController>, FString> PlayerKeys;

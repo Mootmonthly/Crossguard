@@ -1411,6 +1411,8 @@ bool FCrossguardScenarioRaidWorldExtractionZone::RunTest(const FString& Paramete
 			return;
 		}
 		Progression->AwardXp(ECrossguardXpSource::BasicMonster);
+		// The character leaves the world when it extracts; the player state stays.
+		C.Remember(TEXT("PlayerState"), Progression);
 		C.SetNumber(TEXT("RaidXp"), Progression->GetRaidXp());
 		C.SetNumber(TEXT("TotalXp"), Progression->GetTotalXp());
 		C.SetNumber(TEXT("Gold"), Progression->GetGold());
@@ -1445,15 +1447,13 @@ bool FCrossguardScenarioRaidWorldExtractionZone::RunTest(const FString& Paramete
 
 	Scenario.WaitUntil(TEXT("the player extracts"), 2.0f, [](FScenarioContext& C)
 	{
-		ACrossguardCharacter* Player = RequireCharacter(C, TEXT("Player"));
-		const ACrossguardPlayerState* Progression = Player != nullptr ? C.PlayerState(Player) : nullptr;
+		const ACrossguardPlayerState* Progression = Cast<ACrossguardPlayerState>(C.FindActor(TEXT("PlayerState")));
 		return Progression == nullptr || !Progression->IsInRaid();
 	});
 
 	Scenario.Step(TEXT("Extracted after 5 s: raid XP + 35 and the 250 gold banked"), [](FScenarioContext& C)
 	{
-		ACrossguardCharacter* Player = RequireCharacter(C, TEXT("Player"));
-		const ACrossguardPlayerState* Progression = Player != nullptr ? C.PlayerState(Player) : nullptr;
+		const ACrossguardPlayerState* Progression = Cast<ACrossguardPlayerState>(C.FindActor(TEXT("PlayerState")));
 		if (!C.Require(Progression != nullptr, TEXT("the player state")))
 		{
 			return;
@@ -1464,7 +1464,10 @@ bool FCrossguardScenarioRaidWorldExtractionZone::RunTest(const FString& Paramete
 			ExpectedXp);
 		C.Test.TestEqual(TEXT("No raid XP is held any more"), Progression->GetRaidXp(), 0);
 		C.Test.TestEqual(TEXT("The 250 gold coins are banked"), Progression->GetGold() - static_cast<int32>(C.Number(TEXT("Gold"))), ExtractGold);
-		C.Test.TestEqual(TEXT("No gold coins carried any more"), Player->GetInventoryComponent()->CountItem(GoldCoin), 0);
+		// The coins left the inventory for the bank before the character left the world.
+		const ACrossguardCharacter* Player = Cast<ACrossguardCharacter>(C.FindActor(TEXT("Player")));
+		C.Test.TestTrue(TEXT("The extracted character left the raid (gone, or going this tick)"), Player == nullptr || Player->HasLeftRaid());
+		C.Test.TestTrue(TEXT("The player no longer has a pawn"), Progression->GetPawn() == nullptr);
 		C.Test.TestTrue(TEXT("Log: extracted"), C.LogContains(TEXT("extracted")));
 		C.Test.TestTrue(TEXT("Log: gold banked"), C.LogContains(TEXT("gold banked")));
 	});
@@ -1589,8 +1592,10 @@ bool FCrossguardScenarioRaidWorldExtractPortal::RunTest(const FString& Parameter
 		// The portal updates every 0.25 s (its TickInterval).
 		C.Test.TestEqual(TEXT("It opens the channel time after it was summoned"), C.Now() - static_cast<float>(C.Number(TEXT("SummonedAt"))),
 			PortalA->ChannelSeconds, 1.5f);
-		const ACrossguardPlayerState* StateA = C.PlayerState(A);
+		ACrossguardPlayerState* StateA = C.PlayerState(A);
 		C.Test.TestTrue(TEXT("A, standing next to it, is still in the raid"), StateA != nullptr && StateA->IsInRaid());
+		// A leaves the world when it extracts; its player state stays.
+		C.Remember(TEXT("StateA"), StateA);
 		C.ClearLog();
 		const FVector At = PortalA->GetActorLocation();
 		C.Place(A, FVector(At.X, At.Y, 0.0f), 0.0f);
@@ -1598,16 +1603,17 @@ bool FCrossguardScenarioRaidWorldExtractPortal::RunTest(const FString& Parameter
 
 	Scenario.Wait(0.5f);
 
-	Scenario.Step(TEXT("Stepping in extracts A"), [](FScenarioContext& C)
+	Scenario.Step(TEXT("Stepping in extracts A: A's character leaves the world"), [](FScenarioContext& C)
 	{
-		ACrossguardCharacter* A = RequireCharacter(C, TEXT("A"));
-		const ACrossguardPlayerState* StateA = A != nullptr ? C.PlayerState(A) : nullptr;
+		const ACrossguardPlayerState* StateA = Cast<ACrossguardPlayerState>(C.FindActor(TEXT("StateA")));
 		if (!C.Require(StateA != nullptr, TEXT("A's player state")))
 		{
 			return;
 		}
 		C.Test.TestFalse(TEXT("A extracted through the open portal"), StateA->IsInRaid());
 		C.Test.TestTrue(TEXT("Log: extracted"), C.LogContains(TEXT("extracted")));
+		C.Test.TestTrue(TEXT("A's character is gone"), C.FindActor(TEXT("A")) == nullptr);
+		C.Test.TestTrue(TEXT("A's player has no pawn"), StateA->GetPawn() == nullptr);
 	});
 
 	Scenario.Run();
