@@ -1664,6 +1664,50 @@ static void TestParty()
 	CHECK(Parties.Accept("p1", "h", 500.0) == EPartyError::UnknownParty);
 	CHECK(Parties.Create("p1", "lead") == EPartyError::None);
 
+	// Mirror of the backend's parties (PutParty, RemoveParty, DropMember, PutInvite: no rule checks).
+	{
+		FPartyRegistry Mirror;
+		Mirror.PutParty("m1", {"a", "b"}, "a");
+		CHECK(Mirror.PartyOf("a") != nullptr && Mirror.PartyOf("a")->Id == "m1" && Mirror.IsLeader("a") && Mirror.PartyOf("b")->Id == "m1");
+		// An unknown leader falls back to the first member.
+		Mirror.PutParty("m2", {"c"}, "nobody");
+		CHECK(Mirror.IsLeader("c"));
+		CHECK(Mirror.PutInvite("m1", {"x", "a", 100.0}));
+		CHECK(!Mirror.PutInvite("nope", {"x", "a", 100.0}));
+		CHECK(!Mirror.PutInvite("m1", {"", "a", 100.0}));
+		CHECK(Mirror.PutInvite("m1", {"x", "b", 200.0}));
+		CHECK(Mirror.Find("m1")->Invites.size() == 1 && Mirror.Find("m1")->Invites[0].ExpiresAt == 200.0 && Mirror.Find("m1")->Invites[0].InvitedBy == "b");
+		// New member list: b moved to m2 (out of m1), a stays, d joins; invites stay; leader follows.
+		Mirror.PutParty("m2", {"c", "b"}, "b");
+		CHECK(Mirror.PartyOf("b")->Id == "m2" && Mirror.IsLeader("b") && !Mirror.IsLeader("c"));
+		CHECK(Mirror.Find("m1")->Members == std::vector<std::string>({"a"}));
+		Mirror.PutParty("m1", {"a", "d"}, "a");
+		CHECK(Mirror.PartyOf("d")->Id == "m1" && Mirror.Find("m1")->Invites.size() == 1);
+		// A member dropped from the list is in no party.
+		Mirror.PutParty("m1", {"d"}, "d");
+		CHECK(Mirror.PartyOf("a") == nullptr && Mirror.IsLeader("d"));
+		// Moving the last member out of a party removes it.
+		Mirror.PutParty("m3", {"d"}, "d");
+		CHECK(Mirror.Find("m1") == nullptr && Mirror.PartyOf("d")->Id == "m3");
+		// DropMember: leader hand-over to the first left, last one out removes the party.
+		Mirror.DropMember("b");
+		CHECK(Mirror.PartyOf("b") == nullptr && Mirror.IsLeader("c"));
+		Mirror.DropMember("c");
+		CHECK(Mirror.Find("m2") == nullptr);
+		Mirror.DropMember("nobody");
+		// An empty list removes it; RemoveParty frees its members.
+		Mirror.PutParty("m4", {"e", "f"}, "e");
+		Mirror.PutParty("m4", {}, "");
+		CHECK(Mirror.Find("m4") == nullptr && Mirror.PartyOf("e") == nullptr);
+		Mirror.PutParty("m5", {"g"}, "g");
+		Mirror.RemoveParty("m5");
+		Mirror.RemoveParty("m5");
+		CHECK(Mirror.PartyOf("g") == nullptr && Mirror.Find("m5") == nullptr);
+		// The mirrored party works with the rules (the leader invites, a player accepts).
+		Mirror.PutParty("m6", {"h"}, "h");
+		CHECK(Mirror.Invite("h", "i", 0.0) == EPartyError::None && Mirror.Accept("m6", "i", 1.0) == EPartyError::None);
+	}
+
 	// Size cap: 8 members; a pending invite does not reserve a place.
 	FPartyRegistry Full;
 	CHECK(Full.Create("full", "m0") == EPartyError::None);

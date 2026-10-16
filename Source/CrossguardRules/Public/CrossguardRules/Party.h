@@ -165,6 +165,20 @@ namespace Crossguard
 		// goes alone).
 		EPartyError CanStartRaid(const std::string& ActorId) const;
 
+		// --- Mirror of an authoritative copy (the backend's parties, docs/parties.md "On Nakama") ---
+		// These take the backend's word: no rule checks.
+
+		// Sets the party's members (join order) and leader; its invites stay. Each member leaves any
+		// other party here first; members no longer listed are in no party. No members: RemoveParty.
+		void PutParty(const std::string& PartyId, const std::vector<std::string>& Members, const std::string& LeaderId);
+		// Removes the party (members in no party, its invites gone).
+		void RemoveParty(const std::string& PartyId);
+		// The player is in no party here (the last member out removes the party). No leader hand-over:
+		// the backend sends the party itself when it changed.
+		void DropMember(const std::string& PlayerId);
+		// Adds or replaces the party's invite to Invite.PlayerId. False if the party is not here.
+		bool PutInvite(const std::string& PartyId, const FPartyInvite& Invite);
+
 		const FParty* Find(const std::string& PartyId) const;
 		const FParty* PartyOf(const std::string& PlayerId) const;
 		bool IsLeader(const std::string& PlayerId) const;

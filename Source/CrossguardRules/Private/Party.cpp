@@ -343,6 +343,109 @@ namespace Crossguard
 		return Party == nullptr || Party->LeaderId == ActorId ? EPartyError::None : EPartyError::NotLeader;
 	}
 
+	void FPartyRegistry::PutParty(const std::string& PartyId, const std::vector<std::string>& Members, const std::string& LeaderId)
+	{
+		if (Members.empty())
+		{
+			RemoveParty(PartyId);
+			return;
+		}
+		FParty& Party = Parties[PartyId];
+		Party.Id = PartyId;
+		// Old members not in the new list: in no party now.
+		for (const std::string& Old : Party.Members)
+		{
+			if (std::find(Members.begin(), Members.end(), Old) == Members.end())
+			{
+				const auto Index = PlayerParties.find(Old);
+				if (Index != PlayerParties.end() && Index->second == PartyId)
+				{
+					PlayerParties.erase(Index);
+				}
+			}
+		}
+		// New members leave the party the mirror had them in.
+		for (const std::string& Member : Members)
+		{
+			const auto Index = PlayerParties.find(Member);
+			if (Index != PlayerParties.end() && Index->second != PartyId)
+			{
+				DropMember(Member);
+			}
+		}
+		// DropMember may have rehashed Parties: look the party up again.
+		FParty& Updated = Parties[PartyId];
+		Updated.Id = PartyId;
+		Updated.Members = Members;
+		Updated.LeaderId = std::find(Members.begin(), Members.end(), LeaderId) != Members.end() ? LeaderId : Members.front();
+		for (const std::string& Member : Members)
+		{
+			PlayerParties[Member] = PartyId;
+		}
+	}
+
+	void FPartyRegistry::RemoveParty(const std::string& PartyId)
+	{
+		const auto Found = Parties.find(PartyId);
+		if (Found == Parties.end())
+		{
+			return;
+		}
+		for (const std::string& Member : Found->second.Members)
+		{
+			const auto Index = PlayerParties.find(Member);
+			if (Index != PlayerParties.end() && Index->second == PartyId)
+			{
+				PlayerParties.erase(Index);
+			}
+		}
+		Parties.erase(Found);
+	}
+
+	void FPartyRegistry::DropMember(const std::string& PlayerId)
+	{
+		const auto Index = PlayerParties.find(PlayerId);
+		if (Index == PlayerParties.end())
+		{
+			return;
+		}
+		const std::string PartyId = Index->second;
+		PlayerParties.erase(Index);
+		const auto Found = Parties.find(PartyId);
+		if (Found == Parties.end())
+		{
+			return;
+		}
+		FParty& Party = Found->second;
+		Party.Members.erase(std::remove(Party.Members.begin(), Party.Members.end(), PlayerId), Party.Members.end());
+		if (Party.Members.empty())
+		{
+			Parties.erase(Found);
+		}
+		else if (Party.LeaderId == PlayerId)
+		{
+			Party.LeaderId = Party.Members.front();
+		}
+	}
+
+	bool FPartyRegistry::PutInvite(const std::string& PartyId, const FPartyInvite& Invite)
+	{
+		const auto Found = Parties.find(PartyId);
+		if (Found == Parties.end() || Invite.PlayerId.empty())
+		{
+			return false;
+		}
+		if (FPartyInvite* Existing = PartyRulesDetail::FindPartyInvite(Found->second, Invite.PlayerId))
+		{
+			*Existing = Invite;
+		}
+		else
+		{
+			Found->second.Invites.push_back(Invite);
+		}
+		return true;
+	}
+
 	const FParty* FPartyRegistry::Find(const std::string& PartyId) const
 	{
 		const auto Found = Parties.find(PartyId);
