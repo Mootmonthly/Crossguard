@@ -59,6 +59,7 @@ void ACrossguardPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	// Everyone knows everyone's team (nameplates, party skills).
 	DOREPLIFETIME(ACrossguardPlayerState, TeamId);
 	DOREPLIFETIME(ACrossguardPlayerState, DevPlayerId);
+	DOREPLIFETIME(ACrossguardPlayerState, NakamaUserId);
 	// Teammates see who is away (held for a reconnect); public like the team. Assumed harmless to
 	// enemies: they can see the character standing still anyway.
 	DOREPLIFETIME(ACrossguardPlayerState, bDisconnected);
@@ -98,6 +99,7 @@ void ACrossguardPlayerState::CopyProperties(APlayerState* PlayerState)
 	if (ACrossguardPlayerState* Travelled = Cast<ACrossguardPlayerState>(PlayerState))
 	{
 		Travelled->DevPlayerId = DevPlayerId;
+		Travelled->NakamaUserId = NakamaUserId;
 	}
 	Super::CopyProperties(PlayerState);
 

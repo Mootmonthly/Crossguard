@@ -102,6 +102,12 @@ public:
 		const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
 	// Refuses a login whose party's team is already full.
 	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
+	// A login carrying ?NakamaToken= waits while Nakama verifies the token (crossguard_verify_session);
+	// a token that does not verify is refused, and the rest of PreLogin runs only after it does
+	// (docs/anti-cheat.md, "Player identity"). No token: PreLogin as usual (InitNewPlayer refuses the
+	// login where the server requires a Nakama login).
+	virtual void PreLoginAsync(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId,
+		const FOnPreLoginCompleteDelegate& OnComplete) override;
 	// Also: refuses a player id already playing here, or whose raid on this map is over; gives a
 	// player held for a reconnect their own player state back (docs/persistence.md, "Reconnecting").
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId, const FString& Options,
@@ -381,6 +387,10 @@ private:
 	// The stable stand-in id for a login without an online id (ACrossguardPlayerState::DevPlayerId);
 	// empty in Shipping or when none applies.
 	FString DevPlayerIdFor(const FString& Options) const;
+	// The Nakama user id of this login: verified at PreLoginAsync for a remote player; the server's own
+	// logged-in player (listen host, standalone) for itself. Empty if none. OutError: the login must be
+	// refused (a Nakama login is required and missing).
+	FString NakamaUserIdFor(const FString& Options, FString& OutError) const;
 	// A player state here, not held for a reconnect and not Except, whose PlayerIdOf is PlayerId.
 	const ACrossguardPlayerState* FindOnlinePlayer(const FString& PlayerId, const APlayerState* Except) const;
 	// The id PlayerState is held under; empty if it is not held.

@@ -21,7 +21,8 @@ class CROSSGUARD_API UCrossguardGuildSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
 public:
-	// The id guilds know a player by: their online id (a Steam id with Steam), else in development
+	// The id guilds (and saves, parties) know a player by: the server-verified Nakama user id
+	// (ACrossguardPlayerState::NakamaUserId), else their online id (a Steam id with Steam), else in development
 	// builds the server-set stand-in ACrossguardPlayerState::DevPlayerId ("pie-<n>", "dev-<name>"),
 	// else a stand-in for this session only ("session-<n>").
 	static FString PlayerIdOf(const APlayerState* PlayerState);

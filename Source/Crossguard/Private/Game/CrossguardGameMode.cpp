@@ -16,6 +16,7 @@
 #include "Game/CrossguardHubMarker.h"
 #include "Game/CrossguardMatchmaking.h"
 #include "Game/CrossguardMenuGameMode.h"
+#include "Game/CrossguardNakamaSubsystem.h"
 #include "Game/CrossguardPartySubsystem.h"
 #include "Game/CrossguardPlayerController.h"
 #include "Game/CrossguardPlayerState.h"
@@ -174,15 +175,67 @@ void ACrossguardGameMode::PreLogin(const FString& Options, const FString& Addres
 	}
 }
 
+void ACrossguardGameMode::PreLoginAsync(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId,
+	const FOnPreLoginCompleteDelegate& OnComplete)
+{
+	UCrossguardNakamaSubsystem* Nakama = UCrossguardNakamaSubsystem::Get(this);
+	const FString Token = UGameplayStatics::ParseOption(Options, UCrossguardNakamaSubsystem::TokenOption);
+	if (Nakama == nullptr || !Nakama->IsServerConfigured() || Token.IsEmpty())
+	{
+		Super::PreLoginAsync(Options, Address, UniqueId, OnComplete);
+		return;
+	}
+	// The HTTP timeout (UCrossguardNakamaSubsystem::RequestTimeoutSeconds) bounds the wait.
+	TWeakObjectPtr<ACrossguardGameMode> WeakThis(this);
+	Nakama->VerifySessionToken(Token, [WeakThis, Options, Address, UniqueId, OnComplete](bool bVerified, const FString& /*UserId*/, const FString& Error)
+	{
+		ACrossguardGameMode* Self = WeakThis.Get();
+		if (!bVerified || Self == nullptr)
+		{
+			UE_LOG(LogCrossguard, Warning, TEXT("Login from %s refused: Nakama session not verified (%s)"), *Address, Self != nullptr ? *Error : TEXT("map changed"));
+			OnComplete.ExecuteIfBound(TEXT("Your login could not be verified. Log in again."));
+			return;
+		}
+		// Verified (kept for InitNewPlayer): the usual checks (PreLogin), then the engine goes on.
+		Self->AGameModeBase::PreLoginAsync(Options, Address, UniqueId, OnComplete);
+	});
+}
+
+FString ACrossguardGameMode::NakamaUserIdFor(const FString& Options, FString& OutError) const
+{
+	UCrossguardNakamaSubsystem* Nakama = UCrossguardNakamaSubsystem::Get(this);
+	if (Nakama == nullptr)
+	{
+		return FString();
+	}
+	if (bLoggingInLocalPlayer)
+	{
+		// The server's own player: its own login, no verification needed.
+		return Nakama->IsLoggedIn() ? Nakama->GetUserId() : FString();
+	}
+	const FString VerifiedId = Nakama->TakeVerifiedUserId(UGameplayStatics::ParseOption(Options, UCrossguardNakamaSubsystem::TokenOption));
+	if (VerifiedId.IsEmpty() && Nakama->IsNakamaLoginRequired())
+	{
+		OutError = TEXT("Log in first: this server needs a verified account.");
+	}
+	return VerifiedId;
+}
+
 FString ACrossguardGameMode::InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId, const FString& Options,
 	const FString& Portal)
 {
 	// The player id this login claims, settled before Super gives the player state its unique id
-	// (which starts loading the save under it).
+	// (which starts loading the save under it). A verified Nakama user id comes first.
 	ACrossguardPlayerState* NewState = NewPlayerController != nullptr ? NewPlayerController->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	FString NakamaError;
+	const FString NakamaId = NakamaUserIdFor(Options, NakamaError);
+	if (!NakamaError.IsEmpty())
+	{
+		return NakamaError;
+	}
 	const bool bOnlineId = UCrossguardGuildSubsystem::IsOnlineId(UniqueId);
-	const FString DevId = bOnlineId ? FString() : DevPlayerIdFor(Options);
-	const FString LoginId = bOnlineId ? UniqueId.ToString() : DevId;
+	const FString DevId = (bOnlineId || !NakamaId.IsEmpty()) ? FString() : DevPlayerIdFor(Options);
+	const FString LoginId = !NakamaId.IsEmpty() ? NakamaId : bOnlineId ? UniqueId.ToString() : DevId;
 	if (!LoginId.IsEmpty())
 	{
 		if (bIsRaid && FinishedPlayerIds.Contains(LoginId))
@@ -199,6 +252,7 @@ FString ACrossguardGameMode::InitNewPlayer(APlayerController* NewPlayerControlle
 	if (NewState != nullptr)
 	{
 		NewState->DevPlayerId = DevId;
+		NewState->NakamaUserId = NakamaId;
 	}
 	if (bIsRaid && !LoginId.IsEmpty() && HeldPlayers.Contains(LoginId))
 	{

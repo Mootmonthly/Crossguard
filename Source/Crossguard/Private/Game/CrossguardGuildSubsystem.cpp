@@ -49,6 +49,12 @@ FString UCrossguardGuildSubsystem::PlayerIdOf(const APlayerState* PlayerState)
 	{
 		return FString();
 	}
+	// Verified by the server at login (docs/anti-cheat.md, "Player identity").
+	const ACrossguardPlayerState* WithNakamaId = Cast<ACrossguardPlayerState>(PlayerState);
+	if (WithNakamaId != nullptr && !WithNakamaId->NakamaUserId.IsEmpty())
+	{
+		return WithNakamaId->NakamaUserId;
+	}
 	const FUniqueNetIdRepl& UniqueId = PlayerState->GetUniqueId();
 	if (IsOnlineId(UniqueId))
 	{

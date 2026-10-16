@@ -16,6 +16,8 @@ class UVerticalBox;
 // (an address field; ClientTravel to it), Settings (mouse sensitivity, field of view, master volume:
 // UCrossguardSettingsSave), Quit. The reason the player came back (e.g. "Your raid is over.") shows
 // in the status line. Character select is not built (saves are per player id, not per character).
+// Above the buttons: the account line and Log in (UCrossguardNakamaSubsystem: a development device-id
+// login for now, Steam later); once logged in, every server login carries the session token.
 UCLASS()
 class CROSSGUARD_API UCrossguardMainMenuWidget : public UCrossguardWidgetBase
 {
@@ -45,6 +47,14 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|UI")
 	void Quit();
+
+	// Logs in to Nakama (development: device id; TODO Steam). The account line shows the result.
+	UFUNCTION(BlueprintCallable, Category = "Crossguard|UI")
+	void LogIn();
+
+	// "Not logged in", "Logged in as <name>", "Login failed: ...".
+	UFUNCTION(BlueprintPure, Category = "Crossguard|UI")
+	FString GetAccountLine() const;
 
 	// --- Read back (tests, Blueprint subclasses) ---
 
@@ -101,6 +111,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UTextBlock> StatusText;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTextBlock> AccountText;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UVerticalBox> SettingsPanel;

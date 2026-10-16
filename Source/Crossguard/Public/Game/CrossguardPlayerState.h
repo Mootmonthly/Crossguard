@@ -86,6 +86,13 @@ public:
 	UPROPERTY(Replicated)
 	FString DevPlayerId;
 
+	// The player's Nakama user id, verified by the server at login (?NakamaToken=, ACrossguardGameMode::
+	// PreLoginAsync; docs/anti-cheat.md "Player identity"). Empty without a Nakama login. The player id
+	// (UCrossguardGuildSubsystem::PlayerIdOf) when set, ahead of Steam / development / session ids.
+	// Replicated like DevPlayerId (a Nakama user id is not secret).
+	UPROPERTY(Replicated)
+	FString NakamaUserId;
+
 	// Seamless travel: carry the team, party key and progression to the new player state.
 	virtual void CopyProperties(APlayerState* PlayerState) override;
 	// The online id arrives after BeginPlay for joining players: guilds know players by it.

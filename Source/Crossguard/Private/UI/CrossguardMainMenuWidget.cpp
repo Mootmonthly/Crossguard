@@ -12,6 +12,7 @@
 #include "Engine/World.h"
 #include "Game/CrossguardDevMode.h"
 #include "Game/CrossguardMenuGameMode.h"
+#include "Game/CrossguardNakamaSubsystem.h"
 #include "Game/CrossguardPlayerController.h"
 #include "Game/CrossguardSettingsSave.h"
 #include "GameFramework/PlayerController.h"
@@ -76,6 +77,16 @@ void UCrossguardMainMenuWidget::BuildTree()
 	Panel->SetContent(Column);
 	AddTo(Column, MakeText(TEXT("CROSSGUARD"), 32, Title));
 	AddTo(Column, MakeText(TEXT("Placeholder menu"), 10, Info), 8.0f);
+
+	// Account: not a main button (those are the play flow); the login comes first.
+	UHorizontalBox* AccountRow = MakeRow();
+	AddTo(Column, AccountRow, 6.0f);
+	AccountText = MakeText(GetAccountLine(), 12, Info);
+	USizeBox* AccountBox = Make<USizeBox>();
+	AccountBox->SetWidthOverride(240.0f);
+	AccountBox->SetContent(AccountText);
+	AddTo(AccountRow, AccountBox);
+	AddTo(AccountRow, MakeButton(TEXT("Log in"), [this]() { LogIn(); }, 12));
 
 	const auto AddMainButton = [this, Column](const FString& Label, TFunction<void()> OnClicked)
 	{
@@ -144,6 +155,7 @@ void UCrossguardMainMenuWidget::BuildTree()
 void UCrossguardMainMenuWidget::NativeRefresh()
 {
 	SetText(SettingsText, GetSettingsLine());
+	SetText(AccountText, GetAccountLine());
 	if (SettingsPanel != nullptr)
 	{
 		SettingsPanel->SetVisibility(bSettingsOpen ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
@@ -321,4 +333,33 @@ void UCrossguardMainMenuWidget::SaveSettings()
 void UCrossguardMainMenuWidget::Quit()
 {
 	UKismetSystemLibrary::QuitGame(this, GetOwningPlayer(), EQuitPreference::Quit, false);
+}
+
+FString UCrossguardMainMenuWidget::GetAccountLine() const
+{
+	const UCrossguardNakamaSubsystem* Nakama = UCrossguardNakamaSubsystem::Get(this);
+	return Nakama != nullptr ? Nakama->DescribeLogin() : FString(TEXT("Not logged in"));
+}
+
+void UCrossguardMainMenuWidget::LogIn()
+{
+	using namespace CrossguardMainMenuLocal;
+	UCrossguardNakamaSubsystem* Nakama = UCrossguardNakamaSubsystem::Get(this);
+	if (Nakama == nullptr)
+	{
+		return;
+	}
+	// TODO(Steam): with the Steam subsystem running, log in with a Steam ticket instead
+	// (UCrossguardNakamaSubsystem::LoginWithDevice comment).
+	ShowStatus(TEXT("Logging in..."), Info);
+	TWeakObjectPtr<UCrossguardMainMenuWidget> WeakThis(this);
+	Nakama->LoginWithDevice([WeakThis](bool bLoggedIn, const FString& Error)
+	{
+		if (UCrossguardMainMenuWidget* Self = WeakThis.Get())
+		{
+			Self->ShowStatus(bLoggedIn ? FString(TEXT("Logged in.")) : FString::Printf(TEXT("Could not log in: %s"), *Error), bLoggedIn ? Success : Refusal);
+			Self->Refresh();
+		}
+	});
+	Refresh();
 }
