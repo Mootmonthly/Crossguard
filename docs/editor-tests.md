@@ -326,10 +326,10 @@ server-side players in one standalone PIE, not real clients.
 
 | Section / row | Status | Tests | By hand |
 | --- | --- | --- | --- |
-| 1 Pull and build | manual | (`run_editor_tests.bat` builds) | Pull, project files. |
+| 1 Pull and build | script | `Tools\build_editor.bat` (also `run_editor_tests.bat`) | git pull; errors listed in `Saved\Build\errors.txt`. |
 | 2 Data tables imported | auto | `Crossguard.Data.EditorAssets` | — |
-| 2 Tables set on Blueprints / game mode | manual | (scenarios skip or fail when unset) | Editor property set-up. |
-| 3 Character settings | manual | — | Input mapping context, Debug loadout (scenarios ignore it). |
+| 2 Tables set on Blueprints / game mode | script | `Tools\editor_setup.bat` | Imports every DT_ table and sets the references; read-back checked, report in `Saved\EditorSetup\summary.txt`. |
+| 3 Character settings | script | `Tools\editor_setup.bat` | Clears the default mapping context; Debug loadout is yours to set. |
 | 4 Knife hits 15; bottle 10 in 3 m + 3/s for 5 s | auto | `Raid.ThrowingKnife`, `Raid.ExplosiveBottle` | The arc. |
 | 4 Weapon sets 1 / 2 | auto | `Raid.WeaponSetSwitch` | — |
 | 4 Next knife; empty hands after the last | auto | `Raid.ThrowingKnife` | — |
