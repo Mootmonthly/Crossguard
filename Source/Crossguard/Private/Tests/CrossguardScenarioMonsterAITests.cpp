@@ -115,27 +115,6 @@ namespace CrossguardScenarioMonsterAI
 		return Controller != nullptr ? Controller->GetFocusActor() : nullptr;
 	}
 
-	// Damage from Source to Target through the native damage effect (as C.Kill does), so the target's
-	// OnDamaged sees Source as the attacker. Not through guards.
-	bool DealDamage(AActor* Source, AActor* Target, float Attack, float Magic = 0.0f)
-	{
-		UAbilitySystemComponent* SourceASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Source);
-		UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
-		if (SourceASC == nullptr || TargetASC == nullptr)
-		{
-			return false;
-		}
-		const FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(UCrossguardDamageEffect::StaticClass(), 1.0f, SourceASC->MakeEffectContext());
-		if (!Spec.IsValid())
-		{
-			return false;
-		}
-		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Attack, Attack);
-		Spec.Data->SetSetByCallerMagnitude(CrossguardTags::SetByCaller_Damage_Magic, Magic);
-		SourceASC->ApplyGameplayEffectSpecToTarget(*Spec.Data.Get(), TargetASC);
-		return true;
-	}
-
 	// Back to full Health (keeps a target alive through long waits). Not on the dead.
 	void TopUpHealth(AActor* Actor)
 	{
@@ -251,44 +230,6 @@ namespace CrossguardScenarioMonsterAI
 		return static_cast<float>(FVector::Dist2D(A->GetActorLocation(), B->GetActorLocation()));
 	}
 
-	// A box blocking everything (line of sight included), Size in cm, centred at Center.
-	AStaticMeshActor* SpawnWall(FContext& C, FName Name, const FVector& Center, const FVector& Size)
-	{
-		UStaticMesh* Cube = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
-		if (!C.Require(Cube != nullptr, TEXT("/Engine/BasicShapes/Cube exists (for a wall)")))
-		{
-			return nullptr;
-		}
-		AStaticMeshActor* Wall = C.SpawnActor<AStaticMeshActor>(Name, Center, 0.0f, [Cube](AStaticMeshActor& Spawned)
-		{
-			UStaticMeshComponent* Mesh = Spawned.GetStaticMeshComponent();
-			Mesh->SetMobility(EComponentMobility::Movable);
-			Mesh->SetStaticMesh(Cube);
-			Mesh->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
-		});
-		if (Wall != nullptr)
-		{
-			// The engine cube is 100 cm, centred.
-			Wall->SetActorScale3D(Size / 100.0f);
-		}
-		return Wall;
-	}
-
-	// A minion summoned by Summoner (on its team), run by its minion controller.
-	ACrossguardMinion* SpawnMinionOf(FContext& C, FName Name, ACrossguardCharacter* Summoner, const FVector& FloorPoint, float Yaw)
-	{
-		const FVector Location = FloorPoint + FVector(0.0f, 0.0f, GetDefault<ACrossguardMinion>()->GetDefaultHalfHeight() + 5.0f);
-		ACrossguardMinion* Minion = C.SpawnActor<ACrossguardMinion>(Name, Location, Yaw, [Summoner](ACrossguardMinion& Spawned)
-		{
-			Spawned.SetSummoner(Summoner);
-		});
-		if (Minion != nullptr && Minion->GetController() == nullptr)
-		{
-			Minion->SpawnDefaultController();
-		}
-		return Minion;
-	}
-
 	// Monsters (alive or dead) that Spawner spawned (it owns them).
 	TArray<ACrossguardMonster*> SpawnedBy(FContext& C, const AActor* Spawner)
 	{
@@ -346,7 +287,7 @@ bool FCrossguardScenarioMonsterAggroAndAttack::RunTest(const FString& Parameters
 		C.Test.TestEqual(TEXT("The player is unhurt"), C.Health(Player), C.MaxHealth(Player), 0.01f);
 
 		// 20 cm thick, 6 m wide, 4 m tall, half-way between them.
-		SpawnWall(C, TEXT("Wall"), FVector(500.0f, SceneY, 200.0f), FVector(20.0f, 600.0f, 400.0f));
+		C.SpawnBlockingBox(TEXT("Wall"), FVector(500.0f, SceneY, 200.0f), FVector(20.0f, 600.0f, 400.0f));
 		C.Place(Player, FVector(1000.0f, SceneY, 0.0f), 180.0f);
 	});
 
@@ -477,7 +418,7 @@ bool FCrossguardScenarioMonsterLeashReturnsHome::RunTest(const FString& Paramete
 			C.Fail(TEXT("monster or player gone"));
 			return;
 		}
-		DealDamage(Player, Monster, 30.0f);
+		C.Damage(Player, Monster, 30.0f);
 		if (!C.Require(C.Health(Monster) < C.MaxHealth(Monster) && !C.IsDead(Monster), TEXT("the monster is hurt, not dead")))
 		{
 			return;
@@ -586,7 +527,7 @@ bool FCrossguardScenarioMonsterLeashRetargets::RunTest(const FString& Parameters
 			return;
 		}
 		C.Test.TestTrue(TEXT("The monster keeps its target A while B arrives"), FocusOf(Monster) == A);
-		DealDamage(A, Monster, 30.0f);
+		C.Damage(A, Monster, 30.0f);
 		C.Place(A, FVector(1200.0f, SceneY, 0.0f), 180.0f);
 	});
 
@@ -658,7 +599,7 @@ bool FCrossguardScenarioMonsterReactsToDamage::RunTest(const FString& Parameters
 		}
 		C.Test.TestNull(TEXT("No target before the damage"), FocusOf(Monster));
 		C.Test.TestTrue(TEXT("Home before the damage"), DistanceFromHome(Monster) < 50.0f);
-		C.Require(DealDamage(Player, Monster, 5.0f), TEXT("the damage was applied"));
+		C.Damage(Player, Monster, 5.0f);
 	});
 
 	Scenario.WaitUntil(TEXT("the monster turns on its attacker"), 2.0f, [](FScenarioContext& C)
@@ -700,7 +641,7 @@ bool FCrossguardScenarioMonsterTeam::RunTest(const FString& Parameters)
 		{
 			return;
 		}
-		ACrossguardMinion* Minion = SpawnMinionOf(C, TEXT("Minion"), M1, FVector(-250.0f, SceneY, 0.0f), 0.0f);
+		ACrossguardMinion* Minion = C.SpawnMinion(TEXT("Minion"), M1, FVector(-250.0f, SceneY, 0.0f));
 		if (!C.Require(Minion != nullptr && Minion->GetController() != nullptr, TEXT("M1's minion spawned with its controller")))
 		{
 			return;
@@ -1323,7 +1264,7 @@ bool FCrossguardScenarioMobSkillUse::RunTest(const FString& Parameters)
 		const float Step = 0.1f * C.MaxHealth(Mage);
 		for (int32 Bite = 0; Bite < 40 && C.Health(Mage) > 0.5f * C.MaxHealth(Mage); ++Bite)
 		{
-			DealDamage(Player, Mage, 0.0f, Step);
+			C.Damage(Player, Mage, 0.0f, Step);
 		}
 		const float Fraction = C.Health(Mage) / FMath::Max(C.MaxHealth(Mage), 1.0f);
 		C.Test.AddInfo(FString::Printf(TEXT("Mage at %.0f%% Health"), Fraction * 100.0f));

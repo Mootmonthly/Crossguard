@@ -522,6 +522,7 @@ Keep file-local helpers and constants in a uniquely named namespace (unity build
 | `Step(Name, [](FScenarioContext& C) { ... })` | One action, in its own frame. |
 | `Wait(Seconds)` | Waits game seconds. |
 | `WaitUntil(Name, TimeoutSeconds, [](FScenarioContext& C) { return Done; }, PollSeconds = 0)` | Polls every frame (or every `PollSeconds`) until true; fails after the timeout. The condition may act (attack until dead). |
+| `WaitWatching(Name, Seconds, [](FScenarioContext& C) { ... })` | Waits `Seconds` game seconds, calling the lambda every frame (count Health drops, top up, act). Never fails on its own: unlike `WaitUntil` it just ends after `Seconds`. |
 | `TimeDilation(X)`, `Timeout(RealSeconds)`, `Raid(bool)`, `KeepDebugLoadout()` | Options: global time dilation from the start (1); real-time limit for the steps (180); game mode `bIsRaid` (true); keep the character Blueprint's Debug loadout on spawned characters. |
 | `Run()` | Queues it. Last call in `RunTest`, once. |
 
@@ -534,7 +535,9 @@ Keep file-local helpers and constants in a uniquely named namespace (unity build
 | Names | `Remember(Name, Actor)`, `FindActor(Name)`, `Get<T>(Name)`, `SetNumber(Name, V)`, `Number(Name, Default)` | Spawn calls remember their actor under its name. |
 | Spawning | `SpawnPlayer(Name, FloorPoint, Yaw = 0, Party = "")` | A real player: a PlayerController of the game mode's class with its PlayerState and team (`InitNewPlayer` with `?Name=` and `?Party=`), possessing a new character Blueprint through `HandleStartingNewPlayer` → `RestartPlayer` (begins the raid on a raid map). `IsPlayerControlled()` is true (trading, player-kill XP); same Party = same team. No local player, input or HUD. Its controller is remembered as `"<Name>.Controller"`. |
 | | `SpawnDummy(Name, FloorPoint, Yaw = 180)` | The character Blueprint possessed by a plain `AAIController` (like the checklist's placed dummy with Auto Possess AI): ability system set up, not player-controlled, no player state or team, BasicMonster kill XP. |
-| | `SpawnMonster(Name, MobId, FloorPoint, Yaw = 0)` | An `ACrossguardMonster` with that Mob Id (stats from the Mob Table at BeginPlay), with its AI: it fights players and minions within its aggro range (15 m). |
+| | `SpawnMonster(Name, MobId, FloorPoint, Yaw = 0, [](ACrossguardMonster& M) { ... } = nullptr)` | An `ACrossguardMonster` with that Mob Id (stats from the Mob Table at BeginPlay), with its AI: it fights players and minions within its aggro range (15 m). The lambda runs on the deferred spawn, after `MobId` is set and before BeginPlay and possession (`CombatRole`, `FixedHealth`, `AggroRange`, ...); a Mob Id's row still applies over it at BeginPlay. |
+| | `SpawnMinion(Name, Summoner, FloorPoint, MinionClass = nullptr, [](ACrossguardMinion& M) { ... } = nullptr)` | A minion as summon skills spawn it (`UCrossguardSummonAbility::SpawnMinion`): owned and instigated by `Summoner`, `SetSummoner` before BeginPlay (its team), facing the summoner's yaw, run by its minion controller. Class: an `ACrossguardMinion` subclass (default `ACrossguardMinion`); the lambda runs before BeginPlay. Unlike a summon: no life span, always spawned, not dismissed by a recast. |
+| | `SpawnBlockingBox(Name, Center, Size)` | An engine cube scaled to `Size` cm, centred at `Center`, `BlockAll` (pawns, swings, line of sight). Returns the `AStaticMeshActor`; `Destroy()` it to open the way. |
 | | `SpawnActor<T>(Name, Location, Yaw = 0, [](T& A) { ... }, Class = nullptr)` | Any actor; the lambda runs before BeginPlay. Location as is (not put on the floor). |
 | | `Place(Character, FloorPoint, Yaw)`, `bKeepDebugLoadout` | Teleport; keep the Blueprint's Debug loadout for characters spawned after setting it. |
 | Gear | `Equip(Character, WeaponId, Slot = MainHand, Rarity = Common)`, `Unequip(Character, Slot)` | Server equip of a fresh weapon in the active set (a two-handed main hand empties the off hand first). Fails the scenario on an error (unknown id, Weapon Table unset). |
@@ -545,9 +548,12 @@ Keep file-local helpers and constants in a uniquely named namespace (unity build
 | | `ActivateSkill(Character, SkillId)`, `IsOnCooldown(Character, SkillId)` | Activates a granted active skill (as E); its `CooldownTags` are on. |
 | | `SetHealth(A, Value)`, `ApplyStatus(A, CrossguardTags::State_Silenced, Seconds)` | Health base value; a status through `UCrossguardSkillAbility::ApplyStatus` (self-applied, so CC immunity still counts). |
 | | `Kill(Victim, Killer = nullptr)` | Lethal damage through the damage effect: death, body and kill XP as in play. |
+| | `Damage(Source, Victim, Attack, Magic = 0)` | One hit of these base amounts through the damage effect (as `Kill`): stats and the victim's damage reactions apply (a monster turns on `Source`), guards do not. No Source: the victim's own. Returns the Health it took off. |
 | Reading | `Health(A)`, `MaxHealth(A)`, `Stat(A, UCrossguardAttributeSet::GetXAttribute())` | Attributes (−1 / 0 without an ability system). |
 | | `HasTag(A, CrossguardTags::State_Stunned)`, `HasTag(A, TEXT("State.Stunned"))`, `IsDead(A)` | Owned gameplay tags. |
 | | `PlayerState(A)`, `WeaponValue(Character, Slot)`, `ExpectedDamage(Source, Target, AttackBase, MagicBase = 0, Coefficient = 1, AttackShare = 1)` | `ACrossguardPlayerState`; the weapon's AD / MD at its rarity; one hit by the damage formula with current stats. |
+| | `TargetOf(Pawn)` | Whom an AI pawn is fighting: a monster's or minion's controller target (`GetCurrentTarget`), else its AI controller's focus actor; null without one. |
+| | `ClankCount(A)` | Weapon clanks (block, parry, clash: `MulticastWeaponClank`) the character has played since it spawned; the defender plays it. 0 for non-characters. Native: `ACrossguardCharacter::GetWeaponClankCount()` and the `OnWeaponClankNative` delegate. |
 | | `FindAll<T>()`, `FindNearest<T>(Point, Radius)` | Actors in the PIE world. |
 | Game | `SetRaid(bool)`, `SetTimeDilation(X)` | `bIsRaid` (and begins / ends every player's raid); global time dilation. |
 | Log | `LogContains(Text)`, `LogCount(Text)`, `LogLines()`, `ClearLog()` | The captured log. |
