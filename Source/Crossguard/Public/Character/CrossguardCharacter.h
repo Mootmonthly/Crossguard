@@ -2,7 +2,9 @@
 
 #include "AbilitySystem/CrossguardAbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
+#include "Combat/CrossguardCosmetics.h"
 #include "CoreMinimal.h"
+#include "Engine/NetSerialization.h"
 #include "Game/CrossguardPlayerState.h"
 #include "GameFramework/Character.h"
 #include "GenericTeamAgentInterface.h"
@@ -24,12 +26,18 @@ class UCrossguardLoadoutComponent;
 class UCrossguardTradeComponent;
 class UCrossguardGuardAbility;
 class UCrossguardTrackingComponent;
+class UCrossguardWeaponVisualsComponent;
 struct FOnAttributeChangeData;
 
 class ACrossguardCharacter;
 
 // The clank, natively: the character that played it and the point of impact.
 DECLARE_MULTICAST_DELEGATE_TwoParams(FCrossguardWeaponClankSignature, ACrossguardCharacter*, FVector);
+// Art hooks, natively (tests, C++ visuals): an attack started; this character's hit landed at a point on
+// Target; this character took Amount from Source at HitLocation (bBlocked: a guard took part of it).
+DECLARE_MULTICAST_DELEGATE_TwoParams(FCrossguardAttackStartedSignature, ACrossguardCharacter*, const FCrossguardAttackCue&);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FCrossguardAttackHitSignature, ACrossguardCharacter*, FVector, AActor*);
+DECLARE_MULTICAST_DELEGATE_FiveParams(FCrossguardDamageTakenSignature, ACrossguardCharacter*, float, AActor*, FVector, bool);
 
 // Player character. Owns its ability system: a character's stats and skills live and die with it,
 // as an extraction match ends with the character extracted or dead.
@@ -70,6 +78,78 @@ public:
 
 	// Clanks this character has played on this machine (tests).
 	int32 GetWeaponClankCount() const { return WeaponClankCount; }
+
+	// --- Art hooks (docs/art-placeholder-plan.md, "How the art hooks into the code") ---------------
+	// All cosmetic: they run on every machine that shows the character, change no rule, and are sent
+	// unreliably (a lost one is a missed sound, nothing more).
+
+	// Server, or the owning client predicting its own attack: an attack (swing, shot, throw, cast)
+	// starts. The server sends it to every machine; a client that predicted it (bPredictedByOwner,
+	// server side: the activation carried the client's prediction key) has played it already and
+	// skips the copy. Elsewhere it does nothing.
+	void NotifyAttackStarted(FCrossguardAttackCue Cue, bool bPredictedByOwner = false);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastAttackStarted(FCrossguardAttackCue Cue, bool bPredictedByOwner);
+
+	// An attack started: play the swing montage / bow draw / cast animation and the whoosh here
+	// (Blueprint). SwingSound plays on its own; so does the placeholder swing of the weapon mesh.
+	UFUNCTION(BlueprintImplementableEvent, Category = "Crossguard|Art")
+	void OnAttackStarted(const FCrossguardAttackCue& Cue);
+
+	FCrossguardAttackStartedSignature OnAttackStartedNative;
+
+	// This character's direct hit landed on Target at HitLocation (not damage over time). HitSound
+	// plays on its own.
+	UFUNCTION(BlueprintImplementableEvent, Category = "Crossguard|Art")
+	void OnAttackHit(FVector HitLocation, AActor* Target);
+
+	FCrossguardAttackHitSignature OnAttackHitNative;
+
+	// Server, from the damage path (UCrossguardAttributeSet; CrossguardGuard for a hit a guard stopped
+	// whole: Amount 0, bBlocked). Sends OnDamageTaken to every machine, and OnAttackHit to Source
+	// for a direct hit.
+	void NotifyDamageTaken(float Amount, AActor* Source, const FVector& HitLocation, bool bBlocked, bool bDirectHit);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastDamageTaken(float Amount, AActor* Source, FVector_NetQuantize HitLocation, bool bBlocked, bool bDirectHit);
+
+	// Took damage: hit react, blood or sparks, damage numbers (Blueprint). HitVfx plays on its own.
+	UFUNCTION(BlueprintImplementableEvent, Category = "Crossguard|Art")
+	void OnDamageTaken(float Amount, AActor* Source, FVector HitLocation, bool bBlocked);
+
+	FCrossguardDamageTakenSignature OnDamageTakenNative;
+
+	// Played on this machine (tests).
+	int32 GetAttackStartedCount() const { return AttackStartedCount; }
+	int32 GetDamageTakenCount() const { return DamageTakenCount; }
+
+	UCrossguardWeaponVisualsComponent* GetWeaponVisuals() const { return WeaponVisuals; }
+
+	// Sounds and effects the hooks play by themselves when set (empty: nothing). Soft references:
+	// set them in the character Blueprint.
+	// Where an attack starts (OnAttackStarted).
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Art")
+	TSoftObjectPtr<USoundBase> SwingSound;
+
+	// Where this character's hit lands (OnAttackHit).
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Art")
+	TSoftObjectPtr<USoundBase> HitSound;
+
+	// Where this character took a hit (OnDamageTaken).
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Art")
+	TSoftObjectPtr<UNiagaraSystem> HitVfx;
+
+	// Weapons met (OnWeaponClank): a metal clank and sparks at the impact point.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Art")
+	TSoftObjectPtr<USoundBase> BlockSound;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Art")
+	TSoftObjectPtr<UNiagaraSystem> ClankVfx;
+
+	// When it dies (the ragdoll starts).
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Art")
+	TSoftObjectPtr<USoundBase> DeathSound;
 
 	UCrossguardAbilitySystemComponent* GetCrossguardAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UCrossguardLoadoutComponent* GetLoadoutComponent() const { return LoadoutComponent; }
@@ -462,6 +542,15 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Abilities")
 	TObjectPtr<UCrossguardLoadoutComponent> LoadoutComponent;
 
+	// Held weapon meshes from the weapon table (`mesh`), first- and third-person copies, and the
+	// placeholder swing.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Crossguard|Art")
+	TObjectPtr<UCrossguardWeaponVisualsComponent> WeaponVisuals;
+
+	// Moves the body mesh and remembers the place (revive, the body container's copy). For bodies from
+	// data (ACrossguardAICharacter::BodyVisual).
+	void SetBodyMeshRelativeTransform(const FTransform& Transform);
+
 private:
 	// Server. Equips the Debug* items and skills.
 	void ApplyDebugLoadout();
@@ -576,4 +665,14 @@ private:
 
 	// Clanks played on this machine (GetWeaponClankCount).
 	int32 WeaponClankCount = 0;
+
+	// Art hooks on this machine (CrossguardCharacterCosmetics.cpp).
+	void HandleAttackStarted(const FCrossguardAttackCue& Cue);
+	void HandleAttackHit(const FVector& HitLocation, AActor* Target);
+	void PlayClankCosmetics(const FVector& ImpactPoint);
+	void PlayDeathCosmetics();
+	// Attacks started by this machine's notifies (AttackIndex).
+	int32 NextAttackIndex = 0;
+	int32 AttackStartedCount = 0;
+	int32 DamageTakenCount = 0;
 };

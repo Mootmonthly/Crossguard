@@ -45,6 +45,7 @@
 #include "Skills/CrossguardLoadoutComponent.h"
 #include "Skills/CrossguardSkillAbility.h"
 #include "Skills/CrossguardTrackingComponent.h"
+#include "Character/CrossguardWeaponVisualsComponent.h"
 
 namespace CrossguardStealthRelevancy
 {
@@ -73,6 +74,7 @@ ACrossguardCharacter::ACrossguardCharacter()
 	TradeComponent = CreateDefaultSubobject<UCrossguardTradeComponent>(TEXT("TradeComponent"));
 	TrackingComponent = CreateDefaultSubobject<UCrossguardTrackingComponent>(TEXT("TrackingComponent"));
 	TrackingComponent->SetupAttachment(GetRootComponent());
+	WeaponVisuals = CreateDefaultSubobject<UCrossguardWeaponVisualsComponent>(TEXT("WeaponVisuals"));
 	WeaponAttackAbilityClass = UCrossguardWeaponAttackAbility::StaticClass();
 	OffHandAttackAbilityClass = UCrossguardOffHandAttackAbility::StaticClass();
 	GuardAbilityClass = UCrossguardGuardAbility::StaticClass();
@@ -1072,6 +1074,7 @@ void ACrossguardCharacter::SetDeadVisuals(bool bDead)
 		Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		BodyMesh->SetCollisionProfileName(TEXT("Ragdoll"));
 		BodyMesh->SetSimulatePhysics(true);
+		PlayDeathCosmetics();
 		return;
 	}
 
@@ -1570,6 +1573,7 @@ bool ACrossguardCharacter::GetActiveSwing(double Now, double Window, int32& OutI
 void ACrossguardCharacter::MulticastWeaponClank_Implementation(FVector ImpactPoint)
 {
 	++WeaponClankCount;
+	PlayClankCosmetics(ImpactPoint);
 	OnWeaponClank(ImpactPoint);
 	OnWeaponClankNative.Broadcast(this, ImpactPoint);
 }
