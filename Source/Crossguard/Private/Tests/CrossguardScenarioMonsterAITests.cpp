@@ -230,13 +230,19 @@ namespace CrossguardScenarioMonsterAI
 		return static_cast<float>(FVector::Dist2D(A->GetActorLocation(), B->GetActorLocation()));
 	}
 
-	// Monsters (alive or dead) that Spawner spawned (it owns them).
+	// Monsters (alive or dead) that Spawner spawned. Not by owner: possession makes the AI controller the
+	// owner. By the spot each guards (where it spawned), inside the spawner's circle after it chases or dies.
 	TArray<ACrossguardMonster*> SpawnedBy(FContext& C, const AActor* Spawner)
 	{
 		TArray<ACrossguardMonster*> Result;
+		const ACrossguardMobSpawner* MobSpawner = Cast<ACrossguardMobSpawner>(Spawner);
+		if (MobSpawner == nullptr)
+		{
+			return Result;
+		}
 		for (ACrossguardMonster* Monster : C.FindAll<ACrossguardMonster>())
 		{
-			if (Monster->GetOwner() == Spawner)
+			if (FVector::Dist2D(Monster->GetHomeLocation(), MobSpawner->GetActorLocation()) <= MobSpawner->Radius + 1.0f)
 			{
 				Result.Add(Monster);
 			}
@@ -641,7 +647,8 @@ bool FCrossguardScenarioMonsterTeam::RunTest(const FString& Parameters)
 		{
 			return;
 		}
-		ACrossguardMinion* Minion = C.SpawnMinion(TEXT("Minion"), M1, FVector(-250.0f, SceneY, 0.0f));
+		// Off the monsters' line: with no NavMesh it walks straight at the player and would push into M1's back.
+		ACrossguardMinion* Minion = C.SpawnMinion(TEXT("Minion"), M1, FVector(-250.0f, SceneY + 300.0f, 0.0f));
 		if (!C.Require(Minion != nullptr && Minion->GetController() != nullptr, TEXT("M1's minion spawned with its controller")))
 		{
 			return;

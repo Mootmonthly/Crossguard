@@ -143,3 +143,22 @@ missing entry in `Crossguard.Build.cs`. The usual ones would be `NavigationSyste
 
 Keep each fix minimal, rebuild, and commit the fixes with a message naming this sheet's row (for
 example "First compile: A3 activation tags via setter").
+
+## First build results (UE 5.8, 2026-10-15)
+
+The build compiled first time (after A1, A2); none of A3-A18 or C fired. Editor set-up passed. The
+first test run was 36/103; every failure was in the tests, not the game. Now 103/103.
+
+| Cause | Fix |
+| --- | --- |
+| D8 confirmed. 5.8 `APlayerController::IsLocalController`: with no net driver (standalone PIE) a controller is local only with a `ULocalPlayer`, so GAS refused `LocalPredicted` abilities for `SpawnPlayer`'s players | `SpawnPlayer` calls `Controller->SetAsLocalPlayerController()` before possession |
+| Log capture got nothing: GLog only delivers to buffered devices on its dedicated log thread, after the test has looked | `FScenarioLogCapture::CanBeUsedOnMultipleThreads()` returns true (unbuffered; it was already mutex-guarded) |
+| 5.8 `USceneComponent::IsVisible()` is false whenever `bHiddenInGame`, which a capsule always is | Stealth test reads `GetVisibleFlag()` (what `SetVisibility` sets) |
+| Spawner tests matched monsters by owner; possession makes the AI controller the owner | `SpawnedBy` matches by `GetHomeLocation()` within the spawner's `Radius` |
+| MonsterTeam: the minion spawned straight behind M1 and, with no NavMesh (D6), walked into its back | Minion spawned 3 m off the line |
+| ArrowBlockedNoStun: the archer's first arrow lands in the set-up wait, before the shield is up | Health reset to max when the shield goes up |
+
+Still there, harmless: `CooldownGameplayEffectClass 'CrossguardCooldownEffect' grants no tags`
+(5.8 inspects the effect's class defaults; our cooldown tags are dynamic and
+`UCrossguardGameplayAbility::GetCooldownTags` reports them, so cooldowns work), and
+`No GameplayCueNotifyPaths` (no cues yet).

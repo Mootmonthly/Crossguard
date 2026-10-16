@@ -21,10 +21,17 @@ namespace CrossguardScenarioMonsters
 
 	TArray<ACrossguardMonster*> SpawnedBy(CrossguardScenario::FScenarioContext& C, const AActor* Spawner)
 	{
+		// Not by owner: possession makes the AI controller the owner. By the spot each guards (where it
+		// spawned), which stays inside the spawner's circle after it chases or dies.
 		TArray<ACrossguardMonster*> Result;
+		const ACrossguardMobSpawner* MobSpawner = Cast<ACrossguardMobSpawner>(Spawner);
+		if (MobSpawner == nullptr)
+		{
+			return Result;
+		}
 		for (ACrossguardMonster* Monster : C.FindAll<ACrossguardMonster>())
 		{
-			if (Monster->GetOwner() == Spawner)
+			if (FVector::Dist2D(Monster->GetHomeLocation(), MobSpawner->GetActorLocation()) <= MobSpawner->Radius + 1.0f)
 			{
 				Result.Add(Monster);
 			}

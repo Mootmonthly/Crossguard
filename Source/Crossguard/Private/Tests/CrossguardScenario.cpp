@@ -196,6 +196,9 @@ namespace CrossguardScenario
 		}
 
 		virtual bool CanBeUsedOnAnyThread() const override { return true; }
+		// Unbuffered: GLog then calls Serialize on the logging thread right away. A buffered device gets
+		// lines later from the dedicated log thread, after the test has already looked (UE 5.8).
+		virtual bool CanBeUsedOnMultipleThreads() const override { return true; }
 
 		TArray<FString> GetLines() const
 		{
@@ -376,6 +379,9 @@ namespace CrossguardScenario
 			Fail(FString::Printf(TEXT("SpawnPlayer '%s': the %s or its PlayerState did not spawn"), *Name.ToString(), *ControllerClass->GetName()));
 			return nullptr;
 		}
+		// UE 5.8: with no net driver (standalone PIE) a controller is local only if it has a ULocalPlayer,
+		// which ours lack, so GAS refused LocalPredicted abilities. Mark it local before possession.
+		Controller->SetAsLocalPlayerController();
 
 		// 2. Login set-up: name, team (Party), start spot.
 		FString Options = FString::Printf(TEXT("?Name=%s"), *Name.ToString());

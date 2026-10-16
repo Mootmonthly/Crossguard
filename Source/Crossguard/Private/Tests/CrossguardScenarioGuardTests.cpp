@@ -476,6 +476,9 @@ bool FCrossguardScenarioArrowOnShield::RunTest(const FString& Parameters)
 		}
 		C.Aim(Player, Archer);
 		C.Require(C.RaiseGuard(Player), TEXT("the shield is up"));
+		// The archer shoots from the start: an arrow can land during the set-up wait, before the shield
+		// is up. Count from full health now.
+		C.SetHealth(Player, C.MaxHealth(Player));
 		C.ClearLog();
 		C.SetNumber(TEXT("ClanksBefore"), C.ClankCount(Player));
 	});

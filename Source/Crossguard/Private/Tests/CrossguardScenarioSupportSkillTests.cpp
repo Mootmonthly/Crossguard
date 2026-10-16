@@ -1354,7 +1354,7 @@ bool FCrossguardScenarioSupportStealth::RunTest(const FString& Parameters)
 			C.Fail(TEXT("sneak or hider gone"));
 			return;
 		}
-		C.Test.TestTrue(TEXT("The hider is visible before"), Hider->GetCapsuleComponent()->IsVisible());
+		C.Test.TestTrue(TEXT("The hider is visible before"), Hider->GetCapsuleComponent()->GetVisibleFlag());
 		if (!C.Require(C.ActivateSkill(Sneak, TEXT("stealth")), TEXT("Stealth activates")))
 		{
 			return;
@@ -1370,7 +1370,7 @@ bool FCrossguardScenarioSupportStealth::RunTest(const FString& Parameters)
 		if (C.LocalPlayer() != nullptr)
 		{
 			// The PIE player is not on the dummy's side: UpdateStealthVisibility hides its capsule.
-			C.Test.TestFalse(TEXT("The stealthed dummy is hidden from the PIE player (capsule not visible)"), Hider->GetCapsuleComponent()->IsVisible());
+			C.Test.TestFalse(TEXT("The stealthed dummy is hidden from the PIE player (capsule not visible)"), Hider->GetCapsuleComponent()->GetVisibleFlag());
 		}
 		else
 		{
@@ -1439,7 +1439,7 @@ bool FCrossguardScenarioSupportStealth::RunTest(const FString& Parameters)
 		const float Elapsed = C.Now() - static_cast<float>(C.Number(TEXT("HiddenAt")));
 		C.Test.AddInfo(FString::Printf(TEXT("The hider's stealth lasted %.2f s"), Elapsed));
 		C.Test.TestEqual(TEXT("Stealth lasts 12 s"), Elapsed, ExpectedStealthSeconds, 0.5f);
-		C.Test.TestTrue(TEXT("The hider's capsule is visible again"), Hider->GetCapsuleComponent()->IsVisible());
+		C.Test.TestTrue(TEXT("The hider's capsule is visible again"), Hider->GetCapsuleComponent()->GetVisibleFlag());
 	});
 
 	Scenario.Run();
