@@ -146,3 +146,5 @@ Left as they are, with the reason:
   for items (the trade rules allow them); gold in raids is coins, which are items anyway.
 - **Exec commands** are client-side wrappers only. Remove them when the trade and guild windows
   exist. In Shipping the console is off by default anyway.
+
+- **Respawn after leaving a raid** (fixed): once a player extracts or is dead for the raid, `PlayerCanRestart` refuses on the raid map, so a forged `ServerRestartPlayer` cannot put them back in.

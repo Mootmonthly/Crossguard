@@ -159,6 +159,7 @@ void ACrossguardPlayerState::BeginRaid()
 		bInRaid = true;
 		RaidXp = 0;
 		bPortalSummoned = false;
+		bRaidFinished = false;
 		ProgressionChanged();
 		// The carried gear is at risk from now on: the save stops listing it.
 		if (UCrossguardSaveSubsystem* Saves = UCrossguardSaveSubsystem::Get(this))
@@ -174,6 +175,7 @@ int32 ACrossguardPlayerState::EndRaid(bool bExtracted)
 	{
 		return 0;
 	}
+	bRaidFinished = true;
 	Crossguard::FRaidXp Raid;
 	Raid.Add(RaidXp);
 	// A failed extraction loses the raid XP.

@@ -218,6 +218,16 @@ void ACrossguardGameMode::HandleStartingNewPlayer_Implementation(APlayerControll
 	}
 }
 
+bool ACrossguardGameMode::PlayerCanRestart_Implementation(APlayerController* Player)
+{
+	const ACrossguardPlayerState* PlayerState = Player != nullptr ? Player->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	if (bIsRaid && PlayerState != nullptr && PlayerState->HasFinishedRaid())
+	{
+		return false;
+	}
+	return Super::PlayerCanRestart_Implementation(Player);
+}
+
 TArray<FCrossguardInventoryItem> ACrossguardGameMode::RollLoot(FName TableId)
 {
 	const int64 Seed = (static_cast<int64>(FMath::Rand()) << 31) ^ static_cast<int64>(FMath::Rand()) ^ static_cast<int64>(FPlatformTime::Cycles64());

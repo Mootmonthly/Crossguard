@@ -109,6 +109,8 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Progression")
 	bool IsInRaid() const { return bInRaid; }
+	// Server only: this player's raid on this map is over (extracted or dead for the raid).
+	bool HasFinishedRaid() const { return bRaidFinished; }
 
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Progression")
 	const FCrossguardAttributeAllocation& GetAttributeAllocation() const { return AttributeAllocation; }
@@ -263,6 +265,7 @@ private:
 
 	// Server only; reset by BeginRaid.
 	bool bPortalSummoned = false;
+	bool bRaidFinished = false;
 
 	Crossguard::FProgressionConfig ProgressionConfig;
 	Crossguard::FXpConfig XpConfig;

@@ -38,6 +38,9 @@ public:
 	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
 	// Starts the raid for each player when this map is a raid.
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
+	// No respawn into a raid the player already left (extracted or dead for the raid), even if a
+	// client forges ServerRestartPlayer.
+	virtual bool PlayerCanRestart_Implementation(APlayerController* Player) override;
 
 	// Server. Called by the attribute set when damage brings a character to 0 Health. Awards kill
 	// XP to the killer's player: PlayerKill for a player-controlled victim, otherwise the victim's
