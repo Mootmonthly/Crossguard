@@ -369,7 +369,8 @@ void ACrossguardCharacter::ShowDebugMessage(const FString& Message, const FColor
 
 void ACrossguardCharacter::DrawDebugHud()
 {
-	if (!IsLocallyControlled() || GEngine == nullptr)
+	// Off once ACrossguardHUD (the placeholder UI) takes over.
+	if (!bDebugHud || !IsLocallyControlled() || GEngine == nullptr)
 	{
 		return;
 	}

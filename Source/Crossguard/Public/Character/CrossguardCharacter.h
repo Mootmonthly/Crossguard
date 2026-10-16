@@ -277,9 +277,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
 	bool bDebugLootTakesAll = false;
 
-	// Testing until the HUD exists: on-screen text (top left) with Health, shield, weapons, the
-	// selected skill and states. A quick tap of Q selects the next skill, since there is no wheel
-	// widget yet.
+	// Testing: on-screen text (top left) with Health, shield, weapons, the selected skill and
+	// states; a quick tap of Q selects the next skill. ACrossguardHUD (the placeholder UI,
+	// docs/ui.md) turns it off for its player, as its HUD and skill wheel replace it.
 	UPROPERTY(EditAnywhere, Category = "Crossguard|Debug")
 	bool bDebugHud = true;
 

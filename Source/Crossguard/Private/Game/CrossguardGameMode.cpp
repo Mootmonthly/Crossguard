@@ -11,6 +11,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "UI/CrossguardHUD.h"
 
 const TCHAR* ACrossguardGameMode::PartyOption = TEXT("Party");
 
@@ -18,6 +19,8 @@ ACrossguardGameMode::ACrossguardGameMode()
 {
 	DefaultPawnClass = ACrossguardCharacter::StaticClass();
 	PlayerStateClass = ACrossguardPlayerState::StaticClass();
+	// Placeholder UI built in C++ (docs/ui.md); a Blueprint game mode can set its own HUD Class.
+	HUDClass = ACrossguardHUD::StaticClass();
 }
 
 std::string ACrossguardGameMode::PlayerKey(const FUniqueNetIdRepl& UniqueId, const AController* Controller)
