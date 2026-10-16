@@ -250,6 +250,12 @@ damage is computed from the characters' actual stats, so they work at any level.
 | `Crossguard.Scenario.Combat.AIIgnoresAllySwings` | A party member's minion never guards against its ally's 12 swings; every one lands (friendly fire). |
 | `Crossguard.Scenario.Combat.StunBlocksActions` | Stunned (by a parry, or directly): no attack, skill, jump, movement or guard, a raised guard drops; all work again after. |
 
+**`CrossguardScenarioStatusTests.cpp`**
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Status.Root` | Rooted 1 s: walk speed 0, no jump, Hunter's Leap refused, basic attack still works; afterwards walk speed and jumping are back. |
+
 **`CrossguardScenarioMonsterTests.cpp`**
 
 | Test | Checks |

@@ -371,6 +371,8 @@ void ACrossguardCharacter::DrawDebugHud()
 	AddState(CrossguardTags::State_Dead, TEXT("Dead"));
 	AddState(CrossguardTags::State_Muted, TEXT("Muted"));
 	AddState(CrossguardTags::State_Slowed, TEXT("Slowed"));
+	AddState(CrossguardTags::State_Rooted, TEXT("Rooted"));
+	AddState(CrossguardTags::State_Stunned, TEXT("Stunned"));
 	AddState(CrossguardTags::State_Blinded, TEXT("BLINDED"));
 	AddState(CrossguardTags::State_Flying, TEXT("Flying"));
 	AddState(CrossguardTags::State_Dragonified, TEXT("Dragon"));
@@ -1179,7 +1181,8 @@ void ACrossguardCharacter::GuildGive(const FString& PlayerId, int32 SlotId)
 bool ACrossguardCharacter::CanJumpInternal_Implementation() const
 {
 	return Super::CanJumpInternal_Implementation()
-		&& (AbilitySystemComponent == nullptr || !AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Stunned));
+		&& (AbilitySystemComponent == nullptr || (!AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Stunned)
+			&& !AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Rooted)));
 }
 
 void ACrossguardCharacter::NoteMeleeSwing(int32 InImpactPower, float InWeaponDamage)

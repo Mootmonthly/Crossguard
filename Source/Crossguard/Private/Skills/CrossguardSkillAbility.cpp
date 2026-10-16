@@ -38,11 +38,36 @@ FGameplayEffectSpecHandle UCrossguardSkillAbility::MakeStatusSpec(UAbilitySystem
 	{
 		return FGameplayEffectSpecHandle();
 	}
+	if (State == CrossguardTags::State_Rooted)
+	{
+		return MakeRootSpec(Source, Seconds);
+	}
 	FGameplayEffectSpecHandle Spec = Source->MakeOutgoingSpec(UCrossguardStatusEffect::StaticClass(), 1.0f, Source->MakeEffectContext());
 	if (Spec.IsValid())
 	{
 		Spec.Data->SetSetByCallerMagnitude(CrossguardSetByCaller::Duration, Seconds);
 		Spec.Data->DynamicGrantedTags.AddTag(State);
+	}
+	return Spec;
+}
+
+FGameplayEffectSpecHandle UCrossguardSkillAbility::MakeRootSpec(UAbilitySystemComponent* Source, float Seconds)
+{
+	if (Source == nullptr || Seconds <= 0.0f)
+	{
+		return FGameplayEffectSpecHandle();
+	}
+	// Movement Speed × 0 (a multiplier, so no speed buff outweighs it), everything else × 1.
+	FGameplayEffectSpecHandle Spec = Source->MakeOutgoingSpec(UCrossguardTimedMultiplierEffect::StaticClass(), 1.0f, Source->MakeEffectContext());
+	if (Spec.IsValid())
+	{
+		for (const FName& Name : UCrossguardSkillStatsEffect::GetStatNames())
+		{
+			Spec.Data->SetSetByCallerMagnitude(Name, 1.0f);
+		}
+		Spec.Data->SetSetByCallerMagnitude(FName(TEXT("MoveSpeed")), 0.0f);
+		Spec.Data->SetSetByCallerMagnitude(CrossguardSetByCaller::Duration, Seconds);
+		Spec.Data->DynamicGrantedTags.AddTag(CrossguardTags::State_Rooted);
 	}
 	return Spec;
 }
@@ -98,7 +123,7 @@ FGameplayEffectSpecHandle UCrossguardSkillAbility::MakeMuteSpec(UAbilitySystemCo
 bool UCrossguardSkillAbility::IsCrowdControl(const FGameplayTag& State)
 {
 	return State == CrossguardTags::State_Slowed || State == CrossguardTags::State_Blinded || State == CrossguardTags::State_KnockedUp
-		|| State == CrossguardTags::State_Silenced || State == CrossguardTags::State_Stunned;
+		|| State == CrossguardTags::State_Silenced || State == CrossguardTags::State_Stunned || State == CrossguardTags::State_Rooted;
 }
 
 bool UCrossguardSkillAbility::IsCrowdControlImmune(const UAbilitySystemComponent* Target)

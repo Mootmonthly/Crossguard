@@ -35,6 +35,8 @@ public:
 	// Specs for on-hit effects carried by attacks and projectiles; apply with ApplyOnHitSpec.
 	static FGameplayEffectSpecHandle MakeStatusSpec(UAbilitySystemComponent* Source, FGameplayTag State, float Seconds);
 	static FGameplayEffectSpecHandle MakeSlowSpec(UAbilitySystemComponent* Source, float Fraction, float Seconds);
+	// State.Rooted with Movement Speed × 0. MakeStatusSpec / ApplyStatus with State.Rooted use it.
+	static FGameplayEffectSpecHandle MakeRootSpec(UAbilitySystemComponent* Source, float Seconds);
 	// Damage every second for Seconds (Attack and/or Magic per second).
 	static FGameplayEffectSpecHandle MakeDamageOverTimeSpec(UAbilitySystemComponent* Source, float AttackPerSecond, float MagicPerSecond,
 		float Seconds);

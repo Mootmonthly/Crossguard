@@ -402,6 +402,7 @@ UCrossguardFlightAbility::UCrossguardFlightAbility()
 	SkillCategory = ECrossguardSkillCategory::Spell;
 	BaseCooldownSeconds = 60.0f;
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_Flight);
+	ActivationBlockedTags.AddTag(CrossguardTags::State_Rooted);
 	ActivationBlockedTags.RemoveTag(CrossguardTags::State_Dragonified);
 	ActivationOwnedTags.AddTag(CrossguardTags::State_Flying);
 	// [Chop Down] cancels abilities with this tag.

@@ -535,6 +535,7 @@ UCrossguardLikeALionAbility::UCrossguardLikeALionAbility()
 	SkillCategory = ECrossguardSkillCategory::Art;
 	BaseCooldownSeconds = 12.0f;
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_LikeALion);
+	ActivationBlockedTags.AddTag(CrossguardTags::State_Rooted);
 	RequiredWeapons.Add(ECrossguardWeaponType::AnyMelee);
 	SetAssetTags(MeleeTags());
 }
@@ -652,6 +653,7 @@ UCrossguardHuntersLeapAbility::UCrossguardHuntersLeapAbility()
 	SkillCategory = ECrossguardSkillCategory::Art;
 	BaseCooldownSeconds = 15.0f;
 	CooldownTags.AddTag(CrossguardTags::Cooldown_Skill_HuntersLeap);
+	ActivationBlockedTags.AddTag(CrossguardTags::State_Rooted);
 }
 
 bool UCrossguardHuntersLeapAbility::ShouldAIUse(const ACrossguardAICharacter& User, const AActor& Target) const

@@ -64,12 +64,12 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 
 | Item | Needs | Notes |
 | --- | --- | --- |
-| Remaining skill parts | Code, Decision | Neckbite for players (needs Beastial forms), Pet Gem (Tiger) item, Hunter's Tracking hearing range (needs sound), Arcane Arrows dropoff (needs arrow dropoff). |
+| Remaining skill parts | Code, Decision | Neckbite for players (needs Beastial forms), Hunter's Tracking hearing range (needs sound), Arcane Arrows dropoff (needs arrow dropoff). |
 | Stealth teammate indicator | Editor | Party members see a purple outline around a stealthed ally (with the visual assets). |
 | Skill visuals | Editor | Fireball, breath, shield, Blind screen effect, dragon form, skeleton meshes. |
 | Passives on others and free-text mechanics | Code | Data-driven passives cover Self stat modifiers (masteries, Heroic Might, Cor Leonis, ...); party auras, on-hit slows and mechanics like Hunter's Tracking still need code. |
 | Block (shields) and parry | Editor | Built in code: hold right click; Impact Power decides; stun, riposte, AI guards. Needs animations and a guard visual. |
-| Status effects | Code | Root. (Slow, Mute, Silence, Stun, Blind and Attack Damage shields exist.) |
+| Status effects | Code | Slow, Root, Mute, Silence, Stun, Blind and Attack Damage shields exist; none applies Root yet. |
 | Minion meshes | Editor | Meshes for skeletons, tiger and demon (cylinders now). All three summons exist, Minion CDR applies to them, and minions and monsters use their skills. |
 | Animations, first-person arms | Editor | Melee hits are sphere sweeps until weapon collision exists. |
 | Weapon-on-weapon collision (fencing) | Code, Editor | Clashes are approximated (a swing's blade is in the way 0.25 s); real blade traces need swing animations. Clank animation and sound go in `OnWeaponClank`. |

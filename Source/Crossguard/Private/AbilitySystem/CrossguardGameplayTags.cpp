@@ -23,6 +23,7 @@ namespace CrossguardTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Muted, "State.Muted", "Cannot cast skills; passive skills are off.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Silenced, "State.Silenced", "Cannot activate skills; passives and basic attacks still work. Crowd control.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Stunned, "State.Stunned", "Cannot move, attack, guard or use skills (a lost weapon collision). Crowd control.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Rooted, "State.Rooted", "Cannot walk, jump, leap or take flight; can still attack, guard and use other skills. Crowd control.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Guarding, "State.Guarding", "Blocking or parrying (right click held): half speed, no attacks.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Slowed, "State.Slowed", "Movement speed reduced.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Blinded, "State.Blinded", "Screen flashed white.");
