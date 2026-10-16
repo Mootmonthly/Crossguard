@@ -35,7 +35,7 @@ Status: **fixed** (a hole closed in this review), **ok** (checked, no change nee
 | `ServerDepositItem` / `ServerWithdrawItem` / `ServerGiveItem` | Between raids; the item must be in the inventory (not readied); room checked before the bank lets go. | ok |
 | `UCrossguardPartyComponent::ServerInvite` / `ServerAccept` / `ServerLeave` / `ServerKick` | Everything goes through `FPartyRegistry` (leader only for invite and kick, one party per player, 8 max, invite expiry, ids looked up on the server); hub only (`bIsRaid` off), so the raid team cannot change mid-raid. The team follows on the server (`SetPlayerParty`). | ok |
 | `ServerDecline` / `ServerPromote` | Registry checks (own invite; leader only, target a member). Allowed in raids: they change no team. | ok |
-| `ServerStartRaid` | Leader (or solo) and hub only; the destination comes from server settings (`RaidMapName`, `RaidServerAddress`), never from the client; the party id is the server's. | ok |
+| `ServerStartRaid` | Leader (or solo) and hub only; the destination comes from matchmaking (`UCrossguardMatchmakingSubsystem`) or server settings (development: `-RaidServer=`; dev listen mode: `RaidMapName`), never from the client; the party id is the server's. | ok |
 
 ## Abilities
 
@@ -76,8 +76,7 @@ Status: **fixed** (a hole closed in this review), **ok** (checked, no change nee
 | Trade `View` (both offers) | `COND_OwnerOnly`: only the two parties get it. | ok |
 | Guild `Members`, `Invites`, `BankGold`, `BankItems` | `COND_OwnerOnly`, filled only for members. `GuildId`, `GuildName` and `Rank` are public. | ok |
 | Party `PartyId`, `LeaderId`, `bIsLeader`, `Members`, `Invites` | All `COND_OwnerOnly`: the party id is the raid's `?Party=` key, so it never reaches non-members. Allies show through the public `TeamId`. | ok |
-| `?Party=` at login | Raid servers trust the key a client sends: anyone who learns a party's id could join its team on that server. Party ids are random GUIDs sent only to members; the matchmaker should hand raid servers the parties to expect. | note |
-| `?Party=` on a leader-hosted hub (a team back from the raid early) | `UCrossguardPartySubsystem::JoinReturningParty`: only the hub's own player (the leader, from its own travel URL) founds a party from a key; any later login with that key joins it without an invite. The key is the client's word: anyone who knows it (and the leader's address) can join the rebuilt party and team. Keys are random GUIDs sent only to members; only parties founded this way can be joined by key, so an ordinary hub party still needs an invite. Accepted for the listen-server era; dedicated hubs (option 2) should take the party roster from the raid server / backend instead. | note |
+| `?Party=` at login | Raid servers trust the key a client sends: anyone who learns a party's id could join its team on that server. Party ids are random GUIDs sent only to members. Real launches carry the backend's match ticket (`?MatchTicket=`) instead; match servers should take the team from the ticket and ignore `?Party=` outside development (not built: no backend yet). | note |
 | Team travel to the hub (`ClientTravelToHub`) | Server -> client only: the server picks the URL (hub server setting, its hub map, the leader's address as the server sees the connection); no client input. Players leaving with their team are never held for a reconnect (`HoldForReconnect` skips `IsLeavingForHub`), so the travel cannot be used to park a character. | ok |
 | Player state: XP, gold, allocation, respec tokens, Skill Library, `bInRaid` | `COND_OwnerOnly`. | ok |
 | Attributes | Only `Health`, `MaxHealth` and `AttackShield` reach everyone (health bars); the rest are `COND_OwnerOnly`. | ok |

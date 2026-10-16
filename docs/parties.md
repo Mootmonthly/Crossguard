@@ -97,24 +97,37 @@ id>` (empty: the first), `PartyDeclineAll`, `PartyLeave`, `PartyKick <name or id
 
 ## Raid launch
 
+Owner's architecture: raids run on central dedicated match servers that many teams join; the hub on
+dedicated hub servers; the backend (Nakama, [design-decisions.md](design-decisions.md) "Online
+architecture") handles matchmaking. A player's PC never hosts a raid.
+
 `PartyStartRaid` → `UCrossguardPartySubsystem::StartRaid`: leader (or solo), hub only. What it does
 is decided by `PlanRaidTravel` (the same checks, no travel; the tests use it) with
-`Crossguard::PickRaidTravel`, from two **placeholder** settings on the game mode (Crossguard | Raid
-Launch):
+`Crossguard::PickRaidTravel`:
 
-- `RaidMapName` (command line `-RaidMap=<path>` overrides it), e.g. `/Game/Maps/L_Raid`.
-- `RaidServerAddress` (command line `-RaidServer=<address>` overrides it), e.g. `203.0.113.5:7777`.
+1. It asks matchmaking (`UCrossguardMatchmakingSubsystem::GetMatchmaking()`, an
+   `ICrossguardMatchmaking`, `Game/CrossguardMatchmaking.h`) for a match server for the party
+   (`FCrossguardMatchRequest`: party key, player ids). Implementations:
+   - `FCrossguardNoMatchmaking`: the backend stub, always "not available" (the Shipping default
+     until the backend module exists and registers its own with `SetMatchmaking`).
+   - `FCrossguardDevMatchmaking` (development builds, never Shipping; the default there): a fake
+     assignment, the hub game mode's `RaidServerAddress` (`-RaidServer=<address>`), no ticket.
+   **Assumed**: the request is synchronous for now; the backend's will answer later (a queue).
+2. The plan:
 
 | Situation | What happens |
 | --- | --- |
-| Every player on this server is in the party (or the launcher is alone on it) and `RaidMapName` is set | **ServerTravel**: the server loads `<RaidMapName>?Party=<id>` (plus `?listen` on a listen server). The game mode uses seamless travel (`bUseSeamlessTravel`, now on), so player states, and their `PartyKey`, come along; the raid map's game mode (`bIsRaid` on) puts the party on one team again (`HandleSeamlessTravelPlayer`) and begins the raid. |
-| Otherwise, `RaidServerAddress` is set | **ClientTravel**: each member's client travels to `<RaidServerAddress>?Party=<id>` (`TRAVEL_Absolute`); the raid server's game mode reads `?Party=` at login (`InitNewPlayer`) and puts them on one team. A solo player travels without the option. Refused (`HostInParty`) if the listen server's own player is in the party: the host leaving would close the hub for everyone else. |
-| Neither | Refused: `NoRaidDestination`. |
+| DEV-ONLY: development listen mode (`Crossguard::IsDevListenMode`: `-DevListenHub` or PIE, never Shipping), every player on this server is in the party (or the launcher is alone on it) and `RaidMapName` (`-RaidMap=`) is set | **ServerTravel**: the server loads `<RaidMapName>?Party=<id>` (plus `?listen` on a listen server). Seamless travel (`bUseSeamlessTravel`) brings the player states and their `PartyKey`; the raid map's game mode puts the party on one team again (`HandleSeamlessTravelPlayer`) and begins the raid. |
+| Otherwise, matchmaking assigned a match server | **ClientTravel**: each member's client travels to `<address>?MatchTicket=<ticket>` (`UCrossguardMatchmakingSubsystem::BuildMatchTravelUrl`, `TRAVEL_Absolute`); the match server will check the ticket with the backend and take the team from it (not built). A development assignment travels with `<address>?Party=<id>` instead (no option for a solo player): the match server reads `?Party=` at login (`InitNewPlayer`). DEV-ONLY: refused (`HostInParty`) if the listen server's own player is in the party. |
+| Neither | Refused: `NoRaidDestination` ("No raid server available right now"). |
 
-The URL is built by `Crossguard::BuildRaidTravelUrl` (`UCrossguardPartySubsystem::RaidTravelUrl`):
-`<destination>?Party=<id>`; it refuses keys that are not URL-safe.
+Each traveller's save is written first (`SaveNow`). `?Party=` URLs are built by
+`Crossguard::BuildRaidTravelUrl` (`UCrossguardPartySubsystem::RaidTravelUrl`), which refuses keys
+that are not URL-safe; a ticket must be letters, digits, `-` and `_` (256 at most).
 
-### Dev flow now: listen server
+### Development mode: listen server (single PC)
+
+DEV-ONLY: needs `-DevListenHub` (or PIE); never in Shipping.
 
 1. PC 1 hosts the hub: the main menu's Play, or `open /Game/Maps/L_Hub?listen` (L_Hub holds an
    `ACrossguardHubMarker`, [hub-and-menu.md](hub-and-menu.md)); the leader can use the hub's raid
@@ -145,39 +158,19 @@ followed the new player state without a duplicate-login refusal. Then both extra
 travels back to `/Game/Maps/L_Hub` (if it exists): same party, gear carried out, free to launch
 again. The ClientTravel path and a real two-machine travel stay manual.
 
-With a dedicated hub (or a listen host not in the party), set `RaidServerAddress` to a running raid
-server (e.g. a second process `Crossguard.exe /Game/L_Test?listen -game`, or a dedicated server):
-the party's clients travel there and the hub stays.
+Dedicated servers on one PC (development builds): `Tools\run_local_cluster.bat` starts a dedicated
+hub with `-RaidServer=` (development matchmaking) and a dedicated match server with `-HubServer=`; the
+party's clients travel to the match server and the hub stays.
 
-### The future: dedicated servers and a matchmaker
+### Back from the raid
 
-The hub and raids run on separate dedicated servers. `PartyStartRaid` asks a matchmaker (backend,
-not built) for a raid server with room for the party; it returns an address (and a ticket), and the
-hub sends the members' clients there with `?Party=<id>` exactly as the ClientTravel path does now.
-The raid server should then accept only the parties the matchmaker announced: today it trusts
-whatever `?Party=` a client sends (see [anti-cheat.md](anti-cheat.md)). Parties need the backend too
-to outlive a hub server (and to come back from a raid as a party).
-
-### Back from the raid early
-
-A team that finishes while other teams still raid goes back to the hub on its own (ruled, owner;
-[hub-and-menu.md](hub-and-menu.md) "A team goes back early"; `ACrossguardGameMode::ReturnTeamToHub`).
-The team is the party: one `?Party=` key (a solo player is a team of one, no key).
-
-- With a hub server set (`HubServerAddress` / `-HubServer=`; option 2, later) each member's client
-  travels to `<address>?Party=<key>`; that hub puts them on one team from the key (`InitNewPlayer`),
-  but rebuilding the party there needs the backend / matchmaker to announce it (not built).
-- Listen-server era: the leader's client opens `<HubMapName>?listen?Hub?Party=<key>` and becomes the
-  hub; the others connect to `<leader ip>:7777?Party=<key>` 5 s later (placeholders). On that hub
-  `UCrossguardPartySubsystem::JoinReturningParty` (called from `InitNewPlayer` on a hub login with
-  `?Party=`) rebuilds the party: the hub's own player (the leader: its own travel URL carried the
-  key) founds it under that key (`FPartyRegistry::Create`) and leads; each later login with the same
-  key joins it without an invite (`FPartyRegistry::Join`), up to the 8 cap. Only parties founded
-  this way can be joined by key; a key no such party has gives only the team, as before. The leader
-  is the party's leader when the raid server knew the party (it was the hub), else the
-  longest-standing member on the raid server.
-- Risk (accepted for the listen-server era, [anti-cheat.md](anti-cheat.md)): anyone who knows the
-  key and the leader's address can join the rebuilt party.
+A team that finishes goes back to the hub on its own while other teams play on (ruled, owner;
+[hub-and-menu.md](hub-and-menu.md) "A team goes back"; `ACrossguardGameMode::ReturnTeamToHub`). The
+team is the party: one `?Party=` key (a solo player is a team of one, no key). Each member's client
+travels to the hub destination (`GetHubDestination`: the backend's hub server, else
+`HubServerAddress` / `-HubServer=`) with `?Party=<key>`; the hub server puts them on one team from
+the key (`InitNewPlayer`). The party itself is not rebuilt there: that needs the backend's party
+roster (not built). Joining a party by key (the old leader-hosted hub) is removed.
 
 ## Assumptions and placeholders
 
@@ -196,22 +189,21 @@ Still assumed:
    back to the hub after a raid (`ACrossguardGameMode::ReturnToHub`), every party member who is not
    on the server any more (sent to the menu, released while away, logged out) leaves their party
    then (`UCrossguardPartySubsystem::DropAbsentMembers`); the rest keep their party in the hub.
-6. Raid launch: ServerTravel when the whole server is the party and `RaidMapName` is set, else
-   ClientTravel to `RaidServerAddress`, refused when the listen host is in a party that is not the
-   whole server. Both settings are placeholders until a matchmaker exists.
+6. Raid launch: ClientTravel to the match server matchmaking assigns (stub until the backend
+   exists; development builds fake it with `RaidServerAddress` / `-RaidServer=` and `?Party=`, never
+   in Shipping); in development listen mode only, ServerTravel when the whole server is the party and
+   `RaidMapName` is set; refused when the listen host is in a party that is not the whole server.
 7. Seamless travel is on for the game mode (needed to carry `PartyKey` through a ServerTravel).
 8. Party ids are 32-hex-digit GUIDs; the party view (id included) replicates to its owner only.
 9. `?Hub` on a server's map URL, or an `ACrossguardHubMarker` placed in the map (L_Hub), makes that
    map the hub (`bIsRaid` off). `RaidMapName` defaults to `/Game/Maps/Dev/L_DevSandbox` (placeholder).
-10. A team back from the raid early rebuilds its party on its leader's hub from the `?Party=` key:
-    the hub's own player founds and leads it, others join it by key without an invite (above).
-    Teams that went back early leave their parties on the raid server's registry when the rest of
-    the server returns (`DropAbsentMembers`).
+10. A team arriving on a hub server gets its `?Party=` key's team but not its party (until the
+    backend keeps parties). In development mode, teams that went back on their own leave their
+    parties on the server's registry when the rest of the server returns (`DropAbsentMembers`).
 
 ## Not covered
 
 Persistence (parties live in hub memory), coming back from a raid as a party on a dedicated hub
-server (the whole-server return keeps parties; a team going back early rebuilds its party only on a
-hub its leader hosts: above), a matchmaker and raid
-server allocation, raid servers checking `?Party=` against the matchmaker, party chat, a ready
+server (only the development whole-server return keeps parties), the backend's matchmaker and match
+server allocation, match servers checking the ticket (and ignoring `?Party=` outside development), party chat, a ready
 check, and invite by friends list (Steam). A member held for a reconnect shows as "(disconnected)" in the panel (`ACrossguardPlayerState::IsDisconnected`).
