@@ -290,7 +290,7 @@ void UCrossguardGuildWidget::Redraw()
 	for (const FCrossguardGuildBankItemView& Stack : Guild->BankItems)
 	{
 		UHorizontalBox* Row = MakeRow();
-		AddTo(Row, MakeText(CrossguardUI::ItemLabel(Stack.Item, Inventory, Equipment), 10, CrossguardUI::RarityColor(CrossguardUI::ItemRarity(Stack.Item))));
+		AddTo(Row, MakeText(CrossguardUI::ItemLabel(Stack.Item, Inventory, Equipment), 10, CrossguardUI::RarityTextColor(CrossguardUI::ItemRarity(Stack.Item))));
 		const int32 SlotId = Stack.SlotId;
 		AddTo(Row, MakeAction(TEXT("Withdraw"), bManage, [SlotId](UCrossguardGuildComponent& Target) { Target.RequestWithdrawItem(SlotId); }));
 		AddTo(BankList, Row);
@@ -307,7 +307,7 @@ void UCrossguardGuildWidget::Redraw()
 		for (const FCrossguardInventoryItem& Item : Inventory->GetItems())
 		{
 			UHorizontalBox* Row = MakeRow();
-			AddTo(Row, MakeText(CrossguardUI::ItemLabel(Item, Inventory, Equipment), 10, CrossguardUI::RarityColor(CrossguardUI::ItemRarity(Item))));
+			AddTo(Row, MakeText(CrossguardUI::ItemLabel(Item, Inventory, Equipment), 10, CrossguardUI::RarityTextColor(CrossguardUI::ItemRarity(Item))));
 			const int32 ItemId = Item.Id;
 			AddTo(Row, MakeAction(TEXT("Deposit"), Item.Id != Inventory->GetReadiedItemId(),
 				[ItemId](UCrossguardGuildComponent& Target) { Target.RequestDepositItem(ItemId); }));

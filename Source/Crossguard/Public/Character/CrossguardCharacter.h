@@ -173,6 +173,15 @@ public:
 	UFUNCTION(Exec)
 	void PartyStartRaid();
 
+	// Attributes from the console (docs/ui.md; the K panel does the same): Respec <str> <agi> <int>
+	// [gold] asks the server for that allocation. Spending unspent points is free; lowering any
+	// attribute is a respec, paid with a respec token, or with banked gold when "gold" is given.
+	// Between raids only; the server checks everything. Respec alone prints the current allocation,
+	// unspent points, tokens, gold and the gold price. One string: the console fills the last string
+	// parameter with the rest of the line, so the optional word needs no default value.
+	UFUNCTION(Exec)
+	void Respec(const FString& Arguments);
+
 	// Left click: basic attack with the main-hand weapon.
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Combat")
 	bool TryWeaponAttack();

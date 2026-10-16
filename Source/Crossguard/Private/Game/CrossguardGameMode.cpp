@@ -472,6 +472,8 @@ bool ACrossguardGameMode::HoldForReconnect(APlayerController* Leaving)
 	{
 		Movement->bRunPhysicsWithNoController = true;
 	}
+	// Teammates see "(disconnected)" (party panel, HUD team list).
+	PlayerState->SetDisconnected(true);
 	UE_LOG(LogCrossguard, Log, TEXT("%s (%s) disconnected mid-raid: character held for a reconnect"), *Character->GetName(), *PlayerId);
 	return true;
 }
@@ -545,6 +547,8 @@ FString ACrossguardGameMode::RestoreHeldPlayer(APlayerController* Controller, co
 		HeldPlayers.Add(PlayerId, Held);
 		return Error;
 	}
+	// Back: no longer shown as disconnected (SetDisconnected sends the player state at once).
+	HeldState->SetDisconnected(false);
 	HeldState->ForceNetUpdate();
 	// Same team slot (the registry key is just a string).
 	PlayerKeys.Add(TWeakObjectPtr<const AController>(Controller), Held.TeamKey);
@@ -555,7 +559,12 @@ FString ACrossguardGameMode::RestoreHeldPlayer(APlayerController* Controller, co
 
 void ACrossguardGameMode::ResumeHeldCharacter(APlayerController* Player, ACrossguardCharacter* Character)
 {
-	const ACrossguardPlayerState* PlayerState = Player != nullptr ? Player->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	ACrossguardPlayerState* PlayerState = Player != nullptr ? Player->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+	if (PlayerState != nullptr)
+	{
+		// Connected again either way (RestoreHeldPlayer cleared it already; this covers any other path).
+		PlayerState->SetDisconnected(false);
+	}
 	if (PlayerState == nullptr || Character == nullptr || Character->GetPlayerState() != PlayerState || !PlayerState->IsInRaid())
 	{
 		// The character is gone meanwhile: nothing to take back; they watch, like after a death.
@@ -601,6 +610,8 @@ void ACrossguardGameMode::ReleaseHeldPlayer(const FString& PlayerId)
 	}
 	if (PlayerState != nullptr)
 	{
+		// Gone for good (the player state is destroyed below): not "away" any more.
+		PlayerState->SetDisconnected(false);
 		PlayerState->EndRaid(false);
 		if (UCrossguardSaveSubsystem* Saves = UCrossguardSaveSubsystem::Get(this))
 		{

@@ -98,6 +98,15 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Crossguard|Team")
 	FCrossguardTeamChanged OnTeamChanged;
 
+	// True while the player is away mid-raid and their character waits for a reconnect
+	// (ACrossguardGameMode::HoldForReconnect). Public, like the team: teammates' party panel and HUD
+	// team list show "(disconnected)". Display only.
+	UFUNCTION(BlueprintPure, Category = "Crossguard|Team")
+	bool IsDisconnected() const { return bDisconnected; }
+
+	// Server only (the game mode's hold, reconnect and release).
+	void SetDisconnected(bool bInDisconnected);
+
 	// --- Progression ---------------------------------------------------------------------------
 
 	// Level from banked XP, capped at the season's max level.
@@ -256,6 +265,9 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_TeamId)
 	int32 TeamId = -1;
+
+	UPROPERTY(Replicated)
+	bool bDisconnected = false;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Progression)
 	int32 TotalXp = 0;

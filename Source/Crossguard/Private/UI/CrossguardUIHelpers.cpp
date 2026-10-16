@@ -9,6 +9,7 @@
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Skills/CrossguardLoadoutComponent.h"
 #include "Skills/CrossguardSkillCatalog.h"
+#include "UI/CrossguardUIButton.h"
 
 namespace CrossguardUI
 {
@@ -132,6 +133,48 @@ namespace CrossguardUI
 	FLinearColor RarityColor(ECrossguardRarity Rarity)
 	{
 		return UCrossguardItemLibrary::GetRarityColor(Rarity);
+	}
+
+	float RelativeLuminance(const FLinearColor& Color)
+	{
+		// FLinearColor is already linear: no sRGB decoding.
+		return 0.2126f * Color.R + 0.7152f * Color.G + 0.0722f * Color.B;
+	}
+
+	float ContrastRatio(const FLinearColor& First, const FLinearColor& Second)
+	{
+		const float Lighter = FMath::Max(RelativeLuminance(First), RelativeLuminance(Second));
+		const float Darker = FMath::Min(RelativeLuminance(First), RelativeLuminance(Second));
+		return (Lighter + 0.05f) / (Darker + 0.05f);
+	}
+
+	FLinearColor RarityTextColor(ECrossguardRarity Rarity)
+	{
+		const FLinearColor Base = RarityColor(Rarity);
+		const float Luminance = RelativeLuminance(Base);
+		if (Luminance >= MinRarityTextLuminance || Luminance >= 1.0f)
+		{
+			return FLinearColor(Base.R, Base.G, Base.B, 1.0f);
+		}
+		// Luminance is linear in the channels, so mixing toward white by Mix lands exactly on the minimum.
+		const float Mix = (MinRarityTextLuminance - Luminance) / (1.0f - Luminance);
+		return FLinearColor(Base.R + Mix * (1.0f - Base.R), Base.G + Mix * (1.0f - Base.G), Base.B + Mix * (1.0f - Base.B), 1.0f);
+	}
+
+	FLinearColor RarityBackgroundColor(ECrossguardRarity Rarity)
+	{
+		const FLinearColor Base = RarityColor(Rarity);
+		// Placeholder look: 1.5 % grey plus 4 % of the rarity colour (Rare: #21283B in sRGB).
+		return FLinearColor(0.015f + 0.04f * Base.R, 0.015f + 0.04f * Base.G, 0.015f + 0.04f * Base.B, 0.95f);
+	}
+
+	void StyleRarityButton(UCrossguardUIButton* Button, ECrossguardRarity Rarity)
+	{
+		if (Button != nullptr)
+		{
+			Button->SetColor(RarityBackgroundColor(Rarity));
+			Button->SetLabelColor(RarityTextColor(Rarity));
+		}
 	}
 
 	FString SkillName(FName SkillId, const UCrossguardLoadoutComponent* Loadout)

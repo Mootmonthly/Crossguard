@@ -238,7 +238,7 @@ void UCrossguardTradeWidget::Redraw()
 		UCrossguardUIButton* Row = MakeButton(CrossguardUI::ItemLabel(Item, Inventory, Equipment) + (bInHand ? TEXT(" [in hand]") : TEXT("")), nullptr, 10);
 		const int32 Id = Item.Id;
 		Row->OnClicked = [this, Id]() { ToggleOffered(Id); };
-		Row->SetLabelColor(CrossguardUI::RarityColor(CrossguardUI::ItemRarity(Item)));
+		CrossguardUI::StyleRarityButton(Row, CrossguardUI::ItemRarity(Item));
 		// Changing the offer only works unlocked; the server would refuse it anyway.
 		Row->SetActive(!View.bMyLocked && !bInHand);
 		AddTo(bOffered ? MyOfferList.Get() : MyItemsList.Get(), Row);
@@ -248,7 +248,7 @@ void UCrossguardTradeWidget::Redraw()
 
 	for (const FCrossguardInventoryItem& Item : View.TheirItems)
 	{
-		UTextBlock* Line = MakeText(CrossguardUI::ItemLabel(Item, Inventory, Equipment), 10, CrossguardUI::RarityColor(CrossguardUI::ItemRarity(Item)));
+		UTextBlock* Line = MakeText(CrossguardUI::ItemLabel(Item, Inventory, Equipment), 10, CrossguardUI::RarityTextColor(CrossguardUI::ItemRarity(Item)));
 		AddTo(TheirOfferList, Line);
 		++TheirOfferRows;
 	}

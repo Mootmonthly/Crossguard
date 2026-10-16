@@ -423,7 +423,8 @@ void UCrossguardPartySubsystem::RefreshPlayer(ACrossguardPlayerState* PlayerStat
 		}
 	}
 	TArray<FCrossguardPartyInviteView> Invites;
-	for (const Crossguard::FParty* Inviting : Registry.InvitesFor(Id, Now()))
+	const double Clock = Now();
+	for (const Crossguard::FParty* Inviting : Registry.InvitesFor(Id, Clock))
 	{
 		FCrossguardPartyInviteView& Out = Invites.AddDefaulted_GetRef();
 		Out.PartyId = CrossguardPartyLocal::TextOf(Inviting->Id);
@@ -434,6 +435,7 @@ void UCrossguardPartySubsystem::RefreshPlayer(ACrossguardPlayerState* PlayerStat
 			{
 				Out.InvitedBy = NameOf(Pending.InvitedBy);
 				Out.InvitedById = CrossguardPartyLocal::TextOf(Pending.InvitedBy);
+				Out.SecondsLeft = static_cast<float>(FMath::Max(0.0, Pending.ExpiresAt - Clock));
 			}
 		}
 	}

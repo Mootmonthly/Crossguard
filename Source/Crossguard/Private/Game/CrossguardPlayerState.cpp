@@ -59,6 +59,9 @@ void ACrossguardPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	// Everyone knows everyone's team (nameplates, party skills).
 	DOREPLIFETIME(ACrossguardPlayerState, TeamId);
 	DOREPLIFETIME(ACrossguardPlayerState, DevPlayerId);
+	// Teammates see who is away (held for a reconnect); public like the team. Assumed harmless to
+	// enemies: they can see the character standing still anyway.
+	DOREPLIFETIME(ACrossguardPlayerState, bDisconnected);
 
 	// Level is public through the character; the rest is the owner's business.
 	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, TotalXp, COND_OwnerOnly);
@@ -68,6 +71,16 @@ void ACrossguardPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, RespecTokens, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, Gold, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(ACrossguardPlayerState, SkillLibrary, COND_OwnerOnly);
+}
+
+void ACrossguardPlayerState::SetDisconnected(bool bInDisconnected)
+{
+	if (HasAuthority() && bDisconnected != bInDisconnected)
+	{
+		bDisconnected = bInDisconnected;
+		// Player states replicate rarely by default: send it now.
+		ForceNetUpdate();
+	}
 }
 
 void ACrossguardPlayerState::SetTeamId(int32 NewTeamId)

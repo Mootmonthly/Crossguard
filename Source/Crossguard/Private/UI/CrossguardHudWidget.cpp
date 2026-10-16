@@ -396,6 +396,15 @@ FString UCrossguardHudWidget::DescribeInteraction(const ACrossguardCharacter* Ch
 		return FString::Printf(TEXT("F: Pick up %s"),
 			*CrossguardUI::ItemLabel(WorldItem->GetItem(), Character->GetInventoryComponent(), Character->GetEquipmentComponent()));
 	}
+	// Others name themselves (stash chest, vendor NPC).
+	if (const ICrossguardInteractable* Interactable = Cast<ICrossguardInteractable>(Target))
+	{
+		const FString Prompt = Interactable->GetInteractPrompt();
+		if (!Prompt.IsEmpty())
+		{
+			return Prompt;
+		}
+	}
 	return TEXT("F: Use");
 }
 

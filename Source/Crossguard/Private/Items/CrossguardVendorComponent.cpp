@@ -92,6 +92,38 @@ void UCrossguardVendorComponent::ClientSellRejected_Implementation(const FCrossg
 	OnSellRejected.Broadcast(Result);
 }
 
+bool UCrossguardVendorComponent::OpenVendorScreen(AActor* Vendor)
+{
+	if (GetOwner() == nullptr || !GetOwner()->HasAuthority())
+	{
+		return false;
+	}
+	const ACrossguardPlayerState* Progression = Cast<ACrossguardPlayerState>(GetOwner());
+	ECrossguardInventoryError Error = ECrossguardInventoryError::None;
+	if (Progression == nullptr)
+	{
+		Error = ECrossguardInventoryError::NotReady;
+	}
+	else if (Progression->IsInRaid())
+	{
+		Error = ECrossguardInventoryError::BetweenRaidsOnly;
+	}
+	if (Error != ECrossguardInventoryError::None)
+	{
+		UE_LOG(LogCrossguard, Log, TEXT("Vendor refused for %s: error %d"), *GetNameSafe(GetOwner()), static_cast<int32>(Error));
+		ClientSellRejected(VendorFail(Error));
+		return false;
+	}
+	UE_LOG(LogCrossguard, Log, TEXT("Vendor opened for %s at %s"), *GetNameSafe(GetOwner()), *GetNameSafe(Vendor));
+	ClientOpenVendor(Vendor);
+	return true;
+}
+
+void UCrossguardVendorComponent::ClientOpenVendor_Implementation(AActor* Vendor)
+{
+	OnVendorOpened.Broadcast(Vendor);
+}
+
 FCrossguardInventoryResult UCrossguardVendorComponent::Sell(ECrossguardItemSource Source, int32 ItemId, int32& OutGold)
 {
 	ACrossguardPlayerState* Progression = Cast<ACrossguardPlayerState>(GetOwner());

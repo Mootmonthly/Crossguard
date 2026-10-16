@@ -8,6 +8,7 @@ class APawn;
 class UAbilitySystemComponent;
 class UCrossguardEquipmentComponent;
 class UCrossguardLoadoutComponent;
+class UCrossguardUIButton;
 
 // Text and lookups shared by the placeholder UI (docs/ui.md). Display only: nothing here decides a
 // game outcome.
@@ -31,6 +32,22 @@ namespace CrossguardUI
 	// The item's rarity (weapons and armor keep theirs on the weapon / armor).
 	CROSSGUARD_API ECrossguardRarity ItemRarity(const FCrossguardInventoryItem& Item);
 	CROSSGUARD_API FLinearColor RarityColor(ECrossguardRarity Rarity);
+
+	// Readable rarity colours (docs/ui.md, "Contrast"). RarityColor itself is too dark or too bright
+	// for text on the UI's grey (Rare blue on grey is about 1.3:1). Text: the rarity colour lightened
+	// toward white until its relative luminance is at least MinRarityTextLuminance. Background: a dark
+	// tint of it. Every rarity's text then reads at 8:1 or more on its background, 5:1 hovered, and
+	// 8:1 on a window's panel (WCAG asks 4.5:1).
+	constexpr float MinRarityTextLuminance = 0.6f;
+	CROSSGUARD_API FLinearColor RarityTextColor(ECrossguardRarity Rarity);
+	CROSSGUARD_API FLinearColor RarityBackgroundColor(ECrossguardRarity Rarity);
+	// An item button or cell: the dark rarity background and the light rarity label.
+	CROSSGUARD_API void StyleRarityButton(UCrossguardUIButton* Button, ECrossguardRarity Rarity);
+
+	// WCAG relative luminance of a linear colour (alpha ignored), and the contrast ratio of two colours
+	// (1 to 21; WCAG AA asks 4.5 for text).
+	CROSSGUARD_API float RelativeLuminance(const FLinearColor& Color);
+	CROSSGUARD_API float ContrastRatio(const FLinearColor& First, const FLinearColor& Second);
 
 	// The skill's display name from the loadout's skill catalog, else its id.
 	CROSSGUARD_API FString SkillName(FName SkillId, const UCrossguardLoadoutComponent* Loadout);

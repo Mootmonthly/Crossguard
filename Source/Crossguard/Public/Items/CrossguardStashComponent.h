@@ -6,6 +6,9 @@
 
 #include "CrossguardStashComponent.generated.h"
 
+// Owning client: show the stash screen. Source: the stash chest used, or null.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardStashOpened, AActor*, Source);
+
 USTRUCT(BlueprintType)
 struct CROSSGUARD_API FCrossguardStashTab
 {
@@ -96,6 +99,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Stash")
 	void RequestUseStashItem(int32 StashItemId);
 
+	// Server. A stash chest (ACrossguardStashChest) was used: between raids the owning client is told
+	// to show the stash screen (OnStashOpened there); in a raid it is refused (BetweenRaidsOnly,
+	// through OnStashRejected). Returns whether it was allowed. The screen is only a view: every move
+	// is still checked by the requests above.
+	bool OpenStashScreen(AActor* Source);
+
+	UPROPERTY(BlueprintAssignable, Category = "Stash")
+	FCrossguardStashOpened OnStashOpened;
+
 	UPROPERTY(BlueprintAssignable, Category = "Stash")
 	FCrossguardInventoryChanged OnStashChanged;
 
@@ -120,6 +132,9 @@ protected:
 
 	UFUNCTION(Client, Reliable)
 	void ClientStashRejected(const FCrossguardInventoryResult& Result);
+
+	UFUNCTION(Client, Reliable)
+	void ClientOpenStash(AActor* Source);
 
 	UFUNCTION()
 	void OnRep_Tabs();

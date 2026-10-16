@@ -10,6 +10,7 @@
 #include "Crossguard.h"
 #include "CrossguardRules/Economy.h"
 #include "CrossguardRules/Portal.h"
+#include "CrossguardRules/Progression.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
@@ -1505,6 +1506,38 @@ void ACrossguardCharacter::PartyStartRaid()
 	{
 		Party->RequestStartRaid();
 	}
+}
+
+// --- Attributes from the console ---------------------------------------------------------------------
+
+void ACrossguardCharacter::Respec(const FString& Arguments)
+{
+	ACrossguardPlayerState* Progression = GetPlayerState<ACrossguardPlayerState>();
+	if (Progression == nullptr)
+	{
+		return;
+	}
+	const FCrossguardAttributeAllocation& Current = Progression->GetAttributeAllocation();
+	const int32 Points = Crossguard::AttributePointsAtLevel(Progression->GetProgressionConfig(), Progression->GetCharacterLevel());
+	TArray<FString> Words;
+	Arguments.ParseIntoArrayWS(Words);
+	if (Words.Num() < 3)
+	{
+		UE_LOG(LogCrossguard, Display, TEXT("Attributes: Str %d, Agi %d, Int %d; %d of %d points unspent; %d respec tokens; %d gold (a respec costs %d)"),
+			Current.Strength, Current.Agility, Current.Intelligence, Points - (Current.Strength + Current.Agility + Current.Intelligence), Points,
+			Progression->GetRespecTokens(), Progression->GetGold(), Progression->GetRespecGoldPrice());
+		UE_LOG(LogCrossguard, Display, TEXT("Usage: Respec <str> <agi> <int> [gold]  (lowering any attribute is a respec: a token, or gold)"));
+		return;
+	}
+	FCrossguardAttributeAllocation Requested;
+	Requested.Strength = FCString::Atoi(*Words[0]);
+	Requested.Agility = FCString::Atoi(*Words[1]);
+	Requested.Intelligence = FCString::Atoi(*Words[2]);
+	const bool bPayWithGold = Words.Num() > 3 && Words[3].Equals(TEXT("gold"), ESearchCase::IgnoreCase);
+	UE_LOG(LogCrossguard, Display, TEXT("Attributes: asking for Str %d, Agi %d, Int %d%s"), Requested.Strength, Requested.Agility, Requested.Intelligence,
+		bPayWithGold ? TEXT(" (a respec pays with gold)") : TEXT(""));
+	// The server decides; a refusal comes back through OnProgressionRejected (the HUD shows it).
+	Progression->RequestAttributeAllocation(Requested, bPayWithGold);
 }
 
 bool ACrossguardCharacter::CanJumpInternal_Implementation() const

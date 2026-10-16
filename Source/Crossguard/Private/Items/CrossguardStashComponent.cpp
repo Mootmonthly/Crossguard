@@ -268,6 +268,28 @@ void UCrossguardStashComponent::ClientStashRejected_Implementation(const FCrossg
 	OnStashRejected.Broadcast(Result);
 }
 
+bool UCrossguardStashComponent::OpenStashScreen(AActor* Source)
+{
+	if (!IsServer())
+	{
+		return false;
+	}
+	ECrossguardInventoryError Error = ECrossguardInventoryError::None;
+	if (GetUsableInventory(Error) == nullptr)
+	{
+		Finish(StashFail(Error));
+		return false;
+	}
+	UE_LOG(LogCrossguard, Log, TEXT("Stash opened for %s at %s"), *GetNameSafe(GetOwner()), *GetNameSafe(Source));
+	ClientOpenStash(Source);
+	return true;
+}
+
+void UCrossguardStashComponent::ClientOpenStash_Implementation(AActor* Source)
+{
+	OnStashOpened.Broadcast(Source);
+}
+
 void UCrossguardStashComponent::OnRep_Tabs()
 {
 	OnStashChanged.Broadcast();

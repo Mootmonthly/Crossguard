@@ -69,7 +69,9 @@ void UCrossguardItemGridWidget::SetGrid(FIntPoint Size, const TArray<FCrossguard
 		{
 			Footprint = FIntPoint(Footprint.Y, Footprint.X);
 		}
-		const FLinearColor Rarity = CrossguardUI::RarityColor(CrossguardUI::ItemRarity(Item));
+		// Dark rarity background, light rarity label (docs/ui.md, "Contrast").
+		const FLinearColor Rarity = CrossguardUI::RarityTextColor(CrossguardUI::ItemRarity(Item));
+		const FLinearColor CellColor = CrossguardUI::RarityBackgroundColor(CrossguardUI::ItemRarity(Item));
 		const bool bSelected = Item.Id == SelectedItemId;
 
 		UCrossguardUIButton* Cell = Make<UCrossguardUIButton>();
@@ -93,7 +95,7 @@ void UCrossguardItemGridWidget::SetGrid(FIntPoint Size, const TArray<FCrossguard
 			const TCHAR* Separator = Footprint.Y > 1 ? TEXT("\n") : TEXT(" ");
 			Cell->SetLabel(Count.IsEmpty() ? Name : FString::Printf(TEXT("%s%s%s"), *Name, Separator, *Count));
 		}
-		Cell->SetColor(bSelected ? FLinearColor(0.85f, 0.75f, 0.2f, 0.95f) : FLinearColor(Rarity.R * 0.35f, Rarity.G * 0.35f, Rarity.B * 0.35f, 0.95f));
+		Cell->SetColor(bSelected ? FLinearColor(0.85f, 0.75f, 0.2f, 0.95f) : CellColor);
 		Cell->SetLabelColor(bSelected ? FLinearColor::Black : Rarity);
 		Cell->SetToolTipText(FText::FromString(CrossguardUI::ItemLabel(Item, Inventory, Equipment)));
 		const FCrossguardInventoryItem Copy = Item;
@@ -112,7 +114,6 @@ void UCrossguardItemGridWidget::SetGrid(FIntPoint Size, const TArray<FCrossguard
 			}
 		};
 		const FString CellLabel = Cell->GetLabel();
-		const FLinearColor CellColor(Rarity.R * 0.35f, Rarity.G * 0.35f, Rarity.B * 0.35f, 0.95f);
 		Cell->OnDragStart = [this, Copy, Footprint, CellLabel, CellColor, Rarity](const FGeometry& Geometry, const FPointerEvent& MouseEvent)
 		{
 			return StartDrag(Copy, Footprint, CellLabel, CellColor, Rarity, Geometry, MouseEvent);

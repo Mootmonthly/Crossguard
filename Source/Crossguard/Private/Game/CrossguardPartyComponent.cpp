@@ -55,6 +55,7 @@ void UCrossguardPartyComponent::SetView(const FString& InPartyId, const FString&
 	bIsLeader = bInIsLeader;
 	Members = MoveTemp(InMembers);
 	Invites = MoveTemp(InInvites);
+	StampInviteExpiry();
 	// Player states replicate rarely by default: send it now.
 	if (AActor* OwningActor = GetOwner())
 	{
@@ -80,7 +81,31 @@ void UCrossguardPartyComponent::OnRep_Party()
 	// Until a party panel exists.
 	UE_LOG(LogCrossguard, Display, TEXT("Party: %s, %d members%s, %d invites"), PartyId.IsEmpty() ? TEXT("none") : *PartyId, Members.Num(),
 		bIsLeader ? TEXT(" (you lead)") : TEXT(""), Invites.Num());
+	StampInviteExpiry();
 	OnPartyChanged.Broadcast();
+}
+
+void UCrossguardPartyComponent::StampInviteExpiry()
+{
+	// Real time: the server's invite clock (FPlatformTime) ignores pause and time dilation too.
+	const UWorld* World = GetWorld();
+	const double Now = World != nullptr ? World->GetRealTimeSeconds() : 0.0;
+	InviteExpiresAt.Reset();
+	for (const FCrossguardPartyInviteView& Invite : Invites)
+	{
+		InviteExpiresAt.Add(Invite.PartyId, Now + FMath::Max(0.0f, Invite.SecondsLeft));
+	}
+}
+
+float UCrossguardPartyComponent::GetInviteSecondsLeft(const FString& InPartyId) const
+{
+	const double* ExpiresAt = InviteExpiresAt.Find(InPartyId);
+	const UWorld* World = GetWorld();
+	if (ExpiresAt == nullptr || World == nullptr)
+	{
+		return 0.0f;
+	}
+	return static_cast<float>(FMath::Max(0.0, *ExpiresAt - World->GetRealTimeSeconds()));
 }
 
 // Every request: run it on the subsystem, refuse with the result if it failed.

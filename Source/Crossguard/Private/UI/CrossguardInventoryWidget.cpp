@@ -350,8 +350,8 @@ void UCrossguardInventoryWidget::RedrawEquipment()
 		};
 		if (!bEmpty)
 		{
-			const FLinearColor Color = CrossguardUI::RarityColor(Rarity);
-			Button->SetLabelColor(Color);
+			// Dark rarity background, light rarity label: readable for every rarity (docs/ui.md, "Contrast").
+			CrossguardUI::StyleRarityButton(Button, Rarity);
 		}
 		AddTo(EquipmentList, Button, 2.0f);
 	};

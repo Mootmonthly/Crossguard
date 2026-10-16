@@ -26,4 +26,7 @@ public:
 
 	// How close the user must be, in cm.
 	virtual float GetInteractRange() const { return 250.0f; }
+
+	// The HUD's prompt ("F: Open stash"). Empty: the HUD picks one by class, else "F: Use".
+	virtual FString GetInteractPrompt() const { return FString(); }
 };

@@ -73,6 +73,11 @@ struct CROSSGUARD_API FCrossguardPartyInviteView
 
 	UPROPERTY(BlueprintReadOnly, Category = "Party")
 	int32 MemberCount = 0;
+
+	// Seconds the invite had left when the server wrote this view (invites last 180 s). Use
+	// UCrossguardPartyComponent::GetInviteSecondsLeft for the time left now.
+	UPROPERTY(BlueprintReadOnly, Category = "Party")
+	float SecondsLeft = 0.0f;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCrossguardPartyChanged);
@@ -119,6 +124,11 @@ public:
 	// off).
 	UFUNCTION(BlueprintPure, Category = "Party")
 	const TArray<FCrossguardPartyInviteView>& GetInvites() const { return Invites; }
+
+	// Seconds left on the invite from InPartyId, counted on this machine from when the view arrived
+	// (off by the network delay; the server's clock decides). 0 once expired or if unknown.
+	UFUNCTION(BlueprintPure, Category = "Party")
+	float GetInviteSecondsLeft(const FString& InPartyId) const;
 
 	UPROPERTY(BlueprintAssignable, Category = "Party")
 	FCrossguardPartyChanged OnPartyChanged;
@@ -188,6 +198,12 @@ protected:
 	void OnRep_Party();
 
 private:
+	// Stamps each invite's local expiry time from its SecondsLeft (on the server and the owner).
+	void StampInviteExpiry();
+
+	// Party id -> this machine's world real time when the invite expires. Not replicated.
+	TMap<FString, double> InviteExpiresAt;
+
 	UPROPERTY(ReplicatedUsing = OnRep_Party)
 	FString PartyId;
 

@@ -6,6 +6,12 @@
 #include "Components/TextBlock.h"
 #include "Styling/CoreStyle.h"
 
+namespace CrossguardUIButtonLocal
+{
+	// Linear brightness added to the background under the mouse.
+	constexpr float HoverLift = 0.05f;
+}
+
 UCrossguardUIButton::UCrossguardUIButton(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
@@ -94,7 +100,10 @@ void UCrossguardUIButton::ApplyLook()
 	FLinearColor Shown = Color;
 	if (bHovered && bActive)
 	{
-		Shown = FLinearColor(FMath::Min(Color.R + 0.15f, 1.0f), FMath::Min(Color.G + 0.15f, 1.0f), FMath::Min(Color.B + 0.15f, 1.0f), Color.A);
+		// A small lift: enough to see, small enough that light labels keep a 4.5:1 contrast (docs/ui.md,
+		// "Contrast").
+		Shown = FLinearColor(FMath::Min(Color.R + CrossguardUIButtonLocal::HoverLift, 1.0f), FMath::Min(Color.G + CrossguardUIButtonLocal::HoverLift, 1.0f),
+			FMath::Min(Color.B + CrossguardUIButtonLocal::HoverLift, 1.0f), Color.A);
 	}
 	Background->SetBrushColor(Shown);
 	LabelText->SetFont(FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), FontSize));

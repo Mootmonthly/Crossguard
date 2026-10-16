@@ -17,6 +17,9 @@ enum class ECrossguardItemSource : uint8
 // Server and owning client: Gold is the amount received.
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardSold, int32, Gold);
 
+// Owning client: show the vendor screen. Vendor: the vendor NPC used, or null.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardVendorOpened, AActor*, Vendor);
+
 // Selling to NPC vendors for banked gold. Lives on the player state; the vendor NPC in the hub is
 // only where the player opens it. Between raids only, server authoritative.
 //
@@ -40,6 +43,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Vendor")
 	void RequestSell(ECrossguardItemSource Source, int32 ItemId);
 
+	// Server. A vendor NPC (ACrossguardVendorNPC) was used: between raids the owning client is told to
+	// show the vendor screen (OnVendorOpened there); in a raid it is refused (BetweenRaidsOnly, through
+	// OnSellRejected). Returns whether it was allowed. Every sale is still checked by RequestSell.
+	bool OpenVendorScreen(AActor* Vendor);
+
+	UPROPERTY(BlueprintAssignable, Category = "Vendor")
+	FCrossguardVendorOpened OnVendorOpened;
+
 	UPROPERTY(BlueprintAssignable, Category = "Vendor")
 	FCrossguardSold OnSold;
 
@@ -55,6 +66,9 @@ protected:
 
 	UFUNCTION(Client, Reliable)
 	void ClientSellRejected(const FCrossguardInventoryResult& Result);
+
+	UFUNCTION(Client, Reliable)
+	void ClientOpenVendor(AActor* Vendor);
 
 private:
 	FCrossguardInventoryResult Sell(ECrossguardItemSource Source, int32 ItemId, int32& OutGold);
