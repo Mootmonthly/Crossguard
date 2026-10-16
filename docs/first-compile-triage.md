@@ -507,3 +507,38 @@ How to test after it builds: [backend-setup.md](backend-setup.md).
 | N10 | Runtime: main menu test `Crossguard.Scenario.Hub.MainMenuBinds` | Log in is a separate row, not a main button | The main-button list stays Play, Join, Settings, Quit. If the test counts all buttons: | Update the expectation to include the account row's button. |
 | N11 | Runtime: dedicated server with `-NakamaHttpKey=` | `IsNakamaLoginRequired` refuses remote logins without a token unless `-AllowDevPlayerIds` | `Tools\run_local_cluster.ps1` starts servers with `-AllowDevPlayerIds` and no Nakama flags, so nothing changes there. With the flags and no Log in, clients get "Log in first". | Log in from the menu first (backend running), or start the servers with `-AllowDevPlayerIds`. |
 | N12 | Runtime: PIE / tests | Saving is off in tests; the local backend stays the default; no test talks to Nakama | `Crossguard.Nakama.*` are pure (no network). | — |
+
+### Nakama step 3: save leases, parties, matchmaking, tickets, server registry
+
+New `Game/CrossguardNakamaMatchmaking` (`FCrossguardNakamaMatchmaking`, namespace
+`CrossguardNakamaMatchmakingLocal`); rewritten `Game/CrossguardMatchmaking` (asynchronous interface:
+`RequestMatch(..., FMatchCallback)`, `CancelMatch`, `IsSearching`, `FindHubServer(..., FHubCallback)`,
+per-player `PlayerTickets`; `UCrossguardMatchmakingSubsystem::Initialize`); edits to
+`CrossguardNakamaClient` (`CallClientRpc`), `CrossguardNakamaSubsystem` (backend switch, server id,
+registry, tickets, `FindMyHub`, `Deinitialize`), `CrossguardNakamaSaveBackend` (leases),
+`ICrossguardSaveBackend::ReleaseCharacter`, `CrossguardSaveSubsystem` (dependency, release on leave),
+`CrossguardPartySubsystem` (backend mode, async launch, `PlanRaidTravelWith`), `CrossguardPartyComponent`
+(new results, `PlayerArrived`), `CrossguardPlayerState::OnSetUniqueId`, `CrossguardGameMode`
+(tickets at `PreLoginAsync` / `InitNewPlayer`, capacities, registration in `StartPlay`, async team
+return `FinishTeamHubReturn`, `GetHubDestination(Player, BackendHub)`), `CrossguardRaidPortal` (texts),
+`CrossguardMainMenuWidget::Play`, tests (`CrossguardNakamaTests.cpp`, `CrossguardScenarioPartyTests.cpp`),
+rules `FPartyRegistry` mirror methods (built and tested here). The Go module and every RPC ran here
+(`go test`, `Tools/backend_smoke.py` 72 checks against Nakama 3.41.0); the Unreal side is read-only
+reviewed.
+
+| # | Where | Call | Why it may fail | Suggested fix |
+| --- | --- | --- | --- | --- |
+| N13 | `CrossguardSaveSubsystem.cpp`, `CrossguardPartySubsystem.cpp`, `CrossguardMatchmaking.cpp` `Initialize` | `Collection.InitializeDependency<UCrossguardNakamaSubsystem>()` | Assumed the templated overload (UE 5.x `FSubsystemCollectionBase`). | `Collection.InitializeDependency(UCrossguardNakamaSubsystem::StaticClass());` |
+| N14 | `CrossguardNakamaSubsystem.cpp`, `CrossguardNakamaSaveBackend.cpp`, `CrossguardPartySubsystem.cpp` | `FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateUObject(this, &UClass::Tick), Seconds)` with `bool Tick(float)` | `FTickerDelegate` is `TDelegate<bool(float)>`; `CreateUObject` should bind a UObject member. | `CreateWeakLambda(this, [this](float Dt) { return Tick(Dt); })`. |
+| N15 | `CrossguardGameMode.cpp` `RegisterWithBackend` | `GetWorld()->URL.Port` as the listen port | Assumed `UWorld::URL` holds the `-port=` of a dedicated server at `StartPlay`. | Read `FParse::Value(FCommandLine::Get(), TEXT("Port="), Port)` (default 7777), or the net driver's local address. Wrong ports show in the log "registered as ... at 127.0.0.1:<port>"; `-PublicAddress=` overrides. |
+| N16 | `CrossguardGameMode.cpp` `InitGame` | `IsRunningDedicatedServer()`, `GameSession->MaxPlayers = ...` (`#include "GameFramework/GameSession.h"`) | `MaxPlayers` is a public `int32` on `AGameSession` (globalconfig). | If private in 5.8: `[/Script/Engine.GameSession] MaxPlayers=64` in `DefaultGame.ini` and check the raid cap in `PreLogin`. |
+| N17 | `CrossguardPartySubsystem.cpp` `ResultFromName` | `StaticEnum<ECrossguardPartyResult>()->GetValueByNameString(Name)` with a short name ("NotLeader"), then "ECrossguardPartyResult::NotLeader" | Unsure which form an `enum class` UENUM matches. | Both are tried. Test: `Crossguard.Nakama.PartyState`. |
+| N18 | `CrossguardNakamaMatchmaking.cpp`, `CrossguardPartySubsystem.cpp` `ApplyBackendState` | `FJsonObject::TryGetObjectField(key, const TSharedPtr<FJsonObject>*&)`, `TryGetArrayField(key, const TArray<TSharedPtr<FJsonValue>>*&)`, `FJsonObject::Values` (a `TMap<FString, TSharedPtr<FJsonValue>>`), `FJsonValue::TryGetObject(const TSharedPtr<FJsonObject>*&)`, `TryGetString(FString&)` | 5.x signatures (keys as `FStringView`). | Usually compiles; if not, `GetObjectField` / `GetArrayField` after `HasTypedField<EJson::Object>`. |
+| N19 | `CrossguardNakamaMatchmaking.h/.cpp` | `class ... : public ICrossguardMatchmaking, public TSharedFromThis<FCrossguardNakamaMatchmaking>`; `TWeakPtr<...> WeakThis = AsShared();`; `MakeShared<FCrossguardNakamaMatchmaking>(Nakama)` into `TSharedPtr<ICrossguardMatchmaking>` | Standard pattern; ESPMode defaults match. | — |
+| N20 | `CrossguardNakamaTests.cpp` | `NewObject<UCrossguardPartySubsystem>(GetTransientPackage())`, `NewObject<UCrossguardNakamaSubsystem>(...)` (subsystems outside a game instance) | Assumed nothing asserts on a subsystem without a game instance (`GetGameInstance()` is null; `Initialize` is not called). | If it asserts: test the mirror in a scenario (the PIE game instance's subsystem) instead. |
+| N21 | `CrossguardPartySubsystem.cpp` `CancelSearch` | `for (const FString& Key : {PartyKey, PlayerId})` | Initializer list of two `FString`. | Two `if` blocks. |
+| N22 | `CrossguardGameMode.cpp` `PreLoginAsync` | Nested lambdas: the outer has a parameter `UserId`, the inner captures `UserId` by copy and has its own parameter `TicketError` | MSVC C4456/C4457 (shadowing, an error in Unreal) should not fire for a capture. | Rename the capture: `[..., VerifiedUserId = UserId]`. |
+| N23 | Runtime: dedicated server with `-SaveBackend=Nakama` | Registration at `StartPlay`; heartbeat every 10 s | Log "Nakama: registered as hub server ..." (or "registration failed ... retrying"). | Check `-NakamaUrl=`, the key, Docker. |
+| N24 | Runtime: hub → raid | A party member whose `ClientTravel` fails stays marked as "leaving for a raid": their later logout does not leave the party | Minor (they leave after 120 s on no server anyway). | — |
+| N25 | Runtime: shutdown | Lease release and deregister tick the HTTP module by hand (like N5) | Same as N5. | Same as N5. |
+| N26 | Runtime: `Crossguard.Scenario.Hub.PartyRaidLaunchPlan` | New step with a deferred matchmaking; `StartRaid` now ends with `FinishRaidLaunch` (the same travel code) | The earlier steps' expectations are unchanged (the dev fake answers at once). | If the deferred step fails on "Cancelled once": the party change did not reach `CancelSearch` (local `Leave` calls it). |

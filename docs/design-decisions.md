@@ -715,6 +715,41 @@ Everything here is cosmetic: no rule depends on it.
   (`CROSSGUARD_DEV_AUTH`), every login method but Steam is off; a misconfigured `-SaveBackend=Nakama`
   (no URL or key) falls back to local files with an error (placeholder); retries 1-2-4-8-16 s, session
   2 h, refresh token 7 days, shutdown flush 10 s (placeholders).
+- Nakama backend, step 3 ([backend-setup.md](backend-setup.md) "Step 3"). **Owner decision**: 48 players
+  per raid (may scale back): `RaidCapacity` (`-RaidCapacity=`), the matchmaker fills a match server up to
+  its registered capacity. **Assumed (coordinator / Claude; placeholders where marked)**:
+  - The backend switch is `-SaveBackend=Nakama` plus the HTTP key: then leases, Nakama parties, Nakama
+    matchmaking, match tickets and server registration are all on; otherwise all off (in-process,
+    development).
+  - **Save leases**: TTL 60 s, renewed every 20 s, a load waits up to 75 s for another server's lease,
+    tried every 1 s (placeholders); a lost lease stops writes for that player (kept on disk). The lease
+    is the "on a game server" signal for parties.
+  - **Parties**: storage/RPC parties driven by the hub servers (not Nakama's realtime parties: those need
+    client sockets and put the client in charge); the rules mirror `FPartyRegistry` in Go (keep both in
+    step). Hub mirror refresh every 5 s (placeholder). Logging out of the hub (not travelling to a raid)
+    leaves the party (as before); a member on no game server for **120 s** (placeholder) leaves their
+    party (leader hand-over as usual). Invites reach the invitee through their hub server, no Nakama
+    notifications (no client socket). Players without a Nakama login get no parties on a backend server.
+  - **Matchmaking**: our own queue in the Go module, not Nakama's matchmaker (it matches socket sessions).
+    A match starts when **2 teams** are queued or the oldest has waited **30 s** (placeholders,
+    `CROSSGUARD_MATCH_MIN_TEAMS`, `CROSSGUARD_MATCH_MAX_WAIT_SEC`); first come, first served, whole
+    parties; **no backfill** into a running match (placeholder). The hub polls every 2 s and gives up
+    after 300 s (placeholders). A party change (accept, leave, kick) calls the search off; a member who
+    joined during the search has no ticket and stays. The queue and the server registry live in the
+    Nakama process's memory (single node; lost on a Nakama restart, servers register again).
+  - **Tickets**: one per player, random, valid **120 s** until used, then **4200 s** (the raid limit +
+    10 min) for reconnects, only for that player and that match server (placeholders). A backend match
+    server refuses logins without one, except development servers started with `-AllowDevPlayerIds`.
+    The ticket's party is the team; `?Party=` is ignored on such servers.
+  - **Allocation**: an `Allocator` interface in the Go module; today the local fleet (registered match
+    servers, one match per process; freed by `crossguard_match_over`, deregistering, or nobody arriving
+    within 180 s); GameLift Anywhere / managed fleets plug in later.
+  - **Registry**: servers register at start (address `-PublicAddress=`, else `127.0.0.1:<port>`), heartbeat
+    every 10 s, dropped after three missed (placeholders). Hub capacity **64** (placeholder). A dedicated
+    server's GameSession `MaxPlayers` follows its capacity.
+  - **Hub picker**: the party's hub (the one it launched from or last changed on) if it has room, else the
+    hub with the most room (placeholder: spreads players; "fullest first" would keep hubs busier). The
+    menu's Play uses it when logged in (one client-callable RPC, `crossguard_hub_find_mine`).
 
 ## Open questions
 
