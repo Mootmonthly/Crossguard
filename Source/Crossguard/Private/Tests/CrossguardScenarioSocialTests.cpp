@@ -1603,4 +1603,76 @@ bool FCrossguardScenarioHubRespec::RunTest(const FString& Parameters)
 	return true;
 }
 
+// Ruling: a respec costs 1000 banked gold or one respec token, the player's choice. Paying with gold:
+// refused (nothing taken) at 999 gold and in a raid; at 1000 the stat drops and exactly 1000 gold
+// goes, the token stays; paying with the token then leaves the gold alone.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioHubRespecGold, "Crossguard.Scenario.Hub.RespecPaidWithGold", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioHubRespecGold::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioSocial;
+
+	FScenario Scenario(*this);
+	Scenario.Raid(false);
+
+	Scenario.Step(TEXT("Lowering Strength paid with gold: 999 is short, 1000 pays"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = C.SpawnPlayer(TEXT("Player"), FVector(0.0f, Row, 0.0f));
+		ACrossguardPlayerState* Progression = Player != nullptr ? C.PlayerState(Player) : nullptr;
+		if (!C.Require(Progression != nullptr, TEXT("the player has a player state")))
+		{
+			return;
+		}
+		const int32 Price = Progression->GetRespecGoldPrice();
+		C.Test.TestEqual(TEXT("Ruled price"), Price, 1000);
+		const FCrossguardAttributeAllocation Current = Progression->GetAttributeAllocation();
+		if (!C.Require(Current.Strength > 1, TEXT("Strength above 1 to lower twice")) || !C.Require(!Progression->IsInRaid(), TEXT("between raids")))
+		{
+			return;
+		}
+		// Start from exactly 999 banked gold and one token.
+		Progression->SpendGold(Progression->GetGold());
+		Progression->AddGold(Price - 1);
+		Progression->GrantRespecTokens(1);
+		const int32 Tokens = Progression->GetRespecTokens();
+
+		FCrossguardAttributeAllocation Lowered = Current;
+		Lowered.Strength -= 1;
+		Progression->RequestAttributeAllocation(Lowered, true);
+		C.Test.TestEqual(TEXT("999 gold: Strength unchanged"), Progression->GetAttributeAllocation().Strength, Current.Strength);
+		C.Test.TestEqual(TEXT("999 gold: no gold taken"), Progression->GetGold(), Price - 1);
+		C.Test.TestEqual(TEXT("999 gold: the token is not used instead"), Progression->GetRespecTokens(), Tokens);
+
+		Progression->AddGold(1);
+		Progression->BeginRaid();
+		Progression->RequestAttributeAllocation(Lowered, true);
+		C.Test.TestEqual(TEXT("In a raid: Strength unchanged"), Progression->GetAttributeAllocation().Strength, Current.Strength);
+		C.Test.TestEqual(TEXT("In a raid: no gold taken"), Progression->GetGold(), Price);
+		// Back to the hub (a failed extraction: no XP, so the level and the allocation's limits stay),
+		// with exactly the price banked.
+		Progression->EndRaid(false);
+		C.Require(!Progression->IsInRaid(), TEXT("back between raids"));
+		Progression->SpendGold(Progression->GetGold());
+		Progression->AddGold(Price);
+
+		Progression->RequestAttributeAllocation(Lowered, true);
+		C.Test.TestEqual(TEXT("1000 gold: Strength lowered"), Progression->GetAttributeAllocation().Strength, Current.Strength - 1);
+		C.Test.TestEqual(TEXT("1000 gold: all of it paid"), Progression->GetGold(), 0);
+		C.Test.TestEqual(TEXT("1000 gold: the token kept"), Progression->GetRespecTokens(), Tokens);
+
+		FCrossguardAttributeAllocation LoweredAgain = Progression->GetAttributeAllocation();
+		LoweredAgain.Strength -= 1;
+		Progression->RequestAttributeAllocation(LoweredAgain, true);
+		C.Test.TestEqual(TEXT("No gold left: Strength unchanged"), Progression->GetAttributeAllocation().Strength, Current.Strength - 1);
+		Progression->RequestAttributeAllocation(LoweredAgain);
+		C.Test.TestEqual(TEXT("Paid with the token: Strength lowered"), Progression->GetAttributeAllocation().Strength, Current.Strength - 2);
+		C.Test.TestEqual(TEXT("The token is used"), Progression->GetRespecTokens(), Tokens - 1);
+		C.Test.TestEqual(TEXT("No gold taken for a token respec"), Progression->GetGold(), 0);
+	});
+
+	Scenario.Run();
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

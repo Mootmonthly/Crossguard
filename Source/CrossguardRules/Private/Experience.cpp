@@ -96,4 +96,35 @@ namespace Crossguard
 		}
 		return ERespecError::None;
 	}
+
+	ERespecError CanPayRespec(const FEconomyConfig& Config, bool bInRaid, ERespecPayment Payment, int RespecTokens, int BankedGold)
+	{
+		if (Payment == ERespecPayment::Token)
+		{
+			return CanRespec(bInRaid, RespecTokens);
+		}
+		if (bInRaid)
+		{
+			return ERespecError::InRaid;
+		}
+		return BankedGold >= Config.RespecGoldPrice ? ERespecError::None : ERespecError::NotEnoughGold;
+	}
+
+	ERespecError PayRespec(const FEconomyConfig& Config, bool bInRaid, ERespecPayment Payment, int& RespecTokens, int& BankedGold)
+	{
+		const ERespecError Error = CanPayRespec(Config, bInRaid, Payment, RespecTokens, BankedGold);
+		if (Error != ERespecError::None)
+		{
+			return Error;
+		}
+		if (Payment == ERespecPayment::Token)
+		{
+			--RespecTokens;
+		}
+		else
+		{
+			BankedGold -= Config.RespecGoldPrice;
+		}
+		return ERespecError::None;
+	}
 }

@@ -292,11 +292,16 @@ void ACrossguardPlayerState::RestoreSavedProgression(int32 InTotalXp, const FCro
 	ProgressionChanged();
 }
 
-void ACrossguardPlayerState::RequestAttributeAllocation(const FCrossguardAttributeAllocation& Allocation)
+int32 ACrossguardPlayerState::GetRespecGoldPrice() const
+{
+	return Crossguard::FEconomyConfig().RespecGoldPrice;
+}
+
+void ACrossguardPlayerState::RequestAttributeAllocation(const FCrossguardAttributeAllocation& Allocation, bool bPayWithGold)
 {
 	if (HasAuthority())
 	{
-		const ECrossguardProgressionError Error = ApplyAttributeAllocation(Allocation);
+		const ECrossguardProgressionError Error = ApplyAttributeAllocation(Allocation, bPayWithGold);
 		if (Error != ECrossguardProgressionError::None)
 		{
 			OnProgressionRejected.Broadcast(Error);
@@ -304,13 +309,13 @@ void ACrossguardPlayerState::RequestAttributeAllocation(const FCrossguardAttribu
 	}
 	else
 	{
-		ServerRequestAttributeAllocation(Allocation);
+		ServerRequestAttributeAllocation(Allocation, bPayWithGold);
 	}
 }
 
-void ACrossguardPlayerState::ServerRequestAttributeAllocation_Implementation(const FCrossguardAttributeAllocation& Allocation)
+void ACrossguardPlayerState::ServerRequestAttributeAllocation_Implementation(const FCrossguardAttributeAllocation& Allocation, bool bPayWithGold)
 {
-	const ECrossguardProgressionError Error = ApplyAttributeAllocation(Allocation);
+	const ECrossguardProgressionError Error = ApplyAttributeAllocation(Allocation, bPayWithGold);
 	if (Error != ECrossguardProgressionError::None)
 	{
 		ClientProgressionRejected(Error);
@@ -322,7 +327,7 @@ void ACrossguardPlayerState::ClientProgressionRejected_Implementation(ECrossguar
 	OnProgressionRejected.Broadcast(Error);
 }
 
-ECrossguardProgressionError ACrossguardPlayerState::ApplyAttributeAllocation(const FCrossguardAttributeAllocation& Allocation)
+ECrossguardProgressionError ACrossguardPlayerState::ApplyAttributeAllocation(const FCrossguardAttributeAllocation& Allocation, bool bPayWithGold)
 {
 	if (bInRaid)
 	{
@@ -335,7 +340,11 @@ ECrossguardProgressionError ACrossguardPlayerState::ApplyAttributeAllocation(con
 	}
 	if (Crossguard::RequiresRespec(ToRulesAttributes(AttributeAllocation), Requested))
 	{
-		switch (Crossguard::CanRespec(bInRaid, RespecTokens))
+		// The server checks the price and pays it in one step (the rules change nothing on a refusal).
+		int Tokens = RespecTokens;
+		int Banked = Gold;
+		switch (Crossguard::PayRespec(Crossguard::FEconomyConfig(), bInRaid,
+			bPayWithGold ? Crossguard::ERespecPayment::Gold : Crossguard::ERespecPayment::Token, Tokens, Banked))
 		{
 		case Crossguard::ERespecError::None:
 			break;
@@ -343,8 +352,11 @@ ECrossguardProgressionError ACrossguardPlayerState::ApplyAttributeAllocation(con
 			return ECrossguardProgressionError::InRaid;
 		case Crossguard::ERespecError::NoRespecToken:
 			return ECrossguardProgressionError::NoRespecToken;
+		case Crossguard::ERespecError::NotEnoughGold:
+			return ECrossguardProgressionError::NotEnoughGold;
 		}
-		--RespecTokens;
+		RespecTokens = Tokens;
+		Gold = Banked;
 	}
 
 	AttributeAllocation = Allocation;

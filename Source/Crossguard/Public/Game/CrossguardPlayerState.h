@@ -40,13 +40,15 @@ enum class ECrossguardProgressionError : uint8
 	None,
 	// Only allowed between raids.
 	InRaid,
-	// No respec token: respecs are bought with real money.
+	// Paying a respec with a token, and none is left.
 	NoRespecToken,
 	InvalidAllocation,
 	UnknownSkill,
 	AlreadyLearned,
 	// No skill catalog to check against.
 	NotReady,
+	// Paying a respec with gold, and the banked gold is under the price (1000).
+	NotEnoughGold,
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardProgressionRejected, ECrossguardProgressionError, Error);
@@ -115,7 +117,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Progression")
 	const FCrossguardAttributeAllocation& GetAttributeAllocation() const { return AttributeAllocation; }
 
-	// Respecs available. Each real-money respec purchase grants one. Owner only.
+	// Respecs available. Each real-money respec purchase grants one. Owner only. A respec can also be
+	// paid with banked gold instead (GetRespecGoldPrice).
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Progression")
 	int32 GetRespecTokens() const { return RespecTokens; }
 
@@ -178,10 +181,15 @@ public:
 		const TArray<FName>& InSkillLibrary);
 
 	// Sets the attribute allocation. Only between raids. Spending unspent points is free; lowering
-	// any attribute is a respec and uses one respec token. Clients forward the request; failures
-	// reach the owning client through OnProgressionRejected.
+	// any attribute is a respec, paid with one respec token or, with bPayWithGold, with
+	// GetRespecGoldPrice() banked gold (the player chooses). Clients forward the request; the server
+	// checks and pays; failures reach the owning client through OnProgressionRejected.
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Progression")
-	void RequestAttributeAllocation(const FCrossguardAttributeAllocation& Allocation);
+	void RequestAttributeAllocation(const FCrossguardAttributeAllocation& Allocation, bool bPayWithGold = false);
+
+	// Banked gold a respec costs when not paid with a token (ruled: 1000).
+	UFUNCTION(BlueprintPure, Category = "Crossguard|Progression")
+	int32 GetRespecGoldPrice() const;
 
 	// Fires on the server and the owning client when XP, level, allocation, library or respec
 	// tokens change.
@@ -216,13 +224,13 @@ protected:
 	void OnRep_Progression();
 
 	UFUNCTION(Server, Reliable)
-	void ServerRequestAttributeAllocation(const FCrossguardAttributeAllocation& Allocation);
+	void ServerRequestAttributeAllocation(const FCrossguardAttributeAllocation& Allocation, bool bPayWithGold);
 
 	UFUNCTION(Client, Reliable)
 	void ClientProgressionRejected(ECrossguardProgressionError Error);
 
 private:
-	ECrossguardProgressionError ApplyAttributeAllocation(const FCrossguardAttributeAllocation& Allocation);
+	ECrossguardProgressionError ApplyAttributeAllocation(const FCrossguardAttributeAllocation& Allocation, bool bPayWithGold);
 	void AddXp(int32 Amount);
 	// Server. Broadcasts and pushes level and allocation to the pawn.
 	void ProgressionChanged();

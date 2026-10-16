@@ -58,10 +58,27 @@ namespace Crossguard
 	{
 		None,
 		InRaid,
-		// Respecs are bought with real money; each purchase grants one token.
+		// Paying with a token, and none is left (tokens come from purchases and the subscription).
 		NoRespecToken,
+		// Paying with gold, and the banked gold is under FEconomyConfig::RespecGoldPrice.
+		NotEnoughGold,
+	};
+
+	// What the player pays a respec with (ruled: 1000 gold or 1 respec token; the player chooses).
+	enum class ERespecPayment
+	{
+		Token,
+		Gold,
 	};
 
 	// A respec reassigns all attribute points and uses one respec token. Only between raids.
 	CROSSGUARDRULES_API ERespecError CanRespec(bool bInRaid, int RespecTokens);
+
+	// Whether the player can pay a respec the chosen way, between raids.
+	CROSSGUARDRULES_API ERespecError CanPayRespec(
+		const FEconomyConfig& Config, bool bInRaid, ERespecPayment Payment, int RespecTokens, int BankedGold);
+
+	// Pays a respec: one token, or RespecGoldPrice banked gold. Changes nothing on error.
+	CROSSGUARDRULES_API ERespecError PayRespec(
+		const FEconomyConfig& Config, bool bInRaid, ERespecPayment Payment, int& RespecTokens, int& BankedGold);
 }

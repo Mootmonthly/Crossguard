@@ -96,7 +96,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Trading | Editor | Built in code ([trading.md](trading.md)): ask, offer, lock, accept, all-or-nothing swap. Placeholder trade window in code (T, [ui.md](ui.md)); needs art. |
 | Auction house | Code, Decision | Needs the backend and a currency. |
 | Guilds and guild bank | Code, Editor, Decision | Built in code ([guild-rules.md](guild-rules.md)): ranks, invites, kicks, bank (gold and items) with permissions and a log; rules unit tested. In server memory only: needs accounts (Steam ids) and a backend to save guilds. Placeholder guild window in code (U, [ui.md](ui.md)); needs art. |
-| Respec store purchase | Code | Grants respec tokens after a verified purchase; price not set. |
+| Respec store purchase | Code | Price set: a respec costs 1000 banked gold or 1 respec token (gold payment built: `RequestAttributeAllocation(…, bPayWithGold)`). The store purchase of tokens (real money) still needs the backend: grant tokens after a verified purchase. |
 | Subscription | Decision, Code | About $10 per season: five respec tokens, a shared stash tab, common healing items, throwables, lockpicks. |
 | NPC vendors in the hub | Editor | Selling is built (`UCrossguardVendorComponent`); needs the NPC and a sell screen. |
 | Cosmetics | Decision, Editor | |
@@ -125,7 +125,6 @@ Decisions that block items above. Answers go into design-decisions.md.
 | Materials stack size? Gathering channel time, respawn, yields? | Gathering (currently: stack 20; 2 s, once per raid, 1–3 per node) |
 | Which arrows does a bow use first when several rarities are carried? | Ammo (currently: first found) |
 | Is drinking a potion instant? Does bandaging slow movement? | Consumables (currently: instant, full speed) |
-| Respec price? | Store |
 | Jewelry, quarterstaffs, two-handed pavise shields, the Beastial transformation for Neckbite | Later content |
 | Tiger attack speed, Demon size? | Summon Tiger, Summon Greater Demon (currently: 1 s; 1.5×) |
 | Real drop rates: what each monster and chest drops, and rarity odds | Loot tables (placeholders now) |

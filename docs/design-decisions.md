@@ -47,9 +47,11 @@ Code and data must follow it.
   (`50 × 1.1^(level − 1)`, rounded to the nearest whole XP).
 - XP earned in a raid is held until the raid ends. Extracting banks it; failing to extract loses
   it. Dying does not lose it by itself: a teammate can revive you and you can still extract.
-- Respec: reassign all attribute points. Bought with **real money** (revenue beside cosmetics);
-  each purchase grants one respec token. Price not set. Purchases must be verified server-side
-  through the platform store before a token is granted.
+- Respec: reassign all attribute points. Price (owner): **1000 banked gold or 1 respec token**; the
+  player chooses which to pay with (`FEconomyConfig::RespecGoldPrice`). Respec tokens are bought
+  with **real money** (revenue beside cosmetics; each purchase grants one) or come with the
+  subscription. Purchases must be verified server-side through the platform store before a token
+  is granted (the store is not built: it needs the backend).
 - Assumed until ruled otherwise:
   - Attribute points are assigned, and respecs done, only between raids (levels only change then).
   - Killing yourself or an ally gives no XP.

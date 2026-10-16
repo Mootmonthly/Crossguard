@@ -64,6 +64,8 @@ namespace Crossguard
 		double MinDexterityFactor = 0.1;
 		// Weapons and armor sell for GearGoldPerSquare × squares × (rarity level + 1).
 		int GearGoldPerSquare = 5;
+		// Ruled: a respec costs this much banked gold, or one respec token.
+		int RespecGoldPrice = 1000;
 	};
 
 	struct FInventoryConfig

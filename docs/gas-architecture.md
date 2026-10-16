@@ -294,9 +294,11 @@ the session and across seamless travel.
 - Kills: when damage brings a character to 0 Health, the attribute set calls
   `ACrossguardGameMode::HandleKill`. The killer's player gets `PlayerKill` XP for a player victim,
   otherwise the victim's `KillXpSource` (default `BasicMonster`). No XP for yourself or allies.
-- `RequestAttributeAllocation(Allocation)`: between raids only. Spending unspent points is free;
-  lowering any attribute is a respec and uses one respec token. `GrantRespecTokens` (server) is
-  for the store backend once a real-money purchase is verified; no store exists yet.
+- `RequestAttributeAllocation(Allocation, bPayWithGold)`: between raids only. Spending unspent points
+  is free; lowering any attribute is a respec, paid with one respec token or, with `bPayWithGold`,
+  1000 banked gold (`GetRespecGoldPrice`; the server checks and takes it in one step).
+  `GrantRespecTokens` (server) is for the store backend once a real-money purchase is verified; no
+  store exists yet.
 - `LearnSkill(SkillId, Catalog)` (server): between raids only; the inventory consumes the Skill Gem
   when it returns `None`.
 - The character copies level and allocation from the player state (`ApplyProgression`). Turn on

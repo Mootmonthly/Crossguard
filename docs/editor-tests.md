@@ -341,6 +341,7 @@ game mode's Mob Table is unset.
 | `Crossguard.Scenario.Hub.VendorSellsRareRuby` | Rare ruby sells for its price (150) into banked gold; a potion is refused. |
 | `Crossguard.Scenario.Hub.BuyStashTabs` | No gold: refused; with gold, three tabs; the fourth refused AtCap, no gold taken. |
 | `Crossguard.Scenario.Hub.LoweringAttributeNeedsRespecToken` | Lowering Strength refused without a token (nothing changes), done with one (token used). |
+| `Crossguard.Scenario.Hub.RespecPaidWithGold` | Respec paid with gold (price 1000): refused at 999 gold and in a raid (nothing taken, token not used instead); at 1000 Strength drops and all 1000 go, the token stays; then a token respec takes no gold. |
 
 **`CrossguardScenarioUITests.cpp`** (the placeholder UI, [ui.md](ui.md); nothing is drawn under `-nullrhi`)
 
