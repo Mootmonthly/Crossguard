@@ -374,6 +374,8 @@ bool FCrossguardNetConcurrentLoot::RunTest(const FString& Parameters)
 		}
 		const TArray<FCrossguardInventoryItem> Stacks = Body->GetItems();
 		C.SetNumber(TEXT("Stacks"), Stacks.Num());
+		// The pawns may spawn with a loadout (the debug loadout on the character blueprint): count from there.
+		C.SetNumber(TEXT("StacksBefore"), A->GetInventoryComponent()->GetItems().Num() + B->GetInventoryComponent()->GetItems().Num());
 		C.SetNumber(TEXT("Total"), CountItems(Stacks) + CountItems(A->GetInventoryComponent()->GetItems()) + CountItems(B->GetInventoryComponent()->GetItems()));
 		C.Test.TestEqual(TEXT("The body holds 3 stacks"), Stacks.Num(), 3);
 		// Client-side requests: on a client RequestTakeFromContainer sends the ServerTakeFromContainer RPC.
@@ -403,8 +405,11 @@ bool FCrossguardNetConcurrentLoot::RunTest(const FString& Parameters)
 		}
 		const int32 Total = CountItems(Body->GetItems()) + CountItems(A->GetInventoryComponent()->GetItems()) + CountItems(B->GetInventoryComponent()->GetItems());
 		C.Test.TestEqual(TEXT("Items across the body and both inventories"), Total, static_cast<int32>(C.Number(TEXT("Total"))));
-		C.Test.TestEqual(TEXT("Stacks across both inventories"), A->GetInventoryComponent()->GetItems().Num() + B->GetInventoryComponent()->GetItems().Num(),
-			static_cast<int32>(C.Number(TEXT("Stacks"))));
+		// Up to one new stack per stack taken (fewer when a taken stack merged into one the pawn carried).
+		const int32 NewStacks = A->GetInventoryComponent()->GetItems().Num() + B->GetInventoryComponent()->GetItems().Num()
+			- static_cast<int32>(C.Number(TEXT("StacksBefore")));
+		C.Test.TestTrue(FString::Printf(TEXT("Stacks gained across both inventories (%d) are between 1 and %d"), NewStacks, static_cast<int32>(C.Number(TEXT("Stacks")))),
+			NewStacks >= 1 && NewStacks <= static_cast<int32>(C.Number(TEXT("Stacks"))));
 		// Who gets what depends on whose packets the server reads first (one connection may take all);
 		// the late requests are refused as UnknownItem (the stack is gone).
 		C.Test.AddInfo(FString::Printf(TEXT("Client 1 took %d stack(s), client 2 %d"), A->GetInventoryComponent()->GetItems().Num(),

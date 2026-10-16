@@ -415,6 +415,28 @@ bool FCrossguardVisualUI::RunTest(const FString& Parameters)
 		}
 		C.Require(C.GiveItem(Player, TEXT("healing_potion"), 2) == 0 && C.GiveItem(Player, TEXT("bandage"), 1) == 0 && C.GiveItem(Player, TEXT("ruby"), 1) == 0,
 			TEXT("the player's items fit"));
+		// A Rare Backpack (15 squares) and a Common Quiver (5) worn, so their grids show beside the main one.
+		UCrossguardInventoryComponent* Inventory = Player->GetInventoryComponent();
+		for (const ECrossguardInventoryContainer Kind : {ECrossguardInventoryContainer::Backpack, ECrossguardInventoryContainer::Quiver})
+		{
+			FCrossguardInventoryItem Container;
+			Container.Category = ECrossguardItemCategory::Container;
+			Container.ContainerKind = Kind;
+			Container.Rarity = Kind == ECrossguardInventoryContainer::Backpack ? ECrossguardRarity::Rare : ECrossguardRarity::Common;
+			if (!C.Require(Inventory->AddItem(Container) == 0, TEXT("the container fits in the inventory")))
+			{
+				return;
+			}
+			int32 ContainerId = 0;
+			for (const FCrossguardInventoryItem& Item : Inventory->GetItems())
+			{
+				ContainerId = Item.Category == ECrossguardItemCategory::Container && Item.ContainerKind == Kind ? Item.Id : ContainerId;
+			}
+			Inventory->RequestEquipItem(ContainerId);
+		}
+		C.Test.TestTrue(TEXT("The Backpack is worn (15 squares)"), Inventory->GetContainerSize(ECrossguardInventoryContainer::Backpack).X * Inventory->GetContainerSize(ECrossguardInventoryContainer::Backpack).Y == 15);
+		C.Test.TestTrue(TEXT("The Quiver is worn (5 squares)"), Inventory->GetContainerSize(ECrossguardInventoryContainer::Quiver).X * Inventory->GetContainerSize(ECrossguardInventoryContainer::Quiver).Y == 5);
+		C.Require(C.GiveItem(Player, TEXT("arrow"), 20) == 0, TEXT("the arrows fit (the Quiver first)"));
 		C.Require(C.GiveItem(Dummy, TEXT("ruby"), 1, ECrossguardRarity::Rare) == 0, TEXT("the dummy's ruby fits"));
 		C.GrantSkills(Player, {TEXT("fireball")});
 		C.AimAt(Player, EyesAt(DummySpot));

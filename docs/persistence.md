@@ -105,7 +105,10 @@ before the save loads, carried across seamless travel, never over an online id):
   during automation tests). It is the client's word: never on a real server. PIE clients in one
   process send no option, so they keep `session-<n>` ids.
 - Names keep letters, digits, `-` and `_` (32 at most). A login claiming an id already playing is
-  refused.
+  refused. The engine has set its unique id by then, so the save subsystem hears `PlayerJoined` and
+  `PlayerLeaving` for it; both ignore a player state whose id another, still-present player state
+  holds (told from seamless travel, which copies the engine's `PlayerId` to the new state), so the
+  online player keeps their entry and goes on saving.
 
 ## Format
 
@@ -227,3 +230,7 @@ Saving is off while automation tests run (`GIsAutomationTesting`), so no test re
 saves. A save test calls `EnableForTesting(<temp folder>)` (a fresh local backend there, session ids
 allowed) and `DisableForTesting()` at the end, then deletes the folder. Normal PIE saves to
 `Saved/Crossguard/Characters/` like a server.
+
+The "stash an item, stop, play again" smoke is scripted as `Crossguard.Scenario.Save.Smoke1StashAndStop`
+and `Smoke2PlayAgain` (two PIE sessions, so the second one's fresh game instance loads `pie-0.json`
+from disk; see [editor-tests.md](editor-tests.md)). The by-hand version still works the same way.

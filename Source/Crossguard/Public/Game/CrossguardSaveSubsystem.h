@@ -91,7 +91,9 @@ public:
 
 	// --- Hooks (server; each does nothing for clients or while saving is off) -------------------
 
-	// The player's unique id is set: starts loading their save.
+	// The player's unique id is set: starts loading their save. A second player state claiming the
+	// id of a player who is online (a duplicate login, refused by the game mode) is ignored here, in
+	// PlayerReady and in PlayerLeaving: the online player keeps their entry.
 	void PlayerJoined(ACrossguardPlayerState* PlayerState);
 	// Their pawn is possessed: applies the loaded save (or, still loading, as soon as it arrives).
 	void PlayerReady(ACrossguardPlayerState* PlayerState);

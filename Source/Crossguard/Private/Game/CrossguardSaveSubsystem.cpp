@@ -41,6 +41,16 @@ namespace CrossguardSaveDetail
 		return FString(UTF8_TO_TCHAR(Value.c_str()));
 	}
 
+	// The entry's player state Current is someone else who is still around: a second player state
+	// claiming the id of a player who is online (a duplicate login the game mode refuses). Not
+	// seamless travel: there the engine clones the new player state from the old one, copying its
+	// player id along with the unique id, and destroys the old one right after.
+	bool IsAnotherOnlinePlayer(const ACrossguardPlayerState* Current, const ACrossguardPlayerState* PlayerState)
+	{
+		return Current != nullptr && Current != PlayerState && !Current->IsActorBeingDestroyed()
+			&& Current->GetPlayerId() != PlayerState->GetPlayerId();
+	}
+
 	ACrossguardCharacter* CharacterOf(const ACrossguardPlayerState* PlayerState)
 	{
 		return PlayerState != nullptr ? PlayerState->GetPawn<ACrossguardCharacter>() : nullptr;
@@ -461,6 +471,14 @@ void UCrossguardSaveSubsystem::PlayerJoined(ACrossguardPlayerState* PlayerState)
 		// Already loading or loaded for this player state.
 		return;
 	}
+	if (CrossguardSaveDetail::IsAnotherOnlinePlayer(Entry.PlayerState.Get(), PlayerState))
+	{
+		// A second login claiming an online player's id: the game mode refuses it, and the entry
+		// stays with the player who is here.
+		UE_LOG(LogCrossguard, Warning, TEXT("Save for %s: %s joined while %s is online with that id; not loading for it"), *PlayerId,
+			*GetNameSafe(PlayerState), *GetNameSafe(Entry.PlayerState.Get()));
+		return;
+	}
 	Entry.PlayerState = PlayerState;
 	Entry.AppliedTo = nullptr;
 	Entry.bReady = false;
@@ -582,7 +600,7 @@ void UCrossguardSaveSubsystem::PlayerReady(ACrossguardPlayerState* PlayerState)
 {
 	const FString PlayerId = PlayerIdFor(PlayerState);
 	FPlayerEntry* Entry = PlayerId.IsEmpty() ? nullptr : Players.Find(PlayerId);
-	if (Entry == nullptr)
+	if (Entry == nullptr || CrossguardSaveDetail::IsAnotherOnlinePlayer(Entry->PlayerState.Get(), PlayerState))
 	{
 		return;
 	}
@@ -896,8 +914,17 @@ void UCrossguardSaveSubsystem::WriteDirty()
 void UCrossguardSaveSubsystem::PlayerLeaving(ACrossguardPlayerState* PlayerState)
 {
 	const FString PlayerId = PlayerIdFor(PlayerState);
-	if (PlayerId.IsEmpty() || !Players.Contains(PlayerId))
+	FPlayerEntry* Entry = PlayerId.IsEmpty() ? nullptr : Players.Find(PlayerId);
+	if (Entry == nullptr)
 	{
+		return;
+	}
+	// A login that never finished (refused after the engine set its unique id: a second connection
+	// claiming the id of a player who is online) leaves; the entry is the online player's and stays.
+	if (CrossguardSaveDetail::IsAnotherOnlinePlayer(Entry->PlayerState.Get(), PlayerState))
+	{
+		UE_LOG(LogCrossguard, Log, TEXT("Save for %s: a player state that never finished logging in left; %s keeps the entry"), *PlayerId,
+			*GetNameSafe(Entry->PlayerState.Get()));
 		return;
 	}
 	SaveNow(PlayerState);

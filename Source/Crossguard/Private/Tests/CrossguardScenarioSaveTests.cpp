@@ -641,4 +641,195 @@ bool FCrossguardScenarioSaveExtractedLeavesRaid::RunTest(const FString& Paramete
 	return true;
 }
 
+// A second connection claiming an online player's id is refused after the engine has set its
+// unique id, so the save subsystem hears PlayerJoined and then (through Logout) PlayerLeaving for a
+// player state that never finished logging in. The online player's entry must survive: they keep
+// saving. The intruder is a spawned player whose development id is set to the saver's.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioSaveIntruderLeaves, "Crossguard.Scenario.Save.RefusedLoginKeepsOnlinePlayersSave", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioSaveIntruderLeaves::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioSave;
+
+	const TSharedRef<FSaveTestFolder> Folder = MakeShared<FSaveTestFolder>();
+	const TSharedRef<FString> Before = MakeShared<FString>();
+
+	FScenario Scenario(*this);
+	Scenario.Raid(false);
+
+	Scenario.Step(TEXT("A saving player; an intruder logs in with the same id and leaves again"), [Folder, Before](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = StartSaving(C, *Folder, TEXT("Saver"));
+		UCrossguardSaveSubsystem* Saves = UCrossguardSaveSubsystem::Get(C.World());
+		ACrossguardPlayerState* State = C.PlayerState(Player);
+		if (Player == nullptr || Saves == nullptr || State == nullptr)
+		{
+			return;
+		}
+		const FString Path = SaveFileOf(Folder->Directory, State);
+		C.Require(FFileHelper::LoadFileToString(*Before, *Path), TEXT("the saver's file is there"));
+
+		ACrossguardCharacter* Intruder = C.SpawnPlayer(TEXT("Intruder"), FVector(300.0f, 1000.0f, 0.0f), 180.0f);
+		ACrossguardPlayerState* IntruderState = C.PlayerState(Intruder);
+		if (!C.Require(IntruderState != nullptr, TEXT("intruder spawned")))
+		{
+			return;
+		}
+		// What a refused duplicate login looks like to the subsystem: the same id joins, then leaves.
+		IntruderState->DevPlayerId = UCrossguardGuildSubsystem::PlayerIdOf(State);
+		C.Test.TestEqual(TEXT("The intruder claims the saver's id"), UCrossguardGuildSubsystem::PlayerIdOf(IntruderState), UCrossguardGuildSubsystem::PlayerIdOf(State));
+		Saves->PlayerJoined(IntruderState);
+		Saves->PlayerLeaving(IntruderState);
+		C.Test.TestTrue(TEXT("Log: the entry stayed with the saver"), C.LogContains(TEXT("never finished logging in left")));
+
+		// The saver still saves: 100 XP more, written on the next flush.
+		State->AwardXp(ECrossguardXpSource::Quest, 100);
+		Saves->MarkDirty(State);
+		Saves->FlushPendingSaves();
+		FString After;
+		C.Test.TestTrue(TEXT("The saver's file is still written"), FFileHelper::LoadFileToString(After, *Path) && After != *Before);
+		C.Test.TestTrue(TEXT("The file carries the new XP"), After.Contains(TEXT("100")));
+		StopSaving(C, *Folder);
+	});
+
+	Scenario.Run();
+	return true;
+}
+
+// --- Save smoke: two PIE sessions ---------------------------------------------------------------
+//
+// The by-hand smoke from docs/persistence.md ("stash an item, stop, play again: the item is back and
+// the log says 'Loaded the save'"), scripted. One scenario per test, so it is two tests that run in
+// name order and share a fixed folder: Smoke1 saves the PIE player (dev id pie-0) with a ruby in the
+// stash and leaves the file; Smoke2, a new PIE session with a new game instance and save subsystem,
+// loads it from disk the way a login does and finds the ruby. Smoke2 deletes the folder.
+
+namespace CrossguardScenarioSave
+{
+	FString SmokeDirectory()
+	{
+		return FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Automation"), TEXT("SaveSmoke"));
+	}
+
+	// The PIE player's own state (not a spawned one): logged in by the game mode, so it carries the
+	// development id pie-<instance>.
+	ACrossguardPlayerState* SmokePlayerState(FScenarioContext& C, ACrossguardCharacter*& OutPlayer)
+	{
+		OutPlayer = C.LocalPlayer();
+		ACrossguardPlayerState* State = OutPlayer != nullptr ? C.PlayerState(OutPlayer) : nullptr;
+		if (!C.Require(State != nullptr && State->GetStash() != nullptr && OutPlayer->GetInventoryComponent() != nullptr,
+				TEXT("the PIE player has a player state, a stash and an inventory")))
+		{
+			return nullptr;
+		}
+		C.Test.TestTrue(FString::Printf(TEXT("The PIE player's id is a development id (%s)"), *UCrossguardGuildSubsystem::PlayerIdOf(State)),
+			UCrossguardGuildSubsystem::PlayerIdOf(State).StartsWith(TEXT("pie-")));
+		return State;
+	}
+
+	bool StashHoldsRuby(const ACrossguardPlayerState& State)
+	{
+		for (const FCrossguardStashTab& Tab : State.GetStash()->GetTabs())
+		{
+			for (const FCrossguardInventoryItem& Item : Tab.Items)
+			{
+				if (Item.ItemId == TEXT("ruby"))
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioSaveSmokeStash, "Crossguard.Scenario.Save.Smoke1StashAndStop", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioSaveSmokeStash::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioSave;
+
+	FScenario Scenario(*this);
+	Scenario.Raid(false);
+
+	Scenario.Step(TEXT("The PIE player saves to the smoke folder, stashes a ruby, and the session ends"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = nullptr;
+		ACrossguardPlayerState* State = SmokePlayerState(C, Player);
+		UCrossguardSaveSubsystem* Saves = SavesOf(C);
+		if (State == nullptr || Saves == nullptr)
+		{
+			return;
+		}
+		const FString Directory = SmokeDirectory();
+		IFileManager::Get().DeleteDirectory(*Directory, false, true);
+		Saves->EnableForTesting(Directory);
+		Saves->SaveDebounceSeconds = TestDebounceSeconds;
+		// What login did while saving was off.
+		Saves->PlayerJoined(State);
+		Saves->PlayerReady(State);
+		if (!C.Require(Saves->GetSaveState(State) == ECrossguardSaveState::Ready, TEXT("the PIE player's save is ready")))
+		{
+			return;
+		}
+		C.Require(C.GiveItem(Player, TEXT("ruby"), 1, ECrossguardRarity::Rare) == 0, TEXT("the ruby fits"));
+		State->GetStash()->RequestStoreAnywhere(StackId(Player, TEXT("ruby")));
+		C.Require(StashHoldsRuby(*State), TEXT("the ruby is in the stash"));
+		Saves->SaveNow(State);
+		const FString Path = SaveFileOf(Directory, State);
+		FString Document;
+		C.Test.TestTrue(FString::Printf(TEXT("%s is written"), *Path), FFileHelper::LoadFileToString(Document, *Path));
+		C.Test.TestTrue(TEXT("The file holds the ruby"), Document.Contains(TEXT("\"ruby\"")));
+		// The folder stays for Smoke2.
+		Saves->DisableForTesting();
+	});
+
+	Scenario.Run();
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioSaveSmokePlayAgain, "Crossguard.Scenario.Save.Smoke2PlayAgain", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioSaveSmokePlayAgain::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioSave;
+
+	FScenario Scenario(*this);
+	Scenario.Raid(false);
+
+	Scenario.Step(TEXT("A new PIE session loads the smoke save at login: the ruby is back"), [](FScenarioContext& C)
+	{
+		ACrossguardCharacter* Player = nullptr;
+		ACrossguardPlayerState* State = SmokePlayerState(C, Player);
+		UCrossguardSaveSubsystem* Saves = SavesOf(C);
+		if (State == nullptr || Saves == nullptr)
+		{
+			return;
+		}
+		FSaveTestFolder Folder;
+		Folder.Directory = SmokeDirectory();
+		const FString Path = SaveFileOf(Folder.Directory, State);
+		if (!C.Require(IFileManager::Get().FileExists(*Path), FString::Printf(TEXT("%s is there (Smoke1StashAndStop runs first)"), *Path)))
+		{
+			return;
+		}
+		C.Require(!StashHoldsRuby(*State), TEXT("a fresh session: no ruby in the stash yet"));
+		Saves->EnableForTesting(Folder.Directory);
+		Saves->SaveDebounceSeconds = TestDebounceSeconds;
+		// Login's hooks, now with saving on: load from disk, apply on the pawn.
+		Saves->PlayerJoined(State);
+		Saves->PlayerReady(State);
+		C.Test.TestTrue(TEXT("The save is ready"), Saves->GetSaveState(State) == ECrossguardSaveState::Ready);
+		C.Test.TestTrue(TEXT("Log: loaded the save"), C.LogContains(TEXT("Loaded the save for ") + UCrossguardGuildSubsystem::PlayerIdOf(State)));
+		C.Test.TestTrue(TEXT("The ruby is back in the stash"), StashHoldsRuby(*State));
+		StopSaving(C, Folder);
+	});
+
+	Scenario.Run();
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR

@@ -594,6 +594,19 @@ def setup_game_mode(tables, catalog):
         set_if_different(cdo, "mob_table", tables["DT_Mobs"], changes, "mob_table")
     if catalog is not None:
         set_if_different(cdo, "mob_skill_catalog", catalog, changes, "mob_skill_catalog")
+    # The C++ defaults do not reach a Blueprint that saved its own: the reconnect hold needs
+    # CrossguardPlayerController (docs/persistence.md), the placeholder UI CrossguardHUD (docs/ui.md).
+    # A child class of either is fine.
+    class_fixes = []
+    for prop, class_name in (("player_controller_class", "CrossguardPlayerController"), ("hud_class", "CrossguardHUD")):
+        wanted = native_class(class_name)
+        if wanted is None:
+            continue
+        current = cdo.get_editor_property(prop)
+        if current is None or not unreal.MathLibrary.class_is_child_of(current, wanted):
+            cdo.set_editor_property(prop, wanted)
+            changes.append("{} {} -> {}".format(prop, current.get_name() if current is not None else "None", class_name))
+        class_fixes.append((prop, wanted))
 
     if created:
         char_package, char_bp = find_blueprint(CHARACTER_BP)
@@ -624,6 +637,10 @@ def setup_game_mode(tables, catalog):
             problems.append("Loot.skill_catalog")
         if not same_object(cdo.get_editor_property("mob_skill_catalog"), catalog):
             problems.append("mob_skill_catalog")
+    for prop, wanted in class_fixes:
+        current = cdo.get_editor_property(prop)
+        if current is None or not unreal.MathLibrary.class_is_child_of(current, wanted):
+            problems.append(prop)
     if problems or missing or catalog is None:
         detail = []
         if problems:
