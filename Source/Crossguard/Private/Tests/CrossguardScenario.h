@@ -12,8 +12,10 @@
 //   spawned from the character Blueprint (the game mode's Default Pawn Class if it is a Blueprint of
 //   ACrossguardCharacter, else the Blueprint named BP_CrossguardCharacter), so its Weapon / Item
 //   tables and Skill Catalog are the ones the checklist sets. PIE runs as one standalone instance; the
-//   scenario acts on the PIE world (standalone: it is the server). PIE always ends, also on failure or
-//   timeout. Missing Blueprints fail the test with a message naming the asset.
+//   scenario acts on the PIE world (standalone: it is the server). With FScenario::Clients(N) it runs
+//   a server and N real clients in one process instead (see "Networked scenarios" in the context).
+//   PIE always ends, also on failure or timeout. Missing Blueprints fail the test with a message
+//   naming the asset.
 //
 // Writing one
 //
@@ -92,6 +94,13 @@ struct FGameplayAttribute;
 // EAutomationTestFlags is an enum class with flag operators; the expression works either way.
 #define CROSSGUARD_SCENARIO_FLAGS (EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
+// A visual scenario (Crossguard.Visual.*, docs/editor-tests.md "Visual run") takes screenshots, so it
+// needs a rendering editor: NonNullRHI keeps it off the list under -nullrhi (the default run), and
+// Tools\run_editor_tests.bat -Visual runs it.
+#define CROSSGUARD_VISUAL_FLAGS (EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter | EAutomationTestFlags::NonNullRHI)
+
+class ACameraActor;
+
 namespace CrossguardScenario
 {
 	class FScenarioLogCapture;
@@ -123,6 +132,41 @@ namespace CrossguardScenario
 		ACrossguardCharacter* LocalPlayer() const;
 		// Game seconds since PIE started (World->GetTimeSeconds()).
 		float Now() const;
+
+		// --- Networked scenarios (FScenario::Clients) ---------------------------------------------
+		//
+		// PIE runs a server and real clients in one process; each client has its own world, local
+		// player, PlayerController and pawn. Steps still run against the server world; these reach
+		// the clients' worlds. Replication is asynchronous: read client state through
+		// FScenario::WaitUntilOnClient (or WaitUntil), never right after a server-side change.
+
+		// Number of clients (0 in a standalone scenario). Listen server: client 0 is the host, whose
+		// world is the server world itself (so its "copies" are the server actors).
+		int32 ClientCount() const { return NumClients; }
+		bool IsNetworked() const { return NumClients > 0; }
+		// The server world (World()).
+		UWorld* ServerWorld() const { return World(); }
+		// Client Index's world; null if Index is out of range or the world is gone.
+		UWorld* ClientWorld(int32 Index) const;
+		// Client Index's own PlayerController and character, in its world (its local copies).
+		APlayerController* ClientController(int32 Index) const;
+		ACrossguardCharacter* ClientPawn(int32 Index) const;
+		// The server-side character and PlayerController of client Index (matched by PlayerState
+		// PlayerId). Also remembered as "Client<Index>" and "Client<Index>.Controller".
+		ACrossguardCharacter* ServerPawnOf(int32 Index) const;
+		APlayerController* ServerControllerOf(int32 Index) const;
+		// Client Index's copy of a server actor (matched by net GUID): null while it has not been
+		// replicated yet, is not relevant to that client (stealth), or was destroyed there. For the
+		// listen host (client 0) it is the server actor itself.
+		AActor* OnClient(const AActor* ServerActor, int32 Index) const;
+		template <typename T>
+		T* OnClient(const AActor* ServerActor, int32 Index) const
+		{
+			return Cast<T>(OnClient(ServerActor, Index));
+		}
+		// Server: Player joins Ally's team (ACrossguardPlayerState::SetTeamId), so they are allies.
+		// Players log in on teams of their own.
+		void MakeAllies(ACrossguardCharacter* Player, const ACrossguardCharacter* Ally);
 
 		// --- Flow ---------------------------------------------------------------------------------
 
@@ -268,6 +312,8 @@ namespace CrossguardScenario
 		bool ActivateSkill(ACrossguardCharacter* Character, FName SkillId);
 		// A granted skill's CooldownTags are on the character.
 		bool IsOnCooldown(const ACrossguardCharacter* Character, FName SkillId) const;
+		// The character has this non-passive skill granted (on a client: once the spec has replicated).
+		bool HasSkill(const ACrossguardCharacter* Character, FName SkillId) const;
 		// Lethal damage through the native damage effect, so death runs as in play (body, kill XP to
 		// Killer's player). No Killer: the victim's own (no XP).
 		void Kill(AActor* Victim, AActor* Killer = nullptr);
@@ -349,6 +395,19 @@ namespace CrossguardScenario
 		// cooldowns, ability waits and Wait() all speed up together.
 		void SetTimeDilation(float Dilation);
 
+		// --- Screenshots (visual scenarios) -------------------------------------------------------
+
+		// Points a viewport's camera: a camera actor at Eye looking at LookAt becomes the view target of
+		// the local player of the server world (ClientIndex -1: standalone, the PIE player's viewport) or
+		// of client ClientIndex's world (spawned there). Reused on later calls. The pawns stay where they
+		// are. Wait a frame before the screenshot.
+		void LookFrom(const FVector& Eye, const FVector& LookAt, int32 ClientIndex = -1);
+		// Saves what a game viewport shows right now to Saved/EditorTests/Screenshots/<Test>/<Name>.png
+		// (<Test>: the test name after "Crossguard.Visual."). ClientIndex -1: the server world's viewport;
+		// else client ClientIndex's. Needs a rendering editor (Tools\run_editor_tests.bat -Visual); under
+		// -nullrhi it adds an error. Returns success.
+		bool Screenshot(const FString& Name, int32 ClientIndex = -1);
+
 		// --- Log ----------------------------------------------------------------------------------
 
 		// Lines logged since the scenario started (or the last ClearLog), as "Category: message".
@@ -361,6 +420,8 @@ namespace CrossguardScenario
 		friend class FScenarioRunner;
 
 		AActor* SpawnActorInternal(FName Name, UClass* Class, const FVector& Location, float Yaw, TFunctionRef<void(AActor&)> Configure);
+		// Every frame: LookFrom cameras stay the view targets (the engine switches back to the pawn).
+		void KeepCameras();
 		// Deferred spawn of a Crossguard character above FloorPoint; bAIController: possessed by its
 		// AI controller on spawn.
 		// SpawnOwner: owner and instigator (summoned minions).
@@ -369,9 +430,15 @@ namespace CrossguardScenario
 
 		TWeakObjectPtr<UWorld> WorldPtr;
 		TWeakObjectPtr<ACrossguardGameMode> GameModePtr;
+		// Networked: client Index runs in PIE instance FirstClientInstance + Index (listen server: 0,
+		// the host; dedicated server: 1, instance 0 being the server).
+		int32 NumClients = 0;
+		int32 FirstClientInstance = 0;
 		TWeakObjectPtr<UClass> CharacterClassPtr;
 		TMap<FName, TWeakObjectPtr<AActor>> Actors;
 		TMap<FName, double> Numbers;
+		// LookFrom's camera per viewport (ClientIndex -1 for the server world's).
+		TMap<int32, TWeakObjectPtr<ACameraActor>> Cameras;
 		TSharedPtr<FScenarioLogCapture> LogCapture;
 		bool bStopped = false;
 	};
@@ -392,8 +459,18 @@ namespace CrossguardScenario
 		// Waits Seconds of game time, calling Watch every frame (record Health drops, top up, act).
 		// Never fails on its own: it simply ends after Seconds (contrast WaitUntil).
 		FScenario& WaitWatching(const FString& Name, float Seconds, TFunction<void(FScenarioContext&)> Watch);
+		// WaitUntil polled against client Index's world (networked scenarios): Condition gets that
+		// world too. Fails at once if the client world is gone.
+		FScenario& WaitUntilOnClient(int32 Index, const FString& Name, float TimeoutGameSeconds,
+			TFunction<bool(FScenarioContext&, UWorld& ClientWorld)> Condition, float PollSeconds = 0.0f);
 
 		// Options, before Run().
+		// Networked PIE in one process (docs/editor-tests.md, "Networked scenarios"): a listen server
+		// whose host is client 0 plus Count - 1 more clients, or with bDedicatedServer a dedicated
+		// server and Count clients (1..8). Every client is a real PIE client with a local player; PIE
+		// is ready once each one is logged in with a pawn (ServerPawnOf / ClientPawn). Default: one
+		// standalone instance, the server.
+		FScenario& Clients(int32 Count, bool bDedicatedServer = false);
 		// Global time dilation from the start (default 1). Speeds long timers: Wait / WaitUntil and
 		// timeouts are game seconds, so they shrink in real time with it.
 		FScenario& TimeDilation(float Dilation);
@@ -435,6 +512,8 @@ namespace CrossguardScenario
 		bool bRaid = true;
 		bool bKeepDebugLoadout = false;
 		bool bQueued = false;
+		int32 NumClients = 0;
+		bool bDedicatedServer = false;
 	};
 }
 

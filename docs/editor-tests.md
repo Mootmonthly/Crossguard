@@ -122,9 +122,11 @@ the others (`Tools\run_editor_tests.bat`), or alone:
 ```
 Tools\run_editor_tests.bat -Filter Crossguard.Scenario
 Tools\run_editor_tests.bat -Filter Crossguard.Scenario.Combat -SkipBuild
+Tools\run_editor_tests.bat -Filter Crossguard.Net -SkipBuild
 ```
 
-Each takes a few seconds (PIE start and end included). In the open editor they are under Session
+`Crossguard.Net.*` are the [networked scenarios](#networked-scenarios): a server and real PIE
+clients in one process. Each takes a few seconds (PIE start and end included). In the open editor they are under Session
 Frontend → Automation, filter `Crossguard.Scenario` (the **Product** filter): running one there
 **replaces the open level with an unsaved blank map**, so save first.
 
@@ -317,12 +319,23 @@ game mode's Mob Table is unset.
 | `Crossguard.Scenario.Hub.BuyStashTabs` | No gold: refused; with gold, three tabs; the fourth refused AtCap, no gold taken. |
 | `Crossguard.Scenario.Hub.LoweringAttributeNeedsRespecToken` | Lowering Strength refused without a token (nothing changes), done with one (token used). |
 
+**`CrossguardScenarioNetworkTests.cpp`** (networked: a server and real PIE clients, see
+[Networked scenarios](#networked-scenarios))
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Net.WieldingTagsReplicate` | Listen server + 1 client. The host equips a sword, the client an axe: the client's copy of the host has `Equipment.Wielding.Sword` and its own pawn `Equipment.Wielding.Axe`; the host unequips and the client's copy loses the tag. |
+| `Crossguard.Net.DeathRagdollsOnEveryClient` | Listen server + 2 clients. Client 1 kills client 2: on client 1's copy and on client 2's own body `State.Dead`, the mesh simulating physics, the capsule without collision; the host's view too. |
+| `Crossguard.Net.StealthHidesFromEnemyClient` | **Dedicated server** + 3 clients (ally, sneak, enemy). The sneak activates Stealth on its own client (predicted): the enemy client loses the actor while the ally client keeps it; the time from `State.Stealthed` to the drop is logged as `STEALTH LEAK: ... s` (measured 4.3–4.5 s on 5.8: the net driver's `RelevantTimeout`, see [anti-cheat.md](anti-cheat.md)) and must be under 6 s; after 12 s the sneak is back on the enemy client, not stealthed, Health and sword replicated, within 1 m of the server's position. Skipped if `crossguard.StealthHidesFromEnemies` is 0. |
+| `Crossguard.Net.ConcurrentLootFromTwoClients` | Listen server + 2 clients. A dummy with 3 potions, 2 bandages and a Rare ruby dies between them; both open the body (server) and both clients request every stack by RPC in the same frame: the body empties, totals across the body and both inventories unchanged, the number of stacks unchanged (whoever's packets the server reads first takes them; the late requests are refused UnknownItem), and client 1's replicated inventory matches the server's. |
+| `Crossguard.Net.TrackingMarksOnTrackerOnly` | Listen server + 1 client (enemies). Client 1 has `hunters_tracking`; the host moves 1.2 m a step: footprints (instances of the client pawn's `UCrossguardTrackingComponent`) appear on the tracker's client, none on the host's own component, the server's copy of the tracker, or client 1's copy of the host. |
+
 ### Checklist coverage
 
 Against [next-build-checklist.md](next-build-checklist.md). **auto**: the tests check the row's
 expected result; tick it when they pass. **part**: some of it is checked, do the rest by hand.
-**manual**: no test. "Looks" (ragdoll, meshes, arcs, effects) always needs eyes; the tests use
-server-side players in one standalone PIE, not real clients.
+**manual**: no test. "Looks" (ragdoll, meshes, arcs, effects) always needs eyes. `Crossguard.Scenario.*`
+use server-side players in one standalone PIE; `Crossguard.Net.*` use real PIE clients.
 
 | Section / row | Status | Tests | By hand |
 | --- | --- | --- | --- |
@@ -363,12 +376,12 @@ server-side players in one standalone PIE, not real clients.
 | 4 `parting_the_land` | auto | `Skills.PartingTheLand` | The pop-up and walls' look. |
 | 4 `hunters_leap` | auto | `Skills.HuntersLeap` | — |
 | 4 `wall`, `light` | auto | `Skills.Wall`, `Skills.Light` | The light itself. |
-| 4 `stealth` vanish on the other screen | part | `Skills.Stealth`, `Status.StealthNetRelevancy` | Vanishing on a real second client (replication); the enemy client dropping and re-creating the character. |
+| 4 `stealth` vanish on the other screen | auto | `Skills.Stealth`, `Status.StealthNetRelevancy`, `Net.StealthHidesFromEnemyClient` | — (the drop takes ~4.4 s: `RelevantTimeout`, owner's call, [anti-cheat.md](anti-cheat.md)). |
 | 4 `immutable` | auto | `Skills.Immutable` | — |
 | 4 `unleash` | auto | `Skills.Unleash` | — |
 | 4 `benediction` on a body | auto | `Skills.Benediction` | — |
 | 4 `multiscale` with a party member | auto | `Skills.Multiscale` | — |
-| 4 `hunters_tracking` grey marks | part | `Skills.HuntersTracking` | The marks on a real client's screen. |
+| 4 `hunters_tracking` grey marks | auto | `Skills.HuntersTracking`, `Net.TrackingMarksOnTrackerOnly` | Their look. |
 | 4 Drop with G, pick up with F | auto | `Raid.DropAndPickUp` | The box's look. |
 | 4 Gather node: 2 s, herbs, +10 XP, depleted, refused again | auto | `Raid.GatherNode` | The node's mesh hiding. |
 | 4 Gather node: walking, attacking or damage breaks the channel | part | `Raid.GatherNodeMoveInterrupts` | Attacking and taking damage (rules unit tested: `CheckGatherInterrupt`). |
@@ -391,9 +404,9 @@ server-side players in one standalone PIE, not real clients.
 | 5 Vendor ruby +150 | auto | `Hub.VendorSellsRareRuby` | — |
 | 5 Stash tabs | auto | `Hub.BuyStashTabs` | — |
 | 5 Respec token | auto | `Hub.LoweringAttributeNeedsRespecToken` | — |
-| 6 Both see bodies ragdoll | manual | — | Two real clients, replication, visuals. |
-| 6 `showdebug` shows the other's `Equipment.Wielding.*` | manual | — | Replication to a client, debug HUD. |
-| 6 Concurrent loot never duplicates | part | `Social.ConcurrentLootNeverDuplicates` | Two real clients' RPC timing (the test is server-side, one frame). |
+| 6 Both see bodies ragdoll | auto | `Net.DeathRagdollsOnEveryClient` | The ragdoll's look. |
+| 6 `showdebug` shows the other's `Equipment.Wielding.*` | auto | `Net.WieldingTagsReplicate` | The debug HUD itself. |
+| 6 Concurrent loot never duplicates | auto | `Social.ConcurrentLootNeverDuplicates`, `Net.ConcurrentLootFromTwoClients` | — |
 
 Totals: 66 rows: 49 auto, 12 part, 5 manual. Not checklist rows: `Combat.ArrowBlockedNoStun`,
 `SwingClash`, `AIIgnoresAllySwings`, `StunBlocksActions`, `Skills.LikeALion`, `Quickshot`,
@@ -401,10 +414,11 @@ Totals: 66 rows: 49 auto, 12 part, 5 manual. Not checklist rows: `Combat.ArrowBl
 
 ### Known limits
 
-- Written without an engine to build against: compiled and run on no real build yet. Until a first
-  green run, a failure may be the test, not the game (see the framework section below).
-- One standalone PIE, server side: players are server-spawned controllers with no input, HUD or
-  client. Nothing about replication, client prediction, keys or UI is tested.
+- `Crossguard.Scenario.*`: one standalone PIE, server side: players are server-spawned controllers
+  with no input, HUD or client. Replication and prediction are the networked tests' job
+  (`Crossguard.Net.*`); keys and UI are untested.
+- Networked tests drive clients from C++ (`ActivateSkill` on the client pawn, inventory requests on
+  the client component): the real path from a key press to the request is not covered.
 - Clanks: there is no native event to bind to, so the clank (`MulticastWeaponClank` →
   `OnWeaponClank` Blueprint event) is counted from the Impact Power log line before it; the
   Blueprint event, sound and effect are not checked.
@@ -420,9 +434,12 @@ Totals: 66 rows: 49 auto, 12 part, 5 manual. Not checklist rows: `Combat.ArrowBl
 2. The game mode and character Blueprints are found (Asset Registry) and loaded.
 3. A new blank map (`FAutomationEditorCommonUtils::CreateNewMap`) gets: World Settings → Game Mode
    Override = the game mode Blueprint; a 200 m × 200 m floor (engine cube, collision BlockAll, top at
-   Z = 0); a Player Start at (−30 m, −30 m) where the PIE player appears, out of the way.
+   Z = 0); a Player Start at (−30 m, −30 m) where the PIE player appears, out of the way. Its world
+   is flagged `RF_WasLoaded` so the net GUID cache can address the (never saved) level.
 4. PIE starts as **one standalone instance** (`RequestPlaySession`, net mode Standalone, 1 client),
-   whatever your editor's Play settings are. The PIE world is the server.
+   whatever your editor's Play settings are. The PIE world is the server. With `Clients(N)`: a listen
+   server (instance 0, the host) and N − 1 clients, or a dedicated server and N clients, all in the
+   editor process; the start waits until every client is logged in with a pawn.
 5. The game mode's `bIsRaid` is set (on by default, as in checklist section 4) and the optional
    time dilation applied; a log listener starts.
 6. The steps run, one per frame, with their waits.
@@ -513,6 +530,42 @@ Keep file-local helpers and constants in a uniquely named namespace (unity build
   (`LogContains`, `LogCount`, `LogLines`, `ClearLog`). Warnings and errors are also reported by the
   automation framework itself; an error logged by the game fails the test.
 
+### Networked scenarios
+
+`Scenario.Clients(N)` runs PIE as a listen server plus N − 1 clients in the editor process;
+`Scenario.Clients(N, true)` as a dedicated server plus N clients. Every client is a real PIE client:
+its own world, `ULocalPlayer`, PlayerController and a pawn the game mode spawns at the Player Start
+when it logs in over the normal connection (`127.0.0.1:17777`). PIE is ready once every client has
+its pawn and the server knows them all. Steps still run against the server world (`C.World()`),
+where `Place`, `Equip`, `Kill`, `GrantSkills` and the rest act as before; the clients' worlds are
+reached through:
+
+| Call | Does |
+| --- | --- |
+| `C.ClientCount()`, `C.IsNetworked()` | N; 0 / false in a standalone scenario. |
+| `C.ServerWorld()`, `C.ClientWorld(i)` | The server world (= `World()`); client i's world. Listen server: PIE instances 0..N−1, client 0 the host, whose world **is** the server world. Dedicated: server instance 0, clients 1..N. |
+| `C.ClientController(i)`, `C.ClientPawn(i)` | Client i's own PlayerController (the one with a `ULocalPlayer`) and character, in its world. |
+| `C.ServerPawnOf(i)`, `C.ServerControllerOf(i)` | The same player on the server (matched by the PlayerState's `PlayerId`). Also remembered as `"Client<i>"` and `"Client<i>.Controller"`. |
+| `C.OnClient(ServerActor, i)`, `C.OnClient<T>(ServerActor, i)` | Client i's copy of a server actor, by net GUID: null until it has replicated, while it is not relevant to that client (stealth), or once destroyed there. On the listen host it is the server actor itself. |
+| `C.MakeAllies(Player, Ally)` | Server: `Player` joins `Ally`'s team (`ACrossguardPlayerState::SetTeamId`). PIE clients log in without `?Party=`, each on a team of its own. |
+| `C.HasSkill(Character, SkillId)` | A non-passive skill is granted; on a client pawn, once its spec has replicated. |
+| `Scenario.WaitUntilOnClient(i, Name, Timeout, [](FScenarioContext& C, UWorld& ClientWorld) { ... }, Poll = 0)` | `WaitUntil` for a client-side condition (named `[client i] ...` in the log); fails at once if that world is gone. |
+
+Rules of thumb:
+
+- Replication is asynchronous: never read a client right after a server-side change; poll with
+  `WaitUntilOnClient` (in one process it usually takes a frame or two; allow 5 s).
+- The listen host sees everything (`IsNetRelevantFor` filters connections only). Relevancy tests
+  use a dedicated server, every player a remote client.
+- Activate a `LocalPredicted` skill on the **client** pawn (`C.ActivateSkill(C.ClientPawn(i), ...)`),
+  as the player would; the server refuses it for a pawn that is not local there. Wait for
+  `C.HasSkill` on the client pawn first (the spec replicates).
+- Client-side requests go through the client pawn's components (`C.ClientPawn(i)->GetInventoryComponent()->RequestTakeFromContainer(...)`
+  sends the server RPC); server-side helpers (`OpenLootContainer`, `Equip`) go through `ServerPawnOf`.
+- `GEditor->PlayWorld` is not the server once there are several instances (the editor leaves it on
+  the last one it ticked); the framework uses PIE instance 0.
+- Each instance gets a 1280 × 720 window (nothing is drawn under `-nullrhi`).
+
 ### API reference (`CrossguardScenario.h`)
 
 `FScenario` (built in `RunTest`):
@@ -523,7 +576,9 @@ Keep file-local helpers and constants in a uniquely named namespace (unity build
 | `Wait(Seconds)` | Waits game seconds. |
 | `WaitUntil(Name, TimeoutSeconds, [](FScenarioContext& C) { return Done; }, PollSeconds = 0)` | Polls every frame (or every `PollSeconds`) until true; fails after the timeout. The condition may act (attack until dead). |
 | `WaitWatching(Name, Seconds, [](FScenarioContext& C) { ... })` | Waits `Seconds` game seconds, calling the lambda every frame (count Health drops, top up, act). Never fails on its own: unlike `WaitUntil` it just ends after `Seconds`. |
+| `WaitUntilOnClient(i, Name, TimeoutSeconds, [](FScenarioContext& C, UWorld& ClientWorld) { return Done; }, PollSeconds = 0)` | `WaitUntil` on a client's world ([Networked scenarios](#networked-scenarios)). |
 | `TimeDilation(X)`, `Timeout(RealSeconds)`, `Raid(bool)`, `KeepDebugLoadout()` | Options: global time dilation from the start (1); real-time limit for the steps (180); game mode `bIsRaid` (true); keep the character Blueprint's Debug loadout on spawned characters. |
+| `Clients(N, bDedicatedServer = false)` | Option: networked PIE, a listen server (host = client 0) and N − 1 clients, or a dedicated server and N clients. |
 | `Run()` | Queues it. Last call in `RunTest`, once. |
 
 `FScenarioContext` (`C` in steps):
@@ -545,7 +600,8 @@ Keep file-local helpers and constants in a uniquely named namespace (unity build
 | | `GrantSkills(Character, {TEXT("fireball"), ...})` | The loadout, as `DebugSkills` does (learned first, checked against Skill Capacity; when over capacity the level is raised, with debug progression, up to 15 until it fits); native classes on the ability system when the LoadoutComponent has no Skill Catalog. |
 | Acting | `Face(Character, Yaw)`, `Aim(Character, Target)`, `AimAt(Character, Point)` | Level turn; aim from the eyes at the target's centre (pitch included) for aimed skills and swings. AI-controlled characters keep only the yaw. The camera lags: wait 0.2 s after `Face`/`Aim` before an aimed skill, swing or guard. |
 | | `BasicAttack(Character)`, `RaiseGuard(Character)`, `LowerGuard(Character)` | Left click (false while the last attack recovers); right click held / released. |
-| | `ActivateSkill(Character, SkillId)`, `IsOnCooldown(Character, SkillId)` | Activates a granted active skill (as E); its `CooldownTags` are on. |
+| | `ActivateSkill(Character, SkillId)`, `IsOnCooldown(Character, SkillId)`, `HasSkill(Character, SkillId)` | Activates a granted active skill (as E); its `CooldownTags` are on; it is granted. |
+| Net | `ClientCount()`, `ClientWorld(i)`, `ClientPawn(i)`, `ClientController(i)`, `ServerPawnOf(i)`, `ServerControllerOf(i)`, `OnClient<T>(ServerActor, i)`, `MakeAllies(Player, Ally)` | Networked scenarios only: see [Networked scenarios](#networked-scenarios). |
 | | `SetHealth(A, Value)`, `ApplyStatus(A, CrossguardTags::State_Silenced, Seconds)` | Health base value; a status through `UCrossguardSkillAbility::ApplyStatus` (self-applied, so CC immunity still counts). |
 | | `Kill(Victim, Killer = nullptr)` | Lethal damage through the damage effect: death, body and kill XP as in play. |
 | | `Damage(Source, Victim, Attack, Magic = 0)` | One hit of these base amounts through the damage effect (as `Kill`): stats and the victim's damage reactions apply (a monster turns on `Source`), guards do not. No Source: the victim's own. Returns the Health it took off. |
@@ -558,21 +614,33 @@ Keep file-local helpers and constants in a uniquely named namespace (unity build
 | Game | `SetRaid(bool)`, `SetTimeDilation(X)` | `bIsRaid` (and begins / ends every player's raid); global time dilation. |
 | Log | `LogContains(Text)`, `LogCount(Text)`, `LogLines()`, `ClearLog()` | The captured log. |
 
-### Scenario framework: engine calls to check first
+### Scenario framework: engine calls (UE 5.8, verified)
 
-The framework was written without an engine to compile against. If the scenario tests do not build
-or misbehave on a real build, these are the calls to check, most likely first:
+The framework was written without an engine; it first built and ran green on UE 5.8 on 2026-10-15
+([first-compile-triage.md](first-compile-triage.md) has the fixes). What it leans on, and what 5.8
+needed:
 
-1. PIE start (`CrossguardScenario.cpp`, `BeginScenario`): `FRequestPlaySessionParams` (header
-   `PlayInEditorDataTypes.h`) and its `EditorPlaySettings` field; `ULevelEditorPlaySettings::
-   SetPlayNetMode(EPlayNetMode::PIE_Standalone)`, `SetPlayNumberOfClients`, `SetRunUnderOneProcess`;
-   `GEditor->RequestPlaySession`. Headless (`-nullrhi`), PIE opens without a viewport: if "PIE did not
-   start" appears, this is the place.
-2. `FAutomationEditorCommonUtils::CreateNewMap()` (`Tests/AutomationEditorCommon.h`, UnrealEd).
-3. `IAssetRegistry::GetDerivedClassNames` with `FTopLevelAssetPath` (UE 5.1+ signature).
-4. Extra players: a PlayerController spawned with `SpawnActor` (no `UPlayer`), then
-   `ACrossguardGameMode::InitNewPlayer`, `APlayerController::SetPawn`,
-   `ACrossguardGameMode::HandleStartingNewPlayer_Implementation` → `RestartPlayer`. In standalone
-   `IsLocalController()` is true for it, which GAS needs to activate locally predicted abilities; the
-   engine creates its `PlayerInput` on first tick.
-5. The log listener (`GLog->AddOutputDevice`, `FOutputDevice::CanBeUsedOnAnyThread`).
+1. PIE start (`CrossguardScenario.cpp`, `BeginScenario`): `FRequestPlaySessionParams.EditorPlaySettings`;
+   `ULevelEditorPlaySettings::SetPlayNetMode` (`PIE_Standalone`, `PIE_ListenServer`, `PIE_Client` =
+   dedicated server when `bLaunchSeparateServer` is false), `SetPlayNumberOfClients`,
+   `SetRunUnderOneProcess`, `NewWindowWidth/Height`, `SetClientWindowSize`; `GEditor->RequestPlaySession`.
+   Works headless, several instances included (`PlayLevel.cpp`: instance 0 is the standalone / listen
+   host / dedicated server, the rest clients).
+2. Worlds: `GEditor->GetPIEWorldContext(Instance)` and `FWorldContext::RunAsDedicated`.
+   `GEditor->PlayWorld` is only used to see whether any PIE session exists: after the editor's PIE
+   tick loop it points at the last instance ticked.
+3. Client copies: `UNetDriver::GetNetGuidCache()`, `FNetGUIDCache::GetNetGUID` / `GetObjectFromNetGUID`.
+   An unsaved world is not "name stable", so its level cannot be addressed (every spawn warns
+   `PersistentLevel NOT Supported`); the test map's world gets `RF_WasLoaded` (assumed harmless for a
+   throwaway map; `UWorld::bIsNameStableForNetworking` is private).
+4. Extra players (`SpawnPlayer`): a PlayerController spawned with `SpawnActor` (no `UPlayer`), then
+   `SetAsLocalPlayerController` (5.8: without a net driver a controller is local only with a
+   `ULocalPlayer`, and GAS refuses `LocalPredicted` abilities for a non-local one),
+   `ACrossguardGameMode::InitNewPlayer`, `SetPawn`, `HandleStartingNewPlayer_Implementation` →
+   `RestartPlayer`. PIE clients' players match server and client by `APlayerState::GetPlayerId`.
+5. The log listener: `FOutputDevice::CanBeUsedOnMultipleThreads` must be true, or GLog buffers the
+   lines for its own thread and the test reads nothing.
+6. `USceneComponent::IsVisible()` is false while `bHiddenInGame` (always, for a capsule): read
+   `GetVisibleFlag()`.
+7. `FAutomationEditorCommonUtils::CreateNewMap()` and `IAssetRegistry::GetDerivedClassNames`
+   (`FTopLevelAssetPath`) work as written.

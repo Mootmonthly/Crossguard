@@ -18,16 +18,32 @@
 #include "AbilitySystemGlobals.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"
+#include "Camera/CameraActor.h"
 #include "Character/CrossguardAICharacter.h"
 #include "Character/CrossguardCharacter.h"
 #include "Character/CrossguardMinion.h"
 #include "Character/CrossguardMinionController.h"
 #include "Character/CrossguardMonster.h"
 #include "Character/CrossguardMonsterController.h"
+#include "Components/DirectionalLightComponent.h"
+#include "Components/SkyAtmosphereComponent.h"
+#include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "CrossguardRules/Combat.h"
+#include "Engine/DirectionalLight.h"
+#include "Engine/SkyLight.h"
 #include "Editor.h"
 #include "Engine/CollisionProfile.h"
+#include "Engine/Engine.h"
+#include "Engine/GameViewportClient.h"
+#include "Engine/LocalPlayer.h"
+#include "HAL/FileManager.h"
+#include "ImageUtils.h"
+#include "Misc/App.h"
+#include "Misc/Paths.h"
+#include "Slate/SceneViewport.h"
+#include "Engine/NetDriver.h"
+#include "Engine/PackageMapClient.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Game/CrossguardGameMode.h"
@@ -237,6 +253,125 @@ namespace CrossguardScenario
 	{
 		const UWorld* PlayWorld = World();
 		return PlayWorld != nullptr ? PlayWorld->GetTimeSeconds() : 0.0f;
+	}
+
+	// --- Networked -------------------------------------------------------------------------------
+
+	UWorld* FScenarioContext::ClientWorld(int32 Index) const
+	{
+		if (Index < 0 || Index >= NumClients || GEditor == nullptr)
+		{
+			return nullptr;
+		}
+		const FWorldContext* Context = GEditor->GetPIEWorldContext(FirstClientInstance + Index);
+		return Context != nullptr && !Context->RunAsDedicated ? Context->World() : nullptr;
+	}
+
+	APlayerController* FScenarioContext::ClientController(int32 Index) const
+	{
+		UWorld* Client = ClientWorld(Index);
+		if (Client == nullptr)
+		{
+			return nullptr;
+		}
+		// The listen host's world is the server world, with the remote players' controllers too: its own
+		// is the one with a local player.
+		for (FConstPlayerControllerIterator It = Client->GetPlayerControllerIterator(); It; ++It)
+		{
+			APlayerController* Controller = It->Get();
+			if (Controller != nullptr && Cast<ULocalPlayer>(Controller->Player) != nullptr)
+			{
+				return Controller;
+			}
+		}
+		return nullptr;
+	}
+
+	ACrossguardCharacter* FScenarioContext::ClientPawn(int32 Index) const
+	{
+		const APlayerController* Controller = ClientController(Index);
+		return Controller != nullptr ? Cast<ACrossguardCharacter>(Controller->GetPawn()) : nullptr;
+	}
+
+	APlayerController* FScenarioContext::ServerControllerOf(int32 Index) const
+	{
+		UWorld* Server = World();
+		const APlayerController* ClientSide = ClientController(Index);
+		if (Server == nullptr || ClientSide == nullptr)
+		{
+			return nullptr;
+		}
+		if (ClientSide->GetWorld() == Server)
+		{
+			return const_cast<APlayerController*>(ClientSide);
+		}
+		// The PlayerState's PlayerId is replicated and unique per login.
+		const APlayerState* ClientState = ClientSide->PlayerState;
+		if (ClientState == nullptr)
+		{
+			return nullptr;
+		}
+		for (FConstPlayerControllerIterator It = Server->GetPlayerControllerIterator(); It; ++It)
+		{
+			APlayerController* Controller = It->Get();
+			if (Controller != nullptr && Controller->PlayerState != nullptr && Controller->PlayerState->GetPlayerId() == ClientState->GetPlayerId())
+			{
+				return Controller;
+			}
+		}
+		return nullptr;
+	}
+
+	ACrossguardCharacter* FScenarioContext::ServerPawnOf(int32 Index) const
+	{
+		const APlayerController* Controller = ServerControllerOf(Index);
+		return Controller != nullptr ? Cast<ACrossguardCharacter>(Controller->GetPawn()) : nullptr;
+	}
+
+	AActor* FScenarioContext::OnClient(const AActor* ServerActor, int32 Index) const
+	{
+		UWorld* Server = World();
+		UWorld* Client = ClientWorld(Index);
+		if (ServerActor == nullptr || Server == nullptr || Client == nullptr)
+		{
+			return nullptr;
+		}
+		if (Client == Server)
+		{
+			return const_cast<AActor*>(ServerActor);
+		}
+		// The server assigns every replicated actor a net GUID that the client's cache shares (UE 5.8:
+		// UNetDriver::GetNetGuidCache, FNetGUIDCache::GetNetGUID / GetObjectFromNetGUID).
+		const UNetDriver* ServerDriver = Server->GetNetDriver();
+		const UNetDriver* ClientDriver = Client->GetNetDriver();
+		if (ServerDriver == nullptr || ClientDriver == nullptr || !ServerDriver->GetNetGuidCache().IsValid() || !ClientDriver->GetNetGuidCache().IsValid())
+		{
+			return nullptr;
+		}
+		const FNetworkGUID Guid = ServerDriver->GetNetGuidCache()->GetNetGUID(ServerActor);
+		if (!Guid.IsValid())
+		{
+			return nullptr;
+		}
+		AActor* Copy = Cast<AActor>(ClientDriver->GetNetGuidCache()->GetObjectFromNetGUID(Guid, true));
+		return IsValid(Copy) && Copy->GetWorld() == Client ? Copy : nullptr;
+	}
+
+	void FScenarioContext::MakeAllies(ACrossguardCharacter* Player, const ACrossguardCharacter* Ally)
+	{
+		ACrossguardPlayerState* PlayerSide = PlayerState(Player);
+		const ACrossguardPlayerState* AllySide = PlayerState(Ally);
+		if (PlayerSide == nullptr || AllySide == nullptr || AllySide->GetTeamId() < 0)
+		{
+			Fail(TEXT("MakeAllies: both need a player state with a team"));
+			return;
+		}
+		PlayerSide->SetTeamId(AllySide->GetTeamId());
+	}
+
+	bool FScenarioContext::HasSkill(const ACrossguardCharacter* Character, FName SkillId) const
+	{
+		return CrossguardScenarioLocal::FindSkillSpec(CrossguardScenarioLocal::FindASC(Character), SkillId) != nullptr;
 	}
 
 	void FScenarioContext::Fail(const FString& Why)
@@ -952,6 +1087,93 @@ namespace CrossguardScenario
 		}
 	}
 
+	// --- Screenshots ------------------------------------------------------------------------------
+
+	void FScenarioContext::LookFrom(const FVector& Eye, const FVector& LookAt, int32 ClientIndex)
+	{
+		UWorld* Target = ClientIndex < 0 ? World() : ClientWorld(ClientIndex);
+		APlayerController* Controller = ClientIndex < 0 ? (Target != nullptr ? Target->GetFirstPlayerController() : nullptr) : ClientController(ClientIndex);
+		if (Target == nullptr || Controller == nullptr)
+		{
+			Fail(FString::Printf(TEXT("LookFrom: no world or local player controller for viewport %d"), ClientIndex));
+			return;
+		}
+		const FRotator Facing = (LookAt - Eye).Rotation();
+		ACameraActor* Camera = Cameras.FindRef(ClientIndex).Get();
+		if (Camera == nullptr)
+		{
+			FActorSpawnParameters Params;
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			Params.ObjectFlags |= RF_Transient;
+			Camera = Target->SpawnActor<ACameraActor>(ACameraActor::StaticClass(), Eye, Facing, Params);
+			if (Camera == nullptr)
+			{
+				Fail(TEXT("LookFrom: could not spawn a camera"));
+				return;
+			}
+			Cameras.Add(ClientIndex, Camera);
+		}
+		Camera->SetActorLocationAndRotation(Eye, Facing);
+		Controller->SetViewTarget(Camera);
+	}
+
+	void FScenarioContext::KeepCameras()
+	{
+		// The engine puts the view back on the pawn after some events (possession, restart, the game
+		// mode's own SetViewTargetWithBlend); every frame, a LookFrom camera takes it back.
+		for (const TPair<int32, TWeakObjectPtr<ACameraActor>>& Entry : Cameras)
+		{
+			ACameraActor* Camera = Entry.Value.Get();
+			UWorld* Target = Entry.Key < 0 ? World() : ClientWorld(Entry.Key);
+			APlayerController* Controller = Entry.Key < 0 ? (Target != nullptr ? Target->GetFirstPlayerController() : nullptr) : ClientController(Entry.Key);
+			if (Camera != nullptr && Controller != nullptr && Controller->GetViewTarget() != Camera)
+			{
+				Controller->SetViewTarget(Camera);
+			}
+		}
+	}
+
+	bool FScenarioContext::Screenshot(const FString& Name, int32 ClientIndex)
+	{
+		if (!FApp::CanEverRender())
+		{
+			Test.AddError(FString::Printf(TEXT("Screenshot '%s': the editor cannot render (-nullrhi); run Tools\\run_editor_tests.bat -Visual"), *Name));
+			return false;
+		}
+		UWorld* Target = ClientIndex < 0 ? World() : ClientWorld(ClientIndex);
+		UGameViewportClient* ViewportClient = Target != nullptr ? Target->GetGameViewport() : nullptr;
+		FSceneViewport* Viewport = ViewportClient != nullptr ? ViewportClient->Viewport : nullptr;
+		const FIntPoint Size = Viewport != nullptr ? Viewport->GetSizeXY() : FIntPoint::ZeroValue;
+		if (Viewport == nullptr || Size.X <= 0 || Size.Y <= 0)
+		{
+			Test.AddError(FString::Printf(TEXT("Screenshot '%s': %s has no game viewport"), *Name, ClientIndex < 0 ? TEXT("the server world") : *FString::Printf(TEXT("client %d"), ClientIndex)));
+			return false;
+		}
+		// ReadPixels flushes rendering and reads the viewport's back buffer: what the last frame drew.
+		TArray<FColor> Pixels;
+		if (!Viewport->ReadPixels(Pixels) || Pixels.Num() != Size.X * Size.Y)
+		{
+			Test.AddError(FString::Printf(TEXT("Screenshot '%s': ReadPixels failed (%d pixels for %d x %d)"), *Name, Pixels.Num(), Size.X, Size.Y));
+			return false;
+		}
+		for (FColor& Pixel : Pixels)
+		{
+			Pixel.A = 255;
+		}
+		FString Folder = Test.GetBeautifiedTestName();
+		Folder.RemoveFromStart(TEXT("Crossguard.Visual."));
+		const FString Directory = FPaths::ProjectSavedDir() / TEXT("EditorTests") / TEXT("Screenshots") / Folder;
+		IFileManager::Get().MakeDirectory(*Directory, true);
+		const FString Path = Directory / Name + TEXT(".png");
+		if (!FImageUtils::SaveImageByExtension(*Path, FImageView(Pixels.GetData(), Size.X, Size.Y, EGammaSpace::sRGB)))
+		{
+			Test.AddError(FString::Printf(TEXT("Screenshot '%s': could not write %s"), *Name, *Path));
+			return false;
+		}
+		Test.AddInfo(FString::Printf(TEXT("Screenshot: %s (%d x %d)"), *FPaths::ConvertRelativePathToFull(Path), Size.X, Size.Y));
+		return true;
+	}
+
 	// --- Log --------------------------------------------------------------------------------------
 
 	bool FScenarioContext::LogContains(const FString& Text) const
@@ -998,9 +1220,13 @@ namespace CrossguardScenario
 			, Dilation(Scenario.Dilation)
 			, TimeoutSeconds(Scenario.TimeoutSeconds)
 			, bRaid(Scenario.bRaid)
+			, NumClients(Scenario.NumClients)
+			, bDedicatedServer(Scenario.bDedicatedServer)
 			, Context(Scenario.Test)
 		{
 			Context.bKeepDebugLoadout = Scenario.bKeepDebugLoadout;
+			Context.NumClients = NumClients;
+			Context.FirstClientInstance = bDedicatedServer ? 1 : 0;
 		}
 
 		~FScenarioRunner()
@@ -1115,9 +1341,23 @@ namespace CrossguardScenario
 			FRequestPlaySessionParams Params;
 			Params.WorldType = EPlaySessionWorldType::PlayInEditor;
 			PlaySettings.Reset(NewObject<ULevelEditorPlaySettings>(GetTransientPackage()));
-			PlaySettings->SetPlayNetMode(EPlayNetMode::PIE_Standalone);
-			PlaySettings->SetPlayNumberOfClients(1);
+			if (NumClients > 0)
+			{
+				// One process (UE 5.8 PlayLevel.cpp): listen server = instance 0 is the host, 1..N-1 the
+				// clients; PIE_Client = instance 0 a dedicated server (RunAsDedicated), 1..N the clients.
+				PlaySettings->SetPlayNetMode(bDedicatedServer ? EPlayNetMode::PIE_Client : EPlayNetMode::PIE_ListenServer);
+				PlaySettings->SetPlayNumberOfClients(NumClients);
+			}
+			else
+			{
+				PlaySettings->SetPlayNetMode(EPlayNetMode::PIE_Standalone);
+				PlaySettings->SetPlayNumberOfClients(1);
+			}
 			PlaySettings->SetRunUnderOneProcess(true);
+			PlaySettings->bLaunchSeparateServer = false;
+			PlaySettings->NewWindowWidth = 1280;
+			PlaySettings->NewWindowHeight = 720;
+			PlaySettings->SetClientWindowSize(FIntPoint(1280, 720));
 			Params.EditorPlaySettings = PlaySettings.Get();
 			GEditor->RequestPlaySession(Params);
 			SetPhase(EPhase::WaitForPIE);
@@ -1164,6 +1404,15 @@ namespace CrossguardScenario
 		// A floor to stand on and a Player Start for the PIE player, out of the way.
 		void BuildTestMap(UWorld& EditorWorld)
 		{
+			// Networked PIE: the net GUID cache only addresses a level whose outers are "name stable", which
+			// a loaded map is through RF_WasLoaded. This map was never saved, so give its world and level the
+			// flag (PIE's duplicate copies it); otherwise every spawn warns "PersistentLevel NOT Supported".
+			EditorWorld.SetFlags(RF_WasLoaded);
+			if (EditorWorld.PersistentLevel != nullptr)
+			{
+				EditorWorld.PersistentLevel->SetFlags(RF_WasLoaded);
+			}
+
 			FActorSpawnParameters Params;
 			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
@@ -1182,6 +1431,8 @@ namespace CrossguardScenario
 				{
 					Floor->GetStaticMeshComponent()->SetStaticMesh(Cube);
 					Floor->GetStaticMeshComponent()->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+					// Visual run: a 200x scaled cube shadows its own top (acne) and goes black; it needs no shadow.
+					Floor->GetStaticMeshComponent()->SetCastShadow(false);
 				}
 				else
 				{
@@ -1193,12 +1444,65 @@ namespace CrossguardScenario
 			{
 				Test.AddWarning(TEXT("Scenario set-up: could not spawn a Player Start; the PIE player spawns at the origin"));
 			}
+
+			// Light, for the visual run (nothing is drawn headless): a movable sun, a sky and a sky light,
+			// as a new default level has, so nothing needs building.
+			if (FApp::CanEverRender())
+			{
+				ADirectionalLight* Sun = EditorWorld.SpawnActor<ADirectionalLight>(ADirectionalLight::StaticClass(),
+					FTransform(FRotator(-45.0f, 30.0f, 0.0f), FVector(0.0f, 0.0f, 500.0f)), Params);
+				if (Sun != nullptr && Sun->GetLightComponent() != nullptr)
+				{
+					Sun->GetLightComponent()->SetMobility(EComponentMobility::Movable);
+					Sun->GetLightComponent()->SetIntensity(5.0f);
+				}
+				EditorWorld.SpawnActor<ASkyAtmosphere>(ASkyAtmosphere::StaticClass(), FTransform::Identity, Params);
+				ASkyLight* Sky = EditorWorld.SpawnActor<ASkyLight>(ASkyLight::StaticClass(), FTransform(FVector(0.0f, 0.0f, 500.0f)), Params);
+				if (Sky != nullptr && Sky->GetLightComponent() != nullptr)
+				{
+					Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable);
+					Sky->GetLightComponent()->bRealTimeCapture = true;
+				}
+			}
+		}
+
+		// The server world: PIE instance 0 (standalone, listen host or dedicated server). Not
+		// GEditor->PlayWorld: after the editor's PIE tick loop that is left on the last instance ticked.
+		static UWorld* ServerPlayWorld()
+		{
+			const FWorldContext* Context = GEditor != nullptr ? GEditor->GetPIEWorldContext(0) : nullptr;
+			return Context != nullptr ? Context->World() : nullptr;
+		}
+
+		// Networked: every client world is up with its own logged-in player and pawn, which the server
+		// also knows (so steps can use ServerPawnOf / ClientPawn at once).
+		bool ClientsReady(UWorld& PlayWorld)
+		{
+			if (NumClients == 0)
+			{
+				return true;
+			}
+			const AGameStateBase* GameState = PlayWorld.GetGameState();
+			if (GameState == nullptr || GameState->PlayerArray.Num() < NumClients)
+			{
+				return false;
+			}
+			Context.WorldPtr = &PlayWorld;
+			for (int32 Index = 0; Index < NumClients; ++Index)
+			{
+				const UWorld* Client = Context.ClientWorld(Index);
+				if (Client == nullptr || !Client->HasBegunPlay() || Context.ClientPawn(Index) == nullptr || Context.ServerPawnOf(Index) == nullptr)
+				{
+					return false;
+				}
+			}
+			return true;
 		}
 
 		bool WaitForPIE()
 		{
-			UWorld* PlayWorld = GEditor->PlayWorld;
-			if (PlayWorld != nullptr && PlayWorld->HasBegunPlay() && PlayWorld->GetAuthGameMode() != nullptr)
+			UWorld* PlayWorld = ServerPlayWorld();
+			if (PlayWorld != nullptr && PlayWorld->HasBegunPlay() && PlayWorld->GetAuthGameMode() != nullptr && ClientsReady(*PlayWorld))
 			{
 				PlaySettings.Reset();
 				return OnPIEReady(*PlayWorld);
@@ -1245,6 +1549,15 @@ namespace CrossguardScenario
 			{
 				Context.Remember(TEXT("LocalPlayer"), Local);
 			}
+			for (int32 Index = 0; Index < NumClients; ++Index)
+			{
+				Context.Remember(FName(*FString::Printf(TEXT("Client%d"), Index)), Context.ServerPawnOf(Index));
+				Context.Remember(FName(*FString::Printf(TEXT("Client%d.Controller"), Index)), Context.ServerControllerOf(Index));
+			}
+			if (NumClients > 0)
+			{
+				Test.AddInfo(FString::Printf(TEXT("Networked: %s, %d client(s) logged in"), bDedicatedServer ? TEXT("dedicated server") : TEXT("listen server"), NumClients));
+			}
 			StepsStarted = FPlatformTime::Seconds();
 			SetPhase(EPhase::Steps);
 			return false;
@@ -1253,7 +1566,7 @@ namespace CrossguardScenario
 		bool RunSteps()
 		{
 			UWorld* PlayWorld = Context.World();
-			if (PlayWorld == nullptr || GEditor->PlayWorld != PlayWorld)
+			if (PlayWorld == nullptr || ServerPlayWorld() != PlayWorld)
 			{
 				Test.AddError(TEXT("PIE ended (or changed) while the scenario was running"));
 				SetPhase(EPhase::EndPIE);
@@ -1273,6 +1586,7 @@ namespace CrossguardScenario
 				return false;
 			}
 
+			Context.KeepCameras();
 			FScenario::FItem& Item = Items[ItemIndex];
 			const float Now = Context.Now();
 			switch (Item.Kind)
@@ -1370,6 +1684,8 @@ namespace CrossguardScenario
 		float Dilation = 1.0f;
 		float TimeoutSeconds = 180.0f;
 		bool bRaid = true;
+		int32 NumClients = 0;
+		bool bDedicatedServer = false;
 
 		FScenarioContext Context;
 		TSharedPtr<FScenarioLogCapture> LogCapture;
@@ -1449,6 +1765,29 @@ namespace CrossguardScenario
 		Item.Name = Name;
 		Item.Action = MoveTemp(Watch);
 		Item.Seconds = FMath::Max(Seconds, 0.0f);
+		return *this;
+	}
+
+	FScenario& FScenario::WaitUntilOnClient(int32 Index, const FString& Name, float TimeoutGameSeconds,
+		TFunction<bool(FScenarioContext&, UWorld&)> Condition, float PollSeconds)
+	{
+		return WaitUntil(FString::Printf(TEXT("[client %d] %s"), Index, *Name), TimeoutGameSeconds,
+			[Index, Condition = MoveTemp(Condition)](FScenarioContext& C)
+			{
+				UWorld* ClientWorld = C.ClientWorld(Index);
+				if (ClientWorld == nullptr)
+				{
+					C.Fail(FString::Printf(TEXT("client %d's world is gone (not a networked scenario, or it left)"), Index));
+					return false;
+				}
+				return Condition && Condition(C, *ClientWorld);
+			}, PollSeconds);
+	}
+
+	FScenario& FScenario::Clients(int32 Count, bool bInDedicatedServer)
+	{
+		NumClients = FMath::Clamp(Count, 1, 8);
+		bDedicatedServer = bInDedicatedServer;
 		return *this;
 	}
 

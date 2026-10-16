@@ -87,9 +87,13 @@ Left as they are, with the reason:
   and end call `ForceNetUpdate`. Open points for the play test:
   - The net driver keeps replicating an actor for `RelevantTimeout` (engine default 5 s) after
     its last relevant check, so the position can still reach enemies for the first ~5 s of a 12 s
-    stealth. If the play test confirms it, lower `RelevantTimeout` in `DefaultEngine.ini`
-    (`[/Script/OnlineSubsystemUtils.IpNetDriver]`; it applies to every actor) or close the channel
-    on stealth start.
+    stealth. **Confirmed** (2026-10-16, UE 5.8, `Crossguard.Net.StealthHidesFromEnemyClient` on a
+    dedicated PIE server): the enemy client drops the stealthed character 4.3–4.5 s after
+    `State.Stealthed` appears, and gets it back cleanly when stealth ends. Two fixes, the owner's
+    choice (none applied): lower `RelevantTimeout` in `DefaultEngine.ini`
+    (`[/Script/OnlineSubsystemUtils.IpNetDriver]`; it applies to every actor, so far-away actors
+    also drop sooner) or close the enemy connections' actor channel on stealth start (targeted,
+    more code). The test logs the measured time as `STEALTH LEAK: ... s` and only fails above 6 s.
   - Only the classic net driver calls `IsNetRelevantFor`. If the project turns on Iris or a
     Replication Graph, this needs a filter there instead.
   - A listen-server host sees everything (no connection to filter); only remote clients are
