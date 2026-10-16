@@ -385,6 +385,7 @@ bool FCrossguardScenarioTeamReturnNoHub::RunTest(const FString& Parameters)
 		C.Test.TestTrue(TEXT("Log: no hub server"), C.LogContains(TEXT("goes to the menu (no hub server)")));
 		C.Test.TestFalse(TEXT("No whole-server return"), Mode->IsHubReturnPending() || Mode->HasHubReturnStarted());
 		C.Test.TestFalse(TEXT("The menu says why"), ACrossguardMenuGameMode::ReasonMessage(ACrossguardMenuGameMode::NoHubReason).IsEmpty());
+		C.Test.TestFalse(TEXT("The PIE player still raids: the match is not over"), Mode->IsMatchOver());
 	});
 
 	Scenario.Run();

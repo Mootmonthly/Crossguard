@@ -426,6 +426,7 @@ nothing built or run.
 | TR10 | `Game/CrossguardDevMode.cpp` | `TWeakObjectPtr<const UWorld>` at namespace scope; `UWorld::WorldType == EWorldType::PIE`; `FParse::Param(FCommandLine::Get(), TEXT("DevListenHub"))` | A static `TWeakObjectPtr` before UObject init is fine (empty). In Shipping `World` is unused (C4100 is off in UE). | `#include "UObject/WeakObjectPtr.h"`. |
 | TR11 | `Game/CrossguardMatchmaking.h` | Plain C++ `ICrossguardMatchmaking` / `FCrossguardNoMatchmaking` / `FCrossguardDevMatchmaking` before a `UCLASS` in one header; `TSharedPtr<ICrossguardMatchmaking>` member of a `UGameInstanceSubsystem` (not a `UPROPERTY`) | UHT ignores plain classes. Unused parameters in inline overrides. | Move the plain classes to their own header if UHT complains. |
 | TR12 | Tests `PartyRaidLaunchPlan`, `NoHubServerToMenu` | `MakeShared<FPartyTestMatchmaking>()` into `SetMatchmaking(TSharedPtr<ICrossguardMatchmaking>)`; `SetDevListenModeOverrideForTests(World, false)` (bool → `TOptional<bool>`) | Implicit conversions assumed. | `TSharedPtr<ICrossguardMatchmaking>(MakeShared<...>())`; `TOptional<bool>(false)`. |
+| TR13 | `CrossguardGameMode.cpp` `ExitForMatchOver` / `CloseRaidForTime` | `FPlatformMisc::RequestExit(false)`; `DECLARE_MULTICAST_DELEGATE(FCrossguardMatchOver)` member; `if (init; cond)` with a `Cast` in the init | `RequestExit` may want a call-site string in 5.8 (deprecation warning only). | `FPlatformMisc::RequestExitWithStatus(false, 0)`. |
 
 ### Art hooks (`Crossguard.Scenario.Art.*`)
 

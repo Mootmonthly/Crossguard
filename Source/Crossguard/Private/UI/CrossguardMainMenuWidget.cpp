@@ -260,7 +260,8 @@ void UCrossguardMainMenuWidget::Join()
 		return;
 	}
 	ShowStatus(FString::Printf(TEXT("Connecting to %s..."), *Url), Success);
-	TravelTo(Url);
+	// Development builds: the server keeps this machine's player id (-CrossguardPlayerId=).
+	TravelTo(ACrossguardMenuGameMode::WithLocalDevPlayerId(Url));
 }
 
 void UCrossguardMainMenuWidget::ToggleSettings()

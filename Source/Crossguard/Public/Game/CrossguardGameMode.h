@@ -15,6 +15,9 @@ class APlayerController;
 class UCrossguardSkillCatalog;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCrossguardPlayerExtracted, ACrossguardCharacter*, Character);
+// The match on this match server is over (ACrossguardGameMode::IsMatchOver): the hook for the host
+// (GameLift's ProcessEnding, later).
+DECLARE_MULTICAST_DELEGATE(FCrossguardMatchOver);
 
 // A raider whose connection closed mid-raid: their character waits in the world for them to log in
 // again (ACrossguardGameMode::HoldForReconnect).
@@ -149,6 +152,10 @@ public:
 	// Development builds only, and only on a server started with -AllowDevPlayerIds (or in automation
 	// tests): it is the client's word.
 	static const TCHAR* DevPlayerIdOption;
+	// Development builds: Url plus "?DevPlayerId=<name>" for a "dev-<name>" DevPlayerId, so the next
+	// server (match or hub) keeps the player id and their save. Url unchanged in Shipping, without a
+	// development id, or when Url is empty.
+	static FString WithDevPlayerId(const FString& Url, const FString& DevPlayerId);
 
 	// After a successful extraction (the trip back to the hub: UpdateHubReturn).
 	UPROPERTY(BlueprintAssignable, Category = "Crossguard")
@@ -248,6 +255,32 @@ public:
 	static FString BuildTeamHubJoinUrl(const FString& Address, const FString& Party);
 
 	virtual void StartPlay() override;
+
+	// --- Match lifecycle (docs/dedicated-server-plan.md, C6). Server. ---
+	//
+	// Assumed (coordinator's decision, placeholder): one match per match-server process. The match is
+	// over once every player has left the raid map's play (all teams gone to the hub or the menu) or
+	// MaxRaidDurationSeconds ran out; then OnMatchOver fires and a dedicated server process exits
+	// cleanly (after MatchOverExitDelaySeconds) so the fleet starts a fresh one. Never in development
+	// listen mode (the whole server travels back instead), the editor, automation tests, or with
+	// -KeepMatchServer on the command line (the local cluster).
+
+	// Seconds a raid may last before it closes: raiders still in it fail it (Assumed: as a death for the
+	// raid), held raiders are released, and every team goes back. Not in development listen mode.
+	// Placeholder.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Match", meta = (ClampMin = "0"))
+	float MaxRaidDurationSeconds = 3600.0f;
+
+	// Seconds between the match being over and the process exiting (the last clients' travel).
+	// Placeholder.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard|Match", meta = (ClampMin = "0"))
+	float MatchOverExitDelaySeconds = 5.0f;
+
+	bool IsMatchOver() const { return bMatchOver; }
+	FCrossguardMatchOver OnMatchOver;
+
+	// Server. The raid's time limit: closes the raid (see MaxRaidDurationSeconds).
+	void CloseRaidForTime();
 
 	// Seconds into the raid before extract portals can be summoned. Lower it to test.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Crossguard", meta = (ClampMin = "0"))
@@ -369,6 +402,15 @@ private:
 	TSet<FString> FinishedPlayerIds;
 	// During Login of this process's own player (a ULocalPlayer: standalone, listen-server host).
 	bool bLoggingInLocalPlayer = false;
+
+	// Marks the match over when nobody is left in its play (see IsMatchOver), then requests the exit.
+	void CheckMatchOver();
+	// A dedicated match server that may exit when its match is over.
+	bool ShouldExitWhenMatchOver() const;
+	void ExitForMatchOver();
+	FTimerHandle MatchTimeLimitTimer;
+	FTimerHandle MatchOverExitTimer;
+	bool bMatchOver = false;
 
 	// Players finished with the raid go somewhere: false only in development mode with no hub map and
 	// no hub server (they stay, as before; the dead with nobody to watch go to the menu).

@@ -693,6 +693,13 @@ Everything here is cosmetic: no rule depends on it.
 - Raid size: start at **48 players per raid** (about 12–16 teams) and scale back if performance or
   pacing needs it. The owner notes this is ambitious (comparable games struggle at about 18).
 - Launch region: **US East (N. Virginia, us-east-1)**.
+- **Assumed (coordinator, placeholders)**: one match per match-server process: once every team has
+  left, the match is over and a dedicated server exits cleanly (after **5 s**) so the host starts a
+  fresh one; a raid closes after **3600 s** (`MaxRaidDurationSeconds`): raiders still in it fail it as
+  a death for the raid, held raiders are released, teams go back. Not in development mode
+  ([dedicated-server-plan.md](dedicated-server-plan.md) C6).
+- **Assumed**: the development fake matchmaking (`-RaidServer=`) and `?DevPlayerId=` on travel URLs
+  exist in non-Shipping builds only.
 - Dedicated server tooling ([dedicated-server-plan.md](dedicated-server-plan.md)). **Assumed**: the
   committed `Crossguard.uproject` stays on the launcher engine (`EngineAssociation` 5.8) and server
   builds use a second working copy with the source engine; local cluster ports 7777 (hub) and 7778

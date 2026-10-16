@@ -106,6 +106,11 @@ L_MainMenu --(backend: not built)--> hub server --raid portal / Start raid: matc
    travel along as `?DevPlayerId=<name>`), or `ReturnToMenu`. The match server stays for the teams
    still raiding. On the hub server the key gives the team (`InitNewPlayer`); the party itself comes
    back from the backend later (not built: [parties.md](parties.md) "Back from the raid").
+   Once every team has left, the match is over (`IsMatchOver`, `OnMatchOver`) and a dedicated match
+   server exits so a fresh process takes the next match (Assumed, one match per process; not in
+   development mode, tests, or with `-KeepMatchServer`). A raid closes after `MaxRaidDurationSeconds`
+   (**3600 s, placeholder**): raiders still in it fail it, and their teams go back
+   ([dedicated-server-plan.md](dedicated-server-plan.md) C6).
 
 ## Development mode (single PC, listen server)
 

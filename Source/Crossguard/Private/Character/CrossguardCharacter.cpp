@@ -773,8 +773,9 @@ void ACrossguardCharacter::UpdateStealthVisibility()
 	if (AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Stealthed) && !(IsPlayerControlled() && IsLocallyControlled()))
 	{
 		// The local viewer: its pawn, or its player state while spectating. No local player
-		// (dedicated server): nothing to draw anyway.
-		const APlayerController* Viewer = GetWorld()->GetFirstPlayerController();
+		// (dedicated server: its first player controller is a remote client's): nothing to draw.
+		const APlayerController* FirstController = GetNetMode() == NM_DedicatedServer ? nullptr : GetWorld()->GetFirstPlayerController();
+		const APlayerController* Viewer = FirstController != nullptr && FirstController->IsLocalController() ? FirstController : nullptr;
 		const AActor* ViewerSide = Viewer == nullptr ? nullptr
 			: Viewer->GetPawn() != nullptr ? static_cast<const AActor*>(Viewer->GetPawn()) : static_cast<const AActor*>(Viewer->PlayerState.Get());
 		bHideFromViewer = ViewerSide != nullptr && !UCrossguardTeamLibrary::AreAllies(ViewerSide, this);

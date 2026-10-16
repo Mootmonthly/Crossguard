@@ -399,12 +399,13 @@ ECrossguardPartyResult UCrossguardPartySubsystem::StartRaid(ACrossguardPlayerSta
 		// own options (?Hub) must not carry over.
 		return World->ServerTravel(Url, true) ? ECrossguardPartyResult::None : ECrossguardPartyResult::TravelFailed;
 	}
-	// Each member's client connects to the match server with the ticket (development: ?Party=<id>).
+	// Each member's client connects to the match server with the ticket (development: ?Party=<id>),
+	// with their own development id in development builds.
 	for (ACrossguardPlayerState* Traveller : Travellers)
 	{
 		if (APlayerController* Controller = Cast<APlayerController>(Traveller->GetOwner()))
 		{
-			Controller->ClientTravel(Url, TRAVEL_Absolute);
+			Controller->ClientTravel(ACrossguardGameMode::WithDevPlayerId(Url, Traveller->DevPlayerId), TRAVEL_Absolute);
 		}
 	}
 	return ECrossguardPartyResult::None;

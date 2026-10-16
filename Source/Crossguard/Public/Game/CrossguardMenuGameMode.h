@@ -49,6 +49,10 @@ public:
 	// Join: the address as typed, trimmed ("192.168.1.20", "host.example:7777"). Empty if it is empty
 	// or holds spaces or URL separators ('?', '#', '/').
 	static FString BuildJoinUrl(const FString& Address);
+	// Development builds: Url plus "?DevPlayerId=<name>" from this machine's -CrossguardPlayerId=<name>
+	// (letters, digits, '-', '_'; 32 at most), so a dedicated server (no local player) keeps the
+	// player id and save. Url unchanged in Shipping, without the option, or when Url is empty.
+	static FString WithLocalDevPlayerId(const FString& Url);
 	// Back to the menu: "<MenuMap>?MenuReason=<Key>" (no option when Key is empty). Characters other
 	// than letters and digits are dropped from the key. Empty if MenuMap is empty.
 	static FString BuildMenuUrl(const FString& MenuMap, const FString& ReasonKey);

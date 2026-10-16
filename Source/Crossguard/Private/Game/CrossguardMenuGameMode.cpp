@@ -64,6 +64,28 @@ FString ACrossguardMenuGameMode::BuildJoinUrl(const FString& Address)
 	return Trimmed;
 }
 
+FString ACrossguardMenuGameMode::WithLocalDevPlayerId(const FString& Url)
+{
+#if UE_BUILD_SHIPPING
+	return Url;
+#else
+	FString Name;
+	if (Url.IsEmpty() || !FParse::Value(FCommandLine::Get(), TEXT("CrossguardPlayerId="), Name))
+	{
+		return Url;
+	}
+	FString Safe;
+	for (const TCHAR Char : Name.Left(32))
+	{
+		if ((FChar::IsAlnum(Char) && Char < 128) || Char == TEXT('-') || Char == TEXT('_'))
+		{
+			Safe.AppendChar(Char);
+		}
+	}
+	return Safe.IsEmpty() ? Url : FString::Printf(TEXT("%s?%s=%s"), *Url, ACrossguardGameMode::DevPlayerIdOption, *Safe);
+#endif
+}
+
 FString ACrossguardMenuGameMode::BuildMenuUrl(const FString& MenuMap, const FString& ReasonKey)
 {
 	const FString Map = MenuMap.TrimStartAndEnd();

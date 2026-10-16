@@ -107,6 +107,20 @@ APlayerController* ACrossguardGameMode::Login(UPlayer* NewPlayer, ENetRole InRem
 	return Super::Login(NewPlayer, InRemoteRole, Portal, Options, UniqueId, ErrorMessage);
 }
 
+FString ACrossguardGameMode::WithDevPlayerId(const FString& Url, const FString& DevPlayerId)
+{
+#if UE_BUILD_SHIPPING
+	return Url;
+#else
+	if (Url.IsEmpty() || !DevPlayerId.StartsWith(TEXT("dev-")) || DevPlayerId.Len() <= 4)
+	{
+		return Url;
+	}
+	// Honoured where the next server allows it (-AllowDevPlayerIds).
+	return FString::Printf(TEXT("%s?%s=%s"), *Url, DevPlayerIdOption, *DevPlayerId.RightChop(4));
+#endif
+}
+
 FString ACrossguardGameMode::DevPlayerIdFor(const FString& Options) const
 {
 #if UE_BUILD_SHIPPING
@@ -457,6 +471,105 @@ void ACrossguardGameMode::StartPlay()
 {
 	Super::StartPlay();
 	RaidStartSeconds = GetWorld()->GetTimeSeconds();
+	// The raid's time limit; the development listen server has none (DEV-ONLY (listen server)).
+	if (bIsRaid && MaxRaidDurationSeconds > 0.0f && !Crossguard::IsDevListenMode(GetWorld()))
+	{
+		GetWorldTimerManager().SetTimer(MatchTimeLimitTimer, this, &ACrossguardGameMode::CloseRaidForTime, MaxRaidDurationSeconds, false);
+	}
+}
+
+// --- Match lifecycle -------------------------------------------------------------------------------
+
+void ACrossguardGameMode::CloseRaidForTime()
+{
+	UWorld* World = GetWorld();
+	if (!bIsRaid || bMatchOver || bHubReturnStarted || World == nullptr || GameState == nullptr)
+	{
+		return;
+	}
+	UE_LOG(LogCrossguard, Log, TEXT("The raid's time is up (%.0f s): it closes"), MaxRaidDurationSeconds);
+	// Raiders away fail it as at a team's return; collected first (releasing changes the map).
+	TArray<FString> AwayIds;
+	HeldPlayers.GetKeys(AwayIds);
+	for (const FString& AwayId : AwayIds)
+	{
+		ReleaseHeldPlayer(AwayId, true);
+	}
+	// Assumed: raiders still in it fail it as a death for the raid; their teams then go back.
+	TArray<ACrossguardCharacter*> StillIn;
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		const APlayerController* Player = It->Get();
+		const ACrossguardPlayerState* PlayerState = Player != nullptr ? Player->GetPlayerState<ACrossguardPlayerState>() : nullptr;
+		if (ACrossguardCharacter* Character = Player != nullptr ? Cast<ACrossguardCharacter>(Player->GetPawn()) : nullptr;
+			Character != nullptr && PlayerState != nullptr && PlayerState->IsInRaid())
+		{
+			StillIn.Add(Character);
+		}
+	}
+	for (ACrossguardCharacter* Character : StillIn)
+	{
+		if (ACrossguardPlayerController* Raider = Character->GetController<ACrossguardPlayerController>())
+		{
+			Raider->ClientShowMessage(TEXT("The raid has closed."), CrossguardGameModeLocal::HubReturnColor);
+		}
+		HandlePermanentDeath(Character);
+	}
+	UpdateHubReturn();
+	CheckMatchOver();
+}
+
+void ACrossguardGameMode::CheckMatchOver()
+{
+	if (!bIsRaid || bMatchOver || bHubReturnStarted || GameState == nullptr)
+	{
+		return;
+	}
+	// DEV-ONLY (listen server): the development server travels back as a whole instead.
+	if (Crossguard::IsDevListenMode(GetWorld()))
+	{
+		return;
+	}
+	// Nobody may still be playing here: in the raid, away, or done but waiting for their team.
+	for (const APlayerState* Listed : GameState->PlayerArray)
+	{
+		const ACrossguardPlayerState* PlayerState = Cast<ACrossguardPlayerState>(Listed);
+		if (PlayerState == nullptr || PlayerState->IsActorBeingDestroyed())
+		{
+			continue;
+		}
+		const FString PlayerId = UCrossguardGuildSubsystem::PlayerIdOf(PlayerState);
+		if (!LeavingForHubIds.Contains(PlayerId) && !SentToMenuIds.Contains(PlayerId))
+		{
+			return;
+		}
+	}
+	// And somebody played (an empty server waiting for its first team is not over).
+	if (LeavingForHubIds.IsEmpty() && SentToMenuIds.IsEmpty() && FinishedPlayerIds.IsEmpty())
+	{
+		return;
+	}
+	bMatchOver = true;
+	GetWorldTimerManager().ClearTimer(MatchTimeLimitTimer);
+	UE_LOG(LogCrossguard, Log, TEXT("Match over: every team has left"));
+	OnMatchOver.Broadcast();
+	if (ShouldExitWhenMatchOver())
+	{
+		UE_LOG(LogCrossguard, Log, TEXT("Match server exits in %.0f s (one match per process)"), MatchOverExitDelaySeconds);
+		GetWorldTimerManager().SetTimer(MatchOverExitTimer, this, &ACrossguardGameMode::ExitForMatchOver, FMath::Max(0.1f, MatchOverExitDelaySeconds), false);
+	}
+}
+
+bool ACrossguardGameMode::ShouldExitWhenMatchOver() const
+{
+	return GetNetMode() == NM_DedicatedServer && !GIsEditor && !GIsAutomationTesting && !Crossguard::IsDevListenMode(GetWorld())
+		&& !FParse::Param(FCommandLine::Get(), TEXT("KeepMatchServer"));
+}
+
+void ACrossguardGameMode::ExitForMatchOver()
+{
+	UE_LOG(LogCrossguard, Log, TEXT("Match over: the match server exits"));
+	FPlatformMisc::RequestExit(false);
 }
 
 float ACrossguardGameMode::GetRaidElapsedSeconds() const
@@ -838,6 +951,8 @@ void ACrossguardGameMode::UpdateHubReturn()
 	{
 		return;
 	}
+	// A dedicated match server whose last players left is done (one match per process).
+	CheckMatchOver();
 	// DEV-ONLY (listen server): the whole server goes back together once nobody raids.
 	const bool bWholeServerReturn = GetHubDestination(nullptr).Kind == ECrossguardHubDestination::DevServerTravel;
 	// Who is still in the raid, server-wide and per team: connected raiders (alive or downed, also a
@@ -1308,11 +1423,8 @@ void ACrossguardGameMode::ReturnTeamToHub(int32 TeamId)
 		else
 		{
 			Travel.Mode = ECrossguardTeamHubTravel::HubServer;
-			if (Member->DevPlayerId.StartsWith(TEXT("dev-")))
-			{
-				// Development ids travel along (honoured where the hub allows them: -AllowDevPlayerIds).
-				Travel.Url += FString::Printf(TEXT("?%s=%s"), DevPlayerIdOption, *Member->DevPlayerId.RightChop(4));
-			}
+			// Development ids travel along (honoured where the hub allows them: -AllowDevPlayerIds).
+			Travel.Url = WithDevPlayerId(Travel.Url, Member->DevPlayerId);
 		}
 		UE_LOG(LogCrossguard, Log, TEXT("Team %d back to the hub: %s %s %s (%s)"), TeamId, *Travel.PlayerId,
 			Travel.Mode == ECrossguardTeamHubTravel::HubServer ? TEXT("travels to the hub server") : TEXT("goes to the menu (no hub server)"),
@@ -1320,6 +1432,8 @@ void ACrossguardGameMode::ReturnTeamToHub(int32 TeamId)
 	}
 
 	TeamHubPlans.Add(TeamId, Plan);
+	// The last team leaving ends the match (not in development listen mode).
+	CheckMatchOver();
 
 	// 4. Go (each client leaves; the match server stays for the teams still raiding).
 	const bool bPlanOnly = bHubReturnPlanOnly || (GIsAutomationTesting && !bHubReturnTravelInTests);

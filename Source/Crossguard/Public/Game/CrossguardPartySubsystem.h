@@ -46,7 +46,8 @@ public:
 
 	// What StartRaid would do for Actor, without travelling: the mode and the URL (the match server
 	// with ?MatchTicket=<ticket>; development: the server address or, dev listen mode only, the raid
-	// map, plus ?Party=<id>). Asks matchmaking (UCrossguardMatchmakingSubsystem). Checks the hub and the leader too: anything but None is StartRaid's
+	// map, plus ?Party=<id>). Asks matchmaking (UCrossguardMatchmakingSubsystem). A client travel's
+	// URL is the shared one: StartRaid adds each traveller's ?DevPlayerId= (development builds). Checks the hub and the leader too: anything but None is StartRaid's
 	// refusal.
 	ECrossguardPartyResult PlanRaidTravel(ACrossguardPlayerState* Actor, ECrossguardRaidTravel& OutMode, FString& OutUrl) const;
 
