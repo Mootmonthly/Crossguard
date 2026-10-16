@@ -274,54 +274,40 @@ Independent of category, a skill is:
 
 Details: [hub-and-menu.md](hub-and-menu.md). All **(placeholder, Assumed)** except the trip back to the hub (ruled):
 
-- Title screen `L_MainMenu` (Game Default Map): Play hosts the hub `L_Hub` as a listen server, Join
-  connects to a typed address, Settings (mouse sensitivity 0.1–5, field of view 60–120°, master volume;
+- Title screen `L_MainMenu` (Game Default Map): Play hosts the hub `L_Hub` as a listen server
+  (**development mode only**, see "Online architecture"; elsewhere refused until the backend sends
+  players to a hub server), Join connects to a typed address, Settings (mouse sensitivity 0.1–5, field of view 60–120°, master volume;
   saved per machine), Quit. No character select until saves are per account.
 - `L_Hub`: plaza with stash chest, vendor NPC, party board (opens the party window) and a raid portal.
   F at the portal launches the raid exactly as the party window's Start raid (leader or solo, hub
   only); others get "Only your party's leader can start the raid.".
 - The raid map is `L_DevSandbox` until a real one exists.
 - **Ruled (owner)**: a player dead for the raid with no teammate left to watch is **not** sent to the
-  menu: they keep spectating (their body) and travel back to the hub with their team. `L_MainMenu`
-  ("Your raid is over.") is only for when there is no hub map, a team's trip back has nowhere to go,
+  menu: they keep spectating (their body) and leave with their team. `L_MainMenu` is only for when
+  there is nowhere to go ("Your raid is over. No hub server is available right now." on a dedicated
+  or Shipping server that knows no hub server; "Your raid is over." in development without a hub map)
   and explicit menu requests.
-- **Ruled (owner), back to the hub, option 1**: once every player in the raid is done (extracted or
-  dead for the raid), the whole server travels back to the hub map (seamless ServerTravel, the
-  reverse of the raid launch) and everyone still on it comes along; extracted players spectate until
-  then. Disconnected raiders held for a reconnect count as still in the raid until they die or
-  reconnect and finish, or until a grace runs out. Option 2 (dedicated hub servers) comes later
-  ([roadmap.md](roadmap.md), Milestone 5). Details: [hub-and-menu.md](hub-and-menu.md), "Back to the
-  hub". **(placeholder)**: the countdown once nobody is left is **10 s** ("Returning to the hub in
-  N s" on the HUD); with only held raiders left the server waits **120 s** for them. **Assumed**: a
-  held character still in the raid when the server leaves fails its extraction (released as a death
-  while away: raid XP and carried gear lost; same rule as "the raid ends while away" under
-  Reconnecting); party members not on the server at the return (gone to the menu, released, logged
-  out) leave their parties, as a hub logout does; a dead player spectating a held teammate who is
-  released at the return comes along instead of going to the menu; the hub URL also carries `?Hub`
-  (besides the hub marker); with nobody connected (only held raiders) there is no countdown at all;
-  the trip back is off when the game mode's `HubMapName` is empty (e.g. a separate raid server).
-- **Ruled (owner), a team goes back early ("end of match")**: a team (party key; solo = a team of
-  one) whose members have all extracted or died for the raid goes back to the hub without waiting
-  for teams still raiding; the others play on unaffected; when the last team is done the whole
-  server returns as above. The finished team gets its own countdown (**10 s, placeholder**, its HUD
-  only). Each member is saved and marked as leaving (their connection closing is never "held for a
-  reconnect"), then: with a hub server set (`HubServerAddress` / `-HubServer=`, for option 2) every
-  member travels there with `?Party=<key>`; otherwise the leader's client opens the hub itself as a
-  listen server (`<HubMapName>?listen?Hub?Party=<key>`) and the others connect to the leader's
-  address as the raid server sees it, after **5 s (placeholder)**, port **7777 (placeholder)**; a solo
-  player just opens the hub. The leader's hub rebuilds the party from the key (leader leads).
-  **Known limitation (until dedicated hub servers, option 2)**: members must be able to reach the
-  leader's machine (port forwarding / NAT, firewall); otherwise their join fails. Saves are per
-  machine with the local backend: on the leader's hub, members' characters load from the leader's
-  disk. **Assumed**: a team holding the listen-server host (or the standalone player) cannot leave
-  early and waits for the whole-server return; the leader is the party's leader if the raid server
-  knows the party (it was the hub), else the longest-standing member there; teammates still away
-  when the team leaves fail their extraction (as at the whole-server return); a team countdown still
-  running when the last team finishes gives way to the whole-server countdown; on the leader's hub
-  only the hub's own player founds a party from a key and others join only such a party (anyone
-  knowing the key can: [anti-cheat.md](anti-cheat.md)); a member still on the raid server (join
-  delay) when the whole server travels goes along with it. Details: [hub-and-menu.md](hub-and-menu.md),
-  "A team goes back early".
+- **Ruled (owner), a team goes back ("end of match")**: a team (party key; solo = a team of one)
+  whose members have all extracted or died for the raid leaves the match server for the hub without
+  waiting for teams still raiding; the others play on unaffected. Its own countdown (**10 s,
+  placeholder**, its HUD only); each member is saved and marked as leaving (their connection closing
+  is never "held for a reconnect"; dead teammates spectate and go with them), then each client
+  travels to its hub destination, in order: the hub server the backend picks (stub until the
+  backend exists), the match server's `HubServerAddress` / `-HubServer=`, else the main menu with a
+  message. Details: [hub-and-menu.md](hub-and-menu.md), "A team goes back".
+  **Owner decision (architecture, supersedes the listen-server era)**: the leader's PC no longer
+  hosts the hub and teammates no longer join the leader's address; that path and joining a party by
+  key are removed ("Online architecture" below). **(placeholder)**: with only held raiders left on a
+  team, it waits **120 s** for them. **Assumed**: a held character still in the raid when its team
+  leaves fails its extraction (released as a death while away; same rule as under Reconnecting); a
+  team arriving on a hub server gets its `?Party=` key's team only, the party itself comes back from
+  the backend later (not built).
+- **Development mode only** (single PC: `-DevListenHub` or Play-In-Editor, never Shipping;
+  `Crossguard::IsDevListenMode`): the old option 1 stays as the development flow: once every player
+  in the raid is done the whole server travels back to the hub map (seamless ServerTravel); finished
+  teams wait for it. **Assumed** (development only): a team holding the listen-server host waits for
+  the whole-server return; party members not on the server at the return leave their parties; the
+  trip back is off when `HubMapName` is empty.
 
 ## Extraction
 
@@ -443,9 +429,9 @@ Everything else is a placeholder until ruled; the numbers live in `Crossguard::F
 
 ## Teams and friendly fire
 
-- Players enter a match solo or in a premade team of **up to 8**. Matchmaking passes the party
-  key as the `?Party=<key>` travel URL option; the game mode puts everyone with the same key on
-  one team. Without a key, a player is a team of one.
+- Players enter a match solo or in a premade team of **up to 8**. Today the party key travels as
+  the `?Party=<key>` URL option (development; the backend's match ticket will carry the team later);
+  the game mode puts everyone with the same key on one team. Without a key, a player is a team of one.
 - **Friendly fire is always on.** This overrides the design doc's "no friendly fire". Teams only
   decide who counts as an ally (party skills like Multiscale, UI).
 - Idea, not built: an AGI skill "Disable Friendly Fire".
@@ -456,13 +442,14 @@ Everything else is a placeholder until ruled; the numbers live in `Crossguard::F
   alone; players can delete invites from their inbox, one or all. **(placeholder / Assumed)**:
   inviting while solo founds the party; a leaving leader hands over to the longest-standing member
   and the last member disbands it; logging out of the hub leaves the party; decline and promote
-  work in a raid too. Raid launch **(placeholder until a matchmaker exists)**: when the whole hub
-  server is the party, the server travels to the game mode's `RaidMapName` with `?Party=`; otherwise
-  each member's client travels to `RaidServerAddress` with `?Party=` (refused if a listen host would
-  have to leave). Parties live in hub memory only. `?Hub` on a map URL, or a placed
+  work in a raid too. Raid launch (owner's architecture): the hub asks matchmaking for a match server
+  and each member's client travels there with the backend's match ticket (`?MatchTicket=`).
+  Matchmaking is a stub ("not available") until the backend exists; development builds fake the
+  assignment with `RaidServerAddress` / `-RaidServer=` and `?Party=` (**Assumed**: never in
+  Shipping). The whole-server launch to `RaidMapName` is development mode only. Parties live in hub memory only. `?Hub` on a map URL, or a placed
   `ACrossguardHubMarker` (the scripted `L_Hub` has one), plays that map as the hub (placeholder).
 - Team-scoped raid end (ruled, owner): a team whose members are all extracted or dead for the raid
-  goes back to the hub on its own ("Hub and main menu", "a team goes back early"); team = party key.
+  goes back to the hub on its own ("Hub and main menu", "a team goes back"); team = party key.
 
 ## Items and weapons
 
@@ -693,7 +680,10 @@ Everything here is cosmetic: no rule depends on it.
 ## Online architecture (owner decisions)
 
 - Raids run on central **dedicated match servers** that many teams join. A player's PC never hosts a raid
-  or a hub; one-PC hosting is a development mode only.
+  or a hub; one-PC hosting is a development mode only. In code: every listen-server path is tagged
+  `// DEV-ONLY (listen server)` and gated by `Crossguard::IsDevListenMode` (`-DevListenHub` or PIE,
+  never Shipping); the hub launches raids through `ICrossguardMatchmaking` and match servers send
+  finished teams to `ACrossguardGameMode::GetHubDestination` ([hub-and-menu.md](hub-and-menu.md)).
 - The hub is a **shared, walkable social hub** on dedicated hub servers, sharded into instances.
 - Backend: **Nakama** (open source, self-hosted) for accounts (Steam login), saves, parties,
   matchmaking, guilds (groups), notifications and the wallet; **Amazon GameLift Servers** hosts the raid
@@ -703,6 +693,12 @@ Everything here is cosmetic: no rule depends on it.
 - Raid size: start at **48 players per raid** (about 12–16 teams) and scale back if performance or
   pacing needs it. The owner notes this is ambitious (comparable games struggle at about 18).
 - Launch region: **US East (N. Virginia, us-east-1)**.
+- Dedicated server tooling ([dedicated-server-plan.md](dedicated-server-plan.md)). **Assumed**: the
+  committed `Crossguard.uproject` stays on the launcher engine (`EngineAssociation` 5.8) and server
+  builds use a second working copy with the source engine; local cluster ports 7777 (hub) and 7778
+  (match) (placeholders); the local match server runs with `-HubMap=` empty so it never becomes a hub;
+  one server process per match (fits GameLift; to confirm); `ServerDefaultMap` = `L_Hub` when set
+  (placeholder).
 
 ## Open questions
 

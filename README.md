@@ -22,7 +22,10 @@ Fantasy extraction game. Unreal Engine 5 with the Gameplay Ability System.
 3. Right-click `Crossguard.uproject` → *Generate Visual Studio project files*, then build the
    `CrossguardEditor` target.
 
-The `CrossguardServer` target needs a source build of the engine.
+The `CrossguardServer` target (dedicated server) needs a source build of the engine: see
+[docs/dedicated-server-plan.md](docs/dedicated-server-plan.md) (source engine, server builds for Windows
+and Linux, `Tools\build_server.bat`, a local hub + match server + clients with
+`Tools\run_local_cluster.bat`).
 
 ## PC session (Unreal on Windows)
 

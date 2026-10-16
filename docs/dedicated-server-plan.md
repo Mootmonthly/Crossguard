@@ -6,9 +6,10 @@ that still assumes a listen server. Written for a Claude Code session on the own
 (task file: [tasks/setup-source-engine.md](tasks/setup-source-engine.md)) and for the owner.
 Steps marked **OWNER** need a person (accounts, installers, UAC prompts).
 
-Hosting and backend choice: [backend-comparison.md](backend-comparison.md). Architecture (dedicated
-match servers many teams join, dedicated hub servers, a backend): the "Dedicated architecture"
-commits and [hub-and-menu.md](hub-and-menu.md) / [parties.md](parties.md).
+Owner's choice ([design-decisions.md](design-decisions.md) "Online architecture"): dedicated match
+servers many teams join, shared dedicated hub servers, **Nakama** as the backend, **Amazon GameLift
+Servers** hosting (Anywhere for local testing); comparison in [backend-comparison.md](backend-comparison.md).
+Code side: the "Dedicated architecture" commits, [hub-and-menu.md](hub-and-menu.md), [parties.md](parties.md).
 
 Checked against the official pages on 2026-10-16; versions move, so re-check the linked page when a
 step fails. Numbers marked *estimate* are not measured on the owner's PC.
@@ -241,10 +242,11 @@ docker build -t crossguard-server:dev Saved\Packages\Server
 docker run --rm -p 7779:7777/udp crossguard-server:dev /Game/Maps/Dev/L_DevSandbox -log -port=7777 -AllowDevPlayerIds
 ```
 
-A client from the same build connects with `open 127.0.0.1:7779`. Game traffic is **UDP**. The host
-decides the rest (image registry, ports per instance, health checks, how the match server reports
-"ready" and "empty"): see [backend-comparison.md](backend-comparison.md). Not in the repository yet:
-add a `Dockerfile` once a host is chosen.
+A client from the same build connects with `open 127.0.0.1:7779`. Game traffic is **UDP**. GameLift
+(the chosen host) runs either such a container (container fleets, image pushed to Amazon ECR) or the
+plain `LinuxServer` folder on managed EC2 fleets; either way the server must talk to GameLift through
+the GameLift Server SDK (checklist C15), and GameLift assigns the port per process. Not in the
+repository yet: add the `Dockerfile` with the GameLift work.
 
 ## Part 3: running locally
 
@@ -320,7 +322,7 @@ before hosting, **L** cleanup.
 | C3 | H | Main menu Join (`ACrossguardMenuGameMode::BuildJoinUrl`, `UCrossguardMainMenuWidget`) and the cluster clients | A dedicated server has no local player, so `pie-<n>` / `-CrossguardPlayerId` never apply; only the login URL's `?DevPlayerId=` does. Join from the menu sends none. | Development builds: the client appends `?DevPlayerId=` from its `-CrossguardPlayerId=` to every join / travel URL it builds. Shipping: Steam id + session ticket check on the server ([anti-cheat.md](anti-cheat.md)). |
 | C4 | H | `ACrossguardGameMode::ReturnToHub` (whole-server return) | `ServerTravel` to `<HubMap>?Hub`: a match server would turn itself into a hub; with `-HubMap=` empty it logs "Cannot return to the hub" and everyone stays. | With a hub server (`GetHubServerAddress()` set, or the backend), the last team goes like the early team return: each client travels to the hub server; then the match server resets (C6). `ServerTravel` back only in dev listen mode (`IsDevListenMode`). |
 | C5 | M | `UpdateSpectators` (dead with nobody to watch: `bHubReturnStarted \|\| !GetHubMapName().IsEmpty()`) | With `-HubMap=` empty on a match server, the dead go to the menu instead of riding back with their team (ruled: they ride back). | Count a hub server address as "has a hub". |
-| C6 | H | Match server lifecycle (`ACrossguardGameMode`: `FinishedPlayerIds`, `HeldPlayers`, `SentToMenuIds`, `LeavingForHubIds`, `bHubReturnStarted`, looted containers, killed mobs) | A raid map is used once; nothing resets it. The next party on the same server is refused ("Your raid is over") or finds it looted. | **Decision for the owner**: one process per match (exit when empty, the host starts a fresh one; common with container hosts) or reload the map (`ServerTravel` to the same raid map, non-seamless) between matches. Also when a match closes to new teams. |
+| C6 | H | Match server lifecycle (`ACrossguardGameMode`: `FinishedPlayerIds`, `HeldPlayers`, `SentToMenuIds`, `LeavingForHubIds`, `bHubReturnStarted`, looted containers, killed mobs) | A raid map is used once; nothing resets it. The next party on the same server is refused ("Your raid is over") or finds it looted. | One process per match fits GameLift (the chosen host): `ProcessReady` → `OnStartGameSession` → match → `ProcessEnding` and exit; GameLift starts a fresh process (C15). **Owner**: confirm, and when a match closes to new teams. |
 | C7 | M | Team early return without a hub server (`ECrossguardTeamHubTravel::HostHub` / `JoinLeader`, `TeamHubListenPort`, `RemoteAddressOf`) | The leader's client hosts a listen hub. | Dev listen mode only; on a dedicated match server without a hub address: error log and the menu (or ask the backend). |
 | C8 | M | Menu Play (`ACrossguardMenuGameMode::BuildHostUrl`, `<HubMap>?listen?Hub`) | Play hosts a listen hub on the player's PC. | Play asks the backend for a hub server (dev: a `-HubServer=` / config address); hosting only in dev listen mode. |
 | C9 | L | Listen-host special cases that are simply false on a dedicated server: `IsLocalController() && NM_ListenServer` in `UpdateSpectators`, `bListenHostInParty`, `BuildHubReturnUrl(.., bListen)`, `IsServerOwnPlayer`, `Login`'s `bLoggingInLocalPlayer`, `pie-<n>` in `DevPlayerIdFor` | Correct on dedicated (they never fire). | Tag `// DEV-ONLY (listen server)` as the series does; no behaviour change. |
@@ -329,6 +331,7 @@ before hosting, **L** cleanup.
 | C12 | M | Saves (`UCrossguardLocalSaveBackend`, `Saved/Crossguard/Characters`) | Per machine. Fine for one PC (hub and match share the folder), not for hosted servers. | The backend ([backend-comparison.md](backend-comparison.md), [persistence.md](persistence.md)). |
 | C13 | L | Net settings for big multi-team raids | Engine defaults (server tick 30, default client rates). | Tune `NetServerMaxTickRate`, `MaxClientRate`, relevancy / replication graph after a load test. |
 | C14 | L | Server-only code paths (UI, cosmetics) | Checked: HUD and widgets only for local controllers (`ACrossguardHUD`, `CrossguardWidgetBase`), settings only for the local controller, cosmetics skip `NM_DedicatedServer`, debug HUD needs `IsLocallyControlled`, editor modules only with `bBuildEditor`. | Nothing; confirm with `build_server` and a clean server log in the smoke run. |
+| C15 | M | GameLift Server SDK (not in the project) | Nothing reports to a host. | Add the Amazon GameLift Server SDK plugin for Unreal (built with the source engine; it needs OpenSSL from the engine): `InitSDK`, `ProcessReady` with the port, `OnStartGameSession` (players / match tickets from Nakama), `ActivateGameSession`, `AcceptPlayerSession` at login (with C10), `ProcessEnding`. Hub servers the same, long-lived. Test with GameLift Anywhere on the PC. |
 
 Already fine for dedicated servers: everything gameplay is server-authoritative
 ([anti-cheat.md](anti-cheat.md)); `bUseSeamlessTravel`; raid launch `ServerTravel` only in dev listen
