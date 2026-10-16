@@ -1,0 +1,40 @@
+# Nakama config for Crossguard (docs/backend-setup.md). Non-secret defaults only.
+#
+# Secrets are NOT in this file: docker-compose.yml passes them as command-line flags from Backend/.env
+# (gitignored; template Backend/.env.example), because Nakama does not expand environment variables in
+# its YAML. Flags override this file:
+#   --socket.server_key            NAKAMA_SERVER_KEY        (clients use it to log in; not really secret)
+#   --runtime.http_key             NAKAMA_HTTP_KEY          (dedicated servers' server-to-server RPC key: SECRET)
+#   --session.encryption_key       NAKAMA_SESSION_ENCRYPTION_KEY (signs session tokens: SECRET)
+#   --session.refresh_encryption_key NAKAMA_SESSION_REFRESH_KEY  (SECRET)
+#   --console.username / --console.password / --console.signing_key
+#   --social.steam.publisher_key / --social.steam.app_id  (Steam login)
+#   --runtime.env CROSSGUARD_DEV_AUTH=<0|1>             (device-id login, development only)
+name: crossguard-local
+
+logger:
+  level: INFO
+  stdout: true
+
+session:
+  # Two hours; clients refresh with the refresh token. Dedicated servers verify the token at login only.
+  token_expiry_sec: 7200
+  refresh_token_expiry_sec: 604800
+
+socket:
+  port: 7350
+  # Character saves go through crossguard_save_write: room for an 8 MB record (MaxRecordBytes in the
+  # module, the game's own cap) plus the request envelope. Nakama's default is 256 KB.
+  max_request_size_bytes: 9437184
+
+runtime:
+  path: /nakama/data/modules
+
+console:
+  port: 7351
+  # Console uploads / storage edits of a whole save.
+  max_message_size_bytes: 9437184
+
+# Local development: no metrics endpoint.
+metrics:
+  prometheus_port: 0

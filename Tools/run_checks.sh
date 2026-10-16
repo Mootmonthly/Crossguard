@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Runs every check that works without Unreal: skill data, generated table, rules unit tests.
+# Runs every check that works without Unreal: skill data, generated table, rules unit tests, and the
+# Nakama Go module tests when Go is installed.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -24,3 +25,10 @@ python3 -m py_compile Tools/editor_setup.py
 cmake -S Tests/CrossguardRules -B build/rules-tests >/dev/null
 cmake --build build/rules-tests
 ctest --test-dir build/rules-tests --output-on-failure
+
+# Nakama runtime module (Backend/nakama/modules). Needs Go 1.27.1+ (older Go downloads it: GOTOOLCHAIN=auto).
+if command -v go >/dev/null 2>&1; then
+	(cd Backend/nakama/modules && go vet ./... && go test ./...)
+else
+	echo "Go not installed: skipping the Nakama module tests (Backend/nakama/modules)."
+fi

@@ -1,0 +1,74 @@
+# Local Crossguard backend: Nakama (with our Go module) + PostgreSQL. docs/backend-setup.md.
+#   Tools/run_local_backend.sh (or .ps1)   first run creates Backend/.env, builds, starts, waits for health
+#   docker compose -f Backend/docker-compose.yml --env-file Backend/.env up -d --build
+# Ports: 7350 game API (clients and dedicated servers), 7351 developer console (this PC only).
+name: crossguard-backend
+
+services:
+  postgres:
+    # Nakama supports PostgreSQL and CockroachDB; PostgreSQL is what the official compose file and the
+    # production plan (one VM + managed PostgreSQL, docs/backend-comparison.md) use.
+    image: postgres:16.15-alpine
+    environment:
+      POSTGRES_DB: nakama
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run Tools/run_local_backend first (creates Backend/.env)}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "nakama"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  nakama:
+    build:
+      context: ./nakama
+      args:
+        NAKAMA_VERSION: 3.41.0
+    image: crossguard-nakama:3.41.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_ADDRESS: postgres:${POSTGRES_PASSWORD}@postgres:5432/nakama
+      NAKAMA_SERVER_KEY: ${NAKAMA_SERVER_KEY:?}
+      NAKAMA_HTTP_KEY: ${NAKAMA_HTTP_KEY:?}
+      NAKAMA_SESSION_ENCRYPTION_KEY: ${NAKAMA_SESSION_ENCRYPTION_KEY:?}
+      NAKAMA_SESSION_REFRESH_KEY: ${NAKAMA_SESSION_REFRESH_KEY:?}
+      NAKAMA_CONSOLE_USER: ${NAKAMA_CONSOLE_USER:-admin}
+      NAKAMA_CONSOLE_PASSWORD: ${NAKAMA_CONSOLE_PASSWORD:?}
+      NAKAMA_CONSOLE_SIGNING_KEY: ${NAKAMA_CONSOLE_SIGNING_KEY:?}
+      STEAM_APP_ID: ${STEAM_APP_ID:-}
+      STEAM_PUBLISHER_KEY: ${STEAM_PUBLISHER_KEY:-}
+      CROSSGUARD_DEV_AUTH: ${CROSSGUARD_DEV_AUTH:-0}
+    # Secrets go in as flags (Nakama does not read env vars in local.yml). No `sh -x`: it would log them.
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - |
+        /nakama/nakama migrate up --database.address "$$DB_ADDRESS"
+        exec /nakama/nakama --config /nakama/data/local.yml \
+          --database.address "$$DB_ADDRESS" \
+          --socket.server_key "$$NAKAMA_SERVER_KEY" \
+          --runtime.http_key "$$NAKAMA_HTTP_KEY" \
+          --session.encryption_key "$$NAKAMA_SESSION_ENCRYPTION_KEY" \
+          --session.refresh_encryption_key "$$NAKAMA_SESSION_REFRESH_KEY" \
+          --console.username "$$NAKAMA_CONSOLE_USER" \
+          --console.password "$$NAKAMA_CONSOLE_PASSWORD" \
+          --console.signing_key "$$NAKAMA_CONSOLE_SIGNING_KEY" \
+          --runtime.env "CROSSGUARD_DEV_AUTH=$$CROSSGUARD_DEV_AUTH" \
+          $${STEAM_APP_ID:+--social.steam.app_id "$$STEAM_APP_ID"} \
+          $${STEAM_PUBLISHER_KEY:+--social.steam.publisher_key "$$STEAM_PUBLISHER_KEY"}
+    ports:
+      - "7350:7350"
+      - "127.0.0.1:7351:7351"
+    healthcheck:
+      test: ["CMD", "/nakama/nakama", "healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  pgdata:
