@@ -8,6 +8,7 @@
 #include "CrossguardGuildSubsystem.generated.h"
 
 class ACrossguardPlayerState;
+struct FUniqueNetIdRepl;
 
 // Server: every guild (Crossguard::FGuildRegistry) and the items in guild banks. Players act
 // through their UCrossguardGuildComponent; after each change the subsystem refreshes the views of
@@ -24,6 +25,9 @@ public:
 	// builds the server-set stand-in ACrossguardPlayerState::DevPlayerId ("pie-<n>", "dev-<name>"),
 	// else a stand-in for this session only ("session-<n>").
 	static FString PlayerIdOf(const APlayerState* PlayerState);
+	// A unique id worth keying saves and guilds by: valid and from a real online subsystem. The Null
+	// subsystem (PIE, no Steam) makes up a new id every run, so it does not count.
+	static bool IsOnlineId(const FUniqueNetIdRepl& UniqueId);
 
 	ECrossguardGuildResult Create(ACrossguardPlayerState* Actor, const FString& Name);
 	ECrossguardGuildResult Invite(ACrossguardPlayerState* Actor, ACrossguardPlayerState* Invitee);

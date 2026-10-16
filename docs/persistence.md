@@ -85,6 +85,9 @@ default; a Blueprint game mode that sets its own must use a child of it).
 
 `UCrossguardGuildSubsystem::PlayerIdOf`: the online id (a Steam id with Steam), else in development
 builds the server-set `ACrossguardPlayerState::DevPlayerId` (below), else `session-<PlayerId>`.
+An id from the **Null** online subsystem (`DESKTOP-…-<guid>`, what PIE hands out without Steam) does
+not count as an online id (`IsOnlineId`): it is new on every Play, which is why the first smoke
+test on the PC (2026-10-16) wrote a fresh file each time instead of loading the last one.
 **Session ids are not stable**: they count from the server's start, so after a restart another
 player can get the same id and load someone else's character. Fine for development; set
 `bSaveSessionIds=False` once Steam is in ([steam-setup.md](steam-setup.md)). The id is the server's

@@ -129,8 +129,9 @@ FString ACrossguardGameMode::InitNewPlayer(APlayerController* NewPlayerControlle
 	// The player id this login claims, settled before Super gives the player state its unique id
 	// (which starts loading the save under it).
 	ACrossguardPlayerState* NewState = NewPlayerController != nullptr ? NewPlayerController->GetPlayerState<ACrossguardPlayerState>() : nullptr;
-	const FString DevId = UniqueId.IsValid() ? FString() : DevPlayerIdFor(Options);
-	const FString LoginId = UniqueId.IsValid() ? UniqueId.ToString() : DevId;
+	const bool bOnlineId = UCrossguardGuildSubsystem::IsOnlineId(UniqueId);
+	const FString DevId = bOnlineId ? FString() : DevPlayerIdFor(Options);
+	const FString LoginId = bOnlineId ? UniqueId.ToString() : DevId;
 	if (!LoginId.IsEmpty())
 	{
 		if (bIsRaid && FinishedPlayerIds.Contains(LoginId))
@@ -169,7 +170,8 @@ FString ACrossguardGameMode::InitNewPlayer(APlayerController* NewPlayerControlle
 		const UCrossguardPartySubsystem* Parties = GameInstance != nullptr ? GameInstance->GetSubsystem<UCrossguardPartySubsystem>() : nullptr;
 		if (Parties != nullptr)
 		{
-			Party = Parties->PartyKeyOf(UniqueId.IsValid() ? UniqueId.ToString() : UCrossguardGuildSubsystem::PlayerIdOf(NewPlayerController->PlayerState));
+			Party = Parties->PartyKeyOf(UCrossguardGuildSubsystem::IsOnlineId(UniqueId) ? UniqueId.ToString()
+																						 : UCrossguardGuildSubsystem::PlayerIdOf(NewPlayerController->PlayerState));
 		}
 	}
 	return JoinTeam(NewPlayerController, PlayerKey(UniqueId, NewPlayerController), Party);

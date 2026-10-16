@@ -50,7 +50,7 @@ FString UCrossguardGuildSubsystem::PlayerIdOf(const APlayerState* PlayerState)
 		return FString();
 	}
 	const FUniqueNetIdRepl& UniqueId = PlayerState->GetUniqueId();
-	if (UniqueId.IsValid())
+	if (IsOnlineId(UniqueId))
 	{
 		return UniqueId.ToString();
 	}
@@ -61,6 +61,14 @@ FString UCrossguardGuildSubsystem::PlayerIdOf(const APlayerState* PlayerState)
 		return WithDevId->DevPlayerId;
 	}
 	return FString::Printf(TEXT("session-%d"), PlayerState->GetPlayerId());
+}
+
+bool UCrossguardGuildSubsystem::IsOnlineId(const FUniqueNetIdRepl& UniqueId)
+{
+	// The Null subsystem's ids ("DESKTOP-...-<guid>") are valid but new on every Play: a save keyed
+	// by one is never found again. Steam (or any real subsystem) gives the same id every time.
+	static const FName NullSubsystem(TEXT("NULL"));
+	return UniqueId.IsValid() && UniqueId.GetType() != NullSubsystem;
 }
 
 double UCrossguardGuildSubsystem::Now()

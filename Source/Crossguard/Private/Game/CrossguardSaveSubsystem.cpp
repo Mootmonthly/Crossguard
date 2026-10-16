@@ -424,7 +424,7 @@ FString UCrossguardSaveSubsystem::PlayerIdFor(const ACrossguardPlayerState* Play
 		return FString();
 	}
 	const FString PlayerId = UCrossguardGuildSubsystem::PlayerIdOf(PlayerState);
-	if (!bSaveSessionIds && !PlayerState->GetUniqueId().IsValid())
+	if (!bSaveSessionIds && !UCrossguardGuildSubsystem::IsOnlineId(PlayerState->GetUniqueId()))
 	{
 		return FString();
 	}
