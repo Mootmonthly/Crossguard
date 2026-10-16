@@ -690,5 +690,19 @@ Everything here is cosmetic: no rule depends on it.
 - Assumed: a skill cast fires `OnAttackStarted` (`Kind` Cast, `SkillId`) when it commits, also for
   self-buffs (Slash readying, Stealth).
 
+## Online architecture (owner decisions)
+
+- Raids run on central **dedicated match servers** that many teams join. A player's PC never hosts a raid
+  or a hub; one-PC hosting is a development mode only.
+- The hub is a **shared, walkable social hub** on dedicated hub servers, sharded into instances.
+- Backend: **Nakama** (open source, self-hosted) for accounts (Steam login), saves, parties,
+  matchmaking, guilds (groups), notifications and the wallet; **Amazon GameLift Servers** hosts the raid
+  and hub servers (Anywhere for local testing); **Steam** for login and payments (purchases verified by our
+  own server call). EOS may be added later for voice and Easy Anti-Cheat. See
+  [backend-comparison.md](backend-comparison.md).
+- Raid size: start at **48 players per raid** (about 12–16 teams) and scale back if performance or
+  pacing needs it. The owner notes this is ambitious (comparable games struggle at about 18).
+- Launch region: **US East (N. Virginia, us-east-1)**.
+
 ## Open questions
 
