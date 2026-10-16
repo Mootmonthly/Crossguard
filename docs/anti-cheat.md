@@ -73,7 +73,7 @@ Status: **fixed** (a hole closed in this review), **ok** (checked, no change nee
 | Player state: XP, gold, allocation, respec tokens, Skill Library, `bInRaid` | `COND_OwnerOnly`. | ok |
 | Attributes | Only `Health`, `MaxHealth` and `AttackShield` reach everyone (health bars); the rest are `COND_OwnerOnly`. | ok |
 | Equipment `MainHand`, `OffHand`, `Armor` | Reach everyone (visible gear), including affix rolls. | note |
-| Stealthed characters | Hidden on each machine by `UpdateStealthVisibility`. With `crossguard.StealthHidesFromEnemies` (default on, placeholder) `ACrossguardCharacter::IsNetRelevantFor` returns false for viewers outside the character's team while `State.Stealthed`, so enemy clients get no position (the actor despawns there and is re-created when stealth ends). Own player and allies (spectators too) still get it. Needs the two-client play test (next-build-checklist.md, section 6). | **fixed** (behind switch, untested) |
+| Stealthed characters | Hidden on each machine by `UpdateStealthVisibility`. With `crossguard.StealthHidesFromEnemies` (default on, placeholder) `ACrossguardCharacter::IsNetRelevantFor` returns false for viewers outside the character's team while `State.Stealthed`, so enemy clients get no position (the actor despawns there and is re-created when stealth ends). Own player and allies (spectators too) still get it. On stealth start the server closes the enemy connections' channels at once (no `RelevantTimeout` leak; classic net driver only). Covered by `Crossguard.Net.StealthHidesFromEnemyClient`. | **fixed** (behind switch; channel close pending local verification) |
 
 ## Notes
 
@@ -86,16 +86,20 @@ Left as they are, with the reason:
   fresh replicated state (tags, attributes, equipment), when it is relevant again; stealth start
   and end call `ForceNetUpdate`. Open points for the play test:
   - The net driver keeps replicating an actor for `RelevantTimeout` (engine default 5 s) after
-    its last relevant check, so the position can still reach enemies for the first ~5 s of a 12 s
+    its last relevant check, so the position reached enemies for the first ~5 s of a 12 s
     stealth. **Confirmed** (2026-10-16, UE 5.8, `Crossguard.Net.StealthHidesFromEnemyClient` on a
-    dedicated PIE server): the enemy client drops the stealthed character 4.3–4.5 s after
-    `State.Stealthed` appears, and gets it back cleanly when stealth ends. Two fixes, the owner's
-    choice (none applied): lower `RelevantTimeout` in `DefaultEngine.ini`
-    (`[/Script/OnlineSubsystemUtils.IpNetDriver]`; it applies to every actor, so far-away actors
-    also drop sooner) or close the enemy connections' actor channel on stealth start (targeted,
-    more code). The test logs the measured time as `STEALTH LEAK: ... s` and only fails above 6 s.
-  - Only the classic net driver calls `IsNetRelevantFor`. If the project turns on Iris or a
-    Replication Graph, this needs a filter there instead.
+    dedicated PIE server): the enemy client dropped the stealthed character 4.3–4.5 s after
+    `State.Stealthed` appeared. **Fix A (owner's choice), built, pending local verification:** when
+    the server gains `State.Stealthed`, `ACrossguardCharacter::CloseStealthHiddenChannels` closes
+    the character's actor channel (`EChannelCloseReason::Relevancy`) on every client connection it
+    is hidden from (`IsHiddenByStealthFrom`, the same rule as `IsNetRelevantFor`; split-screen
+    children count as that connection's viewers), so the enemy client drops it at once;
+    `IsNetRelevantFor` keeps it from reopening. Only with the switch on; nothing on standalone (no
+    net driver). `RelevantTimeout` is untouched. The test logs the measured time as
+    `STEALTH LEAK: ... s` and fails above 0.5 s (placeholder).
+  - Only the classic net driver calls `IsNetRelevantFor` and has actor channels to close. With
+    Iris or a Replication Graph (replication driver) the channel close is skipped, and the hiding
+    needs a filter there instead.
   - A listen-server host sees everything (no connection to filter); only remote clients are
     protected.
   - Server-side AI (monsters, minions) is unaffected: relevancy only concerns client connections.

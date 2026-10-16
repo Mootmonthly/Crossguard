@@ -26,6 +26,8 @@ namespace CrossguardScenarioNet
 	// Game seconds a replicated change may take to show on a client (one process: usually a frame or two).
 	constexpr float ReplicationWait = 5.0f;
 	constexpr float StealthSeconds = 12.0f;
+	// The enemy client must drop a stealthed character this soon (docs/anti-cheat.md; placeholder).
+	constexpr float MaxStealthLeakSeconds = 0.5f;
 
 	// Server: client pawns in a row at SceneY, 3 m apart from X = 0, facing +X.
 	bool PlaceClients(CrossguardScenario::FScenarioContext& C)
@@ -187,8 +189,9 @@ bool FCrossguardNetDeathRagdoll::RunTest(const FString& Parameters)
 // Checklist 4 (stealth vanishes on the other screen) and docs/anti-cheat.md: on a dedicated server,
 // the enemy client loses the stealthed character (its actor goes with the channel) while the ally
 // client keeps it; it comes back cleanly when stealth ends. The time from stealth start to the drop
-// is measured and reported: the net driver keeps a no-longer-relevant actor for RelevantTimeout
-// (engine default 5 s). No ruling on that yet, so it is reported, not asserted.
+// is measured and reported. Without the fix the net driver kept the channel for RelevantTimeout
+// (engine default 5 s; measured 4.3-4.5 s); the server now closes the enemy channels when stealth
+// starts (ACrossguardCharacter::CloseStealthHiddenChannels), so the drop must come within 0.5 s.
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardNetStealth, "Crossguard.Net.StealthHidesFromEnemyClient", CROSSGUARD_SCENARIO_FLAGS)
 
 bool FCrossguardNetStealth::RunTest(const FString& Parameters)
@@ -282,9 +285,9 @@ bool FCrossguardNetStealth::RunTest(const FString& Parameters)
 	{
 		const float Leak = C.Now() - static_cast<float>(C.Number(TEXT("StealthedAt")));
 		C.SetNumber(TEXT("Leak"), Leak);
-		C.Test.AddInfo(FString::Printf(TEXT("STEALTH LEAK: the enemy client dropped the stealthed character %.2f s after stealth began (engine RelevantTimeout default 5 s)"), Leak));
+		C.Test.AddInfo(FString::Printf(TEXT("STEALTH LEAK: the enemy client dropped the stealthed character %.2f s after stealth began (channel closed on stealth start; was 4.3-4.5 s)"), Leak));
 		C.Test.TestTrue(TEXT("Stealth is still on"), C.HasTag(C.FindActor(TEXT("Sneak")), CrossguardTags::State_Stealthed));
-		C.Test.TestTrue(TEXT("The drop came within RelevantTimeout + 1 s"), Leak <= 6.0f);
+		C.Test.TestTrue(TEXT("The drop came within 0.5 s (the enemy channel is closed when stealth starts)"), Leak <= MaxStealthLeakSeconds);
 	});
 
 	Scenario.WaitUntil(TEXT("stealth ends"), StealthSeconds + 2.0f, [](FScenarioContext& C)

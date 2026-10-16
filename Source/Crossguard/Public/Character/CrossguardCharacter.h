@@ -481,6 +481,12 @@ private:
 	// side. Each machine decides for itself; visibility is not replicated.
 	void OnStealthChanged(const FGameplayTag Tag, int32 Count);
 	void UpdateStealthVisibility();
+	// The stealth rule of IsNetRelevantFor: true while stealthed (switch on) for a viewer that is
+	// neither its own player nor an ally.
+	bool IsHiddenByStealthFrom(const AActor* RealViewer, const AActor* ViewTarget) const;
+	// Server, on stealth start: closes the actor channel of every client connection it is hidden from,
+	// so enemy clients drop it at once instead of after RelevantTimeout (docs/anti-cheat.md).
+	void CloseStealthHiddenChannels();
 	bool bStealthBound = false;
 	FTimerHandle StealthVisibilityTimer;
 	void ApplyMoveSpeed(float MoveSpeed);

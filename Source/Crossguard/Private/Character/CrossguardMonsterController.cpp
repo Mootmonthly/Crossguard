@@ -94,6 +94,8 @@ void ACrossguardMonsterController::Tick(float DeltaSeconds)
 	{
 		return;
 	}
+	// Crowd avoidance: its side's group (teams can change), none once dead.
+	Monster->UpdateAvoidanceGroups();
 	if (!Monster->IsAlive())
 	{
 		StopMovement();

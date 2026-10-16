@@ -37,8 +37,8 @@ The code builds and the automated tests pass; what is left needs hands-on play. 
 | Item | Needs | Notes |
 | --- | --- | --- |
 | Playtest feel | Editor | Automated tests cover the rules; play for feel, timing and balance. Debug options on the character: `DebugInventory`, `bDebugLootTakesAll`, `DebugReviveDelay`, `bUseDebugProgression`; turn off the game mode's `bIsRaid` to test the stash and vendors. |
-| Stealth position leak | Decision, Code | Measured: enemy clients keep receiving a stealthed player's position for 4.3–4.5 s (the engine's `RelevantTimeout`). Fix: close enemy channels when stealth starts, or lower `RelevantTimeout` for every actor. See [anti-cheat.md](anti-cheat.md). |
-| Crowd avoidance | Editor, Code | Without a nav mesh a minion walks into its summoner's back and stops (seen in tests). Check on a real map; turn on RVO/detour avoidance for monsters and minions if they bunch up. |
+| Stealth position leak | Editor | Built (fix A), pending local verification: when stealth starts the server closes the enemy connections' actor channels, so enemy clients drop the stealthed player at once instead of after 4.3–4.5 s (`RelevantTimeout`). `Crossguard.Net.StealthHidesFromEnemyClient` now fails above 0.5 s. Classic net driver only. See [anti-cheat.md](anti-cheat.md). |
+| Crowd avoidance | Editor | Built, pending local verification: RVO avoidance on monsters and minions (placeholder: 3 m radius, weight 0.5), only toward their own side; players untouched ([design-decisions.md](design-decisions.md)). New test `Crossguard.Scenario.Monsters.MinionAvoidsSummoner` (minion gets around its summoner standing in its line). `MonsterTeam` keeps its 3 m offset until that passes. Check bunching on a real map. |
 
 ## Milestone 1: One complete raid
 
@@ -109,7 +109,7 @@ Goal: enter a raid, fight, loot, extract or die, and see the result.
 | Matchmaking with parties | Code | Must pass `?Party=<key>` in the travel URL. |
 | Backend and accounts | Decision, Code | Persistence, purchases, auction house. |
 | Platform store | Decision, Code | Steam or other; purchases verified server-side. |
-| Anti-cheat review | Code | Reviewed: every server RPC, ability, console command, debug option and replicated property ([anti-cheat.md](anti-cheat.md)). Fixed the grid-position and attribute-allocation overflows, vendor gold overflow, interact spam, oversized trade offers, loadout changes while dead, and debug options in Shipping. Left: stealthed positions still replicate to enemies, and gear affixes are visible to everyone. |
+| Anti-cheat review | Code | Reviewed: every server RPC, ability, console command, debug option and replicated property ([anti-cheat.md](anti-cheat.md)). Fixed the grid-position and attribute-allocation overflows, vendor gold overflow, interact spam, oversized trade offers, loadout changes while dead, and debug options in Shipping. Left: gear affixes are visible to everyone (the stealth position leak is fixed, pending local verification). |
 
 ## Open questions
 

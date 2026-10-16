@@ -25,8 +25,12 @@
 #include "InputAction.h"
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
+#include "Engine/ActorChannel.h"
+#include "Engine/ChildConnection.h"
 #include "Engine/DataTable.h"
 #include "Engine/Engine.h"
+#include "Engine/NetConnection.h"
+#include "Engine/NetDriver.h"
 #include "EngineUtils.h"
 #include "Items/CrossguardEquipmentComponent.h"
 #include "Interaction/CrossguardInteractable.h"
@@ -649,6 +653,10 @@ void ACrossguardCharacter::OnStealthChanged(const FGameplayTag Tag, int32 Count)
 	if (HasAuthority())
 	{
 		ForceNetUpdate();
+		if (Count > 0)
+		{
+			CloseStealthHiddenChannels();
+		}
 	}
 	// While stealthed, re-check twice a second: the local viewer's pawn or team may change. A
 	// dedicated server draws nothing.
@@ -662,27 +670,82 @@ void ACrossguardCharacter::OnStealthChanged(const FGameplayTag Tag, int32 Count)
 	}
 }
 
+bool ACrossguardCharacter::IsHiddenByStealthFrom(const AActor* RealViewer, const AActor* ViewTarget) const
+{
+	if (!CrossguardStealthRelevancy::CVarStealthHidesFromEnemies.GetValueOnGameThread()
+		|| AbilitySystemComponent == nullptr || !AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Stealthed)
+		|| RealViewer == nullptr)
+	{
+		return false;
+	}
+	// Always relevant to its own player (owner / view target), whatever the team.
+	const bool bOwnViewer = RealViewer == GetController() || ViewTarget == this || IsOwnedBy(RealViewer)
+		|| (ViewTarget != nullptr && IsOwnedBy(ViewTarget));
+	// RealViewer is the viewing PlayerController; the team library resolves it through its player
+	// state, so a spectating ally (no pawn) still counts. No design reveal radius yet
+	// (design-decisions.md, Stealth): an enemy never gets it while stealthed.
+	return !bOwnViewer && !UCrossguardTeamLibrary::AreAllies(RealViewer, this);
+}
+
 bool ACrossguardCharacter::IsNetRelevantFor(const AActor* RealViewer, const AActor* ViewTarget, const FVector& SrcLocation) const
 {
 	// Server only (the net driver asks per client connection). Server-side AI never goes through
 	// this: monsters' perception of stealth is separate. bAlwaysRelevant must stay false on
 	// characters, or the net driver never asks; NetCullDistance only adds hiding on top of this.
-	if (CrossguardStealthRelevancy::CVarStealthHidesFromEnemies.GetValueOnGameThread()
-		&& AbilitySystemComponent != nullptr && AbilitySystemComponent->HasMatchingGameplayTag(CrossguardTags::State_Stealthed)
-		&& RealViewer != nullptr)
+	if (IsHiddenByStealthFrom(RealViewer, ViewTarget))
 	{
-		// Always relevant to its own player (owner / view target), whatever the team.
-		const bool bOwnViewer = RealViewer == GetController() || ViewTarget == this || IsOwnedBy(RealViewer)
-			|| (ViewTarget != nullptr && IsOwnedBy(ViewTarget));
-		// RealViewer is the viewing PlayerController; the team library resolves it through its player
-		// state, so a spectating ally (no pawn) still counts. No design reveal radius yet
-		// (design-decisions.md, Stealth): an enemy never gets it while stealthed.
-		if (!bOwnViewer && !UCrossguardTeamLibrary::AreAllies(RealViewer, this))
-		{
-			return false;
-		}
+		return false;
 	}
 	return Super::IsNetRelevantFor(RealViewer, ViewTarget, SrcLocation);
+}
+
+void ACrossguardCharacter::CloseStealthHiddenChannels()
+{
+	// Server, on stealth start. Not relevant any more is not enough: the classic net driver keeps an
+	// open channel (and keeps sending the position) for RelevantTimeout (5 s) after the last relevant
+	// frame. Close the enemy connections' channels now, as the net driver would after the timeout;
+	// the client destroys its copy, and IsNetRelevantFor keeps it from reopening until stealth ends.
+	// Classic net driver only: with a replication driver (ReplicationGraph) relevancy is decided by
+	// its nodes and would reopen the channel; Iris has no actor channels. Both skip (the leak stays).
+	if (!HasAuthority() || !CrossguardStealthRelevancy::CVarStealthHidesFromEnemies.GetValueOnGameThread())
+	{
+		return;
+	}
+	UNetDriver* NetDriver = GetNetDriver();
+	if (NetDriver == nullptr || NetDriver->GetReplicationDriver() != nullptr || NetDriver->IsUsingIrisReplication())
+	{
+		return;
+	}
+	for (UNetConnection* Connection : NetDriver->ClientConnections)
+	{
+		if (Connection == nullptr)
+		{
+			continue;
+		}
+		UActorChannel* Channel = Connection->FindActorChannelRef(this);
+		if (Channel == nullptr || Channel->Closing)
+		{
+			continue;
+		}
+		// The connection's viewers as the net driver builds them (FNetViewer): its player controller
+		// (or owning actor) and view target, plus split-screen children. Hidden only if hidden from all.
+		bool bHiddenFromAll = IsHiddenByStealthFrom(
+			Connection->PlayerController != nullptr ? static_cast<const AActor*>(Connection->PlayerController.Get()) : Connection->OwningActor.Get(),
+			Connection->ViewTarget.Get());
+		for (const UChildConnection* Child : Connection->Children)
+		{
+			if (bHiddenFromAll && Child != nullptr)
+			{
+				bHiddenFromAll = IsHiddenByStealthFrom(
+					Child->PlayerController != nullptr ? static_cast<const AActor*>(Child->PlayerController.Get()) : Child->OwningActor.Get(),
+					Child->ViewTarget.Get());
+			}
+		}
+		if (bHiddenFromAll)
+		{
+			Channel->Close(EChannelCloseReason::Relevancy);
+		}
+	}
 }
 
 void ACrossguardCharacter::ClientLaunch_Implementation(FVector Velocity)

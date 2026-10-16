@@ -94,6 +94,8 @@ void ACrossguardMinionController::Tick(float DeltaSeconds)
 	{
 		return;
 	}
+	// Crowd avoidance: its side's group (teams can change), none once dead.
+	Minion->UpdateAvoidanceGroups();
 	if (!Minion->IsAlive())
 	{
 		StopMovement();

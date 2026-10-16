@@ -752,6 +752,77 @@ bool FCrossguardScenarioMonsterTeam::RunTest(const FString& Parameters)
 	return true;
 }
 
+// --- Crowd avoidance -----------------------------------------------------------------------------
+
+// Roadmap "Crowd avoidance": a minion whose summoner stands exactly between it and its target steers
+// around the summoner (RVO avoidance, same side) and reaches the target. Without avoidance it walks
+// straight into the summoner's back and stays there (no NavMesh: a straight-line walk). The summoner
+// is a monster with no aggro range, so it stays put as the obstacle.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioMinionAvoidsSummoner, "Crossguard.Scenario.Monsters.MinionAvoidsSummoner", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardScenarioMinionAvoidsSummoner::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioMonsterAI;
+
+	static constexpr float SceneY = 5000.0f;
+	FScenario Scenario(*this);
+
+	Scenario.Step(TEXT("Minion, its summoner 2 m ahead on the same line, a player 7 m ahead"), [](FScenarioContext& C)
+	{
+		ACrossguardMonster* Summoner = C.SpawnMonster(TEXT("Summoner"), NAME_None, FVector(200.0f, SceneY, 0.0f), 0.0f,
+			[](ACrossguardMonster& Monster)
+			{
+				// Never chases: it stays as the obstacle.
+				Monster.AggroRange = 0.0f;
+			});
+		if (!C.Require(Summoner != nullptr, TEXT("the summoner spawned")))
+		{
+			return;
+		}
+		ACrossguardMinion* Minion = C.SpawnMinion(TEXT("Minion"), Summoner, FVector(0.0f, SceneY, 0.0f));
+		if (!C.Require(Minion != nullptr && Minion->GetController() != nullptr, TEXT("the minion spawned with its controller")))
+		{
+			return;
+		}
+		C.Test.TestTrue(TEXT("The minion uses RVO avoidance"), Minion->GetCharacterMovement()->bUseRVOAvoidance);
+		C.Test.TestTrue(TEXT("The summoner uses RVO avoidance"), Summoner->GetCharacterMovement()->bUseRVOAvoidance);
+		C.SetNumber(TEXT("SummonerX"), Summoner->GetActorLocation().X);
+		C.SetNumber(TEXT("SummonerY"), Summoner->GetActorLocation().Y);
+		C.ClearLog();
+		C.SpawnPlayer(TEXT("Player"), FVector(700.0f, SceneY, 0.0f), 180.0f);
+		C.SetNumber(TEXT("StartedAt"), C.Now());
+	});
+
+	Scenario.WaitUntil(TEXT("the minion gets around its summoner and hits the player"), 10.0f, [](FScenarioContext& C)
+	{
+		AActor* Player = C.FindActor(TEXT("Player"));
+		const AActor* Minion = C.FindActor(TEXT("Minion"));
+		if (!C.Require(Player != nullptr && Minion != nullptr, TEXT("player and minion still there")))
+		{
+			return false;
+		}
+		TopUpHealth(Player);
+		return CountDamageLines(C, Player, Minion) > 0;
+	});
+
+	Scenario.Step(TEXT("The summoner stayed where it was (it was the obstacle)"), [](FScenarioContext& C)
+	{
+		const AActor* Summoner = C.FindActor(TEXT("Summoner"));
+		if (!C.Require(Summoner != nullptr, TEXT("the summoner is still there")))
+		{
+			return;
+		}
+		C.Test.AddInfo(FString::Printf(TEXT("The minion first hit the player %.2f s after it appeared"),
+			C.Now() - static_cast<float>(C.Number(TEXT("StartedAt")))));
+		const FVector Start(static_cast<float>(C.Number(TEXT("SummonerX"))), static_cast<float>(C.Number(TEXT("SummonerY"))), 0.0f);
+		C.Test.TestTrue(TEXT("The summoner moved less than 0.5 m"), FVector::Dist2D(Summoner->GetActorLocation(), Start) < 50.0f);
+	});
+
+	Scenario.Run();
+	return true;
+}
+
 // --- Death: body, loot, kill XP ---------------------------------------------------------------------
 
 // Checklist / Experience: a player kills monsters of one mob -> each leaves a body (with a roll of

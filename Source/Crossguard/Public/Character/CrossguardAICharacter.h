@@ -133,6 +133,13 @@ public:
 
 	bool IsAlive() const;
 
+	// Crowd avoidance (RVO, on its movement component; placeholder numbers): it steers around allied
+	// monsters and minions on its own side instead of walking into their backs. Enemies are not
+	// avoided (it has to close in to fight them), players are not avoidance agents at all. Server,
+	// called by its controller every tick: puts it in its side's avoidance group (its team, or a
+	// teamless summoner's own minions) and stops it being avoided once dead.
+	void UpdateAvoidanceGroups();
+
 	// Server. Back to full Health (monsters giving up the chase).
 	void RestoreFullHealth();
 

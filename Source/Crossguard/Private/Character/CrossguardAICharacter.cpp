@@ -4,6 +4,7 @@
 #include "AbilitySystem/CrossguardEffects.h"
 #include "AbilitySystem/CrossguardGameplayTags.h"
 #include "AbilitySystemGlobals.h"
+#include "Character/CrossguardMinion.h"
 #include "Combat/CrossguardGuard.h"
 #include "Combat/CrossguardProjectile.h"
 #include "Combat/CrossguardSpellProjectile.h"
@@ -16,6 +17,7 @@
 #include "CrossguardRules/Loadout.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
+#include "Game/CrossguardTeamLibrary.h"
 #include "TimerManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Skills/CrossguardDataPassiveAbility.h"
@@ -42,6 +44,11 @@ ACrossguardAICharacter::ACrossguardAICharacter()
 	// AI turns toward where it moves.
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
+	// Crowd avoidance (design-decisions.md, placeholder): RVO on the movement component, so it also
+	// works on the straight-line walk used without a NavMesh. Groups: UpdateAvoidanceGroups.
+	GetCharacterMovement()->bUseRVOAvoidance = true;
+	GetCharacterMovement()->AvoidanceConsiderationRadius = 300.0f;
+	GetCharacterMovement()->AvoidanceWeight = 0.5f;
 
 	// The base character hides its mesh from its owner (first person); an AI character's owner may
 	// be a player (a summoner), who must see it.
@@ -69,6 +76,41 @@ void ACrossguardAICharacter::PossessedBy(AController* NewController)
 	GetCrossguardAbilitySystemComponent()->SetFixedMaxHealth(FixedHealth);
 	RestoreFullHealth();
 	GrantSkills();
+}
+
+void ACrossguardAICharacter::UpdateAvoidanceGroups()
+{
+	UCharacterMovementComponent* Movement = GetCharacterMovement();
+	if (Movement == nullptr || !HasAuthority())
+	{
+		return;
+	}
+	// Its side: the team (a minion's is its summoner's), else a teamless summoner's own minions.
+	// Group 0 is for no side: in no one's avoid set, avoids no one.
+	uint32 Group = 0;
+	if (IsAlive())
+	{
+		const int32 TeamId = UCrossguardTeamLibrary::GetTeamId(this);
+		const ACrossguardMinion* AsMinion = Cast<ACrossguardMinion>(this);
+		const ACrossguardCharacter* SummonerCharacter = AsMinion != nullptr ? AsMinion->GetSummoner() : nullptr;
+		// 31 groups for every side (assumed: two sides sharing a group just avoid each other too).
+		if (TeamId >= 0)
+		{
+			Group = 1u + static_cast<uint32>(TeamId) % 31u;
+		}
+		else if (SummonerCharacter != nullptr)
+		{
+			Group = 1u + SummonerCharacter->GetUniqueID() % 31u;
+		}
+	}
+	FNavAvoidanceMask OwnGroup;
+	OwnGroup.SetFlagsDirectly(Group == 0 ? 0u : 1u << Group);
+	FNavAvoidanceMask NoGroups;
+	NoGroups.SetFlagsDirectly(0u);
+	// A dead one is in no group, so nobody steers around its body.
+	Movement->SetAvoidanceGroupMask(OwnGroup);
+	Movement->SetGroupsToAvoidMask(OwnGroup);
+	Movement->SetGroupsToIgnoreMask(NoGroups);
 }
 
 void ACrossguardAICharacter::ClearSkills()
