@@ -21,6 +21,8 @@ import (
 // to the collection are refused in auth.go). The game server validates the document on load; this
 // module only checks its rough shape so that garbage never lands in the database.
 //
+// Only the server holding the player's save lease (leases.go) writes: the write carries its token.
+//
 // Writes use storage object versions (optimistic concurrency): the caller passes the version it loaded
 // ("*" when there was none), so two game servers can never silently overwrite each other's save. A
 // write that loses the race is kept in "characters_conflicts" for support, never dropped.
@@ -40,6 +42,9 @@ const (
 	MaxRecordBytes = 8 * 1024 * 1024
 
 	maxReasonLength = 512
+
+	// One character per account until character select exists (placeholder); the lease's default key.
+	defaultCharacterID = "main"
 )
 
 var characterIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
@@ -155,6 +160,8 @@ type saveWriteRequest struct {
 	Record json.RawMessage `json:"record"`
 	// The version the caller loaded or last wrote; "*" = only if there is no save yet.
 	ExpectedVersion string `json:"expected_version"`
+	// The caller's save lease (crossguard_lease_acquire): only the lease holder writes.
+	LeaseToken string `json:"lease_token"`
 }
 
 type saveWriteResponse struct {
@@ -193,9 +200,10 @@ func validateRecord(record json.RawMessage, userID string) error {
 	return nil
 }
 
-// RpcSaveWriteFn: {"user_id", "character_id", "record", "expected_version"} -> {"version"}.
+// RpcSaveWriteFn: {"user_id", "character_id", "record", "expected_version", "lease_token"} -> {"version"}.
 // A stale expected_version answers ABORTED (HTTP 409) and the refused record is kept in
-// characters_conflicts.
+// characters_conflicts. A token that is not the player's current save lease answers FAILED_PRECONDITION
+// (HTTP 400, "save lease not held"): the caller stops writing that player.
 func RpcSaveWriteFn(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
 	if err := requireServerCall(ctx); err != nil {
 		return "", err
@@ -220,7 +228,20 @@ func RpcSaveWriteFn(ctx context.Context, logger runtime.Logger, db *sql.DB, nk r
 		return "", err
 	}
 
-	acks, err := nk.StorageWrite(ctx, []*runtime.StorageWrite{{
+	if request.LeaseToken == "" {
+		return "", errNoLeaseToken
+	}
+	guard, err := leaseGuard(ctx, nk, request.UserID, request.CharacterID, request.LeaseToken)
+	if err != nil {
+		if err == errLeaseLost {
+			logger.Warn("save write for %s/%s refused: the caller does not hold the save lease", request.UserID, request.CharacterID)
+		}
+		return "", err
+	}
+
+	// The save and the lease (rewritten unchanged, version-checked) in one transaction: a lease taken
+	// over between the check above and this write refuses the save too.
+	saveWrite := &runtime.StorageWrite{
 		Collection:      collectionCharacters,
 		Key:             request.CharacterID,
 		UserID:          request.UserID,
@@ -228,9 +249,14 @@ func RpcSaveWriteFn(ctx context.Context, logger runtime.Logger, db *sql.DB, nk r
 		Version:         request.ExpectedVersion,
 		PermissionRead:  permissionOwnerRead,
 		PermissionWrite: permissionNoWrite,
-	}})
+	}
+	acks, _, err := nk.MultiUpdate(ctx, nil, []*runtime.StorageWrite{saveWrite, guard}, nil, nil, false)
 	if err != nil {
-		if isVersionConflict(err) {
+		if isRejected(err) {
+			if !leaseStillHeld(ctx, nk, request.UserID, request.CharacterID, request.LeaseToken, guard) {
+				logger.Warn("save write for %s/%s refused: the save lease changed during the write", request.UserID, request.CharacterID)
+				return "", errLeaseLost
+			}
 			key := keepConflict(ctx, logger, nk, request)
 			logger.Warn("save write for %s/%s refused: version %s is stale (kept as %s/%s)", request.UserID, request.CharacterID,
 				request.ExpectedVersion, collectionConflicts, key)
@@ -240,10 +266,16 @@ func RpcSaveWriteFn(ctx context.Context, logger runtime.Logger, db *sql.DB, nk r
 		logger.Error("save write failed for %s/%s: %v", request.UserID, request.CharacterID, err)
 		return "", errStorage
 	}
-	if len(acks) == 0 {
+	version := ""
+	for _, ack := range acks {
+		if ack.GetCollection() == collectionCharacters {
+			version = ack.GetVersion()
+		}
+	}
+	if version == "" {
 		return "", errStorage
 	}
-	out, _ := json.Marshal(saveWriteResponse{Version: acks[0].GetVersion()})
+	out, _ := json.Marshal(saveWriteResponse{Version: version})
 	return string(out), nil
 }
 

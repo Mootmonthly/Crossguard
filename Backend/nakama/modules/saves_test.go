@@ -21,7 +21,12 @@ func itoa(n int) string {
 }
 
 func writePayload(userID, characterID, rec, expected string) string {
-	return `{"user_id": "` + userID + `", "character_id": "` + characterID + `", "record": ` + rec + `, "expected_version": "` + expected + `"}`
+	return writePayloadWithLease(userID, characterID, rec, expected, testLeaseToken)
+}
+
+func writePayloadWithLease(userID, characterID, rec, expected, token string) string {
+	return `{"user_id": "` + userID + `", "character_id": "` + characterID + `", "record": ` + rec + `, "expected_version": "` + expected +
+		`", "lease_token": "` + token + `"}`
 }
 
 func load(t *testing.T, nk *fakeNakama, userID, characterID string) saveLoadResponse {
@@ -145,6 +150,9 @@ func TestWriteValidation(t *testing.T) {
 			t.Errorf("%s: want INVALID_ARGUMENT, got %v", name, err)
 		}
 	}
+	if _, err := RpcSaveWriteFn(serverCtx(), &fakeLogger{}, nil, nk, writePayloadWithLease(alice, "main", record(alice, 1), "*", "")); errorCode(err) != codeInvalidArgument {
+		t.Errorf("no lease token: want INVALID_ARGUMENT, got %v", err)
+	}
 	// Unknown user: NOT_FOUND.
 	if _, err := RpcSaveWriteFn(serverCtx(), &fakeLogger{}, nil, nk, writePayload(bob, "main", record(bob, 1), "*")); errorCode(err) != codeNotFound {
 		t.Errorf("unknown user: %v", err)
@@ -216,7 +224,7 @@ func TestLoadResponseFieldOrder(t *testing.T) {
 	if !strings.HasPrefix(out, `{"found":true,"version":"`) || !strings.HasSuffix(out, `,"record":`+compact+`}`) {
 		t.Fatalf("load answer shape changed: %s", out)
 	}
-	nk.users[bob] = nk.users[alice]
+	nk.addUser(bob)
 	out, _ = RpcSaveLoadFn(serverCtx(), &fakeLogger{}, nil, nk, `{"user_id": "`+bob+`", "character_id": "main"}`)
 	if out != `{"found":false,"version":"*","record":null}` {
 		t.Fatalf("new character answer shape changed: %s", out)

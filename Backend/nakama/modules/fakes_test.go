@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/heroiclabs/nakama-common/api"
 	"github.com/heroiclabs/nakama-common/runtime"
@@ -37,18 +39,48 @@ type storedObject struct {
 // absent, otherwise must match). Only the calls the module makes are implemented.
 type fakeNakama struct {
 	runtime.NakamaModule
-	users    map[string]*api.Account
-	storage  map[string]storedObject // collection/user/key
-	failRead bool
-	writes   int
+	users     map[string]*api.Account
+	storage   map[string]storedObject // collection/user/key
+	failRead  bool
+	failWrite bool
+	writes    int
+	// Called before each MultiUpdate (tests: a concurrent change between read and write).
+	beforeMultiUpdate func()
 }
+
+// The save lease every user of newFakeNakama holds (writePayload sends its token).
+const (
+	testLeaseToken  = "test-lease-token"
+	testLeaseServer = "test-server"
+)
 
 func newFakeNakama(userIDs ...string) *fakeNakama {
 	nk := &fakeNakama{users: map[string]*api.Account{}, storage: map[string]storedObject{}}
 	for _, id := range userIDs {
-		nk.users[id] = &api.Account{User: &api.User{Id: id, Username: "user-" + id[:4]}}
+		nk.addUser(id)
 	}
 	return nk
+}
+
+// addUser: an account holding the test lease (seeded, not counted as a write).
+func (nk *fakeNakama) addUser(id string) {
+	nk.users[id] = &api.Account{User: &api.User{Id: id, Username: "user-" + id[:4]}}
+	nk.seedLease(id, leaseRecord{ServerID: testLeaseServer, Token: testLeaseToken, ExpiresAtMs: now().Add(24 * time.Hour).UnixMilli()})
+}
+
+func (nk *fakeNakama) seedLease(userID string, lease leaseRecord) {
+	value, _ := json.Marshal(lease)
+	sum := md5.Sum(value)
+	nk.storage[storageKey(collectionLeases, userID, defaultCharacterID)] = storedObject{value: string(value), version: hex.EncodeToString(sum[:])}
+}
+
+// copyStorage: for MultiUpdate's all-or-nothing.
+func (nk *fakeNakama) copyStorage() map[string]storedObject {
+	copied := make(map[string]storedObject, len(nk.storage))
+	for key, object := range nk.storage {
+		copied[key] = object
+	}
+	return copied
 }
 
 func (nk *fakeNakama) ban(userID string) {
@@ -89,6 +121,21 @@ func (nk *fakeNakama) StorageRead(ctx context.Context, reads []*runtime.StorageR
 }
 
 func (nk *fakeNakama) StorageWrite(ctx context.Context, writes []*runtime.StorageWrite) ([]*api.StorageObjectAck, error) {
+	// All or nothing, like Nakama's transaction.
+	saved := nk.copyStorage()
+	savedWrites := nk.writes
+	acks, err := nk.storageWrite(writes)
+	if err != nil {
+		nk.storage = saved
+		nk.writes = savedWrites
+	}
+	return acks, err
+}
+
+func (nk *fakeNakama) storageWrite(writes []*runtime.StorageWrite) ([]*api.StorageObjectAck, error) {
+	if nk.failWrite {
+		return nil, errors.New("database is down")
+	}
 	var acks []*api.StorageObjectAck
 	for _, write := range writes {
 		id := storageKey(write.Collection, write.UserID, write.Key)
@@ -111,6 +158,57 @@ func (nk *fakeNakama) StorageWrite(ctx context.Context, writes []*runtime.Storag
 		acks = append(acks, &api.StorageObjectAck{Collection: write.Collection, Key: write.Key, UserId: write.UserID, Version: version})
 	}
 	return acks, nil
+}
+
+func (nk *fakeNakama) StorageDelete(ctx context.Context, deletes []*runtime.StorageDelete) error {
+	saved := nk.copyStorage()
+	if err := nk.storageDelete(deletes); err != nil {
+		nk.storage = saved
+		return err
+	}
+	return nil
+}
+
+func (nk *fakeNakama) storageDelete(deletes []*runtime.StorageDelete) error {
+	for _, remove := range deletes {
+		id := storageKey(remove.Collection, remove.UserID, remove.Key)
+		existing, exists := nk.storage[id]
+		if remove.Version != "" && (!exists || existing.version != remove.Version) {
+			return errors.New("Storage delete rejected - version check failed.")
+		}
+		delete(nk.storage, id)
+	}
+	return nil
+}
+
+func (nk *fakeNakama) MultiUpdate(ctx context.Context, accountUpdates []*runtime.AccountUpdate, storageWrites []*runtime.StorageWrite,
+	storageDeletes []*runtime.StorageDelete, walletUpdates []*runtime.WalletUpdate, updateLedger bool) ([]*api.StorageObjectAck, []*runtime.WalletUpdateResult, error) {
+	if hook := nk.beforeMultiUpdate; hook != nil {
+		nk.beforeMultiUpdate = nil
+		hook()
+	}
+	saved := nk.copyStorage()
+	savedWrites := nk.writes
+	acks, err := nk.storageWrite(storageWrites)
+	if err == nil {
+		err = nk.storageDelete(storageDeletes)
+	}
+	if err != nil {
+		nk.storage = saved
+		nk.writes = savedWrites
+		return nil, nil, err
+	}
+	return acks, nil, nil
+}
+
+// object returns one stored value (decoded into out); false if absent.
+func (nk *fakeNakama) object(collection, userID, key string, out any) bool {
+	object, ok := nk.storage[storageKey(collection, userID, key)]
+	if !ok {
+		return false
+	}
+	_ = json.Unmarshal([]byte(object.value), out)
+	return true
 }
 
 // objectsIn lists the stored objects of one collection.

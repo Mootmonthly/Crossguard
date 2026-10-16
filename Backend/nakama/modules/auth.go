@@ -23,11 +23,17 @@ const (
 // id is just a string the client picks, so anyone could log in as anyone who uses a known id.
 const envDevAuth = "CROSSGUARD_DEV_AUTH"
 
-// Storage collections only the server writes (game clients may read their own character).
+// Storage collections only the server writes (game clients may read their own character, party
+// membership and invite inbox).
 var serverOnlyCollections = map[string]bool{
-	collectionCharacters: true,
-	collectionQuarantine: true,
-	collectionConflicts:  true,
+	collectionCharacters:   true,
+	collectionQuarantine:   true,
+	collectionConflicts:    true,
+	collectionLeases:       true,
+	collectionParties:      true,
+	collectionPartyMembers: true,
+	collectionPartyInvites: true,
+	collectionMatchTickets: true,
 }
 
 var (
