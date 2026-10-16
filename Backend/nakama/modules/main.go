@@ -9,6 +9,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/heroiclabs/nakama-common/runtime"
 )
@@ -24,11 +25,23 @@ const (
 
 // InitModule is the plugin entry point Nakama looks up by name.
 func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, initializer runtime.Initializer) error {
+	config, err := initializer.GetConfig()
+	if err != nil {
+		return err
+	}
+	encryptionKey := ""
+	if config != nil && config.GetSession() != nil {
+		encryptionKey = config.GetSession().GetEncryptionKey()
+	}
+	if encryptionKey == "" {
+		return errors.New("crossguard: session.encryption_key is empty; crossguard_verify_session cannot work")
+	}
+
 	rpcs := map[string]func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error){
 		RpcSaveLoad:       RpcSaveLoadFn,
 		RpcSaveWrite:      RpcSaveWriteFn,
 		RpcSaveQuarantine: RpcSaveQuarantineFn,
-		RpcVerifySession:  RpcVerifySessionFn,
+		RpcVerifySession:  NewVerifySessionRpc(encryptionKey),
 	}
 	for id, fn := range rpcs {
 		if err := initializer.RegisterRpc(id, fn); err != nil {

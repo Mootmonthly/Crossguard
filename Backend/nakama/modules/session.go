@@ -27,7 +27,6 @@ var (
 	errBadToken     = runtime.NewError("session token is not valid", codeUnauthenticated)
 	errExpiredToken = runtime.NewError("session token has expired", codeUnauthenticated)
 	errBannedUser   = runtime.NewError("account is disabled", codePermissionDenied)
-	errNoConfig     = runtime.NewError("server configuration unavailable", codeInternal)
 )
 
 // Longer than any real token; stops absurd payloads before any work.
@@ -93,8 +92,16 @@ func parseSessionToken(token string, key []byte) (sessionClaims, error) {
 	return claims, nil
 }
 
-// RpcVerifySessionFn: {"token"} -> {"user_id", "username", "steam_id", "expires_at"}. Server-to-server only.
-func RpcVerifySessionFn(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+// NewVerifySessionRpc: {"token"} -> {"user_id", "username", "steam_id", "expires_at"}. Server-to-server
+// only. encryptionKey is session.encryption_key (Initializer.GetConfig at module load).
+func NewVerifySessionRpc(encryptionKey string) func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, string) (string, error) {
+	key := []byte(encryptionKey)
+	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, payload string) (string, error) {
+		return verifySession(ctx, logger, nk, key, payload)
+	}
+}
+
+func verifySession(ctx context.Context, logger runtime.Logger, nk runtime.NakamaModule, key []byte, payload string) (string, error) {
 	if err := requireServerCall(ctx); err != nil {
 		return "", err
 	}
@@ -108,12 +115,7 @@ func RpcVerifySessionFn(ctx context.Context, logger runtime.Logger, db *sql.DB, 
 	if len(request.Token) > maxTokenLength {
 		return "", errBadToken
 	}
-	config, err := nk.GetConfig()
-	if err != nil || config == nil || config.GetSession() == nil {
-		logger.Error("verify session: no config: %v", err)
-		return "", errNoConfig
-	}
-	claims, err := parseSessionToken(request.Token, []byte(config.GetSession().GetEncryptionKey()))
+	claims, err := parseSessionToken(request.Token, key)
 	if err != nil {
 		return "", err
 	}
