@@ -51,8 +51,10 @@ void UCrossguardAttributesWidget::BuildTree()
 
 	PointsText = MakeText(TEXT("No player state."), 14);
 	AddTo(Body, PointsText);
-	AddTo(Body, MakeText(TEXT("Spending unspent points is free. Lowering any attribute is a respec: a respec token, or banked gold. Between raids only."),
-		10, Dim), 4.0f);
+	UTextBlock* RulesText = MakeText(TEXT("Spending unspent points is free. Lowering any attribute is a respec: a respec token, or banked gold. Between raids only."),
+		10, Dim);
+	RulesText->SetAutoWrapText(true);
+	AddTo(Body, RulesText, 4.0f);
 
 	// One row per attribute: name, current -> draft, - and +.
 	for (int32 Attribute = 0; Attribute < AttributeCount; ++Attribute)

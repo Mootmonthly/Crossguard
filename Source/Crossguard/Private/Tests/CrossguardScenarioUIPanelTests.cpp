@@ -10,11 +10,13 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "Blueprint/UserWidget.h"
+#include "Camera/CameraComponent.h"
 #include "Character/CrossguardCharacter.h"
 #include "Engine/GameInstance.h"
 #include "Game/CrossguardPartyComponent.h"
 #include "Game/CrossguardPartySubsystem.h"
 #include "Game/CrossguardPlayerState.h"
+#include "Game/CrossguardSettingsSave.h"
 #include "GameFramework/PlayerController.h"
 #include "UI/CrossguardAttributesWidget.h"
 #include "UI/CrossguardPartyWidget.h"
@@ -257,6 +259,18 @@ bool FCrossguardScenarioUIPanelsBind::RunTest(const FString& Parameters)
 
 		PartyWindow->RemoveFromParent();
 		TeamList->RemoveFromParent();
+	});
+
+	Scenario.Step(TEXT("The saved field of view is on the PIE player's camera"), [](FScenarioContext& C)
+	{
+		const ACrossguardCharacter* Player = C.LocalPlayer();
+		const UCameraComponent* PawnCamera = Player != nullptr ? Player->FindComponentByClass<UCameraComponent>() : nullptr;
+		const UCrossguardSettingsSave* Settings = UCrossguardSettingsSave::LoadOrDefault();
+		if (!C.Require(PawnCamera != nullptr && Settings != nullptr, TEXT("the PIE player has a camera; settings load")))
+		{
+			return;
+		}
+		C.Test.TestEqual(TEXT("Camera FOV = saved FOV"), PawnCamera->FieldOfView, Settings->FieldOfView);
 	});
 
 	Scenario.Run();

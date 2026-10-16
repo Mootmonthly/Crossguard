@@ -118,6 +118,11 @@ UHorizontalBox* UCrossguardWidgetBase::MakeRow()
 UEditableTextBox* UCrossguardWidgetBase::MakeTextField(const FString& Hint)
 {
 	UEditableTextBox* Field = Make<UEditableTextBox>();
+	// The default style's large font overflows the box at 1280 x 720: the windows' 12 pt, dark on the light box.
+	FEditableTextBoxStyle Style = Field->GetWidgetStyle();
+	Style.SetFont(FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 12));
+	Style.SetForegroundColor(FSlateColor(FLinearColor(0.02f, 0.02f, 0.03f)));
+	Field->SetWidgetStyle(Style);
 	Field->SetHintText(FText::FromString(Hint));
 	return Field;
 }
