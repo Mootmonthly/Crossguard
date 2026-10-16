@@ -20,6 +20,10 @@ public class Crossguard : ModuleRules
 			"GameplayTags",
 			"GameplayTasks",
 			"CrossguardRules",
+			// Placeholder UI built in C++ (Source/Crossguard/*/UI, docs/ui.md).
+			"UMG",
+			"Slate",
+			"SlateCore",
 		});
 
 		// Editor builds only: the scenario tests (Private/Tests/CrossguardScenario.*) create a map,
