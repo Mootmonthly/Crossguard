@@ -13,6 +13,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/heroiclabs/nakama-common/runtime"
 )
@@ -58,6 +59,14 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 		return errors.New("crossguard: session.encryption_key is empty; crossguard_verify_session cannot work")
 	}
 
+	// Steam login (docs/steam-setup.md): Nakama checks tickets with these (STEAM_APP_ID / STEAM_PUBLISHER_KEY).
+	steamAppID := 0
+	steamKeySet := false
+	if config != nil && config.GetSocial() != nil && config.GetSocial().GetSteam() != nil {
+		steamAppID = config.GetSocial().GetSteam().GetAppID()
+		steamKeySet = config.GetSocial().GetSteam().GetPublisherKey() != ""
+	}
+
 	clusterSettings := clusterConfigFromEnv(ctx)
 	c := newCluster(clusterSettings)
 	rpcs := map[string]rpcFn{
@@ -92,8 +101,21 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 	if err := registerAuthPolicy(initializer); err != nil {
 		return err
 	}
-	logger.Info("Crossguard module loaded (dev device auth: %v; matchmaking: %d teams or %d s, tickets %d s, heartbeat %d s; %s)",
-		devAuthEnabled(ctx), clusterSettings.MinTeams, clusterSettings.MaxWaitSec, clusterSettings.TicketTTLSec, clusterSettings.HeartbeatSec,
-		c.allocator.Describe())
+	logger.Info("Crossguard module loaded (dev device auth: %v; %s; matchmaking: %d teams or %d s, tickets %d s, heartbeat %d s; %s)",
+		devAuthEnabled(ctx), describeSteamLogin(steamAppID, steamKeySet), clusterSettings.MinTeams, clusterSettings.MaxWaitSec, clusterSettings.TicketTTLSec,
+		clusterSettings.HeartbeatSec, c.allocator.Describe())
 	return nil
+}
+
+// describeSteamLogin: the load log line's Steam part (never the key itself).
+func describeSteamLogin(appID int, publisherKeySet bool) string {
+	switch {
+	case appID == 0 && !publisherKeySet:
+		return "Steam login off (STEAM_APP_ID / STEAM_PUBLISHER_KEY empty)"
+	case appID == 0 || !publisherKeySet:
+		return "Steam login off (STEAM_APP_ID and STEAM_PUBLISHER_KEY are both needed)"
+	case appID == 480:
+		return "Steam login on, app 480 (Spacewar: testing only)"
+	}
+	return fmt.Sprintf("Steam login on, app %d", appID)
 }

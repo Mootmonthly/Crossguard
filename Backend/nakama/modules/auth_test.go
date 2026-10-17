@@ -51,3 +51,21 @@ func TestOtherLoginMethodsOff(t *testing.T) {
 		t.Fatalf("email login: %v", err)
 	}
 }
+
+func TestDescribeSteamLogin(t *testing.T) {
+	for _, c := range []struct {
+		appID  int
+		keySet bool
+		want   string
+	}{
+		{0, false, "Steam login off (STEAM_APP_ID / STEAM_PUBLISHER_KEY empty)"},
+		{480, false, "Steam login off (STEAM_APP_ID and STEAM_PUBLISHER_KEY are both needed)"},
+		{0, true, "Steam login off (STEAM_APP_ID and STEAM_PUBLISHER_KEY are both needed)"},
+		{480, true, "Steam login on, app 480 (Spacewar: testing only)"},
+		{123456, true, "Steam login on, app 123456"},
+	} {
+		if got := describeSteamLogin(c.appID, c.keySet); got != c.want {
+			t.Errorf("describeSteamLogin(%d, %v) = %q, want %q", c.appID, c.keySet, got, c.want)
+		}
+	}
+}
