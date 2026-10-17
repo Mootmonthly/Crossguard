@@ -21,7 +21,17 @@
 		"CountsAsWeapon": "Sword",
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
-		"ProjectileMesh": "",
+		"ProjectileMesh": "/Game/ThirdParty/Quaternius/MedievalWeapons/SM_Arrow.SM_Arrow",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": -90,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "/Game/NiagaraExamples/FX_Weapons/Trails/NS_SimpleRibbonTrail.NS_SimpleRibbonTrail",
 		"ImpactVfx": "/Game/NiagaraExamples/FX_Weapons/Impacts/NS_Impact_Wood.NS_Impact_Wood",
 		"ImpactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactWood.S_ImpactWood"
@@ -49,6 +59,16 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "",
 		"ImpactVfx": "",
 		"ImpactSound": ""
@@ -76,6 +96,16 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "/Game/NiagaraExamples/FX_Weapons/Trails/NS_SimpleRibbonTrail.NS_SimpleRibbonTrail",
 		"ImpactVfx": "/Game/NiagaraExamples/FX_Weapons/Impacts/NS_Impact_Wood.NS_Impact_Wood",
 		"ImpactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactWood.S_ImpactWood"
@@ -103,6 +133,16 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "",
 		"ImpactVfx": "",
 		"ImpactSound": ""
@@ -130,6 +170,16 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "/Game/ThirdParty/Kenney/SurvivalKit/SM_Bottle.SM_Bottle",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "",
 		"ImpactVfx": "/Game/NiagaraExamples/FX_Explosions/NS_Explosion_Small.NS_Explosion_Small",
 		"ImpactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactGlass.S_ImpactGlass"
@@ -157,6 +207,16 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "",
 		"ImpactVfx": "",
 		"ImpactSound": ""
@@ -184,6 +244,16 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "",
 		"ImpactVfx": "",
 		"ImpactSound": ""
@@ -211,6 +281,16 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "",
 		"ImpactVfx": "",
 		"ImpactSound": ""
@@ -238,6 +318,16 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "",
 		"ImpactVfx": "",
 		"ImpactSound": ""
@@ -265,6 +355,16 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "",
 		"ImpactVfx": "",
 		"ImpactSound": ""
@@ -292,6 +392,16 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "",
 		"ImpactVfx": "",
 		"ImpactSound": ""
@@ -319,6 +429,16 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "",
 		"ImpactVfx": "",
 		"ImpactSound": ""
@@ -346,6 +466,16 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "",
 		"ImpactVfx": "",
 		"ImpactSound": ""
@@ -373,6 +503,16 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "",
 		"ImpactVfx": "",
 		"ImpactSound": ""
@@ -400,6 +540,16 @@
 		"bHasCountsAsWeapon": false,
 		"ImpactPower": 0,
 		"ProjectileMesh": "",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "",
 		"ImpactVfx": "",
 		"ImpactSound": ""
@@ -427,6 +577,16 @@
 		"bHasCountsAsWeapon": true,
 		"ImpactPower": 3,
 		"ProjectileMesh": "/Game/ThirdParty/Kenney/SurvivalKit/SM_ToolAxe.SM_ToolAxe",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "",
 		"ImpactVfx": "/Game/NiagaraExamples/FX_Weapons/Impacts/NS_Impact_Metal.NS_Impact_Metal",
 		"ImpactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactMetal.S_ImpactMetal"
@@ -454,6 +614,16 @@
 		"bHasCountsAsWeapon": true,
 		"ImpactPower": 1,
 		"ProjectileMesh": "/Game/ThirdParty/PolyHaven/OrnateMedievalDagger/SM_OrnateMedievalDagger.SM_OrnateMedievalDagger",
+		"ProjectileRotation": {
+			"Pitch": 0,
+			"Yaw": 0,
+			"Roll": 0
+		},
+		"ProjectileScale": {
+			"X": 1,
+			"Y": 1,
+			"Z": 1
+		},
 		"TrailVfx": "",
 		"ImpactVfx": "/Game/NiagaraExamples/FX_Weapons/Impacts/NS_Impact_Metal.NS_Impact_Metal",
 		"ImpactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactMetal.S_ImpactMetal"

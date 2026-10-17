@@ -105,12 +105,16 @@ Sell value at a rarity = `sellValue + sellPerRarity × level`. The exporter writ
 ### Projectile art (optional, Ammo and Throwable)
 
 What the projectile shows, over the projectile Blueprint's own (`ACrossguardProjectile::Visual`): an
-arrow's from its `Ammo` row (the bow's `ammo`), a throw's from the thrown item's row. Each is an asset
-path (`/Game/Folder/Asset.Asset`) and may be left out (the exporter writes `""`).
+arrow's from its `Ammo` row (the bow's `ammo`), a throw's from the thrown item's row. Each may be
+left out (the exporter writes `""` for a path, no turn and scale 1). Paths are Unreal object paths
+(`/Game/Folder/Asset.Asset`). Tune in Play-In-Editor with `CgReloadArtData` (see
+[art-placeholder-plan.md](art-placeholder-plan.md#tuning-art-without-restarting)).
 
 | Field | Exported as | Meaning |
 | --- | --- | --- |
-| `projectileMesh` | `ProjectileMesh` | Static mesh flying with it (its X axis along the flight). |
+| `projectileMesh` | `ProjectileMesh` | Static mesh flying with it (the projectile's X axis is the flight direction). |
+| `projectileRotation` | `ProjectileRotation` | `[pitch, yaw, roll]` degrees: turns the mesh from the flight direction (default `[0, 0, 0]`). A mesh modelled along +Y (Quaternius' arrow) faces its flight with `[0, -90, 0]`. Needs `projectileMesh`. |
+| `projectileScale` | `ProjectileScale` | Number > 0 or `[x, y, z]` > 0: the mesh's scale (default 1). Needs `projectileMesh`. |
 | `trailVfx` | `TrailVfx` | Niagara system attached for the flight. |
 | `impactVfx` | `ImpactVfx` | Niagara system where it hits or explodes. |
 | `impactSound` | `ImpactSound` | Sound where it hits or explodes. |

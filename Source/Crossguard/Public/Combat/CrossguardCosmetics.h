@@ -70,19 +70,24 @@ struct CROSSGUARD_API FCrossguardAttackCue
 };
 
 // What a projectile looks and sounds like. Set on a projectile Blueprint's defaults, or filled from data
-// (an ammo or throwable row in Data/Items/Items.json: projectileMesh, trailVfx, impactVfx, impactSound).
+// (an ammo or throwable row in Data/Items/Items.json: projectileMesh, projectileRotation,
+// projectileScale, trailVfx, impactVfx, impactSound).
 USTRUCT(BlueprintType)
 struct CROSSGUARD_API FCrossguardProjectileVisual
 {
 	GENERATED_BODY()
 
-	// Static mesh flying with the projectile (no collision). Its X axis points along the flight.
+	// Static mesh flying with the projectile (no collision). The projectile's X axis points along the
+	// flight: turn a mesh modelled along another axis with MeshRotation.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
 	TSoftObjectPtr<UStaticMesh> Mesh;
 
+	// Data: an ammo or throwable row's `projectileScale`. Goes with Mesh (MergeFrom).
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
 	FVector MeshScale = FVector::OneVector;
 
+	// Degrees (pitch, yaw, roll) relative to the flight direction. Data: `projectileRotation`. An arrow
+	// modelled along +Y faces its flight with yaw -90. Goes with Mesh (MergeFrom).
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Projectile")
 	FRotator MeshRotation = FRotator::ZeroRotator;
 
@@ -99,6 +104,17 @@ struct CROSSGUARD_API FCrossguardProjectileVisual
 
 	// Fields set in Other replace these (data over Blueprint defaults).
 	void MergeFrom(const FCrossguardProjectileVisual& Other);
+};
+
+// What a monster's or minion's body does when it dies (FCrossguardBodyVisual::DeathMode, Mobs.json `deathMode`).
+UENUM(BlueprintType)
+enum class ECrossguardDeathMode : uint8
+{
+	// Its mesh ragdolls (like a player's) when the mesh has a Physics Asset; without one, the death
+	// animation plays instead.
+	Ragdoll,
+	// The death animation plays and the last pose stays, even when the mesh has a Physics Asset.
+	Animation,
 };
 
 // A monster's or minion's body from data (Data/Mobs/Mobs.json mesh fields, a summon ability's
@@ -142,6 +158,11 @@ struct CROSSGUARD_API FCrossguardBodyVisual
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body")
 	TSoftObjectPtr<UAnimSequenceBase> DeathAnim;
 
+	// On death: ragdoll (needs the mesh's Physics Asset; without one the death animation plays) or
+	// the death animation (DeathAnim, or the Anim Blueprint's own) holding its last pose.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Body")
+	ECrossguardDeathMode DeathMode = ECrossguardDeathMode::Ragdoll;
+
 	bool HasMesh() const { return !Mesh.IsNull(); }
 	bool HasStateAnimations() const { return !IdleAnim.IsNull() || !MoveAnim.IsNull() || !AttackAnim.IsNull() || !DeathAnim.IsNull(); }
 };
@@ -158,7 +179,8 @@ namespace CrossguardCosmetics
 	CROSSGUARD_API void SpawnFxAt(const UObject* WorldContext, const TSoftObjectPtr<UNiagaraSystem>& System, const FVector& Location,
 		const FRotator& Rotation = FRotator::ZeroRotator);
 
-	// An ammo or throwable row's art (projectileMesh, trailVfx, impactVfx, impactSound); unset fields
+	// An ammo or throwable row's art (projectileMesh, projectileRotation, projectileScale, trailVfx,
+	// impactVfx, impactSound); unset fields
 	// stay empty (FCrossguardProjectileVisual::MergeFrom keeps the Blueprint's for them).
 	CROSSGUARD_API FCrossguardProjectileVisual ProjectileVisualFromItem(const FCrossguardItemRow& Row);
 	// What a projectile weapon without ammo shoots (Weapons.json `projectile`).

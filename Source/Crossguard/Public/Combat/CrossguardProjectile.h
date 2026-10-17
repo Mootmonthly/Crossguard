@@ -54,6 +54,8 @@ public:
 
 	// Impacts played on this machine (tests).
 	int32 GetImpactCount() const { return ImpactCount; }
+	// The mesh showing Visual.Mesh (tests).
+	UStaticMeshComponent* GetVisualMesh() const { return VisualMesh; }
 
 protected:
 	virtual void BeginPlay() override;

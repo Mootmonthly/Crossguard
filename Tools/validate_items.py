@@ -97,6 +97,17 @@ PROJECTILE_ART_SPEC = {
     name: (lambda v: isinstance(v, str) and bool(ASSET_PATH_RE.match(v)), ASSET_DESC)
     for name in ("projectileMesh", "trailVfx", "impactVfx", "impactSound")
 }
+
+
+def triple(v):
+    return isinstance(v, list) and len(v) == 3 and all(is_num(x) for x in v)
+
+
+# The projectile mesh's turn from the flight direction and its scale (need projectileMesh).
+PROJECTILE_ART_SPEC["projectileRotation"] = (triple, "[pitch, yaw, roll] in degrees")
+PROJECTILE_ART_SPEC["projectileScale"] = (lambda v: (is_num(v) and v > 0) or (triple(v) and all(x > 0 for x in v)),
+                                          "number > 0 or [x, y, z] > 0")
+MESH_TRANSFORM_FIELDS = ("projectileRotation", "projectileScale")
 PROJECTILE_CATEGORIES = {"Ammo", "Throwable"}
 
 
@@ -136,6 +147,8 @@ def validate(items):
                 err(f"field '{name}' is only allowed for Ammo and Throwable items")
             elif not pred(value):
                 err(f"field '{name}' must be {desc}")
+            elif name in MESH_TRANSFORM_FIELDS and "projectileMesh" not in it:
+                err(f"field '{name}' needs a projectileMesh")
         if it.get("category") != "Consumable":
             for name in CONSUMABLE_SPEC:
                 if name in it:

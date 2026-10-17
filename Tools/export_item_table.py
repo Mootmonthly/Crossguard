@@ -18,6 +18,14 @@ SOURCE = REPO / "Data" / "Items" / "Items.json"
 OUTPUT = REPO / "Data" / "Items" / "ItemTable.json"
 
 
+def vec(values, keys=("X", "Y", "Z")):
+    return {k: v for k, v in zip(keys, values)}
+
+
+def scale3(scale):
+    return scale if isinstance(scale, list) else [scale] * 3
+
+
 def row(item):
     return {
         "Name": item["id"],
@@ -43,6 +51,8 @@ def row(item):
         "ImpactPower": item.get("impactPower", 0),
         # Art (optional, ammo and throwables): an empty path imports as none.
         "ProjectileMesh": item.get("projectileMesh", ""),
+        "ProjectileRotation": vec(item.get("projectileRotation", [0, 0, 0]), ("Pitch", "Yaw", "Roll")),
+        "ProjectileScale": vec(scale3(item.get("projectileScale", 1))),
         "TrailVfx": item.get("trailVfx", ""),
         "ImpactVfx": item.get("impactVfx", ""),
         "ImpactSound": item.get("impactSound", ""),

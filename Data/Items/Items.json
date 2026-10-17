@@ -8,6 +8,8 @@
     "maxStack": 20,
     "sellValue": 0,
     "sellPerRarity": 0,
+    "projectileMesh": "/Game/ThirdParty/Quaternius/MedievalWeapons/SM_Arrow.SM_Arrow",
+    "projectileRotation": [0, -90, 0],
     "impactSound": "/Game/ThirdParty/Kenney/ImpactSounds/S_ImpactWood.S_ImpactWood",
     "trailVfx": "/Game/NiagaraExamples/FX_Weapons/Trails/NS_SimpleRibbonTrail.NS_SimpleRibbonTrail",
     "impactVfx": "/Game/NiagaraExamples/FX_Weapons/Impacts/NS_Impact_Wood.NS_Impact_Wood"

@@ -357,6 +357,14 @@ struct CROSSGUARD_API FCrossguardItemRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item|Art")
 	TSoftObjectPtr<UStaticMesh> ProjectileMesh;
 
+	// Art (`projectileRotation`, `projectileScale`): ProjectileMesh's turn (pitch, yaw, roll degrees)
+	// from the flight direction and its scale. Only with ProjectileMesh.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item|Art")
+	FRotator ProjectileRotation = FRotator::ZeroRotator;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item|Art")
+	FVector ProjectileScale = FVector::OneVector;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item|Art")
 	TSoftObjectPtr<UNiagaraSystem> TrailVfx;
 

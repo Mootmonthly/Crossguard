@@ -66,6 +66,8 @@ namespace CrossguardCosmetics
 	{
 		FCrossguardProjectileVisual Visual;
 		Visual.Mesh = Row.ProjectileMesh;
+		Visual.MeshRotation = Row.ProjectileRotation;
+		Visual.MeshScale = Row.ProjectileScale;
 		Visual.TrailVfx = Row.TrailVfx;
 		Visual.ImpactVfx = Row.ImpactVfx;
 		Visual.ImpactSound = Row.ImpactSound;
