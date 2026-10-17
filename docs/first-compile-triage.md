@@ -568,3 +568,30 @@ reviewed.
 | N24 | Runtime: hub → raid | A party member whose `ClientTravel` fails stays marked as "leaving for a raid": their later logout does not leave the party | Minor (they leave after 120 s on no server anyway). | — |
 | N25 | Runtime: shutdown | Lease release and deregister tick the HTTP module by hand (like N5) | Same as N5. | Same as N5. |
 | N26 | Runtime: `Crossguard.Scenario.Hub.PartyRaidLaunchPlan` | New step with a deferred matchmaking; `StartRaid` now ends with `FinishRaidLaunch` (the same travel code) | The earlier steps' expectations are unchanged (the dev fake answers at once). | If the deferred step fails on "Cancelled once": the party change did not reach `CancelSearch` (local `Leave` calls it). |
+
+## Batch 5 (unbuilt)
+
+### Art tuning: monster ragdolls, projectile mesh rotation, `CgReloadArtData`
+
+New `Game/CrossguardArtReload` (namespace `CrossguardArtReload`, file-local `CrossguardArtReloadLocal`;
+the whole file is `#if !UE_BUILD_SHIPPING`), `Tests/CrossguardScenarioArtTuningTests.cpp` (namespace
+`CrossguardScenarioArtTuning`), `Net.MonsterDeathRagdoll` in `CrossguardScenarioNetworkTests.cpp`.
+Edits: `ECrossguardDeathMode` and `FCrossguardBodyVisual::DeathMode` (`CrossguardCosmetics.h`),
+`FCrossguardMobRow::DeathMode`, `FCrossguardItemRow::ProjectileRotation` / `ProjectileScale`,
+`ACrossguardCharacter::ShouldRagdollOnDeath` (virtual) used by `SetDeadVisuals`, the AI override,
+`ACrossguardMonster::ApplyMobArt` (split out of `ApplyMobData`),
+`UCrossguardWeaponVisualsComponent::RebuildWeapons`, `ACrossguardProjectile::GetVisualMesh`. Nothing
+built or run.
+
+| # | Where | Call | Why it may fail | Suggested fix |
+| --- | --- | --- | --- | --- |
+| AT1 | `CrossguardAICharacter.cpp` `ShouldRagdollOnDeath` | `USkeletalMeshComponent::GetPhysicsAsset()` (from `USkinnedMeshComponent`), `GetSkeletalMeshAsset()` | Assumed public and const in 5.8. | `GetSkeletalMeshAsset()->GetPhysicsAsset()` (needs `Engine/SkeletalMesh.h`). |
+| AT2 | `CrossguardArtReload.cpp` | `FAutoConsoleCommand(TEXT("CgReloadArtData"), Help, FConsoleCommandDelegate::CreateStatic(&RunCommand))` at namespace scope | Standard; a static in a game module registers when the module loads. | If the command is missing in PIE: register it in `FCrossguardModule::StartupModule` with `IConsoleManager::Get().RegisterConsoleCommand`. |
+| AT3 | `CrossguardArtReload.cpp` | `FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Text), TArray<TSharedPtr<FJsonValue>>&)`; `FJsonObject::TryGetNumberField(Name, double&)`, `TryGetArrayField`, `TryGetObjectField`; `const FJsonObject Empty{};` as a stand-in object | The array overload of `Deserialize` and a default-constructed `FJsonObject` assumed (like N18). | Deserialize into a `TSharedPtr<FJsonValue>` and call `AsArray()`; replace `Empty` by `MakeShared<FJsonObject>()`. |
+| AT4 | `CrossguardArtReload.cpp` | `TSoftClassPtr<UAnimInstance>(FSoftObjectPath(Path))`, `TSoftObjectPtr<T>(FSoftObjectPath(Path))` | Explicit constructors assumed. | `TSoftClassPtr<UAnimInstance>(TSoftObjectPtr<UObject>(FSoftObjectPath(Path)).ToSoftObjectPath())` or assign `FSoftObjectPath` via `= FSoftObjectPath(...)`. |
+| AT5 | `CrossguardArtReload.cpp` `ForEachRow` | Template taking `TFunctionRef<void(TRow&, const FJsonObject&)>` with an explicit `TRow` and a lambda | Should deduce; MSVC sometimes needs the lambda wrapped. | Pass `TFunctionRef<void(FCrossguardMobRow&, const FJsonObject&)>(Lambda)`. |
+| AT6 | `CrossguardArtReload.cpp` `ReloadAll` | `GEngine->GetWorldContexts()`, `FWorldContext::World()`, `EWorldType::PIE` / `Game` | Standard. | — |
+| AT7 | `CrossguardScenarioArtTuningTests.cpp`, `CrossguardScenarioNetworkTests.cpp` | `for (const TCHAR* Name : {TEXT("A"), TEXT("B")})`, `for (const ACrossguardMonster* Dead : {Ragdoll, Posed})` | Braced lists of two string literals of different lengths (decay to `const TCHAR*`); like N21. | Two statements. |
+| AT8 | Runtime: `Net.MonsterDeathRagdoll` | `SKM_Manny_Simple` has `PA_Mannequin` set; `MM_Land` stands in for a death animation | Skips (warning) when the mesh has no Physics Asset. If the client's ragdoll check times out: `IsSimulatingPhysics()` on a skeletal mesh may answer for the root body only. | Check `GetMesh()->GetBodyInstance()->IsInstanceSimulatingPhysics()` or `GetAllBodiesBelowSimulatePhysics` instead. |
+| AT9 | Runtime: `Scenario.Art.ReloadArtData` | The monster is refreshed in a standalone PIE world (authority); `RebuildWeapons` destroys and makes the hand meshes again | If "rebuilt with the new roll" fails by 90 degrees: the first `GetWeaponMesh(.., false)` is the third-person copy whose transform is the row's own (not the camera tilt). | — |
+| AT10 | Runtime: monster deaths in raids | A dead monster with `deathMode` "ragdoll" and a Physics Asset now ragdolls (before: the death animation, since the KayKit / Quaternius meshes have no Physics Asset) | Nothing changes until Physics Assets are made for the monster meshes. | — |
