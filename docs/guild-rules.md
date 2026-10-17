@@ -111,9 +111,9 @@ Ranks: **Leader** (exactly one), **Officer**, **Member**.
 ## In the game
 
 - `UCrossguardGuildSubsystem` (game instance subsystem, server) owns the `FGuildRegistry` and the
-  game's copy of each bank stack (affixes included). It survives map travel, but lives **in memory
-  only**: guilds are lost when the server stops, until a backend saves `FGuildRegistry::All()` plus
-  the bank stacks and loads them with `Restore`.
+  game's copy of each bank stack (affixes included). It survives map travel. Two modes: **in memory**
+  (development, PIE, tests: guilds are gone when the process stops) and **on Nakama** (dedicated
+  servers with the backend on; below).
 - Players are known by `PlayerIdOf`: their online id (a Steam id once the Steam online subsystem is
   on), else a per-session stand-in. Guilds that should outlive a session need the real ids.
 - `UCrossguardGuildComponent` on each player state: guild name, id and rank replicate to everyone
@@ -134,7 +134,53 @@ Ranks: **Leader** (exactly one), **Officer**, **Member**.
   `GuildAccept`, `GuildInfo`, `GuildGold`, `GuildDeposit`, `GuildWithdraw`, `GuildGive`, `GuildRank`,
   `GuildKick`, `GuildLeave`).
 
+## On Nakama (backend)
+
+With the backend on (`-SaveBackend=Nakama` plus the HTTP key; [backend-setup.md](backend-setup.md))
+guilds live in Nakama, so a guild is the same on every hub shard and survives travel and restarts.
+Same pattern as parties ([parties.md](parties.md), "On Nakama"):
+
+- **The rules run in Nakama**: `Backend/nakama/modules/guild_rules.go` is a Go copy of `FGuildRegistry`
+  (same checks, same order, same `EGuildError` names). **Keep both in step**: a change to `Guild.cpp` is a
+  change to `guild_rules.go`, and `guild_rules_test.go` mirrors `TestGuild` case for case (a case added
+  to one is added to the other).
+- **The hub server is authoritative towards players**: it checks the game's own rules (between raids,
+  the item is in the inventory and not in hand, the recipient is on this server, room, banked gold) and
+  calls `crossguard_guild` with the HTTP key. The answer updates its **mirror** (`FGuildRegistry::Mirror`,
+  the guilds of the players on this server), refreshed when a player arrives and every **10 s**
+  (placeholder). Requests return at once ("sent"); refusals come back later through `OnGuildRefused`. The
+  guild window is unchanged.
+- **Storage** (Nakama, server-only writes): `guilds/<id>` (the whole guild: roster, invites, bank, the
+  newest 100 log entries), `guild_names/<lowercase name>` (unique names ignoring case),
+  `guild_members/current` and `guild_invites/inbox` per player (one guild per player; the player's open
+  invites), `guild_bank_log/<id>.<seq>` (**append-only**: every deposit, withdrawal and redistribution,
+  never rewritten or deleted, kept after a disband) and `guild_requests/<request id>` (bank operations
+  already applied). Every change is one transaction (`MultiUpdate`) checked against the versions it read;
+  a concurrent change makes it run again.
+- **The bank is atomic with the player**: a deposit, withdrawal, gift or the last member's share carries
+  the save of the player whose gold or inventory changes (built by the hub with the change made, its
+  version and save lease). Nakama writes the guild, the log entry and that save **together or not at
+  all**: nothing can be duplicated or lost between the bank and the player. Two officers withdrawing the
+  same gold or stack at once: one gets it, the other gets `NotEnoughGold` / `UnknownItem`. A retried
+  request (no answer) carries the same request id and is never applied twice. A stale save version or a
+  lost lease refuses it (nothing written).
+- On the hub the move shows at once; if Nakama does not write it (refusal, no answer) the player is put
+  back and saved again. Saves made while the operation is on its way wait for it. One bank operation per
+  player at a time (`Busy` otherwise).
+- **Nakama groups**: each guild is also a Nakama group with the same id (closed, at most 50), members and
+  ranks mirrored after every change (Leader = superadmin, Officer = admin, Member = member), for the
+  console, client reads and a later guild chat. Groups cannot hold the rules (one guild per player,
+  exactly one Leader, invite expiry, names unique ignoring case, a transaction with the bank and the
+  save), so storage decides and the group follows; a failed group update is repaired on the guild's
+  next change. Clients may list groups, never create, join, leave or change them.
+- Game results added for the backend: `BackendUnavailable` (Nakama did not answer or refused; nothing
+  changed), `BankChanged` (the last member's leave: the bank was not what this hub saw; try again),
+  `Busy`.
+- Players need a Nakama login; others are refused (`NoPlayer`). Display names of members on other
+  servers are their user ids until seen here.
+
 ## Not covered
 
-Persistence and the backend, guild chat, the bank log in the UI, bank tabs beyond one, per-rank
-withdrawal limits, and guild names' profanity filtering.
+Guild chat (the Nakama group is ready for it), the bank log in the UI (Nakama keeps it:
+`crossguard_guild_log`), bank tabs beyond one, moving bank items from the game (the rules and the backend
+have it: `move_item`), per-rank withdrawal limits, and guild names' profanity filtering.

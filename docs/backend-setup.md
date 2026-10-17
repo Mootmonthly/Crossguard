@@ -5,9 +5,11 @@ The online backend is **Nakama** (self-hosted, open source) with PostgreSQL
 [backend-comparison.md](backend-comparison.md)). This page covers running it on the dev PC, the keys,
 configuring dedicated servers, and looking at saves. Steps 1-3 of the plan are built: the backend in
 Docker with our Go module; the game's save backend and player identity on Nakama; and (step 3) save
-leases, parties, the game server registry, matchmaking with match tickets and the hub picker. The Go
-module and every RPC run here end to end (`Tools/backend_smoke.py`); the Unreal side is unbuilt
-([first-compile-triage.md](first-compile-triage.md) "Batch 4").
+leases, parties, the game server registry, matchmaking with match tickets and the hub picker. Step 5
+(guilds on Nakama, with the bank), Steam login and session refresh are built too. The Go module and
+every RPC run here end to end (`Tools/backend_smoke.py`); steps 1-3 built and ran on the PC
+(2026-10-16); step 5, Steam login and refresh are unbuilt in Unreal
+([first-compile-triage.md](first-compile-triage.md) "Batch 5").
 
 ## What is where
 
@@ -17,12 +19,14 @@ module and every RPC run here end to end (`Tools/backend_smoke.py`); the Unreal 
 | Nakama config (non-secret defaults) | `Backend/nakama/local.yml` |
 | Keys (template; the real `Backend/.env` is gitignored) | `Backend/.env.example` |
 | Nakama image with our module (built by compose) | `Backend/nakama/Dockerfile` |
-| Go runtime module: RPCs, auth policy, tests | `Backend/nakama/modules`: `main.go` (registration), `saves.go`, `leases.go`, `session.go`, `auth.go`, `parties.go`, `fleet.go` (server registry, `Allocator`), `matchmaking.go` (queue, tickets), `config.go` (tunables), `*_test.go` |
+| Go runtime module: RPCs, auth policy, tests | `Backend/nakama/modules`: `main.go` (registration), `saves.go`, `leases.go`, `session.go`, `auth.go`, `parties.go`, `fleet.go` (server registry, `Allocator`), `matchmaking.go` (queue, tickets), `guild_rules.go` (the guild rules, a copy of `FGuildRegistry`), `guilds.go` (guild storage, bank, log, group mirror), `config.go` (tunables), `*_test.go` (`guild_rules_test.go` mirrors the C++ `TestGuild`) |
 | Start / stop / wipe | `Tools\run_local_backend.bat` (Windows), `Tools/run_local_backend.sh` |
 | End-to-end check against the running backend | `Tools/backend_smoke.py` |
 | Game: REST client, subsystem (backend switch, server id, registry, tickets), save backend (leases), login option | `Source/Crossguard/.../Game/CrossguardNakamaClient`, `CrossguardNakamaSubsystem`, `CrossguardNakamaSaveBackend`, `CrossguardLocalPlayer` |
 | Game: matchmaking on Nakama, parties on Nakama | `Game/CrossguardNakamaMatchmaking` (`ICrossguardMatchmaking`), `UCrossguardPartySubsystem` (backend mode) |
-| Game tests (pure helpers) | `Crossguard.Nakama.*` (`Private/Tests/CrossguardNakamaTests.cpp`: helpers, save payloads, leases, matchmaking answers, party mirror) |
+| Game: guilds on Nakama, bank with the save | `UCrossguardGuildSubsystem` (backend mode), `UCrossguardNakamaSaveBackend::SendWithSave` |
+| Game: Steam login, session refresh | `UCrossguardNakamaSubsystem` (`Login`, `LoginWithSteam`, `RefreshSession`), the menu's Log in |
+| Game tests (pure helpers) | `Crossguard.Nakama.*` (`Private/Tests/CrossguardNakamaTests.cpp`: helpers, save payloads, leases, matchmaking answers, party and guild mirrors, the carried save, sessions) |
 
 Versions are pinned together: the Go plugin only loads into the Nakama build it was compiled
 against. `Backend/nakama/modules/go.mod` requires **nakama-common v1.48.0** and Go **1.27.1**, the
@@ -43,7 +47,7 @@ Tools\run_local_backend.bat            (start; first run builds the image, ~2 mi
 Tools\run_local_backend.bat -Logs      (follow the Nakama log)
 Tools\run_local_backend.bat -Down      (stop; data kept)
 Tools\run_local_backend.bat -Reset     (stop and DELETE the local database: every account and save)
-python Tools\backend_smoke.py          (72 checks: login, saves, lease hand-off, parties, matchmaking, tickets, hub pick)
+python Tools\backend_smoke.py          (SMOKE_COUNT checks: login, saves, lease hand-off, parties, matchmaking, tickets, hub pick, guilds and the bank, refresh tokens, Steam)
 ```
 
 The first run creates `Backend\.env` from `.env.example` with random keys. It prints:
@@ -66,7 +70,7 @@ or `cd Backend/nakama/modules && go test ./...`.
 | `NAKAMA_SESSION_ENCRYPTION_KEY`, `NAKAMA_SESSION_REFRESH_KEY` | Nakama signs session tokens; `crossguard_verify_session` checks them | **Yes**; changing them logs everyone out |
 | `NAKAMA_CONSOLE_USER` / `_PASSWORD` / `_SIGNING_KEY` | Developer console | **Yes** |
 | `POSTGRES_PASSWORD` | Nakama to its database (not exposed outside Docker) | Yes |
-| `STEAM_APP_ID`, `STEAM_PUBLISHER_KEY` | Steam login (Nakama checks tickets with the Steam Web API) | Publisher key: **yes** |
+| `STEAM_APP_ID`, `STEAM_PUBLISHER_KEY` | Steam login (Nakama checks tickets with the Steam Web API; [steam-setup.md](steam-setup.md)). Both empty: Steam login answers "not configured". The load log says which: `Steam login on, app ...` | Publisher key: **yes** |
 | `CROSSGUARD_DEV_AUTH` | `1`: device-id login allowed (development). **`0` on any shared server**: a device id is just a string the client picks | — |
 
 Nakama does not read environment variables in its YAML, so `docker-compose.yml` passes the keys as
@@ -78,7 +82,10 @@ command-line flags (no `sh -x`, which would print them).
 - **Device id** login (and linking): only with `CROSSGUARD_DEV_AUTH=1`; refused (403) otherwise.
 - Every other method (email, custom, Apple, Google, Facebook, Game Center, runtime providers): refused.
 - Clients cannot write or delete objects in `characters`, `characters_quarantine`,
-  `characters_conflicts` (refused whole, 403). They may read their own `characters` object.
+  `characters_conflicts` or any other server collection below (refused whole, 403). They may read their
+  own `characters` object.
+- Clients cannot create, update, delete, join, leave or change members of Nakama groups (the guilds'
+  mirror; 403). They may list them.
 
 ## RPCs (server-to-server)
 
@@ -108,6 +115,9 @@ is the client's (its session; the menu's Play).
 | `crossguard_hub_find_mine` (client) | `{}` with the player's session | `{"server_id", "address"}` | 401 no session, 404 |
 | `crossguard_save_quarantine` | `user_id`, `character_id`, `reason` | `{"quarantined", "key"}` | copies the stored save to `characters_quarantine` (nothing deleted) |
 | `crossguard_verify_session` | `token` | `{"user_id", "username", "steam_id", "expires_at"}` | 401 bad signature / expired / unknown account, 403 banned |
+| `crossguard_guild` | `op` (below), `actor_id`, `server_id` (the hub), and per op: `create` `name`; `invite` / `kick` / `promote` / `demote` / `transfer` `target_id`; `accept` / `decline` `guild_id`; `leave` (the last member with a bank: + `save`, `request_id`, `expected_bank` `{"gold", "slot_ids"}`); `deposit_gold` / `withdraw_gold` `amount`; `give_gold` `target_id`, `amount`; `deposit_item` `item` `{"item_id", "rarity", "count", "width", "height", "payload"}` (+ optional `at`); `withdraw_item` `slot_id`; `give_item` `target_id`, `slot_id`; `move_item` `slot_id`, `at` `{"x", "y", "rotated"}`. Every gold or item move: `request_id` and `save` `{"user_id" (the player whose gold or inventory changes: the actor, a gift's recipient), "record", "expected_version", "lease_token"}` | `{"result", "guild_id", "disbanded", "replayed", "save_version" (the save's new version: written), "item", "payout" (disband), "now_ms", "players": {id: {"guild_id", "invites"}}, "guilds": {id: {"id", "name", "members" [{"user_id", "rank"}], "invites", "bank" {"gold" (text), "width", "height", "next_slot_id", "items"}, "bank_log", "log_seq"}}}` | rule refusals are answers (`result` = an `EGuildError` name or `BankChanged`); 400 bad ids / missing save; **409** stale save version (nothing written) or "changed too often"; 400 code 9 lease lost |
+| `crossguard_guild_get` | `user_ids` (≤ 256) | the same state for them (reads only) | — |
+| `crossguard_guild_log` | `guild_id`, `before_seq` (0: newest), `limit` (≤ 100) | `{"entries" (newest first), "log_seq"}` from the append-only log (also after a disband) | 400 |
 
 Storage: collection `characters`, key = character id (`main` for now: one character per account),
 owner = the Nakama user id, `permission_read` 1 (owner), `permission_write` 0 (server only).
@@ -115,7 +125,10 @@ owner = the Nakama user id, `permission_read` 1 (owner), `permission_write` 0 (s
 `<character id>-<unix nanos>`. Step 3 adds `save_leases/<character id>` (owned by the player,
 server-only), `parties/<party id>` (system-owned, server-only), `party_members/current` and
 `party_invites/inbox` (owned by the player; they may read their own) and `match_tickets/<ticket>`
-(system-owned, server-only). Clients cannot write or delete any of them (before-hook, `auth.go`).
+(system-owned, server-only). Step 5 adds `guilds/<guild id>`, `guild_names/<lowercase name>`,
+`guild_bank_log/<guild id>.<seq>` (append-only), `guild_requests/<request id>` (system-owned,
+server-only), `guild_members/current` and `guild_invites/inbox` (owned by the player; they may read their
+own). Clients cannot write or delete any of them (before-hook, `auth.go`).
 
 ## Step 3: leases, parties, matchmaking (how it works)
 
@@ -166,6 +179,16 @@ servers talk to Nakama over HTTP with the server key.
 launched from, if registered with room; else the hub with the most room). The menu's **Play** (logged
 in, not development mode) asks `crossguard_hub_find_mine` and joins that hub.
 
+## Step 5: guilds (how it works)
+
+[guild-rules.md](guild-rules.md) "On Nakama". In short: the rules of `FGuildRegistry` run in the Go
+module (`guild_rules.go`, kept in step with the C++ by a mirrored unit test); each change is one
+storage transaction; bank moves carry the save of the player whose gold or inventory changes, so the
+bank and the player change together or not at all (a retry with the same `request_id` is answered, not
+applied again); every bank move is also an append-only log object; each guild is mirrored into a Nakama
+group (id = guild id; Leader superadmin, Officer admin, Member member). Hub servers keep a mirror of their
+players' guilds (on arrival, every 10 s, from every answer).
+
 ## Dedicated servers
 
 ```
@@ -211,11 +234,24 @@ server local-hub`, `Matchmaking: ... assigned to 127.0.0.1:7778`, `save lease of
 
 ## Clients
 
-The main menu's **Log in** (above Play) calls `UCrossguardNakamaSubsystem::LoginWithDevice`: device
-id `-NakamaDeviceId=`, else `crossguard-dev-<-CrossguardPlayerId= or the PC's login id>`. The account
-line shows "Logged in as <name>". The token lasts `session.token_expiry_sec` (2 h); refreshing is a
-TODO (log in again). **Steam login is a TODO**: it needs the Steam online subsystem for a Web API
-ticket ([steam-setup.md](steam-setup.md)), then `POST /v2/account/authenticate/steam`.
+The main menu's **Log in** (above Play) calls `UCrossguardNakamaSubsystem::Login`:
+
+- **Steam** when the Steam online subsystem is loaded and logged in (OnlineSubsystemSteam enabled, the
+  Steam client running; [steam-setup.md](steam-setup.md)): a Steam session ticket
+  (`IOnlineIdentity::GetAuthToken`) to `POST /v2/account/authenticate/steam?create=true&sync=false`; Nakama
+  checks it with Steam (`STEAM_APP_ID`, `STEAM_PUBLISHER_KEY`). A ticket Steam does not know yet (401) is
+  tried again (3 tries, 2 s apart). The account is the Steam account's from then on (Nakama links the
+  Steam id).
+- Otherwise, in development builds, the **device id**: `-NakamaDeviceId=`, else
+  `crossguard-dev-<-CrossguardPlayerId= or the PC's login id>` (servers allow it only with
+  `CROSSGUARD_DEV_AUTH=1`). Shipping builds without Steam say "Steam is not running".
+
+The account line shows "Logged in as <name>". The session token lasts `session.token_expiry_sec`
+(2 h); the client **refreshes** it with the refresh token (`refresh_token_expiry_sec`, 7 days) **5 min
+before it expires** (checked every 30 s; `POST /v2/account/session/refresh`), so the token it sends at
+every server login (`?NakamaToken=`) is current. Servers verify the token at every login, reconnects to a
+raid included (`PreLoginAsync`). A refused refresh (401: the refresh token expired) stops refreshing;
+once the session is over the menu says "Session expired: log in again".
 
 Later option: the official **nakama-unreal** SDK (v2.11.x supports UE 5.8), or UE's WebSockets
 module, once realtime sockets are needed (chat, live notifications to clients). Parties and matchmaking
@@ -246,5 +282,14 @@ server holding the player then gets a conflict on its next write (by design).
 - **Display names** of party members on other servers are their user ids until they are seen here.
 - Session revocation (logout, single-session) is not seen by `crossguard_verify_session` (it checks
   signature, expiry, account and ban); tokens are short-lived.
+- **Guild mirror lag**: a guild change made on another hub shard reaches this hub's mirror on the next
+  refresh (10 s) or the next answer. Bank moves are checked by Nakama, never by the mirror.
+- **Guild bank undo**: a bank move Nakama refuses is undone on the hub; if the player used the very gold
+  or stack within that second, the undo logs an error (rare; nothing is duplicated: Nakama has the
+  truth, and the player's next save is version-checked).
+- **Group mirror**: best effort (repaired on the guild's next change). Group names are the guilds' names;
+  a leftover group with no guild (a failed delete) is removed when its name is used again after 60 s.
+- **Steam**: tested only up to Nakama's "not configured" / refusal here (no Steam client in the
+  container); the real login needs the owner's PC with Steam running ([steam-setup.md](steam-setup.md)).
 - **Next** (step 4): GameLift Anywhere as an `Allocator` (and `ICrossguardServerHost` in the game:
-  ready, accept player session, game session end); then guilds as Nakama groups (step 5).
+  ready, accept player session, game session end).

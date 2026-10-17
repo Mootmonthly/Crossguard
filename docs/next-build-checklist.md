@@ -213,3 +213,24 @@ Needs Docker Desktop, `Tools\run_local_backend.bat`, then `python Tools\backend_
 | Both extract | Back on `L_Hub` with the party (P window: same members, alice leading). No `version conflict` / `lease lost` in any log. |
 | After logging in, menu Join `127.0.0.1:7778` (the match server directly) | Refused: "No match ticket: start the raid from the hub." |
 | End the hub process (Task Manager) with players on it, start it again, Play | The players load after at most ~60 s ("not free yet" until the dead hub's lease expires). |
+
+## 8. Guilds on Nakama, Steam login, session refresh ([guild-rules.md](guild-rules.md) "On Nakama", [steam-setup.md](steam-setup.md))
+
+Build first (triage "Batch 5", GN1-GN14). Headless: `Crossguard.Nakama.GuildState`, `GuildBankWrite`,
+`Session` (and the in-memory guild scenarios as before). Then `Tools\run_local_backend.bat` (rebuilds the
+module), `python Tools\backend_smoke.py` ("All backend checks passed."), `Tools\run_local_cluster.bat -Backend`,
+both clients Log in, Play.
+
+| Do | Expect |
+| --- | --- |
+| Hub log at start | `Guilds: in Nakama (refreshed every 10 s)`. Nakama log: `Crossguard module loaded (... Steam login off ...)` (or on, with keys). |
+| alice: guild window (U), create "Iron Wolves" | The window shows the guild at once after the answer; Nakama console → Groups: "Iron Wolves" with alice; Storage: `guilds`, `guild_names`. |
+| alice invites bob, bob accepts | bob sees the roster; console → Groups → members: alice superadmin, bob member. |
+| alice promotes bob (officer) | Console: bob admin. |
+| bob deposits 100 gold and a stack (between raids) | Banked gold and inventory change at once; bank shows them; no `Guild ... not written` in the hub log. Console → Storage `guild_bank_log`: two entries. |
+| alice withdraws the stack, bob withdraws 50 gold | Each gets it; the bank shows the rest. |
+| Close the hub server (Task Manager) and start it again, both Play | The guild, ranks and bank are back (from Nakama). |
+| Raid and back (Start raid, extract) | Guild still there on the hub; the bank was refused during the raid (`OnlyBetweenRaids`). |
+| A member (not an officer) tries to withdraw | "Guild: refused (NotPermitted)"; nothing moves. |
+| Wait 2 h logged in (or set `session.token_expiry_sec: 360` in `Backend/nakama/local.yml` and rerun `run_local_backend.bat`) | Client log: `Nakama: session refreshed` about 5 min before expiry; a raid launched afterwards still joins (no "Log in first"). |
+| **OWNER**, Steam (after [steam-setup.md](steam-setup.md) steps 1-3): Standalone with Steam running, Log in | "Logging in with Steam...", "Logged in as ..."; client log `logged in as ... with Steam`; Nakama console → Accounts: the Steam id. If it fails with 401 after 3 tries: triage GN2. |
