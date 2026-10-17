@@ -47,7 +47,7 @@ Tools\run_local_backend.bat            (start; first run builds the image, ~2 mi
 Tools\run_local_backend.bat -Logs      (follow the Nakama log)
 Tools\run_local_backend.bat -Down      (stop; data kept)
 Tools\run_local_backend.bat -Reset     (stop and DELETE the local database: every account and save)
-python Tools\backend_smoke.py          (SMOKE_COUNT checks: login, saves, lease hand-off, parties, matchmaking, tickets, hub pick, guilds and the bank, refresh tokens, Steam)
+python Tools\backend_smoke.py          (120 checks: login, saves, lease hand-off, parties, matchmaking, tickets, hub pick, guilds and the bank, refresh tokens, Steam)
 ```
 
 The first run creates `Backend\.env` from `.env.example` with random keys. It prints:

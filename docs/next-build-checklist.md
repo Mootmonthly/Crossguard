@@ -198,7 +198,7 @@ These are called from Blueprint (e.g. a debug widget or the Level Blueprint) unt
 
 ## 7. Backend step 3 (Nakama: leases, parties, matchmaking; [backend-setup.md](backend-setup.md))
 
-Needs Docker Desktop, `Tools\run_local_backend.bat`, then `python Tools\backend_smoke.py` (72 checks,
+Needs Docker Desktop, `Tools\run_local_backend.bat`, then `python Tools\backend_smoke.py` (120 checks,
 "All backend checks passed."). For one party alone set `CROSSGUARD_MATCH_MAX_WAIT_SEC=5` in
 `Backend\.env` and run `run_local_backend.bat` again. Then `Tools\run_local_cluster.bat -Backend`.
 
