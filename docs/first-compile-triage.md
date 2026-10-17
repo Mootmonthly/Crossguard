@@ -595,3 +595,36 @@ built or run.
 | AT8 | Runtime: `Net.MonsterDeathRagdoll` | `SKM_Manny_Simple` has `PA_Mannequin` set; `MM_Land` stands in for a death animation | Skips (warning) when the mesh has no Physics Asset. If the client's ragdoll check times out: `IsSimulatingPhysics()` on a skeletal mesh may answer for the root body only. | Check `GetMesh()->GetBodyInstance()->IsInstanceSimulatingPhysics()` or `GetAllBodiesBelowSimulatePhysics` instead. |
 | AT9 | Runtime: `Scenario.Art.ReloadArtData` | `RefreshWorld` on the standalone PIE world (authority: the monster is re-applied); `RebuildWeapons` destroys and remakes the hand meshes | If "monsters refreshed" passes but the scale is still 1: `ApplyBodyVisual` ran before the row change (check the order in the step). The weapon check reads the third-person copy (the row's own transform, no camera tilt). | — |
 | AT10 | Runtime: monster deaths in raids | A dead monster with `deathMode` "ragdoll" and a Physics Asset now ragdolls (before: the death animation, since the KayKit / Quaternius meshes have no Physics Asset) | Nothing changes until Physics Assets are made for the monster meshes. | — |
+
+### Guilds on Nakama, Steam login, session refresh
+
+Edits: `UCrossguardGuildSubsystem` (backend mode: `Initialize` / `Deinitialize`, `SendBackendOp`,
+`SendBankOp`, `ApplyBankChange` / `UndoBankChange`, `ApplyBackendState`, `ParseGuildView`, mirror refresh
+tick; file-local `GuildField` in the anonymous namespace, named namespace `CrossguardGuildBackend`),
+`ECrossguardGuildResult` (+ `BackendUnavailable`, `BankChanged`, `Busy`), `UCrossguardNakamaSaveBackend`
+(`SendWithSave`, `SendJoint` / `HandleJoint` / `FinishJoint`, held saves, flush), `UCrossguardSaveSubsystem`
+(`BuildSaveDocument`, `ItemToPayload` / `ItemFromPayload`, `GetBackendObject`), `FCrossguardNakamaClient`
+(`AuthenticateSteam`, `RefreshSession`, `ReadSession`), `UCrossguardNakamaSubsystem` (`Login`,
+`LoginWithSteam`, `IsSteamLoginAvailable`, refresh: `AcceptSession`, `RefreshSession`, `SessionTick`),
+`UCrossguardMainMenuWidget::LogIn`, `Crossguard.Build.cs` (+ `OnlineSubsystem`), `Crossguard.uproject`
+(+ plugin `OnlineSubsystem`), tests `Crossguard.Nakama.GuildState` / `GuildBankWrite` / `Session`. Rules
+`FGuildRegistry::Mirror` / `RemoveGuild` / `DropPlayer` and `WriteSavedItem` / `ReadSavedItem` are built
+and unit-tested here; the Go module ran here (`go test -race`, `Tools/backend_smoke.py`). Unreal side
+read-only reviewed.
+
+| # | Where | Call | Why it may fail | Suggested fix |
+| --- | --- | --- | --- | --- |
+| GN1 | `CrossguardNakamaSubsystem.cpp` `SteamIdentity`, `IsSteamLoginAvailable` | `#include "OnlineSubsystem.h"`, `"Interfaces/OnlineIdentityInterface.h"`; `IOnlineSubsystem::IsLoaded(FName)`, `IOnlineSubsystem::Get(FName)`, `IOnlineIdentityPtr`, `GetLoginStatus(0) == ELoginStatus::LoggedIn` | OSSv1 API assumed present in 5.8 with the `OnlineSubsystem` module dependency. | If `IsLoaded` is missing: `FModuleManager::Get().IsModuleLoaded(TEXT("OnlineSubsystemSteam"))`, then `Online::GetSubsystem(nullptr, TEXT("STEAM"))` (needs `OnlineSubsystemUtils`). |
+| GN2 | Same, `SendSteamLogin` | `IOnlineIdentity::GetAuthToken(0)` as the ticket for Nakama | Assumed OnlineSubsystemSteam returns a hex session ticket Steam's `AuthenticateUserTicket` accepts (Nakama sends no `identity`). If 5.8 returns a Web API ticket made with an identity, Steam refuses it. | Log in fails with 401 after 3 tries: use `GetLinkedAccountAuthToken(0, TEXT("WebAPI:"), Delegate)` if 5.8 has it (ticket for an empty identity), else call `SteamUser()->GetAuthTicketForWebApi(nullptr)` through the Steamworks SDK module. |
+| GN3 | Runtime: Steam login | A fresh ticket is valid a moment after it is made | Retried 3 times, 2 s apart, on 401. | Raise `SteamLoginAttempts` / `SteamRetrySeconds` if the second try still fails. |
+| GN4 | `Crossguard.uproject`, `Crossguard.Build.cs` | Plugin `OnlineSubsystem` listed (enabled by default in the engine), module dependency `OnlineSubsystem` | Should be a no-op for the build. | If UBT complains about the plugin entry, remove it from the `.uproject` (the module dependency is what matters). |
+| GN5 | `CrossguardGuildSubsystem.cpp` | `TArray<TPair<FString, FString>>` built from `{GuildField(...)}` and `{}`; `TPair<FString, FString>(FString(Name), Json)` | `TPair`'s constructor is explicit, hence `GuildField`. An empty `{}` argument for a `TArray` parameter is standard. | `TArray<TPair<FString, FString>> Fields; Fields.Emplace(...)` then pass `Fields`. |
+| GN6 | `CrossguardGuildSubsystem.cpp` `ParseGuildView`, tests | `FJsonObject::TryGetNumberField(Key, int32&)` into `int` fields of rules structs (`Stored.SlotId`, `Stored.Size.Width`, `Stored.Count`) | `int` is `int32` on MSVC; the `int32&` overload assumed (5.x). | Read into a local `double` and cast. |
+| GN7 | `CrossguardGuildSubsystem.cpp` `SendBankOp` | Lambdas in a member function capture `FBankUndo` (a private nested struct) and call private members through `Self` | Standard (lambdas have the enclosing member's access). | — |
+| GN8 | `CrossguardGuildSubsystem.h` | Forward declarations `class FJsonObject;`, `struct FCrossguardNakamaResponse;` | Must match the definitions (`class FJsonObject`, `struct CROSSGUARD_API FCrossguardNakamaResponse`). | Include the headers instead. |
+| GN9 | `CrossguardNakamaSaveBackend.cpp` `FinishJoint` | `SaveCharacter(PlayerId, Held, [Waiting = HeldCallbacks](...) {...})` (a copy of `TArray<FSaveCallback>` captured into a `TFunction`) | `TFunction` must be copyable: the captured callbacks are `TFunction`s too. | — |
+| GN10 | `CrossguardNakamaSubsystem.cpp` | `SessionTick` bound with `FTickerDelegate::CreateUObject` (N14 pattern); Steam retry with `FTickerDelegate::CreateLambda` capturing `TWeakObjectPtr` and a `TFunction` | As N14. | As N14. |
+| GN11 | `CrossguardNakamaTests.cpp` `Crossguard.Nakama.GuildState` | `NewObject<UCrossguardGuildSubsystem>(NewObject<UGameInstance>(...))` without `Initialize` (in-memory; `ApplyBackendState` works without a world) | Like N20 (the fixed form). | — |
+| GN12 | Runtime: `Crossguard.Nakama.GuildState` | Mirror of a hand-written answer: gold `"9007199254740993"` read with `FCString::Atoi64`; a rotated 1 × 3 stack at (5, 5) covers (7, 5) | If "Stack placed" fails, compare with `FInventoryGrid::Find(1)->Placement`. | — |
+| GN13 | Runtime: guilds on the local cluster (backend) | Bank moves change the player at once and carry their save; Nakama answers in about 50 ms | Log lines: `Guilds: in Nakama (refreshed every 10 s)`, no `Guild ... not written`, no `a save of ... made during a guild bank operation was dropped` (that one is expected only after a refusal). | A refusal undoes the move: check `Guild bank: could not take back ...` errors (rare: the player used the gold or stack in the same second). |
+| GN14 | Runtime: session refresh | Refresh 5 min before the 2 h expiry, checked every 30 s | To see it soon: `session.token_expiry_sec: 360` in `Backend/nakama/local.yml` (then `run_local_backend`): "Nakama: session refreshed" within a minute of login. | — |
