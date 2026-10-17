@@ -674,6 +674,13 @@ void UCrossguardSaveSubsystem::PlayerReady(ACrossguardPlayerState* PlayerState)
 		Entry->bHasPending = false;
 		Entry->Pending = Crossguard::FCharacterSave();
 		Apply(*Entry, *PlayerState, MoveTemp(Record));
+		// Play-In-Editor (owner ruling 2026-10-16): the Blueprint's Debug fields win over the save.
+		const UWorld* World = PlayerState->GetWorld();
+		ACrossguardCharacter* Character = CrossguardSaveDetail::CharacterOf(PlayerState);
+		if (World != nullptr && World->IsPlayInEditor() && Character != nullptr)
+		{
+			Character->ApplyDebugLoadoutOverSave();
+		}
 	}
 	// A new character: the starter kit, once (the first save below records it).
 	if (Entry->bNewCharacter)

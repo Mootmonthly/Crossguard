@@ -264,6 +264,13 @@ Independent of category, a skill is:
 - Guild banks: a shared stash per guild; every member deposits, only officers withdraw, manage or
   redistribute.
 
+### Debug loadout in Play-In-Editor
+
+- Ruled 2026-10-16 (owner): in Play-In-Editor the character Blueprint's Debug fields that are set
+  (Debug Main / Off Hand, Armor, Skills, Inventory) win over the PIE character's save: applied right
+  after the save loads; Debug Inventory replaces the inventory. Empty Debug fields leave the save
+  alone. Not in the cluster, on dedicated servers or in packaged builds.
+
 ### Starter kit
 
 - Ruled 2026-10-16 (placeholder contents): a brand-new character (no save yet) gets a starter kit

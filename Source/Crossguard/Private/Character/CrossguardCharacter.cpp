@@ -488,6 +488,26 @@ bool ACrossguardCharacter::AllowsDebugOptions() const
 #endif
 }
 
+void ACrossguardCharacter::ApplyDebugLoadoutOverSave()
+{
+	const bool bAnySet = !DebugMainHand.IsEmpty() || !DebugOffHand.IsEmpty() || !DebugArmor.IsEmpty() || !DebugSkills.IsEmpty()
+		|| !DebugInventory.IsEmpty();
+	if (!bAnySet || !AllowsDebugOptions() || !HasAuthority())
+	{
+		return;
+	}
+	if (!DebugInventory.IsEmpty())
+	{
+		const TArray<FCrossguardInventoryItem> Items = InventoryComponent->GetItems();
+		for (const FCrossguardInventoryItem& Item : Items)
+		{
+			InventoryComponent->RemoveItem(Item.Id);
+		}
+	}
+	UE_LOG(LogCrossguard, Log, TEXT("%s: Play-In-Editor, the Blueprint's Debug loadout over the save"), *GetName());
+	ApplyDebugLoadout();
+}
+
 void ACrossguardCharacter::ApplyDebugLoadout()
 {
 	const auto RollWeapon = [this](FCrossguardWeaponItem Item)

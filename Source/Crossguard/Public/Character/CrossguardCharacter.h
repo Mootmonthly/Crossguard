@@ -551,6 +551,12 @@ protected:
 	// data (ACrossguardAICharacter::BodyVisual).
 	void SetBodyMeshRelativeTransform(const FTransform& Transform);
 
+public:
+	// Server, Play-In-Editor: the Debug* fields that are set win over the save just loaded (the owner's
+	// manual tests; UCrossguardSaveSubsystem). Debug Inventory replaces the inventory (no pile-up from
+	// play to play). Nothing set, or debug options not allowed: nothing changes.
+	void ApplyDebugLoadoutOverSave();
+
 private:
 	// Server. Equips the Debug* items and skills.
 	void ApplyDebugLoadout();
