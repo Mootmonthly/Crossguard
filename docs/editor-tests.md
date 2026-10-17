@@ -164,7 +164,9 @@ damage is computed from the characters' actual stats, so they work at any level.
 161 tests in 27 files (143 `Crossguard.Scenario.*`, 10 `Crossguard.Net.*`, 8 `Crossguard.Visual.*`;
 2026-10-16; `Net.SeamlessTravelHubToRaid`, `Scenario.UI.StashAndVendor`, `Visual.HubUI`,
 `Scenario.UI.PanelsBind`, `Net.ReconnectShowsDisconnected`, `Scenario.Hub.MainMenuBinds` /
-`HubMarker` / `RaidPortal`, `Scenario.Art.*` and `Scenario.HubReturn.*` (team returns included) not yet built). Grouped by file; the name is the full test name.
+`HubMarker` / `RaidPortal`, `Scenario.Art.*` and `Scenario.HubReturn.*` (team returns included) not yet built).
+Added 2026-10-17, not yet built: `Scenario.Art.ProjectileMeshRotation`, `Scenario.Art.ReloadArtData`,
+`Net.MonsterDeathRagdoll`. Grouped by file; the name is the full test name.
 
 **`CrossguardScenarioRaidTests.cpp`**
 
@@ -449,6 +451,14 @@ back in the same step)
 | `Crossguard.Scenario.Art.MonsterAttackEvent` | A monster next to a player: its attack fires its `OnAttackStarted`, and the player's `OnDamageTaken`. |
 | `Crossguard.Scenario.Art.MobMeshFromData` | A Mob Table row given `SKM_Manny_Simple`, mesh scale 1.5 and an offset: the monster spawned from it shows that mesh at that scale, the cylinder hidden, `BodyVisual` set (replicated). A minion spawned with a `BodyVisual` shows it. Skips without `SKM_Manny_Simple`. |
 
+**`CrossguardScenarioArtTuningTests.cpp`** (art tuning, [art-placeholder-plan.md](art-placeholder-plan.md#tuning-art-without-restarting);
+rows changed in memory and put back in the same step)
+
+| Test | Checks |
+| --- | --- |
+| `Crossguard.Scenario.Art.ProjectileMeshRotation` | An item row with the engine cylinder as `ProjectileMesh`, `ProjectileRotation` (10, -90, 0) and `ProjectileScale` (0.5, 0.5, 2): the visual made from it carries both, merging it over a Blueprint's look keeps the row's rotation, and a projectile spawned with it shows the cylinder turned and scaled that way. |
+| `Crossguard.Scenario.Art.ReloadArtData` | `CgReloadArtData` is a console command. A monster spawned from a Mob Table row given `SKM_Manny_Simple`: JSON with `meshScale` 1.7, `meshYaw` 0, `meshOffset` [0, 0, 0.1] applied (`CrossguardArtReload::ApplyMobArt`, `RefreshWorld`): one row changed (offset in cm), the spawned monster's mesh at scale 1.7 and yaw 0, `BodyVisual` updated; text that is not an array returns -1. A player holding `sword_one_handed` (the cylinder as its mesh): JSON with `relativeTransform` rotation [0, 0, 30] and scale 2: the third-person mesh is rebuilt with that scale and roll. Skips the monster step without `SKM_Manny_Simple`. |
+
 **`CrossguardScenarioNetworkTests.cpp`** (networked: a server and real PIE clients, see
 [Networked scenarios](#networked-scenarios))
 
@@ -456,6 +466,7 @@ back in the same step)
 | --- | --- |
 | `Crossguard.Net.WieldingTagsReplicate` | Listen server + 1 client. The host equips a sword, the client an axe: the client's copy of the host has `Equipment.Wielding.Sword` and its own pawn `Equipment.Wielding.Axe`; the host unequips and the client's copy loses the tag. |
 | `Crossguard.Net.DeathRagdollsOnEveryClient` | Listen server + 2 clients. Client 1 kills client 2: on client 1's copy and on client 2's own body `State.Dead`, the mesh simulating physics, the capsule without collision; the host's view too. |
+| `Crossguard.Net.MonsterDeathRagdoll` | Listen server + 1 client. Two monsters from a Mob Table row given `SKM_Manny_Simple` (Physics Asset `PA_Mannequin`) and `MM_Land` as its death animation (in memory, around the spawns): one `DeathMode` Ragdoll, one Animation. Once client 1 has both with the mesh, both die: on the server the ragdoll one simulates physics and the other does not (capsule without collision), each left a body where it fell; on client 1 the ragdoll one simulates and the other plays its death animation without simulating. Skips without the mannequin's Physics Asset. |
 | `Crossguard.Net.StealthHidesFromEnemyClient` | **Dedicated server** + 3 clients (ally, sneak, enemy). The sneak activates Stealth on its own client (predicted): the enemy client loses the actor while the ally client keeps it; the time from `State.Stealthed` to the drop is logged as `STEALTH LEAK: ... s` (was 4.3–4.5 s on 5.8, the net driver's `RelevantTimeout`; the server now closes the enemy channel when stealth starts, see [anti-cheat.md](anti-cheat.md)) and must be under 0.5 s (placeholder); after 12 s the sneak is back on the enemy client, not stealthed, Health and sword replicated, within 1 m of the server's position. Skipped if `crossguard.StealthHidesFromEnemies` is 0. |
 | `Crossguard.Net.ConcurrentLootFromTwoClients` | Listen server + 2 clients. A dummy with 3 potions, 2 bandages and a Rare ruby dies between them; both open the body (server) and both clients request every stack by RPC in the same frame: the body empties, totals across the body and both inventories unchanged, between 1 and 3 stacks gained across both inventories (the client pawns spawn with the character Blueprint's debug loadout, which a taken stack may merge into; whoever's packets the server reads first takes them; the late requests are refused UnknownItem), and client 1's replicated inventory matches the server's. |
 | `Crossguard.Net.TrackingMarksOnTrackerOnly` | Listen server + 1 client (enemies). Client 1 has `hunters_tracking`; the host moves 1.2 m a step: footprints (instances of the client pawn's `UCrossguardTrackingComponent`) appear on the tracker's client, none on the host's own component, the server's copy of the tracker, or client 1's copy of the host. |

@@ -218,8 +218,8 @@ is set. Asset paths are Unreal object paths: `/Game/Art/Weapons/SM_Sword.SM_Swor
 | Data | Fields | Effect |
 | --- | --- | --- |
 | `Data/Items/Weapons.json` ([schema](item-data-schema.md#weapon-art-optional)) | `mesh`, `attachSocket` (default `hand_r` / `hand_l`), `relativeTransform` | The drawn set's weapons and shield show in the hands (see Held weapons below). |
-| `Data/Items/Items.json`, Ammo and Throwable ([schema](item-data-schema.md#projectile-art-optional)) | `projectileMesh`, `trailVfx`, `impactVfx`, `impactSound` | Arrows (the bow's `ammo` row) and thrown items show a mesh and trail, and play an impact. Over the projectile Blueprint's own. |
-| `Data/Mobs/Mobs.json` ([schema](mob-data-schema.md#art-optional)) | `mesh`, `animBlueprint`, `meshScale`, `meshOffset`, `meshYaw` | The monster's body replaces the cylinder on every machine. One spawner can mix looks. |
+| `Data/Items/Items.json`, Ammo and Throwable ([schema](item-data-schema.md#projectile-art-optional)) | `projectileMesh`, `projectileRotation`, `projectileScale`, `trailVfx`, `impactVfx`, `impactSound` | Arrows (the bow's `ammo` row) and thrown items show a mesh and trail, and play an impact. Over the projectile Blueprint's own. `projectileRotation` turns a mesh modelled along another axis to face the flight (the arrow: `[0, -90, 0]`). |
+| `Data/Mobs/Mobs.json` ([schema](mob-data-schema.md#art-optional)) | `mesh`, `animBlueprint`, `meshScale`, `meshOffset`, `meshYaw`, `animations`, `deathMode` | The monster's body replaces the cylinder on every machine. One spawner can mix looks. On death it ragdolls when the mesh has a Physics Asset (`deathMode` "ragdoll", the default), else plays `animations.death` and stays posed. |
 
 ### Events (Blueprint: override in `BP_CrossguardCharacter` / a monster Blueprint)
 
@@ -232,7 +232,7 @@ the character, with a native C++ delegate of the same name plus `Native` for tes
 | `OnAttackHit(HitLocation, Target)` | This character's direct hit landed (not damage over time). | `HitSound` at the hit. |
 | `OnDamageTaken(Amount, Source, HitLocation, bBlocked)` | It took damage (server's damage path), or a guard stopped a hit whole (`Amount` 0, `bBlocked`). `bBlocked` also when a guard let part through. Hit react, blood or sparks, damage numbers. | `HitVfx` at the hit. |
 | `OnWeaponClank(ImpactPoint)` | Weapons met (block, parry, clash). Native: `OnWeaponClankNative` (character, point). | `BlockSound` and `ClankVfx` at the point. |
-| (death) | The ragdoll starts. | `DeathSound`. |
+| (death) | The ragdoll starts (a monster without a Physics Asset, or with `deathMode` "animation": its death animation). | `DeathSound`. |
 | `ACrossguardProjectile::OnProjectileImpact(Location)` | A projectile hit or exploded. | `Visual.ImpactVfx`, `Visual.ImpactSound`. |
 
 ### Where to put art
@@ -246,10 +246,10 @@ the character, with a native C++ delegate of the same name plus `Native` for tes
 | Hit, swing, block, death sounds; hit and clank sparks | Character defaults, `Crossguard\|Art` | `SwingSound`, `HitSound`, `BlockSound` (Kenney `impactMetal_heavy_*`), `DeathSound`, `HitVfx`, `ClankVfx` (Niagara). |
 | Player arrows / bolts | `UCrossguardWeaponAttackAbility::DefaultProjectileClass`, `ProjectileClasses[weapon id]` (class `ACrossguardProjectile`) | Data: the ammo row's `projectileMesh` / `trailVfx` / `impactVfx` / `impactSound`. Or a BP subclass of `CrossguardProjectile` with its `Visual` defaults set (mesh, trail, impact), set on the attack ability Blueprint (`WeaponAttackAbilityClass` on the character). A staff without ammo: the BP route. |
 | Monster arrows | `ACrossguardAICharacter::ArrowClass` | A projectile BP with `Visual` set. |
-| Fireball | `UCrossguardFireballAbility::ProjectileClass`, `ACrossguardAICharacter::FireballClass` (`ACrossguardSpellProjectile`) | BP subclass with `Visual.TrailVfx` (fire), `Visual.ImpactVfx` (explosion), `Visual.ImpactSound`. |
+| Fireball | `UCrossguardFireballAbility::ProjectileClass`, `ACrossguardAICharacter::FireballClass` (`ACrossguardSpellProjectile`) | BP subclass with `Visual.TrailVfx` (fire), `Visual.ImpactVfx` (explosion), `Visual.ImpactSound`; a flying mesh with `Visual.Mesh`, turned to face the flight with `Visual.MeshRotation` and sized with `Visual.MeshScale` (the Blueprint side of `projectileRotation` / `projectileScale`). |
 | Thrown items | `UCrossguardInventoryComponent::ThrownProjectileClass` (`ACrossguardThrownProjectile`), `DamageAreaClass` (`ACrossguardDamageArea::AreaMesh`) | Data: the throwable's projectile fields. The damage area: a BP with a mesh / Niagara. |
-| Monsters | `ACrossguardMonster` | Data: the mob's `mesh` / `animBlueprint` / `meshScale` / `meshOffset` / `meshYaw`. Or a BP per look (`BP_Monster_Skeleton`) on the spawner's `MonsterClass` with `Mesh` + Anim BP and `PlaceholderMesh` hidden. The Mob Table's `Scale` still applies. |
-| Minions (skeletons, tiger, demon) | `ACrossguardMinion`; summon abilities | `WarriorVisual` / `MageVisual` (Summon Skeletons) and `CompanionVisual` (Summon Tiger, Summon Greater Demon) on the summon ability Blueprints: mesh, Anim BP class, scale, offset, yaw. Or BP subclasses on `WarriorClass`, `MageClass`, `CompanionClass`. |
+| Monsters | `ACrossguardMonster` | Data: the mob's `mesh` / `animBlueprint` / `meshScale` / `meshOffset` / `meshYaw` / `animations` / `deathMode`. A ragdoll needs a Physics Asset on the mesh: in the editor right-click the skeletal mesh → Create → Physics Asset, then set it on the mesh (Physics Asset field) and save both. Or a BP per look (`BP_Monster_Skeleton`) on the spawner's `MonsterClass` with `Mesh` + Anim BP and `PlaceholderMesh` hidden. The Mob Table's `Scale` still applies. |
+| Minions (skeletons, tiger, demon) | `ACrossguardMinion`; summon abilities | `WarriorVisual` / `MageVisual` (Summon Skeletons) and `CompanionVisual` (Summon Tiger, Summon Greater Demon) on the summon ability Blueprints: mesh, Anim BP class, scale, offset, yaw, animations, death mode. Or BP subclasses on `WarriorClass`, `MageClass`, `CompanionClass`. |
 | Extraction portal | `ACrossguardExtractPortal` (`BeamMesh`, `PortalMesh`, `OnStateChanged`); character `PortalClass` | BP subclass: a beam mesh or Niagara beam while channelling, a swirl when open. |
 | Chests and bodies | `ACrossguardLootContainer` | BP with a Static Mesh (KayKit chest / Poly Haven `treasure_chest`). |
 | Doors | `ACrossguardDoor::DoorMesh` | Set the mesh in a BP (KayKit door / Poly Haven `large_castle_door`). It snaps open until animated. |
@@ -257,6 +257,33 @@ the character, with a native C++ delegate of the same name plus `Native` for tes
 | Wall skill | `ACrossguardWall::Mesh` (cube) | Optional stone wall mesh. |
 | Dropped items | `ACrossguardWorldItem::Mesh` (cube) | Later: a per-item mesh. |
 | UI | [ui.md](ui.md), "Replacing it" | Unchanged by this plan. |
+
+### Tuning art without restarting
+
+Weapon angles in the hand, monster sizes and projectile turns need eyes. The loop, in Play-In-Editor
+(listen server and clients alike; not in Shipping):
+
+1. Start PIE with what you want to tune in view (equip the weapon, spawn or walk to the monster).
+2. Edit the art fields in the JSON source (not the generated `*Table.json`):
+   - a weapon in the hand: `Data/Items/Weapons.json` `relativeTransform` (`location` cm, `rotation`
+     `[pitch, yaw, roll]`, `scale`), `mesh`, `attachSocket`;
+   - a monster: `Data/Mobs/Mobs.json` `meshScale`, `meshOffset` (meters), `meshYaw`, `mesh`,
+     `animations`, `deathMode`;
+   - a projectile: `Data/Items/Items.json` `projectileRotation`, `projectileScale`, `projectileMesh`,
+     `trailVfx`, `impactVfx`, `impactSound`.
+3. Save, then in the PIE console (`` ` ``) type **`CgReloadArtData`**. It reads those three files,
+   puts their art fields into the loaded tables (in memory) and re-applies them: living monsters take
+   their row's body again (on the server; clients follow by replication), every character's held
+   weapons are rebuilt, the next projectile shot has the new look. The log says how many rows and
+   actors it reloaded.
+4. Repeat 2-3 until it looks right. Then run the exporters (`Tools/run_checks.sh` says which table
+   is out of date), commit the JSON and the tables, and reimport them (`Tools\editor_setup.bat`) so the
+   saved table assets match.
+
+Not reloaded: gameplay fields (a mob's `scale` also sizes its capsule: exporter and reimport),
+dead monsters, minions (their look is on the summon abilities' Blueprints), projectiles already in
+flight. The command reads the files under the project's `Data/` folder, so it only works from a
+checkout (editor, PIE, a Development build run from the repo).
 
 ### Gaps
 
@@ -270,7 +297,8 @@ data, attack-started events, weapon meshes from the weapon table, and hit / dama
    on a monster: a socket-attached Static Mesh in its Blueprint, or a later data field.
 4. No footstep hook (anim notifies in the Anim Blueprint do that without code).
 5. Monster animations without an Anim Blueprint: `animations` in Mobs.json (idle, move, attack, death by
-   state; 2026-10-16). No blending, no hit reacts, no Physics Assets for monsters yet (no ragdoll).
+   state; 2026-10-16). No blending, no hit reacts. Monster ragdolls work (2026-10-17, `deathMode`) but
+   no monster mesh has a Physics Asset yet: they play their death animation until one is made.
 
 ## Sources (checked 2026-10-16)
 

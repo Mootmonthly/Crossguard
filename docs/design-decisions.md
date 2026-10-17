@@ -701,8 +701,8 @@ Everything here is cosmetic: no rule depends on it.
   (one-handed sword ×0.8, two-handed Sword_Big, dagger ×0.8, one-handed Axe_Small, two-handed
   Axe_Double, spear, Shield_Heater ×1.2, wooden bow), the staff KayKit's ×0.75, the wand none. Thrown
   axe, knife and bottle fly as Kenney tool axe, the Poly Haven dagger and Kenney bottle; arrows and
-  bolts have no mesh (Quaternius' arrow lies along Y and the projectile mesh has no rotation field),
-  a ribbon trail and a wood impact. Skeleton soldier / archer / mage: KayKit Warrior / Rogue / Mage
+  bolts have no mesh (Quaternius' arrow lies along Y and the projectile mesh has no rotation field;
+  since 2026-10-17 the arrow has it, see below), a ribbon trail and a wood impact. Skeleton soldier / archer / mage: KayKit Warrior / Rogue / Mage
   (×0.85) with KayKit's skeleton idle, walk and death, and a two-handed chop / bow release / magic
   shot; the example brute Quaternius' Orc (×0.55), the mithril dragon Quaternius' Dragon_Evolved
   (×0.62 on its scale 6), both `meshYaw` 90, with their own takes. Niagara: hits `NS_Impact_Concrete`,
@@ -722,6 +722,21 @@ Everything here is cosmetic: no rule depends on it.
   machines that draw them.
 - Assumed (development only, 2026-10-16): in non-Shipping builds `-CrossguardPlayerId=<name>` is
   also the player name, so the local cluster's clients are alice and bob (invites go by name).
+- Assumed (placeholder, 2026-10-17): monsters and minions **ragdoll on death like players** when their
+  mesh has a Physics Asset (`deathMode` "ragdoll", the default in Mobs.json; `DeathMode` on a summon's
+  body settings); without one, or with `deathMode` "animation", the death animation plays and the last
+  pose stays. Decided on every machine from replicated art (no extra network traffic). The body
+  container and loot are unchanged. None of the monster meshes has a Physics Asset yet, so nothing looks different until
+  one is made in the editor.
+- Assumed (placeholder, 2026-10-17): the arrow flies as Quaternius' `SM_Arrow` turned
+  `projectileRotation` [0, -90, 0] (tip assumed at +Y; flip to 90 if it flies backwards). Bolts stay
+  without a mesh. `projectileRotation` / `projectileScale` only apply with a `projectileMesh` (the
+  validator refuses them alone). A Blueprint projectile turns its mesh with `Visual.MeshRotation`.
+- Assumed (development only, 2026-10-17): `CgReloadArtData` (console, not in Shipping) reads the JSON
+  sources directly (not the generated tables) and changes the loaded tables in memory only; art fields
+  only (a mob's `scale`, which also sizes the capsule, needs the exporter and a reimport). Living
+  monsters and every character's held weapons are refreshed; dead monsters, minions (art from the summon
+  abilities) and projectiles in flight are not.
 
 ## Online architecture (owner decisions)
 
