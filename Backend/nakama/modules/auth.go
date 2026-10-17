@@ -26,20 +26,27 @@ const envDevAuth = "CROSSGUARD_DEV_AUTH"
 // Storage collections only the server writes (game clients may read their own character, party
 // membership and invite inbox).
 var serverOnlyCollections = map[string]bool{
-	collectionCharacters:   true,
-	collectionQuarantine:   true,
-	collectionConflicts:    true,
-	collectionLeases:       true,
-	collectionParties:      true,
-	collectionPartyMembers: true,
-	collectionPartyInvites: true,
-	collectionMatchTickets: true,
+	collectionCharacters:    true,
+	collectionQuarantine:    true,
+	collectionConflicts:     true,
+	collectionLeases:        true,
+	collectionParties:       true,
+	collectionPartyMembers:  true,
+	collectionPartyInvites:  true,
+	collectionMatchTickets:  true,
+	collectionGuilds:        true,
+	collectionGuildNames:    true,
+	collectionGuildMembers:  true,
+	collectionGuildInvites:  true,
+	collectionGuildBankLog:  true,
+	collectionGuildRequests: true,
 }
 
 var (
 	errLoginMethodOff  = runtime.NewError("this login method is not available", codePermissionDenied)
 	errDevAuthOff      = runtime.NewError("device login is for development servers only", codePermissionDenied)
 	errServerOnlyWrite = runtime.NewError("this collection is written by the game servers only", codePermissionDenied)
+	errGuildGroupWrite = runtime.NewError("guild groups are changed through the game servers only", codePermissionDenied)
 )
 
 func envValue(ctx context.Context, key string) string {
@@ -98,6 +105,15 @@ func denyBefore[T any]() func(context.Context, runtime.Logger, *sql.DB, runtime.
 	}
 }
 
+// denyGroup builds a before-hook that refuses a client's group change (guilds are changed by hub servers
+// through crossguard_guild).
+func denyGroup[T any]() func(context.Context, runtime.Logger, *sql.DB, runtime.NakamaModule, T) (T, error) {
+	return func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.NakamaModule, in T) (T, error) {
+		var none T
+		return none, errGuildGroupWrite
+	}
+}
+
 // Steam is the login (ticket checked by Nakama with social.steam.publisher_key / app_id); device ids in
 // development only; everything else is off.
 func registerAuthPolicy(initializer runtime.Initializer) error {
@@ -130,6 +146,21 @@ func registerAuthPolicy(initializer runtime.Initializer) error {
 		func() error { return initializer.RegisterBeforeAuthenticate(denyBefore[*api.AuthenticateRequest]()) },
 		func() error { return initializer.RegisterBeforeLinkCustom(denyBefore[*api.AccountCustom]()) },
 		func() error { return initializer.RegisterBeforeLinkEmail(denyBefore[*api.AccountEmail]()) },
+		// Groups are the guilds' mirror (guilds.go): clients may list them, never change them.
+		func() error { return initializer.RegisterBeforeCreateGroup(denyGroup[*api.CreateGroupRequest]()) },
+		func() error { return initializer.RegisterBeforeUpdateGroup(denyGroup[*api.UpdateGroupRequest]()) },
+		func() error { return initializer.RegisterBeforeDeleteGroup(denyGroup[*api.DeleteGroupRequest]()) },
+		func() error { return initializer.RegisterBeforeJoinGroup(denyGroup[*api.JoinGroupRequest]()) },
+		func() error { return initializer.RegisterBeforeLeaveGroup(denyGroup[*api.LeaveGroupRequest]()) },
+		func() error { return initializer.RegisterBeforeAddGroupUsers(denyGroup[*api.AddGroupUsersRequest]()) },
+		func() error { return initializer.RegisterBeforeBanGroupUsers(denyGroup[*api.BanGroupUsersRequest]()) },
+		func() error { return initializer.RegisterBeforeKickGroupUsers(denyGroup[*api.KickGroupUsersRequest]()) },
+		func() error {
+			return initializer.RegisterBeforePromoteGroupUsers(denyGroup[*api.PromoteGroupUsersRequest]())
+		},
+		func() error {
+			return initializer.RegisterBeforeDemoteGroupUsers(denyGroup[*api.DemoteGroupUsersRequest]())
+		},
 	}
 	for _, step := range steps {
 		if err := step(); err != nil {

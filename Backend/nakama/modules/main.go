@@ -3,7 +3,8 @@
 // Server-to-server RPCs for the dedicated game servers (called with the runtime HTTP key, never by
 // game clients): character saves (saves.go) with save leases (leases.go), session verification
 // (session.go), parties (parties.go), the game server registry and match server allocation (fleet.go),
-// matchmaking and match tickets (matchmaking.go). One client RPC: crossguard_hub_find_mine. Auth policy
+// matchmaking and match tickets (matchmaking.go), guilds with their bank (guilds.go, rules in
+// guild_rules.go). One client RPC: crossguard_hub_find_mine. Auth policy
 // (auth.go): Steam login always, device-id login only with CROSSGUARD_DEV_AUTH=1, every other way off;
 // clients cannot write or delete the save collections.
 package main
@@ -38,6 +39,9 @@ const (
 	RpcTicketVerify   = "crossguard_ticket_verify"
 	RpcHubFind        = "crossguard_hub_find"
 	RpcHubFindMine    = "crossguard_hub_find_mine"
+	RpcGuild          = "crossguard_guild"
+	RpcGuildGet       = "crossguard_guild_get"
+	RpcGuildLog       = "crossguard_guild_log"
 )
 
 // InitModule is the plugin entry point Nakama looks up by name.
@@ -76,6 +80,9 @@ func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runti
 		RpcTicketVerify:   c.RpcTicketVerify,
 		RpcHubFind:        c.RpcHubFind,
 		RpcHubFindMine:    c.RpcHubFindMine,
+		RpcGuild:          RpcGuildFn,
+		RpcGuildGet:       RpcGuildGetFn,
+		RpcGuildLog:       RpcGuildLogFn,
 	}
 	for id, fn := range rpcs {
 		if err := initializer.RegisterRpc(id, fn); err != nil {
