@@ -81,3 +81,22 @@ Not done / untuned:
   bolt from Weapons.json `projectile` (new field); a wand mesh (KayKit staff at 0.17). The wand stays
   hitscan.
 - Headless 169 / 169, net 11 / 11 after these.
+
+## End of session (owner confirmed: everything works as intended)
+
+- Ruled: in Play-In-Editor the Blueprint's Debug fields that are set win over the PIE character's
+  save (`design-decisions.md`, "Debug loadout in Play-In-Editor"). The PIE save made Debug Skills edits
+  look ignored.
+- KayKit's shared skeleton now holds the Rogue's cape bones (`UCrossguardArtLibrary::MergeMeshBones`,
+  in `import_art.py`).
+- Left on the PC, not committed: the owner's own Debug setting in `BP_CrossguardCharacter` (Fireball
+  added); the old PIE save moved aside to `Saved/Crossguard/Characters/pie-0.json.bak`; the unused
+  part of `Content/NiagaraExamples` (ignored). Nakama still runs in Docker (`run_local_backend.bat -Down`).
+
+## Open for the next sessions
+
+- Tune: weapon angles in the hand (Weapons.json `relativeTransform`), monster sizes.
+- Physics Assets for monsters (ragdoll), hit-react animations, arrow mesh (needs a projectile mesh
+  rotation field), a real wand model, wand hitscan effect.
+- Not imported yet: KayKit Dungeon (chests, doors), Quaternius animals (wolf for the tiger summon).
+- Optional step 6: the source engine (`setup-source-engine.md`, OWNER steps first).
