@@ -1,4 +1,4 @@
-// The Nakama client's, save backend's, matchmaking's and party mirror's pure helpers
+// The Nakama client's, save backend's, matchmaking's, party and guild mirrors' and session's pure helpers
 // (docs/backend-setup.md): no network, no world.
 // The answers parsed here are the exact shapes the Go module writes (Backend/nakama/modules; its tests
 // pin the field order, TestLoadResponseFieldOrder). End-to-end checks against a running Nakama:
@@ -10,12 +10,14 @@
 
 #include "Dom/JsonObject.h"
 #include "Engine/GameInstance.h"
+#include "Game/CrossguardGuildSubsystem.h"
 #include "Game/CrossguardMatchmaking.h"
 #include "Game/CrossguardNakamaClient.h"
 #include "Game/CrossguardNakamaMatchmaking.h"
 #include "Game/CrossguardNakamaSaveBackend.h"
 #include "Game/CrossguardNakamaSubsystem.h"
 #include "Game/CrossguardPartySubsystem.h"
+#include "Game/CrossguardSaveSubsystem.h"
 #include "HAL/PlatformTime.h"
 #include "Misc/Base64.h"
 #include "UObject/Package.h"
@@ -307,6 +309,150 @@ bool FCrossguardNakamaPartyStateTest::RunTest(const FString& Parameters)
 		*PartyId, Bob));
 	TestTrue(TEXT("Gone"), Registry.Find(TCHAR_TO_UTF8(*PartyId)) == nullptr && Parties->PartyKeyOf(Bob).IsEmpty());
 	TestEqual(TEXT("Garbage"), Parties->ApplyBackendState(TEXT("<html>")), FString(TEXT("<unreadable>")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardNakamaGuildStateTest, "Crossguard.Nakama.GuildState", CROSSGUARD_TEST_FLAGS)
+
+bool FCrossguardNakamaGuildStateTest::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardNakamaTestsLocal;
+	TestTrue(TEXT("None"), UCrossguardGuildSubsystem::ResultFromName(TEXT("None")) == ECrossguardGuildResult::None);
+	TestTrue(TEXT("NotPermitted"), UCrossguardGuildSubsystem::ResultFromName(TEXT("NotPermitted")) == ECrossguardGuildResult::NotPermitted);
+	TestTrue(TEXT("InvalidData (last rules name)"), UCrossguardGuildSubsystem::ResultFromName(TEXT("InvalidData")) == ECrossguardGuildResult::InvalidData);
+	TestTrue(TEXT("BankChanged (the backend's own)"), UCrossguardGuildSubsystem::ResultFromName(TEXT("BankChanged")) == ECrossguardGuildResult::BankChanged);
+	TestTrue(TEXT("Unknown name"), UCrossguardGuildSubsystem::ResultFromName(TEXT("Dance")) == ECrossguardGuildResult::BackendUnavailable);
+	TestTrue(TEXT("Garbage marker"), UCrossguardGuildSubsystem::ResultFromName(TEXT("<unreadable>")) == ECrossguardGuildResult::BackendUnavailable);
+
+	TArray<TPair<FString, FString>> Fields;
+	Fields.Add(TPair<FString, FString>(TEXT("target_id"), FCrossguardNakamaClient::Quote(Bob)));
+	Fields.Add(TPair<FString, FString>(TEXT("amount"), TEXT("25")));
+	TestEqual(TEXT("Op payload"), UCrossguardGuildSubsystem::BuildOpPayload(TEXT("give_gold"), Alice, TEXT("hub-1"), Fields),
+		FString::Printf(TEXT("{\"op\":\"give_gold\",\"actor_id\":\"%s\",\"server_id\":\"hub-1\",\"target_id\":\"%s\",\"amount\":25}"), Alice, Bob));
+
+	// A bank stack's payload: the item in the save's format, affixes and all.
+	FCrossguardInventoryItem Sword;
+	Sword.Category = ECrossguardItemCategory::Weapon;
+	Sword.Weapon.WeaponId = TEXT("sword_one_handed");
+	Sword.Weapon.Rarity = ECrossguardRarity::Epic;
+	Sword.Rarity = ECrossguardRarity::Epic;
+	FCrossguardAffix& Sharp = Sword.Weapon.Affixes.AddDefaulted_GetRef();
+	Sharp.AffixId = TEXT("sharp");
+	Sharp.Value = 3.5f;
+	Sword.Count = 1;
+	Sword.Size = FIntPoint(1, 3);
+	const FString Payload = UCrossguardSaveSubsystem::ItemToPayload(Sword);
+	FCrossguardInventoryItem Back;
+	TestTrue(TEXT("Payload reads back"), UCrossguardSaveSubsystem::ItemFromPayload(Payload, Back));
+	TestTrue(TEXT("Same weapon and rarity"), Back.Weapon.WeaponId == Sword.Weapon.WeaponId && Back.Weapon.Rarity == ECrossguardRarity::Epic);
+	TestTrue(TEXT("Affix kept"), Back.Weapon.Affixes.Num() == 1 && Back.Weapon.Affixes[0].AffixId == TEXT("sharp") && FMath::IsNearlyEqual(Back.Weapon.Affixes[0].Value, 3.5f));
+	TestFalse(TEXT("Not a payload"), UCrossguardSaveSubsystem::ItemFromPayload(TEXT("{\"id\":1}"), Back));
+	const TSharedPtr<FJsonObject> ItemJson = ParseJson(UCrossguardGuildSubsystem::BuildItemJson(Sword));
+	FString ItemId;
+	FString ItemPayload;
+	int32 Rarity = -1;
+	TestTrue(TEXT("Deposit item JSON"), ItemJson.IsValid() && ItemJson->TryGetStringField(TEXT("item_id"), ItemId) && ItemId == TEXT("sword_one_handed")
+		&& ItemJson->TryGetNumberField(TEXT("rarity"), Rarity) && Rarity == 3 && ItemJson->TryGetStringField(TEXT("payload"), ItemPayload) && ItemPayload == Payload);
+
+	// The mirror (a bare game instance, no world). A crossguard_guild answer's shape (Backend/nakama/modules/guilds.go):
+	// Alice leads, Bob is an officer, Carol has an invite; gold above 2^53 travels as text.
+	UCrossguardGuildSubsystem* Guilds = NewObject<UCrossguardGuildSubsystem>(NewObject<UGameInstance>(GetTransientPackage()));
+	const TCHAR* GuildId = TEXT("10000000-0000-4000-8000-000000000001");
+	const TCHAR* Carol = TEXT("bbbbbbbb-cccc-dddd-eeee-ffffffffffff");
+	const FString Answer = FString::Printf(TEXT("{\"result\":\"None\",\"guild_id\":\"%s\",\"now_ms\":1800000000000,\"players\":{")
+		TEXT("\"%s\":{\"guild_id\":\"%s\",\"invites\":[]},")
+		TEXT("\"%s\":{\"guild_id\":\"\",\"invites\":[{\"guild_id\":\"%s\",\"guild_name\":\"Iron Wolves\",\"invited_by\":\"%s\",\"expires_at_ms\":1800000300000}]}},")
+		TEXT("\"guilds\":{\"%s\":{\"id\":\"%s\",\"name\":\"Iron Wolves\",\"members\":[{\"user_id\":\"%s\",\"rank\":\"Leader\"},{\"user_id\":\"%s\",\"rank\":\"Officer\"}],")
+		TEXT("\"invites\":[{\"user_id\":\"%s\",\"invited_by\":\"%s\",\"expires_at_ms\":1800000300000}],")
+		TEXT("\"bank\":{\"gold\":\"9007199254740993\",\"width\":10,\"height\":30,\"next_slot_id\":2,\"items\":[{\"slot_id\":1,\"item_id\":\"sword_one_handed\",")
+		TEXT("\"rarity\":3,\"count\":1,\"width\":1,\"height\":3,\"x\":5,\"y\":5,\"rotated\":true,\"payload\":%s}]},\"bank_log\":[],\"log_seq\":4}}}"),
+		GuildId, Alice, GuildId, Carol, GuildId, Alice, GuildId, GuildId, Alice, Bob, Carol, Alice, *FCrossguardNakamaClient::Quote(Payload));
+	TestEqual(TEXT("Answer's result"), Guilds->ApplyBackendState(Answer), FString(TEXT("None")));
+	const Crossguard::FGuildRegistry& Registry = Guilds->GetRegistry();
+	const std::string AliceId = TCHAR_TO_UTF8(Alice);
+	const std::string BobId = TCHAR_TO_UTF8(Bob);
+	const Crossguard::FGuild* Mirrored = Registry.GuildOf(AliceId);
+	TestTrue(TEXT("Mirrored guild"), Mirrored != nullptr && Mirrored->Name == "Iron Wolves" && Mirrored->LeaderId() == AliceId);
+	TestTrue(TEXT("Bob is an officer"), Registry.RankOf(BobId) == Crossguard::EGuildRank::Officer);
+	TestTrue(TEXT("Gold exact past 2^53"), Mirrored != nullptr && Mirrored->Bank.Gold == 9007199254740993LL);
+	const Crossguard::FGridItem* Placed = Mirrored != nullptr ? Mirrored->Bank.Grid.Find(1) : nullptr;
+	TestTrue(TEXT("Stack placed as stored (rotated)"), Placed != nullptr && Placed->Placement.X == 5 && Placed->Placement.bRotated
+		&& Mirrored->Bank.Grid.ItemAt(7, 5) == 1);
+	TestTrue(TEXT("Its payload kept"), Mirrored != nullptr && Mirrored->Bank.Find(1) != nullptr && Mirrored->Bank.Find(1)->Payload == TCHAR_TO_UTF8(*Payload));
+
+	// Refusals come back by name and change nothing.
+	TestEqual(TEXT("Refusal by name"), Guilds->ApplyBackendState(TEXT("{\"result\":\"NotPermitted\",\"now_ms\":1,\"players\":{},\"guilds\":{}}")),
+		FString(TEXT("NotPermitted")));
+	TestTrue(TEXT("Still mirrored"), Registry.GuildOf(AliceId) != nullptr);
+	// A get saying Bob is in no guild (kicked on another hub) drops him here.
+	Guilds->ApplyBackendState(FString::Printf(TEXT("{\"now_ms\":1,\"players\":{\"%s\":{\"guild_id\":\"\",\"invites\":[]}},\"guilds\":{}}"), Bob));
+	TestFalse(TEXT("Bob dropped"), Registry.RankOf(BobId).has_value());
+	// Disbanded.
+	Guilds->ApplyBackendState(FString::Printf(TEXT("{\"result\":\"None\",\"guild_id\":\"%s\",\"disbanded\":true,\"now_ms\":1,")
+		TEXT("\"payout\":{\"gold\":\"5\",\"items\":[]},\"players\":{\"%s\":{\"guild_id\":\"\",\"invites\":[]}},\"guilds\":{}}"), GuildId, Alice));
+	TestTrue(TEXT("Gone"), Registry.Find(TCHAR_TO_UTF8(GuildId)) == nullptr && Registry.GuildOf(AliceId) == nullptr);
+	TestEqual(TEXT("Garbage"), Guilds->ApplyBackendState(TEXT("<html>")), FString(TEXT("<unreadable>")));
+
+	// A view whose stacks overlap is not a guild.
+	const TSharedPtr<FJsonObject> Overlap = ParseJson(FString::Printf(TEXT("{\"id\":\"%s\",\"name\":\"Overlap\",\"members\":[{\"user_id\":\"%s\",\"rank\":\"Leader\"}],")
+		TEXT("\"bank\":{\"gold\":\"0\",\"width\":2,\"height\":2,\"next_slot_id\":3,\"items\":[")
+		TEXT("{\"slot_id\":1,\"item_id\":\"a\",\"count\":1,\"width\":2,\"height\":2,\"x\":0,\"y\":0},")
+		TEXT("{\"slot_id\":2,\"item_id\":\"b\",\"count\":1,\"width\":1,\"height\":1,\"x\":1,\"y\":1}]}}"), GuildId, Alice));
+	Crossguard::FGuild Parsed;
+	TMap<int32, FString> Payloads;
+	TestFalse(TEXT("Overlapping stacks refused"), Overlap.IsValid() && UCrossguardGuildSubsystem::ParseGuildView(*Overlap, Parsed, Payloads));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardNakamaGuildBankWriteTest, "Crossguard.Nakama.GuildBankWrite", CROSSGUARD_TEST_FLAGS)
+
+bool FCrossguardNakamaGuildBankWriteTest::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardNakamaTestsLocal;
+	// The save a bank operation carries: the document embedded as is, the version and lease next to it.
+	TestEqual(TEXT("Save member"), UCrossguardNakamaSaveBackend::BuildSaveMember(Alice, TEXT("main"), TEXT("{\"version\":1}"), TEXT("v7"), TEXT("lease")),
+		FString::Printf(TEXT("{\"user_id\":\"%s\",\"character_id\":\"main\",\"record\":{\"version\":1},\"expected_version\":\"v7\",\"lease_token\":\"lease\"}"), Alice));
+	TestEqual(TEXT("Written: the save's new version"), UCrossguardNakamaSaveBackend::ReadSaveVersion(TEXT("{\"result\":\"None\",\"save_version\":\"abc\"}")),
+		FString(TEXT("abc")));
+	TestTrue(TEXT("Refused: no version"), UCrossguardNakamaSaveBackend::ReadSaveVersion(TEXT("{\"result\":\"NotPermitted\"}")).IsEmpty());
+	TestTrue(TEXT("Garbage: no version"), UCrossguardNakamaSaveBackend::ReadSaveVersion(TEXT("<html>")).IsEmpty());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardNakamaSessionTest, "Crossguard.Nakama.Session", CROSSGUARD_TEST_FLAGS)
+
+bool FCrossguardNakamaSessionTest::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardNakamaTestsLocal;
+	const int64 Now = 1800000000;
+	const int64 Lead = UCrossguardNakamaSubsystem::RefreshLeadSeconds;
+	TestFalse(TEXT("Plenty of time left"), UCrossguardNakamaSubsystem::ShouldRefreshSession(Now, Now + Lead + 1, Now + 604800));
+	TestTrue(TEXT("Within the lead"), UCrossguardNakamaSubsystem::ShouldRefreshSession(Now, Now + Lead, Now + 604800));
+	TestTrue(TEXT("Already expired, refresh token good"), UCrossguardNakamaSubsystem::ShouldRefreshSession(Now, Now - 10, Now + 10));
+	TestFalse(TEXT("Refresh token expired"), UCrossguardNakamaSubsystem::ShouldRefreshSession(Now, Now + 10, Now));
+	TestFalse(TEXT("No session"), UCrossguardNakamaSubsystem::ShouldRefreshSession(Now, 0, Now + 10));
+
+	FString Token;
+	FString Refresh;
+	TestTrue(TEXT("Session answer"), FCrossguardNakamaClient::ReadSession(TEXT("{\"created\":true,\"token\":\"t\",\"refresh_token\":\"r\"}"), Token, Refresh)
+		&& Token == TEXT("t") && Refresh == TEXT("r"));
+	TestFalse(TEXT("No token"), FCrossguardNakamaClient::ReadSession(TEXT("{\"code\":16,\"message\":\"Refresh token invalid or expired.\"}"), Token, Refresh));
+
+	// A login answer: the session token's and the refresh token's claims.
+	const auto MakeToken = [](const TCHAR* UserId, int64 ExpiresAt)
+	{
+		return Base64Url(TEXT("{\"alg\":\"HS256\",\"typ\":\"JWT\"}")) + TEXT(".")
+			+ Base64Url(FString::Printf(TEXT("{\"tid\":\"t\",\"uid\":\"%s\",\"usn\":\"alice\",\"exp\":%lld}"), UserId, ExpiresAt)) + TEXT(".sig");
+	};
+	UCrossguardNakamaSubsystem* Nakama = NewObject<UCrossguardNakamaSubsystem>(NewObject<UGameInstance>(GetTransientPackage()));
+	FString Error;
+	const FString Session = MakeToken(Alice, Now + 7200);
+	const FString RefreshToken = MakeToken(Alice, Now + 604800);
+	TestTrue(TEXT("Session accepted"), Nakama->AcceptSession(FString::Printf(TEXT("{\"token\":\"%s\",\"refresh_token\":\"%s\"}"), *Session, *RefreshToken), Error));
+	TestTrue(TEXT("Token, refresh token, user, expiry"), Nakama->GetSessionToken() == Session && Nakama->GetRefreshToken() == RefreshToken
+		&& Nakama->GetUserId() == Alice && Nakama->GetSessionExpiresAt() == Now + 7200);
+	TestFalse(TEXT("An unreadable answer keeps the session"), Nakama->AcceptSession(TEXT("{\"token\":\"nope\"}"), Error));
+	TestEqual(TEXT("Kept"), Nakama->GetSessionToken(), Session);
 	return true;
 }
 
