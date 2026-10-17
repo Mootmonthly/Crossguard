@@ -276,6 +276,12 @@ Independent of category, a skill is:
 - Each season: five respec tokens, a shared stash tab (usable by all of the account's characters),
   several stacks of common healing items, some throwables and lockpicks.
 
+## Monster pace
+
+- Ruled 2026-10-16 (owner, "mobs move and attack way too fast"): every mob walks at 2.5 m/s (was
+  4.5, the players' speed) and attacks half as often (attack intervals doubled: 3 s, the archer 2 s).
+  Assumed: the mages' Fireball interval (8 s) is unchanged.
+
 ## Hub and main menu
 
 Details: [hub-and-menu.md](hub-and-menu.md). All **(placeholder, Assumed)** except the trip back to the hub (ruled):
@@ -698,6 +704,11 @@ Everything here is cosmetic: no rule depends on it.
   size and facing. No Physics Assets yet: monsters play their death animation instead of a ragdoll.
   Character sounds: swing Kenney knifeSlice, hit impactPunch_medium, block impactMetal_heavy,
   death impactSoft_heavy.
+- Assumed (placeholder, 2026-10-16): the wand is KayKit's staff at 0.17 (no wand model in the packs).
+  The staff's bolt: Weapons.json `projectile`, `NS_Spark_Continuous` trail and `NS_Spark_Burst`
+  impact. Spell projectiles (Fireball, players' and monsters'): `NS_Fire` trail and
+  `NS_Explosion_Medium` impact from Config/DefaultGame.ini. The wand stays hitscan (nothing flies;
+  the hit shows the character's hit effect).
 - Assumed (placeholder, 2026-10-16, owner's choice of approach): monsters without an Anim Blueprint
   play data animations by state (`animations` in Mobs.json: idle and move loop, move above 20 cm/s;
   the attack once per attack start; death once, holding the last pose), picked every 0.1 s, only on

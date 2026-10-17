@@ -18,6 +18,7 @@
 #include "Character/CrossguardMonster.h"
 #include "Character/CrossguardWeaponVisualsComponent.h"
 #include "Combat/CrossguardCosmetics.h"
+#include "Combat/CrossguardSpellProjectile.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/DataTable.h"
@@ -150,8 +151,17 @@ bool FCrossguardScenarioArtWeaponMeshes::RunTest(const FString& Parameters)
 		C.Test.TestTrue(TEXT("drawn: shown again"), FirstPerson != nullptr && FirstPerson->IsVisible());
 		C.Unequip(Player, ECrossguardEquipmentSlot::OffHand);
 		C.Test.TestNull(TEXT("unequipped shield: no mesh"), Visuals->GetWeaponMesh(ECrossguardEquipmentSlot::OffHand, false));
-		// The data's wand has no mesh (Data/Items/Weapons.json): nothing, as before art.
+		// A weapon row without a mesh (the wand's, emptied for the test): nothing, as before art.
+		UDataTable* Weapons = Player->GetEquipmentComponent()->WeaponTable;
+		FCrossguardWeaponRow* Wand = Weapons != nullptr ? Weapons->FindRow<FCrossguardWeaponRow>(TEXT("wand_one_handed"), TEXT("ArtTest"), false) : nullptr;
+		if (!C.Require(Wand != nullptr, TEXT("the wand's weapon row")))
+		{
+			return;
+		}
+		const TSoftObjectPtr<UStaticMesh> WandMesh = Wand->Mesh;
+		Wand->Mesh.Reset();
 		C.Equip(Player, TEXT("wand_one_handed"));
+		Wand->Mesh = WandMesh;
 		C.Test.TestNull(TEXT("a weapon without a mesh: nothing (first person)"), Visuals->GetWeaponMesh(ECrossguardEquipmentSlot::MainHand, true));
 		C.Test.TestNull(TEXT("a weapon without a mesh: nothing (third person)"), Visuals->GetWeaponMesh(ECrossguardEquipmentSlot::MainHand, false));
 	});
@@ -369,6 +379,33 @@ bool FCrossguardScenarioArtMobStateAnims::RunTest(const FString& Parameters)
 		C.Kill(Monster);
 		Monster->UpdateBodyAnimation();
 		C.Test.TestTrue(TEXT("dead: the death animation"), Monster->GetPlayingBodyAnim() == Row->DeathAnim.Get());
+	});
+	Scenario.Run();
+	return true;
+}
+
+// A spell projectile without its own look takes the configured one (Config/DefaultGame.ini,
+// ACrossguardSpellProjectile DefaultSpellVisual: the Fireball's fire and explosion).
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardScenarioArtSpellVisual, "Crossguard.Scenario.Art.SpellProjectileDefaultLook", CROSSGUARD_SCENARIO_FLAGS)
+bool FCrossguardScenarioArtSpellVisual::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioArtHooks;
+	FScenario Scenario(*this);
+	Scenario.Step(TEXT("A spell projectile spawns with the configured trail and impact"), [](FScenarioContext& C)
+	{
+		const ACrossguardSpellProjectile* Defaults = GetDefault<ACrossguardSpellProjectile>();
+		if (Defaults->DefaultSpellVisual.TrailVfx.IsNull())
+		{
+			C.Skip(TEXT("no DefaultSpellVisual in Config/DefaultGame.ini"));
+			return;
+		}
+		ACrossguardSpellProjectile* Spell = C.SpawnActor<ACrossguardSpellProjectile>(TEXT("Spell"), FVector(0.0f, -6000.0f, 200.0f));
+		if (C.Require(Spell != nullptr, TEXT("spell projectile spawned")))
+		{
+			C.Test.TestTrue(TEXT("trail from config"), Spell->Visual.TrailVfx == Defaults->DefaultSpellVisual.TrailVfx);
+			C.Test.TestTrue(TEXT("impact from config"), Spell->Visual.ImpactVfx == Defaults->DefaultSpellVisual.ImpactVfx);
+		}
 	});
 	Scenario.Run();
 	return true;

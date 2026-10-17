@@ -161,6 +161,8 @@ namespace CrossguardCosmetics
 	// An ammo or throwable row's art (projectileMesh, trailVfx, impactVfx, impactSound); unset fields
 	// stay empty (FCrossguardProjectileVisual::MergeFrom keeps the Blueprint's for them).
 	CROSSGUARD_API FCrossguardProjectileVisual ProjectileVisualFromItem(const FCrossguardItemRow& Row);
+	// What a projectile weapon without ammo shoots (Weapons.json `projectile`).
+	CROSSGUARD_API FCrossguardProjectileVisual ProjectileVisualFromWeapon(const FCrossguardWeaponRow& Row);
 
 	// Attached to Parent (kept relative), destroyed with it.
 	CROSSGUARD_API UNiagaraComponent* SpawnFxAttached(const TSoftObjectPtr<UNiagaraSystem>& System, USceneComponent* Parent);

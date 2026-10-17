@@ -175,6 +175,20 @@ struct CROSSGUARD_API FCrossguardWeaponRow : public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Art")
 	FVector MeshScale = FVector::OneVector;
 
+	// Art (`projectile`: mesh, trailVfx, impactVfx, impactSound): what a projectile weapon without
+	// ammo (the staff) shoots looks like. An ammo row's fields win over these.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Art")
+	TSoftObjectPtr<UStaticMesh> ProjectileMesh;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Art")
+	TSoftObjectPtr<UNiagaraSystem> ProjectileTrailVfx;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Art")
+	TSoftObjectPtr<UNiagaraSystem> ProjectileImpactVfx;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Art")
+	TSoftObjectPtr<USoundBase> ProjectileImpactSound;
+
 	bool IsMelee() const { return Range == ECrossguardWeaponRange::Melee; }
 };
 

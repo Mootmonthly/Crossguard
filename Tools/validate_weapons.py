@@ -100,6 +100,9 @@ WEAPON_ART_SPEC = {
     "mesh": (asset_path, "an asset path like /Game/Weapons/SM_Sword.SM_Sword"),
     "attachSocket": (lambda v: isinstance(v, str) and bool(SOCKET_RE.match(v)), "a socket name (e.g. hand_r)"),
     "relativeTransform": (lambda v: isinstance(v, dict), "object"),
+    "projectile": (lambda v: isinstance(v, dict) and bool(v) and set(v) <= {"mesh", "trailVfx", "impactVfx", "impactSound"}
+                   and all(asset_path(p) for p in v.values()),
+                   "an object of asset paths: mesh, trailVfx, impactVfx, impactSound (each optional)"),
 }
 
 SPEED_SPEC = {

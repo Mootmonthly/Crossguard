@@ -50,6 +50,11 @@ def row(weapon):
         "MeshOffset": vec(transform.get("location", [0, 0, 0])),
         "MeshRotation": vec(transform.get("rotation", [0, 0, 0]), ("Pitch", "Yaw", "Roll")),
         "MeshScale": vec(scale),
+        # What a projectile weapon without ammo (the staff) shoots looks like (`projectile`).
+        "ProjectileMesh": weapon.get("projectile", {}).get("mesh", ""),
+        "ProjectileTrailVfx": weapon.get("projectile", {}).get("trailVfx", ""),
+        "ProjectileImpactVfx": weapon.get("projectile", {}).get("impactVfx", ""),
+        "ProjectileImpactSound": weapon.get("projectile", {}).get("impactSound", ""),
     }
 
 

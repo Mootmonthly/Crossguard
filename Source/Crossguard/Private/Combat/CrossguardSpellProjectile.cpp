@@ -11,6 +11,15 @@ ACrossguardSpellProjectile::ACrossguardSpellProjectile()
 	Movement->ProjectileGravityScale = 0.0f;
 }
 
+void ACrossguardSpellProjectile::BeginPlay()
+{
+	// The configured look under this projectile's own (on every machine: the same config).
+	FCrossguardProjectileVisual Merged = DefaultSpellVisual;
+	Merged.MergeFrom(Visual);
+	Visual = Merged;
+	Super::BeginPlay();
+}
+
 void ACrossguardSpellProjectile::SetFlight(float Speed, float LifeSeconds)
 {
 	Movement->InitialSpeed = Speed;

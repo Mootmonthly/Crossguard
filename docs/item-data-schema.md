@@ -50,6 +50,7 @@ shown, as before. `UCrossguardWeaponVisualsComponent` shows the drawn set's mesh
 | `mesh` | asset path | A static mesh held while the weapon is drawn, e.g. `/Game/Art/Weapons/SM_Sword.SM_Sword`. Exported as `Mesh` (`""` when left out). |
 | `attachSocket` | string | Hand socket on the body (and the first-person arms). Left out: `hand_r` in the main hand, `hand_l` in the off hand. Needs `mesh`. Exported as `AttachSocket` (`None` when left out). |
 | `relativeTransform` | object | The mesh's place on the socket: `location` `[x, y, z]` cm, `rotation` `[pitch, yaw, roll]` degrees, `scale` (a number or `[x, y, z]`); each optional. Needs `mesh`. Exported as `MeshOffset`, `MeshRotation`, `MeshScale`. |
+| `projectile` | object | A projectile weapon without ammo (the staff): its shot's look, each optional: `mesh`, `trailVfx`, `impactVfx`, `impactSound` (asset paths). An ammo row's fields win. Exported as `ProjectileMesh`, `ProjectileTrailVfx`, `ProjectileImpactVfx`, `ProjectileImpactSound`. |
 
 Attack interval = `(perSeconds / attacks) / (1 + ActionSpeed)`. ActionSpeed is the
 character's stat (0 at 10 AGI). The divisor is floored at 0.1.

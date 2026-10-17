@@ -516,6 +516,10 @@ void UCrossguardWeaponAttackAbility::SpawnProjectile(const FGameplayEffectSpecHa
 		const UCrossguardInventoryComponent* Inventory = FindInventory(GetCurrentActorInfo());
 		const FCrossguardItemRow* Ammo = Weapon != nullptr && !Weapon->AmmoId.IsNone() && Inventory != nullptr && Inventory->ItemTable != nullptr
 			? Inventory->ItemTable->FindRow<FCrossguardItemRow>(Weapon->AmmoId, TEXT("WeaponAttack"), false) : nullptr;
+		if (Weapon != nullptr)
+		{
+			Projectile->Visual.MergeFrom(CrossguardCosmetics::ProjectileVisualFromWeapon(*Weapon));
+		}
 		if (Ammo != nullptr)
 		{
 			Projectile->Visual.MergeFrom(CrossguardCosmetics::ProjectileVisualFromItem(*Ammo));

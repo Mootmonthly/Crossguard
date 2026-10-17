@@ -72,6 +72,16 @@ namespace CrossguardCosmetics
 		return Visual;
 	}
 
+	FCrossguardProjectileVisual ProjectileVisualFromWeapon(const FCrossguardWeaponRow& Row)
+	{
+		FCrossguardProjectileVisual Visual;
+		Visual.Mesh = Row.ProjectileMesh;
+		Visual.TrailVfx = Row.ProjectileTrailVfx;
+		Visual.ImpactVfx = Row.ProjectileImpactVfx;
+		Visual.ImpactSound = Row.ProjectileImpactSound;
+		return Visual;
+	}
+
 	UNiagaraComponent* SpawnFxAttached(const TSoftObjectPtr<UNiagaraSystem>& System, USceneComponent* Parent)
 	{
 		if (System.IsNull() || Parent == nullptr || !CanPlay(Parent))

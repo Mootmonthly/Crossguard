@@ -150,6 +150,10 @@
     "mesh": "/Game/ThirdParty/KayKit/Skeletons/SM_Skeleton_Staff.SM_Skeleton_Staff",
     "relativeTransform": {
       "scale": 0.75
+    },
+    "projectile": {
+      "trailVfx": "/Game/NiagaraExamples/FX_Sparks/NS_Spark_Continuous.NS_Spark_Continuous",
+      "impactVfx": "/Game/NiagaraExamples/FX_Sparks/NS_Spark_Burst.NS_Spark_Burst"
     }
   },
   {
@@ -215,6 +219,10 @@
     "delivery": "Hitscan",
     "ammo": null,
     "canParry": false,
-    "impactPower": 1
+    "impactPower": 1,
+    "mesh": "/Game/ThirdParty/KayKit/Skeletons/SM_Skeleton_Staff.SM_Skeleton_Staff",
+    "relativeTransform": {
+      "scale": 0.17
+    }
   }
 ]

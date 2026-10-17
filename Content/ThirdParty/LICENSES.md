@@ -19,10 +19,11 @@ Downloaded 2026-10-16; the raw zips and FBX files are not in the repository.
 
 **`Content/NiagaraExamples`** is Epic's **Niagara Examples Pack** (Fab, free): the Fab Standard
 License, **for Unreal Engine projects only** (not CC0). Only the systems in use and what they need
-are in the repository (105 files, `git add -f`); the rest of the pack is ignored (`.gitignore`) and
+are in the repository (115 files, `git add -f`); the rest of the pack is ignored (`.gitignore`) and
 stays on the owner's PC: `NS_Impact_Concrete` (character hits), `NS_Spark_Burst` (block / parry
 clank), `NS_SimpleRibbonTrail` and `NS_Impact_Wood` (arrows, bolts), `NS_Impact_Metal` (thrown axes
-and knives), `NS_Explosion_Small` (explosive bottle). To use another system: add it to Fab's copy on
+and knives), `NS_Explosion_Small` (explosive bottle), `NS_Fire` and `NS_Explosion_Medium` (Fireball),
+`NS_Spark_Continuous` (the staff's bolt). To use another system: add it to Fab's copy on
 the PC, then `git add -f` it and its dependencies.
 
 Downloaded but not imported yet (in the same CC0 packs): KayKit Dungeon Remastered 1.1, Quaternius
