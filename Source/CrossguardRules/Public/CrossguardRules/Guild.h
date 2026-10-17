@@ -262,6 +262,17 @@ namespace Crossguard
 		// Moves or rotates a bank item. Not logged.
 		EGuildError MoveBankItem(const std::string& ActorId, int SlotId, FGridPlacement At);
 
+		// A mirror of guilds kept elsewhere (the Nakama backend, docs/guild-rules.md "On Nakama"): puts
+		// Guild in, replacing this registry's copy of it and anything stale in its way (another guild
+		// under its name, its members' places in other guilds; a guild left empty goes). Then the
+		// Restore checks; on error the registry is as it was before the call.
+		EGuildError Mirror(const FGuild& Guild);
+		// Forgets a guild (disbanded elsewhere). False if unknown.
+		bool RemoveGuild(const std::string& GuildId);
+		// The player is in no guild (elsewhere): drops them from the one they are in here (a guild left
+		// empty goes; a Leader dropped leaves none, until the next Mirror of that guild).
+		void DropPlayer(const std::string& PlayerId);
+
 		const FGuild* Find(const std::string& GuildId) const;
 		const FGuild* FindByName(const std::string& Name) const;
 		const FGuild* GuildOf(const std::string& PlayerId) const;

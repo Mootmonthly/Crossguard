@@ -640,6 +640,83 @@ namespace Crossguard
 		return Guild->Bank.Grid.Move(SlotId, At) ? EGuildError::None : EGuildError::NoRoom;
 	}
 
+	EGuildError FGuildRegistry::Mirror(const FGuild& Guild)
+	{
+		if (Guild.Id.empty())
+		{
+			return EGuildError::InvalidGuildId;
+		}
+		// On error everything goes back.
+		const std::unordered_map<std::string, FGuild> SavedGuilds = Guilds;
+		const std::unordered_map<std::string, std::string> SavedNames = NameIndex;
+		const std::unordered_map<std::string, std::string> SavedPlayers = PlayerGuilds;
+
+		RemoveGuild(Guild.Id);
+		const auto Named = NameIndex.find(NameKey(Guild.Name));
+		if (Named != NameIndex.end())
+		{
+			const std::string Stale = Named->second;
+			RemoveGuild(Stale);
+		}
+		for (const FGuildMember& Member : Guild.Members)
+		{
+			DropPlayer(Member.PlayerId);
+		}
+		const EGuildError Error = Restore(Guild);
+		if (Error != EGuildError::None)
+		{
+			Guilds = SavedGuilds;
+			NameIndex = SavedNames;
+			PlayerGuilds = SavedPlayers;
+		}
+		return Error;
+	}
+
+	bool FGuildRegistry::RemoveGuild(const std::string& GuildId)
+	{
+		const auto Found = Guilds.find(GuildId);
+		if (Found == Guilds.end())
+		{
+			return false;
+		}
+		for (const FGuildMember& Member : Found->second.Members)
+		{
+			const auto Player = PlayerGuilds.find(Member.PlayerId);
+			if (Player != PlayerGuilds.end() && Player->second == GuildId)
+			{
+				PlayerGuilds.erase(Player);
+			}
+		}
+		const auto Named = NameIndex.find(NameKey(Found->second.Name));
+		if (Named != NameIndex.end() && Named->second == GuildId)
+		{
+			NameIndex.erase(Named);
+		}
+		Guilds.erase(Found);
+		return true;
+	}
+
+	void FGuildRegistry::DropPlayer(const std::string& PlayerId)
+	{
+		const auto Player = PlayerGuilds.find(PlayerId);
+		if (Player == PlayerGuilds.end())
+		{
+			return;
+		}
+		const std::string GuildId = Player->second;
+		const auto Found = Guilds.find(GuildId);
+		if (Found == Guilds.end())
+		{
+			PlayerGuilds.erase(Player);
+			return;
+		}
+		RemoveMember(Found->second, PlayerId);
+		if (Found->second.Members.empty())
+		{
+			RemoveGuild(GuildId);
+		}
+	}
+
 	const FGuild* FGuildRegistry::Find(const std::string& GuildId) const
 	{
 		const auto Found = Guilds.find(GuildId);

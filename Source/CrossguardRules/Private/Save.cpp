@@ -1056,6 +1056,47 @@ namespace Crossguard
 		return WriteJson(Root);
 	}
 
+	std::string WriteSavedItem(const FSavedItem& Item)
+	{
+		// The item itself: where it lies or is worn is the holder's business.
+		FSavedItem Own = Item;
+		Own.Placement = FGridPlacement();
+		Own.Grid = EContainerKind::Main;
+		Own.Worn = ESavedWorn::None;
+		Own.WornSet = 0;
+		return WriteJson(SaveDetail::WriteItem(Own), false);
+	}
+
+	bool ReadSavedItem(const std::string& Json, FSavedItem& OutItem, std::string* OutError, const FSaveLimits& Limits)
+	{
+		const auto Refuse = [OutError](const std::string& Why)
+		{
+			if (OutError != nullptr)
+			{
+				*OutError = Why;
+			}
+			return false;
+		};
+		if (Json.size() > Limits.MaxDocumentBytes)
+		{
+			return Refuse("too large");
+		}
+		FJsonNode Root;
+		FJsonParseError ParseError;
+		if (!ParseJson(Json, Root, &ParseError, Limits.MaxDepth))
+		{
+			return Refuse(ParseError.Message + " at byte " + std::to_string(ParseError.Offset));
+		}
+		SaveDetail::FFieldReader Reader(Limits);
+		FSavedItem Item;
+		if (!Reader.ReadItem(Root, "item", Item))
+		{
+			return Refuse(Reader.Detail);
+		}
+		OutItem = std::move(Item);
+		return true;
+	}
+
 	bool PlaceInStash(std::vector<FSavedStashTab>& Tabs, FSavedItem& Item, const FInventoryConfig& Config)
 	{
 		if (Item.Size.Width <= 0 || Item.Size.Height <= 0)

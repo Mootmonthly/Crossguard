@@ -1350,6 +1350,87 @@ static void TestGuild()
 	CHECK(Loaded.RankOf("x1") == EGuildRank::Leader);
 }
 
+// The hub's mirror of guilds kept by the backend (not a rule: no Go copy needed).
+static void TestGuildMirror()
+{
+	FGuildRegistry Mirror;
+	FGuild Wolves;
+	Wolves.Id = "g1";
+	Wolves.Name = "Iron Wolves";
+	Wolves.Members = {{"a", EGuildRank::Leader}, {"b", EGuildRank::Member}};
+	Wolves.Bank.Grid = FInventoryGrid(FGridSize{10, 30});
+	Wolves.Bank.Gold = 5;
+	CHECK(Mirror.Mirror(Wolves) == EGuildError::None);
+	CHECK(Mirror.RankOf("b") == EGuildRank::Member && Mirror.Find("g1")->Bank.Gold == 5);
+	// A newer copy replaces it (ranks, bank).
+	Wolves.Members[1].Rank = EGuildRank::Officer;
+	Wolves.Bank.Gold = 7;
+	FGuildBankItem Sword;
+	Sword.SlotId = 3;
+	Sword.ItemId = "sword";
+	Sword.Size = {1, 3};
+	Wolves.Bank.Items.push_back(Sword);
+	Wolves.Bank.NextSlotId = 4;
+	CHECK(Wolves.Bank.Grid.Place(3, Sword.Size, {0, 0, false}));
+	CHECK(Mirror.Mirror(Wolves) == EGuildError::None);
+	CHECK(Mirror.RankOf("b") == EGuildRank::Officer && Mirror.Find("g1")->Bank.Gold == 7 && Mirror.Find("g1")->Bank.Find(3) != nullptr);
+	// b moved to another guild elsewhere: the stale place in g1 goes.
+	FGuild Ravens;
+	Ravens.Id = "g2";
+	Ravens.Name = "Ravens";
+	Ravens.Members = {{"b", EGuildRank::Leader}};
+	Ravens.Bank.Grid = FInventoryGrid(FGridSize{10, 30});
+	CHECK(Mirror.Mirror(Ravens) == EGuildError::None);
+	CHECK(Mirror.GuildOf("b")->Id == "g2" && Mirror.Find("g1")->Members.size() == 1);
+	// A guild under a stale name (renamed / disbanded and refounded elsewhere) is replaced.
+	FGuild NewWolves;
+	NewWolves.Id = "g3";
+	NewWolves.Name = "iron wolves";
+	NewWolves.Members = {{"c", EGuildRank::Leader}};
+	NewWolves.Bank.Grid = FInventoryGrid(FGridSize{10, 30});
+	CHECK(Mirror.Mirror(NewWolves) == EGuildError::None);
+	CHECK(Mirror.Find("g1") == nullptr && Mirror.GuildOf("a") == nullptr && Mirror.FindByName("Iron Wolves")->Id == "g3");
+	// Bad data changes nothing.
+	FGuild Broken = Ravens;
+	Broken.Members = {{"b", EGuildRank::Member}};
+	CHECK(Mirror.Mirror(Broken) == EGuildError::InvalidData);
+	CHECK(Mirror.RankOf("b") == EGuildRank::Leader && Mirror.Find("g3") != nullptr);
+	// Dropping players and guilds.
+	Mirror.DropPlayer("b");
+	CHECK(Mirror.Find("g2") == nullptr && Mirror.GuildOf("b") == nullptr && Mirror.FindByName("Ravens") == nullptr);
+	Mirror.DropPlayer("nobody");
+	CHECK(Mirror.RemoveGuild("g3") && !Mirror.RemoveGuild("g3"));
+	CHECK(Mirror.All().empty() && Mirror.GuildOf("c") == nullptr);
+	CHECK(Mirror.Mirror(FGuild()) == EGuildError::InvalidGuildId);
+}
+
+// A guild bank stack's payload on the backend: one item in the save's format.
+static void TestSavedItemJson()
+{
+	FSavedItem Item;
+	Item.Category = EItemCategory::Weapon;
+	Item.ItemId = "sword_one_handed";
+	Item.Rarity = ERarity::Epic;
+	Item.Count = 1;
+	Item.Size = {1, 3};
+	Item.Affixes = {{"sharp", 3.5}, {"heavy", 1.0}};
+	Item.Placement = {4, 5, true};
+	Item.Worn = ESavedWorn::MainHand;
+	const std::string Json = WriteSavedItem(Item);
+	CHECK(Json.find('\n') == std::string::npos);
+	CHECK(Json.find("\"worn\"") == std::string::npos && Json.find("\"x\":0") != std::string::npos);
+	FSavedItem Back;
+	std::string Error;
+	CHECK(ReadSavedItem(Json, Back, &Error));
+	CHECK(Back.ItemId == "sword_one_handed" && Back.Rarity == ERarity::Epic && Back.Category == EItemCategory::Weapon);
+	CHECK(Back.Size.Width == 1 && Back.Size.Height == 3 && Back.Affixes.size() == 2 && Back.Affixes[0].Id == "sharp");
+	CHECK_NEAR(Back.Affixes[0].Value, 3.5);
+	CHECK(Back.Placement.X == 0 && !Back.Placement.bRotated && Back.Worn == ESavedWorn::None);
+	CHECK(!ReadSavedItem("{\"id\":\"x\"}", Back, &Error) && !Error.empty());
+	CHECK(!ReadSavedItem("not json", Back, &Error));
+	CHECK(!ReadSavedItem("[]", Back, nullptr));
+}
+
 static void TestTrade()
 {
 	const FTradeConfig Config;
@@ -2386,6 +2467,8 @@ int main()
 	TestGathering();
 	TestLoot();
 	TestGuild();
+	TestGuildMirror();
+	TestSavedItemJson();
 	TestParty();
 	TestTrade();
 	TestGuard();

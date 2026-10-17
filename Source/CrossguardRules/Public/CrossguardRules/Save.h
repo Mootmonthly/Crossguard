@@ -181,6 +181,13 @@ namespace Crossguard
 	// people and backends reading the file; loading ignores it.
 	CROSSGUARDRULES_API std::string WriteCharacterSave(const FCharacterSave& Save, const FProgressionConfig& Progression = FProgressionConfig());
 
+	// One item in the save's item format, as a compact JSON object (a guild bank stack's payload on
+	// the backend, docs/guild-rules.md). ReadSavedItem reads it back with the save's checks; false (and
+	// OutError) when it is not one. Only the item's own fields: the game sets place and wear.
+	CROSSGUARDRULES_API std::string WriteSavedItem(const FSavedItem& Item);
+	CROSSGUARDRULES_API bool ReadSavedItem(const std::string& Json, FSavedItem& OutItem, std::string* OutError = nullptr,
+		const FSaveLimits& Limits = FSaveLimits());
+
 	// What the game knows about an item right now.
 	struct FSavedItemInfo
 	{
