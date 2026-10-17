@@ -811,6 +811,44 @@ Everything here is cosmetic: no rule depends on it.
   - **Hub picker**: the party's hub (the one it launched from or last changed on) if it has room, else the
     hub with the most room (placeholder: spreads players; "fullest first" would keep hubs busier). The
     menu's Play uses it when logged in (one client-callable RPC, `crossguard_hub_find_mine`).
+- Nakama backend, step 5: guilds, plus Steam login and session refresh ([guild-rules.md](guild-rules.md)
+  "On Nakama", [steam-setup.md](steam-setup.md), [backend-setup.md](backend-setup.md) "Clients").
+  **Assumed (Claude; placeholders where marked)**:
+  - **Guilds in storage, Nakama groups as a mirror**: the rules and the bank live in Nakama storage (one
+    transaction per change), because groups cannot hold one guild per player, exactly one Leader, invite
+    expiry, names unique ignoring case or a transaction with the bank and the save. Each guild is also a
+    closed Nakama group with the same id (the guild id is the group's id), max 50, Leader = superadmin,
+    Officer = admin, Member = member, synced after every change (best effort, repaired on the next
+    change); clients may list groups, never change them. Invites are our own (with expiry), not Nakama join
+    requests; each player has an invite inbox (an index; the guild's list decides).
+  - The guild rules are copied to Go (`guild_rules.go`) and kept in step with `FGuildRegistry` by a unit
+    test that mirrors `TestGuild` case for case.
+  - **Bank moves carry the player's save**: deposits, withdrawals, gifts and the last member's share are
+    written in one Nakama transaction with the save of the player whose gold or inventory changes (its
+    version and save lease checked), so nothing can be duplicated or lost; a retry with the same request id
+    is answered, never applied again. The hub makes the move at once and undoes it if Nakama does not write
+    it; saves made meanwhile wait for the answer (written after it, or dropped). One bank operation per
+    player at a time (placeholder; `Busy`).
+  - The last member leaving with a non-empty bank sends the bank as their hub sees it; if Nakama's differs
+    the leave is refused (`BankChanged`, try again). New game results `BackendUnavailable`, `BankChanged`,
+    `Busy`.
+  - **Bank log**: Nakama keeps the whole history, append-only (`guild_bank_log`, one object per entry,
+    never rewritten, kept after a disband); the guild record keeps the newest 100 (the rule). The game shows
+    no log yet.
+  - Hub mirror of guilds refreshed every **10 s** (placeholder) and on arrival; a stack whose item data the
+    game cannot read is not offered. Transport limits (placeholders): a stack's payload at most 4 KB, sides
+    at most 16 squares. Group names are the guild names; a group left over without a guild is removed
+    when its name is used again after 60 s.
+  - **Steam login**: the menu's Log in uses Steam when the Steam online subsystem is loaded and logged in;
+    development builds without it use the device id, Shipping refuses ("Steam is not running"). The ticket
+    is `IOnlineIdentity::GetAuthToken` (a Steam session ticket; Nakama passes no `identity` to Steam);
+    tried 3 times, 2 s apart (placeholders). No Steam friends import (`sync=false`). The Nakama username
+    is the one Nakama generates (the game shows the Steam name). Steam app **480** (Spacewar) for testing;
+    unsure whether Steam accepts a publisher key for 480 (else testing needs the owner's own app id).
+  - **Session refresh**: the client refreshes its token **5 min** before it expires, checked every
+    **30 s** (placeholders); a failed refresh is tried again, a refused one (401) stops and the menu asks
+    to log in again once the session is over. Servers verify the token at every login, reconnects
+    included; connected players are not re-checked during a session.
 
 ## Open questions
 
