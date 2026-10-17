@@ -67,3 +67,17 @@ Not done / untuned:
 - The PC has no system Python: use `C:\Program Files\Epic Games\UE_5.8\Engine\Binaries\ThirdParty\Python3\Win64\python.exe -I`.
 - Close the cluster before building or saving maps (it locks the DLL and the assets).
 - The Build Paths step of L_Hub was done by the owner in the editor; a scripted nav build stays locked (`AsyncLoadLock`).
+
+## Follow-ups after the owner's playtest (same day)
+
+- Monsters walked sideways on clients: the body mesh's data yaw was lost to network smoothing. Fixed
+  (`CacheInitialMeshOffset`); test `Net.MobMeshYawOnClient` fails without the fix.
+- New characters started empty (the save overwrote the Debug loadout). Ruled: a **starter kit** for
+  every new character (placeholder: Common one-handed sword and shield, 3 healing potions,
+  3 bandages; game mode **Crossguard | Starter Kit**), given once before the first save.
+- First-person weapons (no arms yet): tilted 45 degrees forward, at 60% size.
+- Ruled: mobs walk 2.5 m/s and attack half as often (`design-decisions.md`, "Monster pace").
+- Magic visuals: Fireball (spell projectiles) fire + explosion from `DefaultGame.ini`; the staff's
+  bolt from Weapons.json `projectile` (new field); a wand mesh (KayKit staff at 0.17). The wand stays
+  hitscan.
+- Headless 169 / 169, net 11 / 11 after these.
