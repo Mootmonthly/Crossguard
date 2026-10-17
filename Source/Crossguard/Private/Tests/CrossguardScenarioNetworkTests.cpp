@@ -9,11 +9,16 @@
 #if WITH_DEV_AUTOMATION_TESTS && WITH_EDITOR
 
 #include "AbilitySystem/CrossguardGameplayTags.h"
+#include "Animation/AnimSequenceBase.h"
 #include "Character/CrossguardCharacter.h"
+#include "Character/CrossguardMobRow.h"
 #include "Character/CrossguardMonster.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Engine/DataTable.h"
+#include "Engine/SkeletalMesh.h"
 #include "Engine/World.h"
+#include "Game/CrossguardGameMode.h"
 #include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
 #include "Items/CrossguardInventoryComponent.h"
@@ -29,6 +34,10 @@ namespace CrossguardScenarioNet
 	constexpr float StealthSeconds = 12.0f;
 	// The enemy client must drop a stealthed character this soon (docs/anti-cheat.md; placeholder).
 	constexpr float MaxStealthLeakSeconds = 0.5f;
+	// The project's mannequin (it has a Physics Asset, PA_Mannequin) and an animation of its skeleton
+	// standing in for a death animation.
+	const TCHAR* const NetMannyPath = TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny_Simple.SKM_Manny_Simple");
+	const TCHAR* const NetMannyDeathAnimPath = TEXT("/Game/Characters/Mannequins/Anims/Unarmed/Jump/MM_Land.MM_Land");
 
 	// Server: client pawns in a row at SceneY, 3 m apart from X = 0, facing +X.
 	bool PlaceClients(CrossguardScenario::FScenarioContext& C)
@@ -231,6 +240,121 @@ bool FCrossguardNetDeathRagdoll::RunTest(const FString& Parameters)
 			}
 		}
 		C.Test.TestTrue(TEXT("The host sees the server actor ragdoll"), Victim->GetMesh()->IsSimulatingPhysics());
+	});
+
+	Scenario.Run();
+	return true;
+}
+
+// A monster from data with a Physics Asset (the mannequin's) ragdolls on the server and on the
+// client (Mobs.json deathMode "ragdoll", the default); one with deathMode "animation" plays its death
+// animation and stays posed. Both leave a body as before. The mob row is changed in memory around the
+// spawns only.
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrossguardNetMonsterDeathRagdoll, "Crossguard.Net.MonsterDeathRagdoll", CROSSGUARD_SCENARIO_FLAGS)
+
+bool FCrossguardNetMonsterDeathRagdoll::RunTest(const FString& Parameters)
+{
+	using namespace CrossguardScenario;
+	using namespace CrossguardScenarioNet;
+
+	FScenario Scenario(*this);
+	Scenario.Clients(2);
+
+	Scenario.Step(TEXT("Two mannequin monsters from data (ragdoll, animation) 12 m from the clients"), [](FScenarioContext& C)
+	{
+		if (!PlaceClients(C))
+		{
+			return;
+		}
+		const TSoftObjectPtr<USkeletalMesh> Manny{FSoftObjectPath(NetMannyPath)};
+		const USkeletalMesh* MannyMesh = Manny.LoadSynchronous();
+		const TSoftObjectPtr<UAnimSequenceBase> DeathAnim{FSoftObjectPath(NetMannyDeathAnimPath)};
+		if (MannyMesh == nullptr || MannyMesh->GetPhysicsAsset() == nullptr || DeathAnim.LoadSynchronous() == nullptr)
+		{
+			C.Skip(TEXT("the mannequin (with its Physics Asset) or MM_Land is not in the project"));
+			return;
+		}
+		UDataTable* Mobs = C.GameMode() != nullptr ? C.GameMode()->MobTable.Get() : nullptr;
+		if (!C.Require(Mobs != nullptr && Mobs->GetRowNames().Num() > 0, TEXT("the game mode's Mob Table")))
+		{
+			return;
+		}
+		const FName MobId = Mobs->GetRowNames()[0];
+		FCrossguardMobRow* Row = Mobs->FindRow<FCrossguardMobRow>(MobId, TEXT("NetTest"), false);
+		const FCrossguardMobRow Saved = *Row;
+		Row->Mesh = Manny;
+		Row->AnimClass.Reset();
+		Row->MeshScale = 1.0f;
+		Row->MeshOffset = FVector::ZeroVector;
+		Row->MeshYaw = -90.0f;
+		Row->IdleAnim.Reset();
+		Row->MoveAnim.Reset();
+		Row->AttackAnim.Reset();
+		Row->DeathAnim = DeathAnim;
+		Row->DeathMode = ECrossguardDeathMode::Ragdoll;
+		ACrossguardMonster* Ragdoll = C.SpawnMonster(TEXT("Ragdoll"), MobId, FVector(1200.0f, SceneY + 600.0f, 0.0f), 90.0f);
+		Row->DeathMode = ECrossguardDeathMode::Animation;
+		ACrossguardMonster* Posed = C.SpawnMonster(TEXT("Posed"), MobId, FVector(1200.0f, SceneY + 900.0f, 0.0f), 90.0f);
+		*Row = Saved;
+		C.Require(Ragdoll != nullptr && Posed != nullptr && Ragdoll->BodyVisual.Mesh == Manny, TEXT("both monsters spawned with the mannequin"));
+	});
+
+	Scenario.WaitUntilOnClient(1, TEXT("client 1 has both monsters with the mannequin"), ReplicationWait, [](FScenarioContext& C, UWorld&)
+	{
+		for (const TCHAR* MonsterName : {TEXT("Ragdoll"), TEXT("Posed")})
+		{
+			const ACrossguardMonster* Copy = C.OnClient<ACrossguardMonster>(C.Get<ACrossguardMonster>(MonsterName), 1);
+			if (Copy == nullptr || Copy->GetMesh()->GetSkeletalMeshAsset() == nullptr || Copy->GetMesh()->GetPhysicsAsset() == nullptr)
+			{
+				return false;
+			}
+		}
+		return true;
+	});
+
+	Scenario.Step(TEXT("Both die: the server ragdolls one and poses the other"), [](FScenarioContext& C)
+	{
+		ACrossguardMonster* Ragdoll = C.Get<ACrossguardMonster>(TEXT("Ragdoll"));
+		ACrossguardMonster* Posed = C.Get<ACrossguardMonster>(TEXT("Posed"));
+		if (!C.Require(Ragdoll != nullptr && Posed != nullptr, TEXT("both monsters")))
+		{
+			return;
+		}
+		C.Kill(Ragdoll);
+		C.Kill(Posed);
+		C.Test.TestTrue(TEXT("Server: both dead"), C.IsDead(Ragdoll) && C.IsDead(Posed));
+		C.Test.TestTrue(TEXT("Server: deathMode ragdoll simulates"), Ragdoll->GetMesh()->IsSimulatingPhysics());
+		C.Test.TestFalse(TEXT("Server: deathMode animation does not"), Posed->GetMesh()->IsSimulatingPhysics());
+		C.Test.TestEqual(TEXT("Server: posed body walk-through"), static_cast<int32>(Posed->GetCapsuleComponent()->GetCollisionEnabled()),
+			static_cast<int32>(ECollisionEnabled::NoCollision));
+		// The body container spawns where each fell (ACrossguardCharacter::HandleDeath).
+		for (const ACrossguardMonster* Dead : {Ragdoll, Posed})
+		{
+			bool bHasBody = false;
+			for (TActorIterator<ACrossguardLootContainer> It(C.World()); It; ++It)
+			{
+				bHasBody |= FVector::Dist(It->GetActorLocation(), Dead->GetActorLocation()) < 10.0f;
+			}
+			C.Test.TestTrue(*FString::Printf(TEXT("Server: %s left a body (loot unchanged)"), *Dead->GetName()), bHasBody);
+		}
+	});
+
+	Scenario.WaitUntilOnClient(1, TEXT("client 1: the ragdoll simulates, the other plays its death animation"), ReplicationWait,
+		[](FScenarioContext& C, UWorld&)
+	{
+		const ACrossguardMonster* Ragdoll = C.OnClient<ACrossguardMonster>(C.Get<ACrossguardMonster>(TEXT("Ragdoll")), 1);
+		const ACrossguardMonster* Posed = C.OnClient<ACrossguardMonster>(C.Get<ACrossguardMonster>(TEXT("Posed")), 1);
+		return Ragdoll != nullptr && Posed != nullptr && C.IsDead(Ragdoll) && C.IsDead(Posed) && Ragdoll->GetMesh()->IsSimulatingPhysics()
+			&& Posed->GetPlayingBodyAnim() != nullptr && Posed->GetPlayingBodyAnim()->GetPathName() == NetMannyDeathAnimPath;
+	});
+
+	Scenario.Step(TEXT("Client 1: the posed copy does not simulate"), [](FScenarioContext& C)
+	{
+		const ACrossguardMonster* Posed = C.OnClient<ACrossguardMonster>(C.Get<ACrossguardMonster>(TEXT("Posed")), 1);
+		if (C.Require(Posed != nullptr, TEXT("client 1 has the posed monster")))
+		{
+			C.Test.TestFalse(TEXT("Client 1: deathMode animation does not simulate"), Posed->GetMesh()->IsSimulatingPhysics());
+		}
 	});
 
 	Scenario.Run();
