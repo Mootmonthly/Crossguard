@@ -24,6 +24,10 @@ WEAPONS = REPO / "Data" / "Items" / "Weapons.json"
 NATURAL_IMPACT_POWER = 3
 
 
+# Mobs.json deathMode -> ECrossguardDeathMode.
+DEATH_MODES = {"ragdoll": "Ragdoll", "animation": "Animation"}
+
+
 def row(mob, weapons):
     weapon = weapons[mob["weapon"]] if mob["weapon"] else None
     return {
@@ -58,6 +62,8 @@ def row(mob, weapons):
         "MoveAnim": mob.get("animations", {}).get("move", ""),
         "AttackAnim": mob.get("animations", {}).get("attack", ""),
         "DeathAnim": mob.get("animations", {}).get("death", ""),
+        # On death: "ragdoll" (needs the mesh's Physics Asset; else the death animation) or "animation".
+        "DeathMode": DEATH_MODES[mob.get("deathMode", "ragdoll")],
     }
 
 

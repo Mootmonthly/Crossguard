@@ -83,19 +83,26 @@ void ACrossguardMonster::ApplyMobData()
 	}
 	GrantSkills();
 	// Art: its own mesh from data (mixed spawners give every mob its look). Replicated to clients.
-	if (!Row->Mesh.IsNull())
+	ApplyMobArt(*Row);
+}
+
+void ACrossguardMonster::ApplyMobArt(const FCrossguardMobRow& Row)
+{
+	if (Row.Mesh.IsNull())
 	{
-		BodyVisual.Mesh = Row->Mesh;
-		BodyVisual.AnimClass = Row->AnimClass;
-		BodyVisual.MeshScale = Row->MeshScale;
-		BodyVisual.MeshOffset = Row->MeshOffset;
-		BodyVisual.MeshYaw = Row->MeshYaw;
-		BodyVisual.IdleAnim = Row->IdleAnim;
-		BodyVisual.MoveAnim = Row->MoveAnim;
-		BodyVisual.AttackAnim = Row->AttackAnim;
-		BodyVisual.DeathAnim = Row->DeathAnim;
-		ApplyBodyVisual();
+		return;
 	}
+	BodyVisual.Mesh = Row.Mesh;
+	BodyVisual.AnimClass = Row.AnimClass;
+	BodyVisual.MeshScale = Row.MeshScale;
+	BodyVisual.MeshOffset = Row.MeshOffset;
+	BodyVisual.MeshYaw = Row.MeshYaw;
+	BodyVisual.IdleAnim = Row.IdleAnim;
+	BodyVisual.MoveAnim = Row.MoveAnim;
+	BodyVisual.AttackAnim = Row.AttackAnim;
+	BodyVisual.DeathAnim = Row.DeathAnim;
+	BodyVisual.DeathMode = Row.DeathMode;
+	ApplyBodyVisual();
 }
 
 void ACrossguardMonster::OnRep_MobScale()

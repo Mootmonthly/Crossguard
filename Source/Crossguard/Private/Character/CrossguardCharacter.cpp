@@ -1093,8 +1093,12 @@ void ACrossguardCharacter::SetDeadVisuals(bool bDead)
 		GetCharacterMovement()->DisableMovement();
 		// Walk-through: the ragdoll and the body container are what others interact with.
 		Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		BodyMesh->SetCollisionProfileName(TEXT("Ragdoll"));
-		BodyMesh->SetSimulatePhysics(true);
+		// Without a ragdoll (a monster's death animation) the mesh stays posed where it fell.
+		if (ShouldRagdollOnDeath())
+		{
+			BodyMesh->SetCollisionProfileName(TEXT("Ragdoll"));
+			BodyMesh->SetSimulatePhysics(true);
+		}
 		PlayDeathCosmetics();
 		return;
 	}

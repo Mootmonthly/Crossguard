@@ -158,6 +158,8 @@ public:
 	virtual void PossessedBy(AController* NewController) override;
 	// Monsters and minions stay dead (a revive would duplicate a monster's loot).
 	virtual bool CanBeRevived() const override { return false; }
+	// BodyVisual.DeathMode Ragdoll (the default) and a Physics Asset on the body mesh.
+	virtual bool ShouldRagdollOnDeath() const override;
 
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "Crossguard|AI")

@@ -134,4 +134,9 @@ struct CROSSGUARD_API FCrossguardMobRow : public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob|Art")
 	TSoftObjectPtr<UAnimSequenceBase> DeathAnim;
+
+	// Art (`deathMode`: "ragdoll" | "animation"): ragdoll needs the mesh's Physics Asset (without one
+	// the death animation plays); animation always plays DeathAnim and keeps the last pose.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mob|Art")
+	ECrossguardDeathMode DeathMode = ECrossguardDeathMode::Ragdoll;
 };

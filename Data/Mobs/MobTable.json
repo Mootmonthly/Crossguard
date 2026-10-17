@@ -32,7 +32,8 @@
 		"IdleAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_OrcCharacterArmature_Idle.SK_OrcCharacterArmature_Idle",
 		"MoveAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_OrcCharacterArmature_Walk.SK_OrcCharacterArmature_Walk",
 		"AttackAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_OrcCharacterArmature_Punch.SK_OrcCharacterArmature_Punch",
-		"DeathAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_OrcCharacterArmature_Death.SK_OrcCharacterArmature_Death"
+		"DeathAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_OrcCharacterArmature_Death.SK_OrcCharacterArmature_Death",
+		"DeathMode": "Ragdoll"
 	},
 	{
 		"Name": "mithril_dragon",
@@ -75,7 +76,8 @@
 		"IdleAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Dragon_EvolvedCharacterArmature_Flying_Idle.SK_Dragon_EvolvedCharacterArmature_Flying_Idle",
 		"MoveAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Dragon_EvolvedCharacterArmature_Fast_Flying.SK_Dragon_EvolvedCharacterArmature_Fast_Flying",
 		"AttackAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Dragon_EvolvedCharacterArmature_Headbutt.SK_Dragon_EvolvedCharacterArmature_Headbutt",
-		"DeathAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Dragon_EvolvedCharacterArmature_Death.SK_Dragon_EvolvedCharacterArmature_Death"
+		"DeathAnim": "/Game/ThirdParty/Quaternius/UltimateMonsters/SK_Dragon_EvolvedCharacterArmature_Death.SK_Dragon_EvolvedCharacterArmature_Death",
+		"DeathMode": "Ragdoll"
 	},
 	{
 		"Name": "skeleton_archer",
@@ -113,7 +115,8 @@
 		"IdleAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Idle.Rig_Medium_SpecialSkeletons_Idle",
 		"MoveAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Walking.Rig_Medium_SpecialSkeletons_Walking",
 		"AttackAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_CombatRangedRanged_Bow_Release.Rig_Medium_CombatRangedRanged_Bow_Release",
-		"DeathAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Death.Rig_Medium_SpecialSkeletons_Death"
+		"DeathAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Death.Rig_Medium_SpecialSkeletons_Death",
+		"DeathMode": "Ragdoll"
 	},
 	{
 		"Name": "skeleton_mage",
@@ -153,7 +156,8 @@
 		"IdleAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Idle.Rig_Medium_SpecialSkeletons_Idle",
 		"MoveAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Walking.Rig_Medium_SpecialSkeletons_Walking",
 		"AttackAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_CombatRangedRanged_Magic_Shoot.Rig_Medium_CombatRangedRanged_Magic_Shoot",
-		"DeathAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Death.Rig_Medium_SpecialSkeletons_Death"
+		"DeathAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Death.Rig_Medium_SpecialSkeletons_Death",
+		"DeathMode": "Ragdoll"
 	},
 	{
 		"Name": "skeleton_soldier",
@@ -193,6 +197,7 @@
 		"IdleAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Idle.Rig_Medium_SpecialSkeletons_Idle",
 		"MoveAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Walking.Rig_Medium_SpecialSkeletons_Walking",
 		"AttackAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_CombatMeleeMelee_2H_Attack_Chop.Rig_Medium_CombatMeleeMelee_2H_Attack_Chop",
-		"DeathAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Death.Rig_Medium_SpecialSkeletons_Death"
+		"DeathAnim": "/Game/ThirdParty/KayKit/Animations/Rig_Medium_SpecialSkeletons_Death.Rig_Medium_SpecialSkeletons_Death",
+		"DeathMode": "Ragdoll"
 	}
 ]

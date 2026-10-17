@@ -326,6 +326,11 @@ public:
 	// (called by the attribute set when State.Dead is added or removed).
 	void SetDeadVisuals(bool bDead);
 
+	// The body mesh simulates physics when it dies. Players: always (the mannequin's Physics Asset).
+	// AI characters: their BodyVisual's DeathMode, and only with a Physics Asset (else the death
+	// animation plays). The same answer on every machine: it only reads replicated art.
+	virtual bool ShouldRagdollOnDeath() const { return true; }
+
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 

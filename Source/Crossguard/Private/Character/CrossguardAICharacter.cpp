@@ -124,6 +124,17 @@ void ACrossguardAICharacter::ApplyBodyVisual()
 	}
 }
 
+bool ACrossguardAICharacter::ShouldRagdollOnDeath() const
+{
+	const USkeletalMeshComponent* BodyMeshComponent = GetMesh();
+	if (BodyMeshComponent == nullptr || BodyMeshComponent->GetSkeletalMeshAsset() == nullptr || BodyMeshComponent->GetPhysicsAsset() == nullptr)
+	{
+		// No Physics Asset: nothing to simulate; the death animation plays instead.
+		return false;
+	}
+	return BodyVisual.DeathMode == ECrossguardDeathMode::Ragdoll;
+}
+
 namespace CrossguardAIBodyAnims
 {
 	// How often the state animation is picked (placeholder).
@@ -176,10 +187,15 @@ void ACrossguardAICharacter::UpdateBodyAnimation()
 	bool bLoop = true;
 	if (!IsAlive())
 	{
-		Wanted = BodyVisual.DeathAnim.LoadSynchronous();
-		bLoop = false;
 		// The last pose stays: nothing changes after death.
 		World->GetTimerManager().ClearTimer(BodyAnimTimer);
+		if (BodyMeshComponent->IsSimulatingPhysics())
+		{
+			// Ragdolled: physics moves the body, no death animation.
+			return;
+		}
+		Wanted = BodyVisual.DeathAnim.LoadSynchronous();
+		bLoop = false;
 	}
 	else if (World->GetTimeSeconds() < BodyAttackUntil && !BodyVisual.AttackAnim.IsNull())
 	{

@@ -5,6 +5,8 @@
 
 #include "CrossguardMonster.generated.h"
 
+struct FCrossguardMobRow;
+
 // A PvE monster, run by ACrossguardMonsterController: it guards the spot it starts at, attacks the
 // nearest player or minion it can see within AggroRange, and gives up the chase beyond LeashRange
 // from home (walks back, healed). Its body holds what it carried plus a roll of LootTableId; its
@@ -32,6 +34,11 @@ public:
 	float LeashRange = 3000.0f;
 
 	FVector GetHomeLocation() const { return HomeLocation; }
+
+	// Server. Row's art fields (mesh, Anim Blueprint, mesh scale / offset / yaw, animations, death
+	// mode) into the replicated BodyVisual, applied at once. Nothing without a mesh in Row. Also used
+	// by CgReloadArtData (tuning without restarts).
+	void ApplyMobArt(const FCrossguardMobRow& Row);
 
 	virtual void BeginPlay() override;
 	virtual void OnDamaged(AActor* Attacker, float Damage) override;

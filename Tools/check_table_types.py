@@ -23,7 +23,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 PUBLIC = REPO / "Source" / "Crossguard" / "Public"
-HEADERS = [PUBLIC / "Skills" / "CrossguardSkillTypes.h", PUBLIC / "Items" / "CrossguardItemTypes.h", PUBLIC / "Items" / "CrossguardLoot.h",
+HEADERS = [PUBLIC / "Combat" / "CrossguardCosmetics.h", PUBLIC / "Skills" / "CrossguardSkillTypes.h", PUBLIC / "Items" / "CrossguardItemTypes.h", PUBLIC / "Items" / "CrossguardLoot.h",
            PUBLIC / "Character" / "CrossguardAICharacter.h", PUBLIC / "Character" / "CrossguardMobRow.h"]
 TABLES = [
     (REPO / "Data" / "Skills" / "SkillTable.json", "FCrossguardSkillRow"),
