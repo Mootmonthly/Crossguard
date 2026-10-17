@@ -90,6 +90,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Art")
 	void RefreshWeapons();
 
+	// Throws the meshes away and builds them again from the weapon rows, even for the same weapons
+	// (CgReloadArtData: a row's mesh or relativeTransform changed).
+	void RebuildWeapons();
+
 	// A placeholder swing is moving a weapon.
 	bool IsSwinging() const { return SwingSlot.IsSet(); }
 

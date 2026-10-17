@@ -81,6 +81,13 @@ void UCrossguardWeaponVisualsComponent::RefreshWeapons()
 	OnWeaponMeshesChanged.Broadcast();
 }
 
+void UCrossguardWeaponVisualsComponent::RebuildWeapons()
+{
+	ClearHand(MainHand);
+	ClearHand(OffHand);
+	RefreshWeapons();
+}
+
 USceneComponent* UCrossguardWeaponVisualsComponent::FindFirstPersonArms() const
 {
 	if (FirstPersonArmsTag.IsNone())
