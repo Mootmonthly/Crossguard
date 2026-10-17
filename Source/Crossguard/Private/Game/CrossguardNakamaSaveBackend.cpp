@@ -368,6 +368,15 @@ void UCrossguardNakamaSaveBackend::SaveCharacter(const FString& PlayerId, const 
 		}
 		return;
 	}
+	// A guild bank operation is on its way: this document was built after its change was made here, so
+	// it waits for the answer (written after it, or dropped if the change did not happen).
+	if (Entry->IsJointPending())
+	{
+		Entry->HeldDocument = Document;
+		Entry->bHasHeld = true;
+		Entry->HeldCallbacks.Add(MoveTemp(OnSaved));
+		return;
+	}
 	// Nothing changed since the newest write (sent, waiting or done): writing again would only move
 	// the version. The caller waits for that write instead.
 	const FString Unstamped = WithoutSavedAt(Document);
@@ -399,10 +408,11 @@ void UCrossguardNakamaSaveBackend::SaveCharacter(const FString& PlayerId, const 
 void UCrossguardNakamaSaveBackend::Pump(const FString& PlayerId)
 {
 	FPlayerSaves* Entry = Players.Find(PlayerId);
-	if (Entry == nullptr || Entry->bInFlight || Entry->RetryHandle.IsValid())
+	if (Entry == nullptr || Entry->bInFlight || Entry->bJointInFlight || Entry->RetryHandle.IsValid())
 	{
 		return;
 	}
+	// Saves queued before a guild bank operation go first (they do not hold its change), then it.
 	if (Entry->bHasQueued)
 	{
 		Entry->InFlightDocument = MoveTemp(Entry->QueuedDocument);
@@ -412,6 +422,11 @@ void UCrossguardNakamaSaveBackend::Pump(const FString& PlayerId)
 		Entry->bHasQueued = false;
 		Entry->Attempt = 1;
 		Send(PlayerId, *Entry);
+		return;
+	}
+	if (Entry->bJointWaiting)
+	{
+		SendJoint(PlayerId, *Entry);
 		return;
 	}
 	if (Entry->bReleaseInFlight)
@@ -575,6 +590,209 @@ FString UCrossguardNakamaSaveBackend::KeepLocally(const FString& PlayerId, const
 	return File;
 }
 
+// --- Guild bank operations ------------------------------------------------------------------------
+
+FString UCrossguardNakamaSaveBackend::BuildSaveMember(const FString& UserId, const FString& InCharacterId, const FString& Document,
+	const FString& ExpectedVersion, const FString& LeaseToken)
+{
+	return FString::Printf(TEXT("{\"user_id\":%s,\"character_id\":%s,\"record\":%s,\"expected_version\":%s,\"lease_token\":%s}"),
+		*FCrossguardNakamaClient::Quote(UserId), *FCrossguardNakamaClient::Quote(InCharacterId), *Document, *FCrossguardNakamaClient::Quote(ExpectedVersion),
+		*FCrossguardNakamaClient::Quote(LeaseToken));
+}
+
+FString UCrossguardNakamaSaveBackend::ReadSaveVersion(const FString& Body)
+{
+	TSharedPtr<FJsonObject> Object;
+	FString Version;
+	if (FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Body), Object) && Object.IsValid())
+	{
+		Object->TryGetStringField(TEXT("save_version"), Version);
+	}
+	return Version;
+}
+
+bool UCrossguardNakamaSaveBackend::HasPendingJoint(const FString& PlayerId) const
+{
+	const FPlayerSaves* Entry = Players.Find(PlayerId);
+	return Entry != nullptr && Entry->IsJointPending();
+}
+
+bool UCrossguardNakamaSaveBackend::SendWithSave(const FString& PlayerId, const FString& Document, const FString& RpcId,
+	TFunction<FString(const FString& SaveMember)> MakePayload, FJointCallback OnDone, FString& OutError)
+{
+	FPlayerSaves* Entry = Players.Find(PlayerId);
+	if (!CanCall(OutError))
+	{
+		return false;
+	}
+	if (!FCrossguardNakamaClient::IsUserId(PlayerId))
+	{
+		OutError = TEXT("not a Nakama user id");
+	}
+	else if (Entry == nullptr || Entry->Version.IsEmpty())
+	{
+		OutError = TEXT("never loaded on this server (no storage version)");
+	}
+	else if (Entry->bConflict || Entry->LeaseToken.IsEmpty())
+	{
+		OutError = TEXT("this server does not own the player's save (conflict or no lease)");
+	}
+	else if (Entry->IsJointPending() || Entry->bHasHeld)
+	{
+		OutError = TEXT("another guild bank operation of this player is on its way");
+	}
+	if (!OutError.IsEmpty())
+	{
+		return false;
+	}
+	Entry->bJointWaiting = true;
+	Entry->JointRpc = RpcId;
+	Entry->JointDocument = Document;
+	Entry->JointPayload.Reset();
+	Entry->JointMakePayload = MoveTemp(MakePayload);
+	Entry->JointCallback = MoveTemp(OnDone);
+	Entry->JointAttempt = 0;
+	Pump(PlayerId);
+	return true;
+}
+
+void UCrossguardNakamaSaveBackend::SendJoint(const FString& PlayerId, FPlayerSaves& Entry)
+{
+	FCrossguardNakamaResponse NotSent;
+	if (Entry.bConflict || Entry.LeaseToken.IsEmpty())
+	{
+		// A write queued before it lost the race or the lease: this one cannot be written either.
+		NotSent.ErrorMessage = TEXT("not sent: this server no longer owns the player's save");
+		FinishJoint(PlayerId, Entry, NotSent, false);
+		return;
+	}
+	if (Entry.JointPayload.IsEmpty())
+	{
+		// The version the writes before it left (they are done).
+		Entry.JointPayload = Entry.JointMakePayload(BuildSaveMember(PlayerId, CharacterId, Entry.JointDocument, Entry.Version, Entry.LeaseToken));
+	}
+	Entry.bJointWaiting = false;
+	Entry.bJointInFlight = true;
+	++Entry.JointAttempt;
+	TWeakObjectPtr<UCrossguardNakamaSaveBackend> WeakThis(this);
+	Client->CallServerRpc(HttpKey, Entry.JointRpc, Entry.JointPayload, [WeakThis, PlayerId](const FCrossguardNakamaResponse& Response)
+	{
+		if (UCrossguardNakamaSaveBackend* Self = WeakThis.Get())
+		{
+			Self->HandleJoint(PlayerId, Response);
+		}
+		else
+		{
+			UE_LOG(LogCrossguard, Error, TEXT("Nakama: guild bank operation of %s finished after shutdown (%s)"), *PlayerId, *Response.Describe());
+		}
+	});
+}
+
+void UCrossguardNakamaSaveBackend::HandleJoint(const FString& PlayerId, const FCrossguardNakamaResponse& Response)
+{
+	FPlayerSaves* Entry = Players.Find(PlayerId);
+	if (Entry == nullptr || !Entry->bJointInFlight)
+	{
+		return;
+	}
+	Entry->bJointInFlight = false;
+	if (Response.IsOk())
+	{
+		const FString NewVersion = ReadSaveVersion(Response.Body);
+		if (!NewVersion.IsEmpty())
+		{
+			Entry->Version = NewVersion;
+			Entry->LastWritten = WithoutSavedAt(Entry->JointDocument);
+		}
+		FinishJoint(PlayerId, *Entry, Response, !NewVersion.IsEmpty());
+		return;
+	}
+	if (IsLeaseLost(Response))
+	{
+		LoseLease(PlayerId, *Entry, Response.Describe());
+		FinishJoint(PlayerId, *Entry, Response, false);
+		return;
+	}
+	if (Response.HttpStatus == 409 || Response.ErrorCode == FCrossguardNakamaClient::CodeAborted)
+	{
+		// Nothing was written. A stale save means another server wrote it: stop writing, as for a save.
+		if (Response.ErrorMessage.Contains(TEXT("version conflict")))
+		{
+			Entry->bConflict = true;
+			UE_LOG(LogCrossguard, Error, TEXT("Nakama: guild bank operation of %s refused, the save changed elsewhere (%s). No more writes for this player until they load again."),
+				*PlayerId, *Response.Describe());
+		}
+		FinishJoint(PlayerId, *Entry, Response, false);
+		return;
+	}
+	if (Response.IsRetryable() && Entry->JointAttempt < MaxWriteAttempts && !bFlushing)
+	{
+		// The same payload (request id): applied already, Nakama answers from its record of it.
+		Entry->bJointWaiting = true;
+		const float Delay = RetryDelaySeconds(Entry->JointAttempt);
+		UE_LOG(LogCrossguard, Warning, TEXT("Nakama: guild bank operation of %s failed (%s); retry %d in %.0f s"), *PlayerId, *Response.Describe(),
+			Entry->JointAttempt, Delay);
+		TWeakObjectPtr<UCrossguardNakamaSaveBackend> WeakThis(this);
+		Entry->RetryHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([WeakThis, PlayerId](float)
+		{
+			UCrossguardNakamaSaveBackend* Self = WeakThis.Get();
+			if (FPlayerSaves* Retrying = Self != nullptr ? Self->Players.Find(PlayerId) : nullptr)
+			{
+				Retrying->RetryHandle.Reset();
+				Self->Pump(PlayerId);
+			}
+			return false;
+		}), Delay);
+		return;
+	}
+	// No answer: it may or may not have landed. The version stays the one from before it, so if it did,
+	// the next write of this player is refused (version conflict) instead of undoing it.
+	UE_LOG(LogCrossguard, Error, TEXT("Nakama: guild bank operation of %s got no answer (%s); its outcome is unknown, later writes are version-checked"),
+		*PlayerId, *Response.Describe());
+	FinishJoint(PlayerId, *Entry, Response, false);
+}
+
+void UCrossguardNakamaSaveBackend::FinishJoint(const FString& PlayerId, FPlayerSaves& Entry, const FCrossguardNakamaResponse& Response, bool bSaveWritten)
+{
+	FJointCallback Callback = MoveTemp(Entry.JointCallback);
+	Entry.bJointWaiting = false;
+	Entry.bJointInFlight = false;
+	Entry.JointRpc.Reset();
+	Entry.JointDocument.Reset();
+	Entry.JointPayload.Reset();
+	Entry.JointMakePayload = nullptr;
+	Entry.JointCallback = nullptr;
+	Entry.JointAttempt = 0;
+	if (Entry.bHasHeld)
+	{
+		const FString Held = MoveTemp(Entry.HeldDocument);
+		TArray<FSaveCallback> HeldCallbacks = MoveTemp(Entry.HeldCallbacks);
+		Entry.HeldDocument.Reset();
+		Entry.HeldCallbacks.Reset();
+		Entry.bHasHeld = false;
+		if (bSaveWritten)
+		{
+			// Built after the change, which is in the save now: it goes next, as usual.
+			SaveCharacter(PlayerId, Held, [Waiting = HeldCallbacks](bool bSaved, const FString& Error) mutable
+			{
+				CrossguardNakamaSaveLocal::Report(Waiting, bSaved, Error);
+			});
+		}
+		else
+		{
+			// Built with a change Nakama did not make (or of unknown outcome): never written. The guild
+			// subsystem puts the player back and saves again.
+			UE_LOG(LogCrossguard, Warning, TEXT("Nakama: a save of %s made during a guild bank operation was dropped (the operation was not written)"), *PlayerId);
+			CrossguardNakamaSaveLocal::Report(HeldCallbacks, false, TEXT("dropped: built with a guild bank change that was not written"));
+		}
+	}
+	if (Callback)
+	{
+		Callback(Response, bSaveWritten);
+	}
+	Pump(PlayerId);
+}
+
 // --- Leases ----------------------------------------------------------------------------------------
 
 void UCrossguardNakamaSaveBackend::LoseLease(const FString& PlayerId, FPlayerSaves& Entry, const FString& Why)
@@ -715,7 +933,7 @@ void UCrossguardNakamaSaveBackend::FlushWrites(float TimeoutSeconds)
 	{
 		for (const TPair<FString, FPlayerSaves>& Pair : Players)
 		{
-			if (Pair.Value.bInFlight)
+			if (Pair.Value.bInFlight || Pair.Value.IsJointPending())
 			{
 				return true;
 			}
@@ -731,6 +949,15 @@ void UCrossguardNakamaSaveBackend::FlushWrites(float TimeoutSeconds)
 	for (TPair<FString, FPlayerSaves>& Pair : Players)
 	{
 		FPlayerSaves& Entry = Pair.Value;
+		if (Entry.IsJointPending())
+		{
+			// Unsent or unanswered: its outcome is Nakama's (version-checked); nothing more is written for it.
+			FCrossguardNakamaResponse NoAnswer;
+			NoAnswer.ErrorMessage = TEXT("no answer before shutdown");
+			UE_LOG(LogCrossguard, Error, TEXT("Nakama: guild bank operation of %s unanswered at shutdown"), *Pair.Key);
+			Entry.bJointInFlight = false;
+			FinishJoint(Pair.Key, Entry, NoAnswer, false);
+		}
 		if (Entry.bInFlight)
 		{
 			// No answer in time: it may still land, but keep it here as well.

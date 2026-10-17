@@ -9,6 +9,7 @@
 #include "CrossguardSaveSubsystem.generated.h"
 
 class ACrossguardPlayerState;
+struct FCrossguardInventoryItem;
 class APawn;
 class UCrossguardSaveSubsystem;
 
@@ -125,6 +126,15 @@ public:
 
 	// The record SaveNow would write for this player now. False if the player is not tracked.
 	bool BuildRecord(ACrossguardPlayerState* PlayerState, Crossguard::FCharacterSave& OutRecord) const;
+	// The document SaveNow would write now, without writing it (a guild bank operation carries it to
+	// Nakama, UCrossguardGuildSubsystem): also becomes the player's cached record. OutPlayerId: the save's
+	// key. False if the player's save is not ready here.
+	bool BuildSaveDocument(ACrossguardPlayerState* PlayerState, FString& OutPlayerId, FString& OutDocument);
+
+	// A guild bank stack's payload on the backend: the item in the save's item format
+	// (Crossguard::WriteSavedItem), and back. False if Payload is not one.
+	static FString ItemToPayload(const FCrossguardInventoryItem& Item);
+	static bool ItemFromPayload(const FString& Payload, FCrossguardInventoryItem& OutItem);
 
 	// --- Backend ------------------------------------------------------------------------------
 

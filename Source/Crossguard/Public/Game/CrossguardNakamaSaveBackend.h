@@ -39,6 +39,10 @@ struct FCrossguardNakamaResponse;
 //   write carries the token; leases are renewed every LeaseRenewSeconds; ReleaseCharacter (logout, travel)
 //   releases once the player's writes are done. A lease lost (expired and taken, refused renewal or
 //   write) stops writes for that player like a version conflict (kept on disk).
+// - Guild bank operations (SendWithSave, docs/guild-rules.md "On Nakama") carry the player's save: Nakama
+//   writes the guild and the save together or not at all. They queue with the player's writes; saves
+//   asked for while one is on its way are held until it is answered (then written after it, or dropped
+//   if the save was not written: they hold a change that did not happen).
 UCLASS()
 class CROSSGUARD_API UCrossguardNakamaSaveBackend : public UObject, public ICrossguardSaveBackend
 {
@@ -71,6 +75,27 @@ public:
 	virtual void ReleaseCharacter(const FString& PlayerId) override;
 	virtual FString DescribeBackend() const override;
 	virtual void FlushWrites(float TimeoutSeconds) override;
+
+	// --- Guild bank operations ---
+
+	// Response: Nakama's last answer. bSaveWritten: the answer carried the save's new version (the bank
+	// change and the save were written; for a rule refusal or a failure, nothing was).
+	using FJointCallback = TFunction<void(const FCrossguardNakamaResponse& Response, bool bSaveWritten)>;
+	// Sends RpcId (crossguard_guild) with the player's save Document: MakePayload gets the "save" member
+	// (BuildSaveMember: the JSON object with the version and lease token current when it is sent) and
+	// returns the whole payload; it is built once, so retries (no answer, 5xx) send the same request id.
+	// Waits for a write on its way; saves asked for meanwhile wait for it (held). One per player at a
+	// time. False (OutError says why, nothing sent) without a lease, a loaded version, after a conflict,
+	// or while another one is pending.
+	bool SendWithSave(const FString& PlayerId, const FString& Document, const FString& RpcId, TFunction<FString(const FString& SaveMember)> MakePayload,
+		FJointCallback OnDone, FString& OutError);
+	// A guild bank operation of the player is waiting or on its way.
+	bool HasPendingJoint(const FString& PlayerId) const;
+	// {"user_id":..,"character_id":..,"record":<Document as is>,"expected_version":..,"lease_token":..}
+	static FString BuildSaveMember(const FString& UserId, const FString& CharacterId, const FString& Document, const FString& ExpectedVersion,
+		const FString& LeaseToken);
+	// The "save_version" of a crossguard_guild answer; empty if none (nothing was written).
+	static FString ReadSaveVersion(const FString& Body);
 
 	// The storage version known for a player ("*": no save stored yet; empty: not loaded here).
 	FString GetKnownVersion(const FString& PlayerId) const;
@@ -123,8 +148,23 @@ private:
 		// Released once idle (ReleaseCharacter), and the release on its way.
 		bool bReleaseWhenIdle = false;
 		bool bReleaseInFlight = false;
+		// A guild bank operation carrying the save (SendWithSave): waiting to go (also between retries), or
+		// on its way. Payload built when first sent.
+		bool bJointWaiting = false;
+		bool bJointInFlight = false;
+		FString JointRpc;
+		FString JointDocument;
+		FString JointPayload;
+		TFunction<FString(const FString&)> JointMakePayload;
+		FJointCallback JointCallback;
+		int32 JointAttempt = 0;
+		// Saves asked for while it was pending (the newest document, and who waits for it).
+		bool bHasHeld = false;
+		FString HeldDocument;
+		TArray<FSaveCallback> HeldCallbacks;
 
-		bool IsBusy() const { return bInFlight || bHasQueued || RetryHandle.IsValid() || bReleaseInFlight; }
+		bool IsJointPending() const { return bJointWaiting || bJointInFlight; }
+		bool IsBusy() const { return bInFlight || bHasQueued || RetryHandle.IsValid() || bReleaseInFlight || IsJointPending() || bHasHeld; }
 	};
 
 	// Acquires the lease (retrying while another server holds it), then loads.
@@ -141,6 +181,10 @@ private:
 	// Writes Document to the fallback folder. Returns the file (empty if even that failed).
 	FString KeepLocally(const FString& PlayerId, const FString& Document, const FString& Reason);
 	bool CanCall(FString& OutError) const;
+	// Guild bank operations: send (Payload built the first time), answer, and the end of one.
+	void SendJoint(const FString& PlayerId, FPlayerSaves& Entry);
+	void HandleJoint(const FString& PlayerId, const FCrossguardNakamaResponse& Response);
+	void FinishJoint(const FString& PlayerId, FPlayerSaves& Entry, const FCrossguardNakamaResponse& Response, bool bSaveWritten);
 	// The player lost the lease: no more writes until they load again (logged).
 	void LoseLease(const FString& PlayerId, FPlayerSaves& Entry, const FString& Why);
 	void SendRelease(const FString& PlayerId, FPlayerSaves& Entry);

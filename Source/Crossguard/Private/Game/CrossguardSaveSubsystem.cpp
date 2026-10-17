@@ -910,6 +910,42 @@ void UCrossguardSaveSubsystem::Write(const FString& PlayerId, FPlayerEntry& Entr
 	});
 }
 
+bool UCrossguardSaveSubsystem::BuildSaveDocument(ACrossguardPlayerState* PlayerState, FString& OutPlayerId, FString& OutDocument)
+{
+	const FPlayerEntry* Found = nullptr;
+	if (!CanSave(PlayerState, Found))
+	{
+		return false;
+	}
+	OutPlayerId = PlayerIdFor(PlayerState);
+	FPlayerEntry& Entry = Players.FindChecked(OutPlayerId);
+	if (!BuildRecord(PlayerState, Entry.Last))
+	{
+		return false;
+	}
+	Entry.bHasLast = true;
+	Entry.bDirty = false;
+	Entry.Last.SavedAt = FDateTime::UtcNow().ToUnixTimestamp();
+	OutDocument = CrossguardSaveDetail::FromUtf8(Crossguard::WriteCharacterSave(Entry.Last, PlayerState->GetProgressionConfig()));
+	return true;
+}
+
+FString UCrossguardSaveSubsystem::ItemToPayload(const FCrossguardInventoryItem& Item)
+{
+	return CrossguardSaveDetail::FromUtf8(Crossguard::WriteSavedItem(CrossguardSaveDetail::ToSaved(Item)));
+}
+
+bool UCrossguardSaveSubsystem::ItemFromPayload(const FString& Payload, FCrossguardInventoryItem& OutItem)
+{
+	Crossguard::FSavedItem Saved;
+	if (!Crossguard::ReadSavedItem(CrossguardSaveDetail::ToUtf8(Payload), Saved))
+	{
+		return false;
+	}
+	OutItem = CrossguardSaveDetail::ToGame(Saved);
+	return true;
+}
+
 void UCrossguardSaveSubsystem::SaveNow(ACrossguardPlayerState* PlayerState)
 {
 	const FPlayerEntry* Found = nullptr;
