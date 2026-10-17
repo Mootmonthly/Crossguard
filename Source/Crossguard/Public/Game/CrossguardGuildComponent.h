@@ -57,6 +57,12 @@ enum class ECrossguardGuildResult : uint8
 	NoRoomInInventory,
 	// No player state or character to act for.
 	NoPlayer,
+	// Backend mode: Nakama did not answer or refused the request; nothing changed.
+	BackendUnavailable,
+	// Backend mode: the bank changed since this server last saw it (the last member's leave); try again.
+	BankChanged,
+	// Backend mode: another bank operation of this player is on its way.
+	Busy,
 };
 
 USTRUCT(BlueprintType)

@@ -139,6 +139,8 @@ public:
 	// --- Backend ------------------------------------------------------------------------------
 
 	ICrossguardSaveBackend* GetBackend() const;
+	// The backend as an object (e.g. to reach UCrossguardNakamaSaveBackend's guild bank writes).
+	UObject* GetBackendObject() const { return BackendObject.Get(); }
 	// Must implement ICrossguardSaveBackend (ignored otherwise). Set it before players join.
 	void SetBackend(UObject* NewBackend);
 
