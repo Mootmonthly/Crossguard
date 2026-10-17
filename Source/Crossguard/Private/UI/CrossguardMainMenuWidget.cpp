@@ -386,11 +386,10 @@ void UCrossguardMainMenuWidget::LogIn()
 	{
 		return;
 	}
-	// TODO(Steam): with the Steam subsystem running, log in with a Steam ticket instead
-	// (UCrossguardNakamaSubsystem::LoginWithDevice comment).
-	ShowStatus(TEXT("Logging in..."), Info);
+	// Steam when the Steam online subsystem runs; development builds without it use a device id.
+	ShowStatus(UCrossguardNakamaSubsystem::IsSteamLoginAvailable() ? TEXT("Logging in with Steam...") : TEXT("Logging in..."), Info);
 	TWeakObjectPtr<UCrossguardMainMenuWidget> WeakThis(this);
-	Nakama->LoginWithDevice([WeakThis](bool bLoggedIn, const FString& Error)
+	Nakama->Login([WeakThis](bool bLoggedIn, const FString& Error)
 	{
 		if (UCrossguardMainMenuWidget* Self = WeakThis.Get())
 		{

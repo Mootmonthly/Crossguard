@@ -11,15 +11,30 @@
 #include "HAL/PlatformTime.h"
 #include "HttpManager.h"
 #include "HttpModule.h"
+#include "Interfaces/OnlineIdentityInterface.h"
 #include "Misc/CommandLine.h"
 #include "Misc/DateTime.h"
 #include "Misc/Guid.h"
 #include "Misc/Parse.h"
+#include "OnlineSubsystem.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
 namespace CrossguardNakamaSubsystemLocal
 {
+	// The Steam online subsystem's identity interface when Steam is loaded (OnlineSubsystemSteam enabled,
+	// docs/steam-setup.md), else null. Never loads the module itself.
+	IOnlineIdentityPtr SteamIdentity()
+	{
+		static const FName SteamName(TEXT("STEAM"));
+		if (!IOnlineSubsystem::IsLoaded(SteamName))
+		{
+			return nullptr;
+		}
+		IOnlineSubsystem* Steam = IOnlineSubsystem::Get(SteamName);
+		return Steam != nullptr ? Steam->GetIdentityInterface() : nullptr;
+	}
+
 	// A verified token waits this long for its InitNewPlayer (PreLoginAsync -> Login is immediate).
 	constexpr double VerifiedSessionSeconds = 60.0;
 
@@ -92,6 +107,11 @@ void UCrossguardNakamaSubsystem::Initialize(FSubsystemCollectionBase& Collection
 
 void UCrossguardNakamaSubsystem::Deinitialize()
 {
+	if (SessionHandle.IsValid())
+	{
+		FTSTicker::GetCoreTicker().RemoveTicker(SessionHandle);
+		SessionHandle.Reset();
+	}
 	DeregisterServer(2.0f);
 	Super::Deinitialize();
 }
@@ -443,6 +463,90 @@ FString UCrossguardNakamaSubsystem::GetDevDeviceId()
 	return (TEXT("crossguard-dev-") + Name).Left(128);
 }
 
+bool UCrossguardNakamaSubsystem::IsSteamLoginAvailable()
+{
+	const IOnlineIdentityPtr Identity = CrossguardNakamaSubsystemLocal::SteamIdentity();
+	return Identity.IsValid() && Identity->GetLoginStatus(0) == ELoginStatus::LoggedIn;
+}
+
+void UCrossguardNakamaSubsystem::Login(FLoginCallback OnDone)
+{
+	if (IsSteamLoginAvailable())
+	{
+		LoginWithSteam(MoveTemp(OnDone));
+		return;
+	}
+#if UE_BUILD_SHIPPING
+	LoginState = ECrossguardNakamaLoginState::Failed;
+	LastError = TEXT("Steam is not running (start Steam and log in)");
+	if (OnDone)
+	{
+		OnDone(false, LastError);
+	}
+#else
+	// Development: no Steam here, a device id instead (servers allow it only with CROSSGUARD_DEV_AUTH=1).
+	LoginWithDevice(MoveTemp(OnDone));
+#endif
+}
+
+void UCrossguardNakamaSubsystem::LoginWithSteam(FLoginCallback OnDone)
+{
+	if (LoginState == ECrossguardNakamaLoginState::LoggingIn || !Client.IsValid())
+	{
+		if (OnDone)
+		{
+			OnDone(false, TEXT("already logging in"));
+		}
+		return;
+	}
+	LoginState = ECrossguardNakamaLoginState::LoggingIn;
+	LastError.Reset();
+	SendSteamLogin(1, MoveTemp(OnDone));
+}
+
+void UCrossguardNakamaSubsystem::SendSteamLogin(int32 Attempt, FLoginCallback OnDone)
+{
+	const IOnlineIdentityPtr Identity = CrossguardNakamaSubsystemLocal::SteamIdentity();
+	// A Steam session ticket (hex). Steam validates a new ticket a moment after it is made, so an early
+	// refusal is tried again with a fresh one.
+	const FString Ticket = Identity.IsValid() ? Identity->GetAuthToken(0) : FString();
+	if (Ticket.IsEmpty())
+	{
+		LoginState = ECrossguardNakamaLoginState::Failed;
+		LastError = TEXT("Steam gave no login ticket (is Steam running and logged in?)");
+		UE_LOG(LogCrossguard, Warning, TEXT("Nakama login failed: %s"), *LastError);
+		if (OnDone)
+		{
+			OnDone(false, LastError);
+		}
+		return;
+	}
+	TWeakObjectPtr<UCrossguardNakamaSubsystem> WeakThis(this);
+	Client->AuthenticateSteam(ServerKey, Ticket, [WeakThis, Attempt, OnDone](const FCrossguardNakamaResponse& Response)
+	{
+		UCrossguardNakamaSubsystem* Self = WeakThis.Get();
+		if (Self == nullptr)
+		{
+			return;
+		}
+		// 401: Steam did not (yet) accept the ticket.
+		if (Response.HttpStatus == 401 && Attempt < SteamLoginAttempts)
+		{
+			UE_LOG(LogCrossguard, Log, TEXT("Nakama: Steam ticket not accepted yet (%s); trying again"), *Response.Describe());
+			FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([WeakThis, Attempt, OnDone](float)
+			{
+				if (UCrossguardNakamaSubsystem* Retrying = WeakThis.Get())
+				{
+					Retrying->SendSteamLogin(Attempt + 1, OnDone);
+				}
+				return false;
+			}), SteamRetrySeconds);
+			return;
+		}
+		Self->FinishLogin(Response, TEXT("Steam"), OnDone);
+	});
+}
+
 void UCrossguardNakamaSubsystem::LoginWithDevice(FLoginCallback OnDone)
 {
 	if (LoginState == ECrossguardNakamaLoginState::LoggingIn || !Client.IsValid())
@@ -456,42 +560,136 @@ void UCrossguardNakamaSubsystem::LoginWithDevice(FLoginCallback OnDone)
 	LoginState = ECrossguardNakamaLoginState::LoggingIn;
 	LastError.Reset();
 	TWeakObjectPtr<UCrossguardNakamaSubsystem> WeakThis(this);
-	Client->AuthenticateDevice(ServerKey, GetDevDeviceId(), [WeakThis, OnDone = MoveTemp(OnDone)](const FCrossguardNakamaResponse& Response)
+	Client->AuthenticateDevice(ServerKey, GetDevDeviceId(), [WeakThis, OnDone](const FCrossguardNakamaResponse& Response)
+	{
+		if (UCrossguardNakamaSubsystem* Self = WeakThis.Get())
+		{
+			Self->FinishLogin(Response, TEXT("device"), OnDone);
+		}
+	});
+}
+
+void UCrossguardNakamaSubsystem::FinishLogin(const FCrossguardNakamaResponse& Response, const FString& Method, FLoginCallback OnDone)
+{
+	FString Error;
+	if (!Response.IsOk() || !AcceptSession(Response.Body, Error))
+	{
+		LoginState = ECrossguardNakamaLoginState::Failed;
+		LastError = Response.IsOk() ? Error : Response.Describe();
+		UE_LOG(LogCrossguard, Warning, TEXT("Nakama login (%s) failed: %s"), *Method, *LastError);
+		if (OnDone)
+		{
+			OnDone(false, LastError);
+		}
+		return;
+	}
+	LoginMethod = Method;
+	LoginState = ECrossguardNakamaLoginState::LoggedIn;
+	UE_LOG(LogCrossguard, Log, TEXT("Nakama: logged in as %s (%s) with %s"), *Username, *UserId, *Method);
+	if (!SessionHandle.IsValid())
+	{
+		SessionHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateUObject(this, &UCrossguardNakamaSubsystem::SessionTick), SessionCheckSeconds);
+	}
+	if (OnDone)
+	{
+		OnDone(true, FString());
+	}
+}
+
+bool UCrossguardNakamaSubsystem::AcceptSession(const FString& Body, FString& OutError)
+{
+	FString Token;
+	FString NewRefreshToken;
+	FString NewUserId;
+	FString NewUsername;
+	int64 ExpiresAt = 0;
+	if (!FCrossguardNakamaClient::ReadSession(Body, Token, NewRefreshToken) || !FCrossguardNakamaClient::ReadTokenClaims(Token, NewUserId, NewUsername, ExpiresAt))
+	{
+		OutError = TEXT("unreadable session");
+		return false;
+	}
+	if (!UserId.IsEmpty() && LoginState == ECrossguardNakamaLoginState::LoggedIn && bRefreshing && NewUserId != UserId)
+	{
+		// A refresh never changes the account.
+		OutError = TEXT("the refreshed session is another account's");
+		return false;
+	}
+	SessionToken = Token;
+	UserId = NewUserId;
+	Username = NewUsername;
+	SessionExpiresAt = ExpiresAt;
+	// The refresh token's own expiry (Nakama: session.refresh_token_expiry_sec); none: no refreshing.
+	FString RefreshUserId;
+	FString RefreshUsername;
+	int64 RefreshExpiry = 0;
+	if (!NewRefreshToken.IsEmpty() && FCrossguardNakamaClient::ReadTokenClaims(NewRefreshToken, RefreshUserId, RefreshUsername, RefreshExpiry))
+	{
+		RefreshToken = NewRefreshToken;
+		RefreshExpiresAt = RefreshExpiry;
+	}
+	else if (!bRefreshing)
+	{
+		RefreshToken.Reset();
+		RefreshExpiresAt = 0;
+	}
+	return true;
+}
+
+bool UCrossguardNakamaSubsystem::ShouldRefreshSession(int64 NowUnix, int64 InSessionExpiresAt, int64 InRefreshExpiresAt)
+{
+	return InSessionExpiresAt > 0 && InSessionExpiresAt - NowUnix <= RefreshLeadSeconds && NowUnix < InRefreshExpiresAt;
+}
+
+bool UCrossguardNakamaSubsystem::SessionTick(float DeltaSeconds)
+{
+	if (LoginState == ECrossguardNakamaLoginState::LoggedIn && !bRefreshing
+		&& ShouldRefreshSession(FDateTime::UtcNow().ToUnixTimestamp(), SessionExpiresAt, RefreshExpiresAt))
+	{
+		RefreshSession(nullptr);
+	}
+	return true;
+}
+
+void UCrossguardNakamaSubsystem::RefreshSession(FLoginCallback OnDone)
+{
+	if (bRefreshing || RefreshToken.IsEmpty() || !Client.IsValid() || LoginState != ECrossguardNakamaLoginState::LoggedIn)
+	{
+		if (OnDone)
+		{
+			OnDone(false, TEXT("nothing to refresh"));
+		}
+		return;
+	}
+	bRefreshing = true;
+	TWeakObjectPtr<UCrossguardNakamaSubsystem> WeakThis(this);
+	Client->RefreshSession(ServerKey, RefreshToken, [WeakThis, OnDone = MoveTemp(OnDone)](const FCrossguardNakamaResponse& Response)
 	{
 		UCrossguardNakamaSubsystem* Self = WeakThis.Get();
 		if (Self == nullptr)
 		{
 			return;
 		}
-		FString Token;
-		TSharedPtr<FJsonObject> Object;
-		if (Response.IsOk() && FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Response.Body), Object) && Object.IsValid())
+		FString Error;
+		const bool bRefreshed = Response.IsOk() && Self->AcceptSession(Response.Body, Error);
+		Self->bRefreshing = false;
+		if (bRefreshed)
 		{
-			Object->TryGetStringField(TEXT("token"), Token);
+			UE_LOG(LogCrossguard, Log, TEXT("Nakama: session refreshed (valid until %lld)"), Self->SessionExpiresAt);
 		}
-		FString NewUserId;
-		FString NewUsername;
-		int64 ExpiresAt = 0;
-		if (!FCrossguardNakamaClient::ReadTokenClaims(Token, NewUserId, NewUsername, ExpiresAt))
+		else
 		{
-			Self->LoginState = ECrossguardNakamaLoginState::Failed;
-			Self->LastError = Response.IsOk() ? FString(TEXT("unreadable session")) : Response.Describe();
-			UE_LOG(LogCrossguard, Warning, TEXT("Nakama login failed: %s"), *Self->LastError);
-			if (OnDone)
+			// Tried again at the next check; once the session is over, the menu asks to log in again.
+			UE_LOG(LogCrossguard, Warning, TEXT("Nakama: session not refreshed (%s)"), Response.IsOk() ? *Error : *Response.Describe());
+			if (Response.HttpStatus == 401)
 			{
-				OnDone(false, Self->LastError);
+				// The refresh token is no good (expired, revoked): no more tries.
+				Self->RefreshToken.Reset();
+				Self->RefreshExpiresAt = 0;
 			}
-			return;
 		}
-		Self->SessionToken = Token;
-		Self->UserId = NewUserId;
-		Self->Username = NewUsername;
-		Self->SessionExpiresAt = ExpiresAt;
-		Self->LoginState = ECrossguardNakamaLoginState::LoggedIn;
-		UE_LOG(LogCrossguard, Log, TEXT("Nakama: logged in as %s (%s)"), *NewUsername, *NewUserId);
 		if (OnDone)
 		{
-			OnDone(true, FString());
+			OnDone(bRefreshed, bRefreshed ? FString() : (Response.IsOk() ? Error : Response.Describe()));
 		}
 	});
 }
@@ -518,8 +716,8 @@ FString UCrossguardNakamaSubsystem::DescribeLogin() const
 
 FString UCrossguardNakamaSubsystem::GetLoginOption() const
 {
-	// TODO: refresh the session (refresh token, /v2/account/session/refresh) before it expires; until
-	// then an expired session sends no token and the player logs in again from the menu.
+	// The current token: SessionTick refreshes it RefreshLeadSeconds before it expires. An expired
+	// session sends none (the server then asks to log in first).
 	return IsLoggedIn() ? FString::Printf(TEXT("%s=%s"), TokenOption, *SessionToken) : FString();
 }
 

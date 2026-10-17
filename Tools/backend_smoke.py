@@ -568,7 +568,7 @@ def check_sessions(backend):
     status, body = backend.rpc("crossguard_verify_session", {"token": session["refresh_token"]})
     check("a refresh token is not a session token (401)", status == 401, f"{status} {body}")
 
-    status, body = call("POST", "/v2/account/authenticate/steam?create=true", {"account": {"token": "00ff00ff"}}, server_key)
+    status, body = call("POST", "/v2/account/authenticate/steam?create=true&sync=false", {"token": "00ff00ff"}, server_key)
     if env.get("STEAM_APP_ID") and env.get("STEAM_PUBLISHER_KEY"):
         check("Steam login with a fake ticket refused by Steam", status not in (200, 403), f"{status} {body}")
     else:

@@ -51,6 +51,33 @@ void FCrossguardNakamaClient::AuthenticateDevice(const FString& ServerKey, const
 		FString::Printf(TEXT("{\"id\":%s}"), *Quote(DeviceId)), MoveTemp(OnDone));
 }
 
+void FCrossguardNakamaClient::AuthenticateSteam(const FString& ServerKey, const FString& SteamTicket, FCallback OnDone) const
+{
+	// The body is the account ({"token": ticket}); no friends import (sync=false).
+	Post(FString::Printf(TEXT("%s/v2/account/authenticate/steam?create=true&sync=false"), *BaseUrl), BasicAuth(ServerKey),
+		FString::Printf(TEXT("{\"token\":%s}"), *Quote(SteamTicket)), MoveTemp(OnDone));
+}
+
+void FCrossguardNakamaClient::RefreshSession(const FString& ServerKey, const FString& RefreshToken, FCallback OnDone) const
+{
+	Post(FString::Printf(TEXT("%s/v2/account/session/refresh"), *BaseUrl), BasicAuth(ServerKey), FString::Printf(TEXT("{\"token\":%s}"), *Quote(RefreshToken)),
+		MoveTemp(OnDone));
+}
+
+bool FCrossguardNakamaClient::ReadSession(const FString& Body, FString& OutToken, FString& OutRefreshToken)
+{
+	OutToken.Reset();
+	OutRefreshToken.Reset();
+	TSharedPtr<FJsonObject> Object;
+	if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Body), Object) || !Object.IsValid())
+	{
+		return false;
+	}
+	Object->TryGetStringField(TEXT("token"), OutToken);
+	Object->TryGetStringField(TEXT("refresh_token"), OutRefreshToken);
+	return !OutToken.IsEmpty();
+}
+
 void FCrossguardNakamaClient::Post(const FString& Url, const FString& Authorization, const FString& Body, FCallback OnDone) const
 {
 	const TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();

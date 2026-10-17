@@ -11,7 +11,8 @@
 // - Server-to-server (dedicated servers only): Crossguard RPCs (Backend/nakama/modules) authorized
 //   with the runtime HTTP key, sent as HTTP Basic auth ("<key>:"), never in the URL. The key comes from
 //   the server's command line or environment (UCrossguardNakamaSubsystem) and never ships to clients.
-// - Client login: device-id authentication with the (public) server key.
+// - Client login with the (public) server key: Steam (a Steam session ticket), device id (development),
+//   and refreshing the session with its refresh token.
 //
 // Completion callbacks run on the game thread (the HTTP module's default).
 
@@ -60,7 +61,19 @@ public:
 	// holds "token" and "refresh_token".
 	void AuthenticateDevice(const FString& ServerKey, const FString& DeviceId, FCallback OnDone) const;
 
+	// POST <url>/v2/account/authenticate/steam?create=true&sync=false with the Steam session ticket (hex),
+	// authorized with the server key. Nakama checks it with Steam's Web API (social.steam: publisher key,
+	// app id). The answer holds "token" and "refresh_token".
+	void AuthenticateSteam(const FString& ServerKey, const FString& SteamTicket, FCallback OnDone) const;
+
+	// POST <url>/v2/account/session/refresh with the refresh token, authorized with the server key. The
+	// answer holds a new "token" and "refresh_token" (same account).
+	void RefreshSession(const FString& ServerKey, const FString& RefreshToken, FCallback OnDone) const;
+
 	// --- Helpers (pure; unit tested in CrossguardNakamaTests.cpp) ---
+
+	// The "token" and "refresh_token" of a session answer (login, refresh). False without a token.
+	static bool ReadSession(const FString& Body, FString& OutToken, FString& OutRefreshToken);
 
 	// A JSON string literal, quotes included.
 	static FString Quote(const FString& Value);

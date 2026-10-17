@@ -32,6 +32,10 @@ public class Crossguard : ModuleRules
 		// Nakama REST client (Game/CrossguardNakamaClient, docs/backend-setup.md): HTTP requests, JSON answers.
 		PrivateDependencyModuleNames.AddRange(new string[] { "HTTP", "Json" });
 
+		// Steam login (Game/CrossguardNakamaSubsystem): the Steam online subsystem's identity interface, when
+		// OnlineSubsystemSteam is enabled (docs/steam-setup.md). Nothing Steam-specific is linked.
+		PrivateDependencyModuleNames.Add("OnlineSubsystem");
+
 		// UGameMapsSettings (the HUD's F10 back to the main menu: GameDefaultMap).
 		PrivateDependencyModuleNames.Add("EngineSettings");
 

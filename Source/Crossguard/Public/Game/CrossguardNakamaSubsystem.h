@@ -19,8 +19,10 @@ enum class ECrossguardNakamaLoginState : uint8
 
 // The game's link to Nakama (docs/backend-setup.md, docs/anti-cheat.md "Player identity").
 //
-// Client: logs the player in (development: a device id; Steam: TODO) and keeps the session token,
-// which UCrossguardLocalPlayer adds to every server login as ?NakamaToken=<token>.
+// Client: logs the player in (Steam when the Steam online subsystem runs; development builds without it: a
+// device id), keeps the session token, which UCrossguardLocalPlayer adds to every server login as
+// ?NakamaToken=<token> (servers verify it at every login, reconnects included), and refreshes it with the
+// refresh token before it expires (docs/backend-setup.md, "Clients").
 //
 // Dedicated server: holds the server-to-server settings (-NakamaUrl=, -NakamaHttpKey= or the
 // CROSSGUARD_NAKAMA_HTTP_KEY environment variable) and verifies the session tokens of connecting players
@@ -134,12 +136,33 @@ public:
 	// --- Client login -----------------------------------------------------------------------------
 
 	using FLoginCallback = TFunction<void(bool bLoggedIn, const FString& Error)>;
+	// The menu's Log in: Steam when IsSteamLoginAvailable; otherwise the device id in development builds,
+	// and a refusal in Shipping (Steam is the only login there).
+	void Login(FLoginCallback OnDone);
+	// Steam login: a session ticket from the Steam online subsystem (IOnlineIdentity::GetAuthToken) to
+	// /v2/account/authenticate/steam; Nakama checks it with Steam (STEAM_APP_ID / STEAM_PUBLISHER_KEY on the
+	// backend). A ticket Steam does not know yet is tried again (SteamLoginAttempts, SteamRetrySeconds apart).
+	void LoginWithSteam(FLoginCallback OnDone);
 	// Development login: Nakama device authentication (refused by servers without CROSSGUARD_DEV_AUTH).
 	// The device id is -NakamaDeviceId=, else "crossguard-dev-<-CrossguardPlayerId= or this PC's login id>".
-	// TODO(Steam): LoginWithSteam: get a Web API auth ticket from the Steam online subsystem
-	// (ISteamUser::GetAuthTicketForWebApi, needs OnlineSubsystemSteam, docs/steam-setup.md) and POST it
-	// to /v2/account/authenticate/steam?create=true&sync=false.
 	void LoginWithDevice(FLoginCallback OnDone);
+	// The Steam online subsystem is loaded and its user logged in (the Steam client runs).
+	static bool IsSteamLoginAvailable();
+
+	// Session refresh (placeholders): the token is refreshed this long before it expires, checked every
+	// SessionCheckSeconds; a failed refresh is tried again at the next check.
+	static constexpr int64 RefreshLeadSeconds = 300;
+	static constexpr float SessionCheckSeconds = 30.0f;
+	static constexpr int32 SteamLoginAttempts = 3;
+	static constexpr float SteamRetrySeconds = 2.0f;
+	// Time to refresh: the session ends within RefreshLeadSeconds (or has ended) and the refresh token
+	// is still good. All Unix seconds.
+	static bool ShouldRefreshSession(int64 NowUnix, int64 SessionExpiresAt, int64 RefreshExpiresAt);
+	// Takes a session answer (login or refresh): token, refresh token, the claims. False (OutError) if it
+	// holds no readable session; the current session is kept then.
+	bool AcceptSession(const FString& Body, FString& OutError);
+	// Refreshes now (also done on its own before expiry). OnDone may be empty.
+	void RefreshSession(FLoginCallback OnDone);
 
 	UFUNCTION(BlueprintPure, Category = "Crossguard|Online")
 	ECrossguardNakamaLoginState GetLoginState() const { return LoginState; }
@@ -148,6 +171,10 @@ public:
 	bool IsLoggedIn() const;
 
 	const FString& GetSessionToken() const { return SessionToken; }
+	const FString& GetRefreshToken() const { return RefreshToken; }
+	int64 GetSessionExpiresAt() const { return SessionExpiresAt; }
+	// "Steam" or "device" (the last login).
+	const FString& GetLoginMethod() const { return LoginMethod; }
 	const FString& GetUserId() const { return UserId; }
 	const FString& GetUsername() const { return Username; }
 	const FString& GetLastError() const { return LastError; }
@@ -177,6 +204,10 @@ private:
 		double VerifiedAt = 0.0;
 	};
 	void PruneVerified();
+	// Ends a login attempt (login answers): accepts the session or fails with the answer's reason.
+	void FinishLogin(const FCrossguardNakamaResponse& Response, const FString& Method, FLoginCallback OnDone);
+	void SendSteamLogin(int32 Attempt, FLoginCallback OnDone);
+	bool SessionTick(float DeltaSeconds);
 	void SendRegistration();
 	bool HeartbeatTick(float DeltaSeconds);
 	// Ticks the HTTP module until bDone or the deadline (shutdown only).
@@ -203,5 +234,10 @@ private:
 	FString UserId;
 	FString Username;
 	int64 SessionExpiresAt = 0;
+	FString RefreshToken;
+	int64 RefreshExpiresAt = 0;
+	bool bRefreshing = false;
+	FString LoginMethod;
+	FTSTicker::FDelegateHandle SessionHandle;
 	FString LastError;
 };
