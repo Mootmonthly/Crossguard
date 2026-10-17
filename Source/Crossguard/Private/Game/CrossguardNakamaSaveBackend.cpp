@@ -773,9 +773,10 @@ void UCrossguardNakamaSaveBackend::FinishJoint(const FString& PlayerId, FPlayerS
 		if (bSaveWritten)
 		{
 			// Built after the change, which is in the save now: it goes next, as usual.
-			SaveCharacter(PlayerId, Held, [Waiting = HeldCallbacks](bool bSaved, const FString& Error) mutable
+			SaveCharacter(PlayerId, Held, [Waiting = HeldCallbacks](bool bSaved, const FString& Error)
 			{
-				CrossguardNakamaSaveLocal::Report(Waiting, bSaved, Error);
+				TArray<FSaveCallback> Callbacks = Waiting;
+				CrossguardNakamaSaveLocal::Report(Callbacks, bSaved, Error);
 			});
 		}
 		else
