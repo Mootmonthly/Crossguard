@@ -5,6 +5,7 @@
 
 #include "CrossguardArtLibrary.generated.h"
 
+class USkeletalMesh;
 class USkeleton;
 
 // Asset set-up calls for Tools/import_art.py (Unreal Python), where the engine exposes none.
@@ -20,6 +21,11 @@ public:
 	// the skeleton dirty (save it). Returns the number of bones, 0 without a skeleton.
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Art")
 	static int32 UseMeshProportions(USkeleton* Skeleton, const TArray<FName>& AnimationBones);
+
+	// Adds the bones Mesh has and its skeleton lacks (a shared skeleton: the Rogue's cape) to the
+	// skeleton, as the editor does when it loads the mesh. Marks it dirty. False without either.
+	UFUNCTION(BlueprintCallable, Category = "Crossguard|Art")
+	static bool MergeMeshBones(USkeleton* Skeleton, USkeletalMesh* Mesh);
 
 	// The skeleton's first Count bone names (finding the root and hips to pass above).
 	UFUNCTION(BlueprintCallable, Category = "Crossguard|Art")

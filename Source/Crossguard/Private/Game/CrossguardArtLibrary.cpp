@@ -1,6 +1,7 @@
 #include "Game/CrossguardArtLibrary.h"
 
 #include "Animation/Skeleton.h"
+#include "Engine/SkeletalMesh.h"
 
 int32 UCrossguardArtLibrary::UseMeshProportions(USkeleton* Skeleton, const TArray<FName>& AnimationBones)
 {
@@ -26,6 +27,17 @@ int32 UCrossguardArtLibrary::UseMeshProportions(USkeleton* Skeleton, const TArra
 	}
 	Skeleton->MarkPackageDirty();
 	return Count;
+}
+
+bool UCrossguardArtLibrary::MergeMeshBones(USkeleton* Skeleton, USkeletalMesh* Mesh)
+{
+	if (Skeleton == nullptr || Mesh == nullptr)
+	{
+		return false;
+	}
+	const bool bMerged = Skeleton->MergeAllBonesToBoneTree(Mesh, false);
+	Skeleton->MarkPackageDirty();
+	return bMerged;
 }
 
 TArray<FName> UCrossguardArtLibrary::FirstBoneNames(const USkeleton* Skeleton, int32 Count)

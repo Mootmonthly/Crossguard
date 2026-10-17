@@ -46,6 +46,7 @@ QUATERNIUS_MONSTERS = "drop/Ultimate_Monsters/Ultimate Monsters/{group}/FBX/{nam
 # mesh, the root and hips from the animation (KAYKIT_RIG_ANIMATION_BONES; set_rig_proportions).
 KAYKIT_RIG = "/Game/ThirdParty/KayKit/Skeletons/SK_Skeleton_Warrior_Skeleton"
 KAYKIT_RIG_ANIMATION_BONES = ["Rig_Medium", "root", "hips"]
+KAYKIT_RIG_MESHES = ["SK_Skeleton_Warrior", "SK_Skeleton_Rogue", "SK_Skeleton_Mage", "SK_Skeleton_Minion"]
 # Import scale per destination folder (default 1): Quaternius' weapons come in about 5x too big.
 IMPORT_SCALE = {"/Game/ThirdParty/Quaternius/MedievalWeapons": 0.2}
 
@@ -247,6 +248,11 @@ def set_rig_proportions():
     if skeleton is None:
         record("SKIP", step, "not imported")
         return
+    # Every mesh's bones on the shared skeleton (the Rogue's cape), then the proportions for all of them.
+    for mesh_name in KAYKIT_RIG_MESHES:
+        mesh = unreal.EditorAssetLibrary.load_asset("/Game/ThirdParty/KayKit/Skeletons/" + mesh_name)
+        if mesh is not None:
+            unreal.CrossguardArtLibrary.merge_mesh_bones(skeleton, mesh)
     bones = unreal.CrossguardArtLibrary.use_mesh_proportions(skeleton, KAYKIT_RIG_ANIMATION_BONES)
     if not unreal.EditorAssetLibrary.save_loaded_asset(skeleton, False):
         record("FAIL", step, "set but saving failed")
